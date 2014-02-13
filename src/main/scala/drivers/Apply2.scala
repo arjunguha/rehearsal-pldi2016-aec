@@ -44,7 +44,7 @@ trait LocalPackage {
 
   def preinstall = 0
   def install (/* TODO : Configuration */): Int = 
-    (Cmd.exec ("apt-get install " + package_name))_1
+    (Cmd.exec ("apt-get install " + package_name))._1
   def postinstall = 0
 }
 
@@ -154,16 +154,20 @@ class Nginx extends LocalPackage
 }
 
 
-/* TODO : preinstallhook */
-class GoLang extends LocalPackage
-             with Command {
-  override val package_name = "golang"
-  override val cmd_name = "go"
-
-  override def preinstall 
+class DebconfUtils extends LocalPackage {
+  override val package_name = "debconf-utils"
 }
 
 
+class GoLang (debconfutils: DebconfUtils) extends LocalPackage
+                                          with Command {
+  override val package_name = "golang"
+  override val cmd_name = "go"
+
+  override def preinstall (): Int = {
+    (Cmd.exec ("cat golang.seed | debconf-set-selections"))._1
+  }
+}
 
 
 class Git extends LocalPackage 
@@ -180,11 +184,6 @@ object cd {
 }
 
 
-/* TODO : Executable trait that gives a method exec */
-/* TODO : File trait may be that stores location and checksum */
-/* TODO : Service trait that provides method to start restart */
-
-/* RAII */
 class Apply2 (make    : Make,
               golang  : GoLang,
               couchdb : CouchDB, /* XXX : External dependency */
