@@ -10,6 +10,9 @@
 
 
 
+
+
+
 /* XXX : trait "environment variable" */
 object PATH {
 
@@ -30,37 +33,38 @@ trait Command {
 
 trait Service {
 
-  def start (args: String) = 0
+  val svc_name: String
+
+  // TODO : see more info about starting stopping daemons
+  def start (args: String): Int = 0
   def stop  () = 0
   def restart (args: String) = 0
   def is_running = false
 }
 
 
-trait LocalPackage {
-
+sealed trait Package {
   val package_name: String
   val package_desc: String = ""
 
-  def preinstall = 0
-  def install (/* TODO : Configuration */): Int = 
-    (Cmd.exec ("apt-get install " + package_name))._1
-  def postinstall = 0
-}
-
-trait NonLocalPackage {
-
-  val package_name: String
-  val package_desc: String = ""
-
-  def preinstall = 0
-  def install (): Int
-  def postinstall = 0
+  def preinstall (): Int = 0
+  def install (): Int // Mandatory
+  def postinstall (): Int = 0
 }
 
 
 
-/* TODO : Need to make these singleton */
+trait LocalPackage extends Package {
+
+  override def install (/* TODO : Configuration */): Int = 
+    (Cmd.exec ("apt-get install -q -y" + " " + package_name))._1
+}
+
+trait NonLocalPackage extends Package {}
+
+
+
+/* TODO : Need to make these singleton objects */
 
 
 /* Make encompasses autoconf automake .. */
@@ -197,6 +201,7 @@ class Apply2 (make    : Make,
 
   override val package_name = "Apply2"
   override val cmd_name = "apply2"
+  override val svc_name = cmd_name
   override val package_desc = "Admission system for UMass"
 
 
@@ -211,10 +216,75 @@ class Apply2 (make    : Make,
     git.exec ("clone" + " " + repo_loc)
 
     // XXX : Could be abstracted out as this is a frequently used action
-    Cmd.exec ("cd Apply2")
+    cd ("Apply2")
 
     make.exec ("")
   }
 
-  override def postinstall (/* arguments */) = PATH.add (location)
+  override def postinstall (/* arguments */) = {
+
+    PATH.add (location)
+
+    this.exec ("newdept sample")
+    this.exec ("newreviewer scooby redbull64 \"Scooby Doo\"")
+
+    // TODO : Need to push it into a service
+    this.exec ("testserver")
+  }
+}
+
+
+class Main {
+
+  def install (what: Package) {
+    what.preinstall ()
+    what.install ()
+    what.postinstall ()
+  }
+
+  def main (args: Array[String]) {
+
+    /* TODO : Should have been RAII */
+    val make = new Make
+    install (make)
+
+    val couchdb = new CouchDB
+    install (couchdb)
+
+    val hg = new Mercurial
+    install (hg)
+
+    val wget = new Wget
+    install (wget)
+
+    val tar = new Tar
+    install (tar)
+
+    val gcppc = new CPP
+    install (gcppc)
+
+    val node = new Node (wget, tar, make, gcppc)
+    install (node)
+
+    val npm = new Npm (node)
+    install (npm)
+
+    val tsc = new TypeScript (npm)
+    install (tsc)
+
+    val nginx = new Nginx
+    install (nginx)
+
+    val debconfutils = new DebconfUtils
+    install (debconfutils)
+
+    val go = new GoLang (debconfutils)
+    install (go)
+
+    val git = new Git
+    install (git)
+
+    val apply2 = new Apply2 (make, go, couchdb, hg, nginx, git, tsc)
+    install (apply2)
+  }
 }
