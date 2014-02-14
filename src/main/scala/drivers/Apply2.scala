@@ -1,16 +1,4 @@
-/* TODO :
- *   trait Package
- *   trait MemberPackage
- *   trait Native (* Available without explicitly installing *)
- *   trait NonMemberPackage
- *   trait Command
- *
- * TODO : Add update and uninstall support 
- */
-
-
-
-
+/* TODO : Add update and uninstall support */
 
 
 /* XXX : trait "environment variable" */
@@ -119,9 +107,10 @@ class Node (wget: Wget,
     wget.exec (src)
     tar.exec ("-xzf" + " " + package_name + "-" + version + ".tar.gz")
     cd (package_name + "-" + version)
-    Cmd.exec ("./configure")
-    make.exec ("")
-    make.exec ("install")
+      Cmd.exec ("./configure")
+      make.exec ("")
+      make.exec ("install")
+    cd ("../")
   }
 }
 
@@ -182,12 +171,6 @@ class Git extends LocalPackage
 }
 
 
-object cd {
-
-  def apply (loc: String): Int = (Cmd.exec ("cd" + " " + loc))._1
-}
-
-
 class Apply2 (make    : Make,
               golang  : GoLang,
               couchdb : CouchDB, /* XXX : External dependency */
@@ -217,8 +200,8 @@ class Apply2 (make    : Make,
 
     // XXX : Could be abstracted out as this is a frequently used action
     cd ("Apply2")
-
-    make.exec ("")
+      make.exec ("")
+    cd ("../")
   }
 
   override def postinstall (/* arguments */) = {
