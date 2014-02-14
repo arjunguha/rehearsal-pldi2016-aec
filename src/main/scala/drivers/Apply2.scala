@@ -217,7 +217,7 @@ class Apply2 (make    : Make,
 }
 
 
-class Main {
+object Main {
 
   def install (what: Package) {
     what.preinstall ()
