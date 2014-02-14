@@ -1,11 +1,12 @@
 import java.io.File
 import java.io.FileOutputStream
 import scala.sys.process._
+import java.nio.file._
 
 object Cmd {
 
   val newline = sys.props ("line.separator")
-  var pwd = "./"
+  var pwd = Paths.get ("./")
 
   def exec (cmd: String): (Int, String, String) = {
 
@@ -25,10 +26,14 @@ object Cmd {
       var logger = ProcessLogger ((s) => outlog += (s + newline),
                                   (s) => errlog += (s + newline))
 
-      val status: Int = Process (file.getCanonicalPath (), new File (pwd)) ! logger
+      val status: Int = Process (file.getCanonicalPath (), pwd.toFile ()) ! logger
 
       // Done with file delete
       file.delete ()
+
+      // Enabled now for logging purpose
+      println (outlog)
+      println (errlog)
 
       (status, outlog, errlog)
     } catch {
@@ -36,3 +41,17 @@ object Cmd {
     }
   }
 }
+
+
+object cd {
+
+  def apply (loc: String): Int = {
+
+    var tmp = Cmd.pwd
+    tmp = tmp.resolve (loc)
+    val st = Cmd.exec ("cd" + " " + tmp.toString ())._1
+    if (0 == st) Cmd.pwd = tmp
+    st
+  }
+}
+
