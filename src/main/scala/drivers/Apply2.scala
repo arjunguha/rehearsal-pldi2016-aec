@@ -1,14 +1,5 @@
 /* TODO : Add update and uninstall support */
-
-
-/* XXX : trait "environment variable" */
-object PATH {
-
-  /* TODO : Constructor */
-  
-  /* Idempotent */
-  def add (path: String): Int = 0
-}
+/* TODO : Batching of install, doing an independent apt-get install every time is painfull */
 
 
 trait Command {
@@ -66,6 +57,9 @@ class CouchDB extends LocalPackage
               with Command {
   override val package_name = "couchdb"
   override val cmd_name = package_name
+
+  var host = "localhost"
+  var port = "5894"
 }
 
 class Mercurial extends LocalPackage
@@ -127,8 +121,8 @@ class Npm (node: Node) extends NonLocalPackage
 }
 
 
-/* should it depend instead on npm or both "npm and node"
- * Does node always imply npm
+/* TODO : should it depend instead on node or both "npm and node"
+ *        Does node always imply npm
  */
 class TypeScript (npm: Npm) extends NonLocalPackage
                             with Command {
@@ -188,7 +182,7 @@ class Apply2 (make    : Make,
   override val package_desc = "Admission system for UMass"
 
 
-  val repo_loc = "https://github.com/plasma-umass/Apply2.git"
+  val repo_loc = "https://github.com/nimishgupta/Apply2.git"
 
   // Should come from configuration
   val location = "./"
@@ -206,16 +200,19 @@ class Apply2 (make    : Make,
 
   override def postinstall (/* arguments */) = {
 
-    PATH.add (location)
+    ENV_PATH.append (location)
 
     this.exec ("newdept sample")
-    this.exec ("newreviewer scooby redbull64 \"Scooby Doo\"")
+    this.exec ("newreviewer" + " " +
+               "scooby redbull64 \"Scooby Doo\"")
 
     // TODO : Need to push it into a service
-    this.exec ("testserver")
+    this.exec (
+               "-dbhost" + " " + couchdb.host + " " +
+               "-dbport" + " " + couchdb.port + " " +
+               "testserver")
   }
 }
-
 
 object Main {
 

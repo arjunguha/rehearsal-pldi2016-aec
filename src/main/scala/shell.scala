@@ -55,3 +55,19 @@ object cd {
   }
 }
 
+/* XXX : trait "environment variable" */
+object ENV_PATH {
+
+  var elems = System.getenv ("PATH").split (':').map (Paths.get (_))
+
+  /* Idempotent */
+  def append (path: String): Int = {
+
+    if (! elems.contains (Paths.get (path))) {
+      elems = elems :+ Paths.get (path)
+      (Cmd.exec ("export PATH=$PATH:" + path))._1
+    }
+    else { 0 }
+  }
+}
+
