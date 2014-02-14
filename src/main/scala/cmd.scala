@@ -5,6 +5,7 @@ import scala.sys.process._
 object Cmd {
 
   val newline = sys.props ("line.separator")
+  var pwd = "./"
 
   def exec (cmd: String): (Int, String, String) = {
 
@@ -24,7 +25,7 @@ object Cmd {
       var logger = ProcessLogger ((s) => outlog += (s + newline),
                                   (s) => errlog += (s + newline))
 
-      val status: Int = (file.getCanonicalPath ()) ! logger
+      val status: Int = Process (file.getCanonicalPath (), new File (pwd)) ! logger
 
       // Done with file delete
       file.delete ()
