@@ -17,8 +17,8 @@ trait Service {
   // TODO : see more info about starting stopping daemons
   def start (args: String): Int = 0
   def stop  () = 0
-  def restart (args: String) = 0
-  def is_running = false
+  def restart (/* args: String */) = Cmd.exec ("/etc/init.d/" + svc_name + " " + "restart")
+  var is_running = false
 }
 
 
@@ -52,15 +52,31 @@ class Make extends LocalPackage
   override val package_name = "make"
   override val cmd_name = package_name
 }
-                                
-class CouchDB extends LocalPackage
-              with Command {
-  override val package_name = "couchdb"
-  override val cmd_name = package_name
 
-  var host = "localhost"
-  var port = "5894"
+
+
+class CouchDB (val host: String = "localhost",
+               val port: String = "5894") extends LocalPackage
+                                          with Service {
+  override val package_name = "couchdb"
+  override val svc_name = package_name
+
+  override def postinstall () = {
+
+    Cmd.exec ("cat << 'EOF' > /etc/couchdb/local.ini\n" +
+              "[httpd]\n" + 
+              "bind_address = " + host + "\n" +
+              "port = " + port + "\n" +
+              "EOF\n")
+
+    restart ()
+
+    is_running = true
+    0
+  }
 }
+
+
 
 class Mercurial extends LocalPackage
                 with Command {
@@ -185,7 +201,7 @@ class Apply2 (make    : Make,
   val repo_loc = "https://github.com/nimishgupta/Apply2.git"
 
   // Should come from configuration
-  val location = "./"
+  var location = "./"
 
   override def install (/* Configuration required */): Int = {
     
@@ -194,13 +210,14 @@ class Apply2 (make    : Make,
 
     // XXX : Could be abstracted out as this is a frequently used action
     cd ("Apply2")
-      make.exec ("")
+      location = Cmd.pwd.toString ()
+      if (0 == make.exec (""))
+        ENV_PATH.append (location)
     cd ("../")
   }
 
   override def postinstall (/* arguments */) = {
 
-    ENV_PATH.append (location)
 
     this.exec ("newdept sample")
     this.exec ("newreviewer" + " " +
