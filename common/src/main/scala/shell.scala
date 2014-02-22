@@ -26,6 +26,7 @@ object Cmd {
       var logger = ProcessLogger ((s) => outlog += (s + newline),
                                   (s) => errlog += (s + newline))
 
+      println ("executing : " + cmd)
       val status: Int = Process (file.getCanonicalPath (), pwd.toFile ()) ! logger
 
       // Done with file delete
