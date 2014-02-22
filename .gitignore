@@ -1,0 +1,7 @@
+# Vagrant specific
+
+.vagrant
+
+# scala specific
+project/
+target/
