@@ -201,7 +201,7 @@ class Apply2 (make    : Command,
   }
 }
 
-object Main {
+object Apply2 {
 
   def install (what: Package) {
     what.preinstall ()
@@ -209,7 +209,7 @@ object Main {
     what.postinstall ()
   }
 
-  def main (args: Array[String]) {
+  def install () {
 
     /* TODO : Should have been RAII */
     val make = new CommandLocalPackage ("make")

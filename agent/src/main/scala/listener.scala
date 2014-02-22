@@ -9,7 +9,6 @@ import akka.actor.{ActorSystem, Props}
 import akka.io.IO
 import spray.can.Http
 
-/*
 object Listener extends App {
 
   implicit val system = ActorSystem ()
@@ -19,4 +18,3 @@ object Listener extends App {
 
   IO (Http) ! Http.Bind (handler, interface = "localhost", port = 9090)
 }
-*/
