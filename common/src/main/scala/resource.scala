@@ -1,14 +1,8 @@
 /* TODO : Check that everythings Needs to be transferrable over network using an actor, that is reconstructable as it is over network */
 /* Generics across network!! */
 
-/* resource can be installed natively or customly */
-/* will follow graph like directory structure */
-/* Need to specify custom install or native */
-/* type of script lets say would be setup.sh */
 /* import property map */
 /* Export property map */
-/* Props : trait map -> Prop [T] */
-/* Dependency Type */
 
 /* Can pass properties to shell script using command line parameters */
 /* But how to link generic shell script execution with command line parameters that can be derived from properties */
