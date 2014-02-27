@@ -1,15 +1,20 @@
 import akka.kernel.Bootable
+import akka.pattern.ask
+import akka.util.Timeout
 import akka.actor.{Address, ActorSystem, Actor, Props, ActorRef}
 import com.typesafe.config.ConfigFactory
 
-import scala.concurrent.Future
+import scala.concurrent._
 import scala.collection.mutable.Map
+import scala.concurrent.duration._
 
 // Messages exchanged
 case class StartWorker(addr: String)
 case class PropertyRequested (component: String, prop_key: String)
 case class PropertyReply (prop: Option[Prop[String]])
 case class InstallResource (r: Resource)
+
+
 
 
 object ResourceDb {
@@ -28,7 +33,7 @@ object ResourceDb {
 
 
 
-class WorkerActor(masterRef : ActorRef) extends Actor {
+class WorkerActor(/*masterRef : ActorRef*/) extends Actor {
 
   /* masterRef ! StartWorker("from the worker") */
 
@@ -62,10 +67,10 @@ class WorkerActorSystem (remoteip: String = "127.0.0.1",
                          port: Int = 5000) extends Bootable {
 
   val system = ActorSystem("WorkerSys", ConfigFactory.load.getConfig("slave"))
-  val masterRef = system.actorFor("akka.tcp://Master@" + remoteip + ":" + port + "/user/Register")
+  // val masterRef = system.actorFor("akka.tcp://Master@" + remoteip + ":" + port + "/user/Register")
   // why can't we get the port from the config?
 
-  system.actorOf(Props(new WorkerActor(masterRef)), "Register")
+  system.actorOf(Props(new WorkerActor(/*masterRef*/)), "Register")
 
 
   def startup  = println("a worker system came online")
@@ -73,14 +78,26 @@ class WorkerActorSystem (remoteip: String = "127.0.0.1",
 }
 
 
-class MasterActor extends Actor {
+class MasterActor (workerRef: ActorRef) extends Actor {
+
+  private val timeout = Timeout (120 seconds)
+
+  val make = new Resource ("make", Native, Map.empty, Map.empty)
+
+  workerRef ! InstallResource (make)
+  /*
+  val future = workerRef ? PropertyRequested (apply2.name, "isRunning")
+  val result = Await.result (future, timeout.duration).asInstanceOf[Option[Prop[String]]]
+  */
 
   override def receive = {
 
+    /*
     case StartWorker(actorPath) => {
       println("remote worker actor from " + actorPath + " is requesting to do work")
       sender ! StartWorker("hello from master")
     }
+    */
 
     case _ => {
       println("received an unknown message type")
@@ -90,13 +107,16 @@ class MasterActor extends Actor {
 
 
 
-class MasterSystem extends Bootable {
+class MasterSystem (workerip: String = "127.0.0.1",
+                    port: Int = 5000) extends Bootable {
 
   val system = ActorSystem("Master", ConfigFactory.load.getConfig ("master"))
+  val workerRef = system.actorFor ("akka.tcp://Worker@" + workerip + ":" + port + "/user/Register")
+
   override def startup  = { println("the master is online") }
   override def shutdown = { system.shutdown() }
 
-  system.actorOf(Props[MasterActor], "Register")
+  system.actorOf(Props (new MasterActor(workerRef)), "Register")
 }
 
 
