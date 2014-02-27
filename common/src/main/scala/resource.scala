@@ -14,14 +14,19 @@
 /* But how to link generic shell script execution with command line parameters that can be derived from properties */
 
 
+/*
 import shapeless._
 import record._
 import syntax.singleton._
 import poly._
 import HList._
+import shapeless.ops.record._
+*/
+import scala.collection._
 
 
 /* Prop ADT */
+/* TODO : Maybe overriding toString is a better choice */
 sealed trait Prop [+T] { def v () : T }
 case class StaticProp [T] (private val _v: T) extends Prop [T] { def v () = _v }
 
@@ -33,7 +38,7 @@ case class DynamicProp [T] (private val eval_script: String,
   def v () : T = {
 
     (Cmd.exec (eval_script)) match {
-      case (0, out, _) => parse (out) /* TODO: implicit conversion to T, may restrict the kinds to T as any code cannot be translated over network */
+      case (0, out, _) => parse (out)
       case (_, _, err) => fallback
     }
   }
@@ -49,35 +54,38 @@ case object Native extends InstallMethod
 case class Custom (val script: String) extends InstallMethod
 
 
+// TODO : Encapsulate config in a config class
 
 object InstallResource {
 
+  // TODO : Define
+  // def props_to_strlst[L <: HList, Prop[_]] (props: L) : Unit = {}
 
-  def props_to_strlst[L <: HList, Prop[_]] (props: L) : Unit = {}
+  def props_to_strlst (props : Map[String, Prop[_]]) : List[String] = 
+    props.toList.map { case (k,p) => k + ":" + p.v ()}
 
-  def apply[L <: HList, Prop[_]] (name: String, method: InstallMethod, props: L): Int = {
+  def apply (name: String, method: InstallMethod, props: Map[String, Prop[_]]): Int = {
     method match {
       case Native => Cmd.exec ("apt-get install -q -y" + " " + name)._1
-      case Custom (script) => Cmd.exec (script)._1 /* TODO : Convert props list to string list */
+      case Custom (script) => Cmd.exec (script + " " + 
+                                        (props_to_strlst (props)).foldLeft (" ") (_ + _)
+                                       )._1
     }
   }
 
   def apply (name: String, method: InstallMethod): Int =
-    apply (name, method, HNil)
+    apply (name, method, Map.empty)
 }
 
 
-  
-
-
-/* TODO : Consruct a Global map out of deps, to answer certain queries */  
+/* TODO : Consruct a Global map out of deps, to answer certain queries from actors */  
 
 
 class Resource (val name: String, 
-                val install_type: InstallMethod,
-                val iconfig: HList, /* TODO : Change to maps */ /* of Prop */
-                val econfig: HList, /* TODO : Change to maps */ /*of Prop */
-                val deps: Resource*) {
+                private val install_type: InstallMethod,
+                private val iconfig: /* HList */ Map[String, Prop[String]], 
+                private val econfig: /* HList */ Map[String, Prop[String]], 
+                private val deps: Resource*) {
 
   def install_deps (rs: Seq[Resource]) = {
 
@@ -90,8 +98,12 @@ class Resource (val name: String,
     InstallResource (name, install_type, iconfig)
   }
 
-  /* TODO : Poly Type */
-  def get_prop (name: String) : String = {
-    "missing"
+  // TODO : Get this out
+  def get_prop (name: String)
+               (implicit parse: (Prop[String] => String)) : Option[String] = {
+    (econfig get name) match {
+      case Some (p) => Some (parse (p))
+      case None => None
+    }
   }
 }
