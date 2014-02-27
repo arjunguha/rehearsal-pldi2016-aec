@@ -78,9 +78,6 @@ object InstallResource {
 }
 
 
-/* TODO : Consruct a Global map out of deps, to answer certain queries from actors */  
-
-
 class Resource (val name: String, 
                 private val install_type: InstallMethod,
                 private val iconfig: /* HList */ Map[String, Prop[String]], 
@@ -99,11 +96,7 @@ class Resource (val name: String,
   }
 
   // TODO : Get this out
-  def get_prop (name: String)
-               (implicit parse: (Prop[String] => String)) : Option[String] = {
-    (econfig get name) match {
-      case Some (p) => Some (parse (p))
-      case None => None
-    }
+  def get_prop (name: String) : Option[Prop[String]] = {
+    (econfig get name)
   }
 }

@@ -2,23 +2,61 @@ import akka.kernel.Bootable
 import akka.actor.{Address, ActorSystem, Actor, Props, ActorRef}
 import com.typesafe.config.ConfigFactory
 
+import scala.concurrent.Future
+import scala.collection.mutable.Map
+
+// Messages exchanged
 case class StartWorker(addr: String)
+case class PropertyRequested (component: String, prop_key: String)
+case class PropertyReply (prop: Option[Prop[String]])
+case class InstallResource (r: Resource)
+
+
+object ResourceDb {
+
+  private var m: Map[String, Resource] = Map.empty
+
+  def add (comp: String, r: Resource) = {m += (comp -> r)}
+
+  def query (comp: String, prop: String) : Option[Prop[String]] = {
+    (m get comp) match {
+      case Some (c) => (c.get_prop (prop))
+      case None => None
+    }
+  }
+}
+
+
 
 class WorkerActor(masterRef : ActorRef) extends Actor {
 
-  masterRef ! StartWorker("from the worker")
+  /* masterRef ! StartWorker("from the worker") */
 
   override def receive = {
+
     case StartWorker(actorPath) => {
       println("got from the master")
       sender ! StartWorker("hello from master")
     }
+
+    case InstallResource (r) => {
+      println ("Installing resource " + r.name)
+      r.install ()
+      ResourceDb.add (r.name, r)
+    }
+
+    case PropertyRequested (component, prop_key) => {
+      println ("Seeking property " + prop_key + " in " + component)
+      sender ! new PropertyReply (ResourceDb.query (component, prop_key))
+    } 
+
     case _ => {
       println("received an unknown message type")
     }
   }
-
 }
+
+
 
 class WorkerActorSystem (remoteip: String = "127.0.0.1",
                          port: Int = 5000) extends Bootable {
@@ -32,8 +70,8 @@ class WorkerActorSystem (remoteip: String = "127.0.0.1",
 
   def startup  = println("a worker system came online")
   def shutdown = system.shutdown()
-
 }
+
 
 class MasterActor extends Actor {
 
@@ -48,9 +86,10 @@ class MasterActor extends Actor {
       println("received an unknown message type")
     }
   }
-
-
 }
+
+
+
 class MasterSystem extends Bootable {
 
   val system = ActorSystem("Master", ConfigFactory.load.getConfig ("master"))
@@ -58,8 +97,8 @@ class MasterSystem extends Bootable {
   override def shutdown = { system.shutdown() }
 
   system.actorOf(Props[MasterActor], "Register")
- 
 }
+
 
 object WorkerApp {
   def main(args: Array[String]) {
