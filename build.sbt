@@ -5,7 +5,7 @@ lazy val drivers = project.dependsOn (common)
 
 lazy val agent   = project.dependsOn (common)
 
-lazy val cmder   = project.dependsOn (common)
+lazy val master  = project.dependsOn (common)
 
 
 name := "cook"
