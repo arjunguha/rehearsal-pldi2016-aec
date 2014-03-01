@@ -27,7 +27,7 @@ object Apply2Install {
   private val couchdb = new ResourceDesc ("couchdb", Native, Remote ("agent2"))
   
 
-  val plan = new ResourceDesc ("apply2", new Custom ("apply2_setup.sh"), Localhost,
+  val plan = new ResourceDesc ("apply2", new Custom ("apply2_setup.sh"), Remote ("agent1"),
                                        make, golang, couchdb, nginx, git, ts)
 }
 
