@@ -41,7 +41,9 @@ class Make (i: InstallMethod) extends Actor {
 object Make {
 
   val name = "make"
-  def akkaProps (i: InstallMethod) = Props.create (classOf[Make], i)
+  def akkaProps (i: InstallMethod,
+                 props: Map[String, String],
+                 deps: Map[String, ActorRef]) = Props.create (classOf[Make], i)
 }
 // -----------------------------------------------------------------
 
@@ -57,7 +59,9 @@ class DebConfUtils (i: InstallMethod) extends Actor {
 object DebConfUtils {
 
   val name = "debconf-utils"
-  def akkaProps (i: InstallMethod) = Props.create (classOf[DebConfUtils], i)
+  def akkaProps (i: InstallMethod,
+                 props: Map[String, String],
+                 deps: Map[String, ActorRef]) = Props.create (classOf[DebConfUtils], i)
 }
 
 // -----------------------------------------------------------------
@@ -84,7 +88,11 @@ class CouchDB (i: InstallMethod,
 object CouchDB {
 
   val name = "couchdb"
-  def akkaProps (i: InstallMethod) = Props.create (classOf[CouchDB], i/* TODO : , _, _*/)
+  def akkaProps (i: InstallMethod,
+                 props: Map[String, String],
+                 deps: Map[String, ActorRef]) = Props.create (classOf[CouchDB], i,  
+                                               (props.get ("host") getOrElse "127.0.0.1"),
+                                               (props.get ("port") getOrElse "5984"))
 }
 
 class Git (i: InstallMethod) extends Actor {
@@ -95,7 +103,9 @@ class Git (i: InstallMethod) extends Actor {
 
 object Git {
   val name = "git"
-  def akkaProps (i: InstallMethod) = Props.create (classOf[Git], i)
+  def akkaProps (i: InstallMethod,
+                 props: Map[String, String],
+                 deps: Map[String, ActorRef]) = Props.create (classOf[Git], i)
 }
 
 
@@ -107,7 +117,9 @@ class CPPC (i : InstallMethod) extends Actor {
 
 object CPPC {
   val name = "g++"
-  def akkaProps (i: InstallMethod) = Props.create (classOf[CPPC], i)
+  def akkaProps (i: InstallMethod,
+                 props: Map[String, String],
+                 deps: Map[String, ActorRef]) = Props.create (classOf[CPPC], i)
 }
 
 
@@ -121,7 +133,13 @@ class Node (i : InstallMethod,
 
 object Node {
   val name = "node"
-  def akkaProps (i: InstallMethod) = Props.create (classOf[Node], i)
+  def akkaProps (i: InstallMethod,
+                 props: Map[String, String],
+                 deps: Map[String, ActorRef]) = Props.create (classOf[Node], i,
+                   deps.get (Make.name) getOrElse (throw new IllegalArgumentException
+                                                   ("Make actor ref not found")),
+                   deps.get (CPPC.name) getOrElse (throw new IllegalArgumentException
+                                                   ("Cpp compiler actor ref not found")))
 }
 
 
@@ -134,7 +152,11 @@ class TypeScript (i: InstallMethod, node: ActorRef) extends Actor {
 
 object TypeScript {
   val name = "tsc"
-  def akkaProps (i: InstallMethod) = Props.create (classOf[TypeScript], i)
+  def akkaProps (i: InstallMethod,
+                 props: Map[String, String],
+                 deps: Map[String, ActorRef]) = Props.create (classOf[TypeScript], i,
+                   deps.get (Node.name) getOrElse (throw new IllegalArgumentException 
+                                                   ("Node actor ref not found")))
 }
 
 
@@ -146,7 +168,10 @@ class GoLang (i: InstallMethod, debconfUtils: ActorRef) extends Actor {
 
 object GoLang {
   val name = "go"
-  def akkaProps (i: InstallMethod) = Props.create (classOf[GoLang], i)
+  def akkaProps (i: InstallMethod,
+                 props: Map[String, String],
+                 deps: Map[String, ActorRef]) = Props.create (classOf[GoLang], i,
+                         deps.get (DebConfUtils.name) getOrElse (throw new IllegalArgumentException ("debconf-utils actor ref not found")))
 }
 
 
@@ -158,7 +183,9 @@ class Nginx (i : InstallMethod) extends Actor {
 
 object Nginx {
   val name = "nginx"
-  def akkaProps (i: InstallMethod) = Props.create (classOf[Nginx], i)
+  def akkaProps (i: InstallMethod,
+                 props: Map[String, String],
+                 deps: Map[String, ActorRef]) = Props.create (classOf[Nginx], i)
 }
 
  
@@ -192,24 +219,40 @@ class Apply2 (i: InstallMethod,
 
 object Apply2 {
   val name = "apply2"
-  def akkaProps (i: InstallMethod) = Props.create (classOf[Apply2], i)
+  def akkaProps (i: InstallMethod, 
+                 props: Map[String, String],
+                 deps: Map[String, ActorRef]) = Props.create (classOf[Apply2], i,
+              // TODO : Not maintainable, depends on position of args and easy to get wrong
+                      deps.get (Make.name) getOrElse (throw new IllegalArgumentException 
+                                                      ("Make actor ref not found")),
+                      deps.get (GoLang.name) getOrElse (throw new IllegalArgumentException                                                         ("GoLang actor ref not found")),
+                      deps.get (CouchDB.name) getOrElse (throw new IllegalArgumentException
+                                                      ("CouchDB actor ref not found")),
+                      deps.get (Nginx.name) getOrElse (throw new IllegalArgumentException
+                                                      ("Nginx actor ref not found")),
+                      deps.get (Git.name) getOrElse (throw new IllegalArgumentException
+                                                      ("Git actor ref not found")),
+                      deps.get (TypeScript.name) getOrElse (throw new IllegalArgumentException
+                                                      ("TypeScript actor ref not found")))
 }
 
 
-object classMap {
+object Apply2ActorProps {
 
-  def classType (name: String) = 
+  def apply (name: String, i: InstallMethod, 
+             props: Map[String, String],
+             deps : Map[String, ActorRef]) =
+
     name match {
-      case "make"          => classOf[DebConfUtils]
-      case "debconf-utils" => classOf[DebConfUtils]
-      case "couchdb"       => classOf[CouchDB]
-      case "git"           => classOf[Git]
-      case "g++"           => classOf[CPPC]
-      case "node"          => classOf[Node]
-      case "tsc"           => classOf[TypeScript]
-      case "nginx"         => classOf[Nginx]
-      case "go"            => classOf[GoLang]
-      case "apply2"        => classOf[Apply2]
+      case "make"          => Make.akkaProps         (i, props, deps)
+      case "debconf-utils" => DebConfUtils.akkaProps (i, props, deps)
+      case "couchdb"       => CouchDB.akkaProps      (i, props, deps)
+      case "git"           => Git.akkaProps          (i, props, deps)
+      case "g++"           => CPPC.akkaProps         (i, props, deps)
+      case "node"          => Node.akkaProps         (i, props, deps)
+      case "tsc"           => TypeScript.akkaProps   (i, props, deps)
+      case "nginx"         => Nginx.akkaProps        (i, props, deps)
+      case "go"            => GoLang.akkaProps       (i, props, deps)
+      case "apply2"        => Apply2.akkaProps       (i, props, deps)
     }
 }
-
