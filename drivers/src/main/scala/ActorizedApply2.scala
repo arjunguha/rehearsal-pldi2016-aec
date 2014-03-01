@@ -135,3 +135,23 @@ class Apply2 (name: String,
 
   override def receive = {case _ =>}
 }
+
+
+object classMap {
+
+  // XXX : Some magic
+  def classType (name: String) = 
+    name match {
+      case "make"          => classOf[Make]
+      case "debconf-utils" => classOf[DebConfUtils]
+      case "couchdb"       => classOf[CouchDB]
+      case "git"           => classOf[Git]
+      case "g++"           => classOf[CPPC]
+      case "node"          => classOf[Node]
+      case "tsc"           => classOf[TypeScript]
+      case "nginx"         => classOf[Nginx]
+      case "go"            => classOf[GoLang]
+      case "apply2"        => classOf[Apply2]
+    }
+}
+
