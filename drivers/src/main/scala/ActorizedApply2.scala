@@ -2,6 +2,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import akka.actor.Actor
 import akka.actor.ActorRef
+import akka.actor.Props
 
 import scala.concurrent._
 import scala.concurrent.duration._
@@ -10,40 +11,56 @@ import scala.concurrent.duration._
 
 /////////////////////////////////////////////////////////////////////////
 sealed trait InstallMethod
-case object Native extends InstallMethod
-case class Custom (val script: String) extends InstallMethod
+case class Native (val name: String)   extends InstallMethod
+case class Custom (val cmd: String) extends InstallMethod
 
 
 object InstallResource {
 
   type Prop = (String, String)
 
-  def apply (name: String,
-             method: InstallMethod,
+  def apply (method: InstallMethod,
              props: Prop*): Int = {
     method match {
-      case Native => Cmd.exec ("apt-get install -q -y" + " " + name)._1
-      case Custom (script) => Cmd.exec (script + " " + 
-                                        props.foldLeft (" ") (_ + _)
-                                       )._1
+      case Native (name) => Cmd.exec ("apt-get install -q -y" + " " + name)._1
+      case Custom (cmd)  => Cmd.exec (cmd + " " + 
+                                      props.foldLeft (" ") (_ + _)
+                                     )._1
     }
   }
 }
 
+// -----------------------------------------------------------------
 
+class Make (i: InstallMethod) extends Actor {
 
-class Make (name: String, i: InstallMethod) extends Actor {
-
-  override def preStart() = InstallResource (name, i)
+  override def preStart() = InstallResource (i)
   override def receive = {case _ =>}
 }
 
+object Make {
 
-class DebConfUtils (name: String, i: InstallMethod) extends Actor {
+  val name = "make"
+  def akkaProps (i: InstallMethod) = Props.create (classOf[Make], i)
+}
+// -----------------------------------------------------------------
 
-  override def preStart() = InstallResource (name, i)
+
+// -----------------------------------------------------------------
+
+class DebConfUtils (i: InstallMethod) extends Actor {
+
+  override def preStart() = InstallResource (i)
   override def receive = {case _ =>}
 }
+
+object DebConfUtils {
+
+  val name = "debconf-utils"
+  def akkaProps (i: InstallMethod) = Props.create (classOf[DebConfUtils], i)
+}
+
+// -----------------------------------------------------------------
 
 /* TODO : See best practices */
 case object GetCouchDBHost
@@ -52,12 +69,11 @@ case class CouchDBHost (val host: String) {}
 case class CouchDBPort (val port: String) {}
 
 
-class CouchDB (name: String,
-               i: InstallMethod,
+class CouchDB (i: InstallMethod,
                host: String,
                port: String) extends Actor {
 
-  override def preStart = InstallResource (name, i)
+  override def preStart = InstallResource (i)
   override def receive = {
 
     case GetCouchDBHost => sender ! CouchDBHost (host)
@@ -65,52 +81,90 @@ class CouchDB (name: String,
   }
 }
 
-class Git (name: String, i: InstallMethod) extends Actor {
+object CouchDB {
 
-  override def preStart() = InstallResource (name, i)
+  val name = "couchdb"
+  def akkaProps (i: InstallMethod) = Props.create (classOf[CouchDB], i/* TODO : , _, _*/)
+}
+
+class Git (i: InstallMethod) extends Actor {
+
+  override def preStart() = InstallResource (i)
   override def receive = {case _ =>}
 }
 
-
-class CPPC (name: String, i : InstallMethod) extends Actor {
-
-  override def preStart () = InstallResource (name, i)
-  override def receive = {case _ =>}
+object Git {
+  val name = "git"
+  def akkaProps (i: InstallMethod) = Props.create (classOf[Git], i)
 }
 
 
-class Node (name : String,
-            i : InstallMethod,
+class CPPC (i : InstallMethod) extends Actor {
+
+  override def preStart () = InstallResource (i)
+  override def receive = {case _ =>}
+}
+
+object CPPC {
+  val name = "g++"
+  def akkaProps (i: InstallMethod) = Props.create (classOf[CPPC], i)
+}
+
+
+class Node (i : InstallMethod,
             make: ActorRef,
             cppc: ActorRef) extends Actor {
 
-  override def preStart() = InstallResource (name, i)
+  override def preStart() = InstallResource (i)
   override def receive = {case _ =>}
 }
 
+object Node {
+  val name = "node"
+  def akkaProps (i: InstallMethod) = Props.create (classOf[Node], i)
+}
 
-class TypeScript (name: String, i: InstallMethod, node: ActorRef) extends Actor {
 
-  override def preStart() = InstallResource (name, i)
+
+class TypeScript (i: InstallMethod, node: ActorRef) extends Actor {
+
+  override def preStart() = InstallResource (i)
   override def receive = {case _ =>}
 }
 
-class GoLang (name: String, i: InstallMethod, debconfUtils: ActorRef) extends Actor {
+object TypeScript {
+  val name = "tsc"
+  def akkaProps (i: InstallMethod) = Props.create (classOf[TypeScript], i)
+}
 
-  override def preStart() = InstallResource (name, i)
+
+class GoLang (i: InstallMethod, debconfUtils: ActorRef) extends Actor {
+
+  override def preStart() = InstallResource (i)
   override def receive = {case _ =>}
 }
 
-class Nginx (name: String, i : InstallMethod) extends Actor {
+object GoLang {
+  val name = "go"
+  def akkaProps (i: InstallMethod) = Props.create (classOf[GoLang], i)
+}
 
-  override def preStart() = InstallResource (name, i)
+
+class Nginx (i : InstallMethod) extends Actor {
+
+  override def preStart() = InstallResource (i)
   override def receive = {case _ =>}
 }
+
+object Nginx {
+  val name = "nginx"
+  def akkaProps (i: InstallMethod) = Props.create (classOf[Nginx], i)
+}
+
  
 
 
-class Apply2 (name: String,
-              i: InstallMethod,
+class Apply2 (i: InstallMethod,
               make: ActorRef,
               golang: ActorRef, 
               couchdb: ActorRef,
@@ -130,19 +184,23 @@ class Apply2 (name: String,
     val cdb_port = Await.result (cdb_port_future,
                                  timeout.duration).asInstanceOf[String]
 
-    InstallResource (name, i, ("-host", cdb_host), ("-port", cdb_port))
+    InstallResource (i, ("-host", cdb_host), ("-port", cdb_port))
   }
 
   override def receive = {case _ =>}
 }
 
+object Apply2 {
+  val name = "apply2"
+  def akkaProps (i: InstallMethod) = Props.create (classOf[Apply2], i)
+}
+
 
 object classMap {
 
-  // XXX : Some magic
   def classType (name: String) = 
     name match {
-      case "make"          => classOf[Make]
+      case "make"          => classOf[DebConfUtils]
       case "debconf-utils" => classOf[DebConfUtils]
       case "couchdb"       => classOf[CouchDB]
       case "git"           => classOf[Git]
