@@ -1,7 +1,8 @@
 import akka.kernel.Bootable
 import akka.pattern.ask
 import akka.util.Timeout
-import akka.actor.{Address, ActorSystem, Actor, Props, ActorRef}
+import akka.actor.{Address, ActorSystem, Actor, Props, ActorRef, Deploy}
+import akka.remote.RemoteScope
 import com.typesafe.config.ConfigFactory
 
 
@@ -13,32 +14,30 @@ class MasterSystem (config: ResourceDesc) extends Bootable {
   override def startup  = { println("the master is online") }
   override def shutdown = { println ("shutting down"); system.shutdown() }
 
-  val agent_port = "5001"
+  val agent_port = 5001
 
+  def install_resource (res: ResourceDesc,
+                        cur_loc: Remote): (String , ActorRef) = {
 
+    var install_ip = res.loc match {
+      case Localhost   => cur_loc.ip
+      case Remote (ip) => ip
+    }
 
-  /*
-  def install_resource (r: ResourceDesc,
-                        loc: ResourceLocation = Localhost): ActorRef) {
-
-    val deps = foreach (dep <- r.deps) yield install_resource (dep, dep.loc)
+    val dep_map = res.deps.map (install_resource (_, Remote (install_ip))) toMap
     
-    val remote_addr = Address ("akka.tcp", "WorkerSys", loc.ip, port)
+    val remote_addr = Address ("akka.tcp", "WorkerSys", install_ip, agent_port)
 
-    system.actorof( Props(classMap.classType (r.name), r.name, r.installation,)).withDeploy (Deploy (scope = RemoteScope (address))))
+    val ref = system.actorOf ((Apply2ActorProps (res.name,
+                                      res.installation,
+                                      res.props,
+                                      dep_map)).withDeploy (Deploy (scope = RemoteScope (remote_addr))))
+    (res.name, ref)
   }
 
-  install_resource (config)
-*/
-
-
-
-
-
-
+  install_resource (config, Remote ("127.0.0.1"))
 }
-  
-
+ 
 
 object Main {
 
