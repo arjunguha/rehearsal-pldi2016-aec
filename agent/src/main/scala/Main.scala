@@ -1,22 +1,21 @@
 import akka.kernel.Bootable
-import akka.pattern.ask
 import akka.util.Timeout
-import akka.actor.{Address, ActorSystem, Actor, Props, ActorRef}
+import akka.actor.{ActorSystem, Actor, Props, ActorRef}
 import com.typesafe.config.ConfigFactory
 
-import scala.concurrent._
 import scala.collection.mutable.Map
 import scala.concurrent.duration._
 
+/*
 // Messages exchanged
 case class StartWorker(addr: String)
 case class PropertyRequested (component: String, prop_key: String)
-case class PropertyReply (prop: Option[Prop[String]])
+case class PropertyReply (prop: Option[Props[String]])
 case class InstallResource (r: Resource)
+*/
 
 
-
-
+/*
 object ResourceDb {
 
   private var m: Map[String, Resource] = Map.empty
@@ -30,6 +29,7 @@ object ResourceDb {
     }
   }
 }
+*/
 
 
 
@@ -39,6 +39,7 @@ class WorkerActor(/*masterRef : ActorRef*/) extends Actor {
 
   override def receive = {
 
+    /*
     case StartWorker(actorPath) => {
       println("got from the master")
       sender ! StartWorker("hello from master")
@@ -57,7 +58,8 @@ class WorkerActor(/*masterRef : ActorRef*/) extends Actor {
 
     case _ => {
       println("received an unknown message type")
-    }
+    }*/
+    case _ =>
   }
 }
 
@@ -80,12 +82,12 @@ class WorkerActorSystem (remoteip: String = "127.0.0.1",
 
 class MasterActor (workerRef: ActorRef) extends Actor {
 
+  /*
   private val timeout = Timeout (120 seconds)
 
   val make = new Resource ("make", Native, Map.empty, Map.empty)
 
   workerRef ! InstallResource (make)
-  /*
   val future = workerRef ? PropertyRequested (apply2.name, "isRunning")
   val result = Await.result (future, timeout.duration).asInstanceOf[Option[Prop[String]]]
   */

@@ -1,7 +1,5 @@
 import akka.kernel.Bootable
-import akka.pattern.ask
-import akka.util.Timeout
-import akka.actor.{Address, ActorSystem, Actor, Props, ActorRef, Deploy}
+import akka.actor.{Address, ActorSystem, ActorRef, Deploy}
 import akka.remote.RemoteScope
 import com.typesafe.config.ConfigFactory
 
@@ -16,6 +14,7 @@ class MasterSystem (config: ResourceDesc) extends Bootable {
 
   val agent_port = 5001
 
+  // TODO : Cycle Detection
   def install_resource (res: ResourceDesc,
                         cur_loc: Remote): (String , ActorRef) = {
 
@@ -41,8 +40,5 @@ class MasterSystem (config: ResourceDesc) extends Bootable {
 
 object Main {
 
-  def main (args: Array[String]) {
-
-    new MasterSystem (Apply2Install.plan)
-  }
+  def main (args: Array[String]) { new MasterSystem (Apply2Install.plan) }
 }

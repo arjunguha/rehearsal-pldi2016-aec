@@ -1,5 +1,6 @@
 /* specify a dependency graph for Apply2 */
 /* Need to associate ip address */
+import scala.collection._
 
 sealed trait ResourceLocation
 case object Localhost extends ResourceLocation
@@ -9,15 +10,16 @@ case class Remote (val ip: String) extends ResourceLocation
 case class ResourceDesc (val name: String,
                          val installation: InstallMethod,
                          val loc: ResourceLocation = Localhost,
-                         val props: Map[String, String] = Map.empty,
+                         val props: Map[String, String] = Map (),
                          val deps: List[ResourceDesc] = Nil) {}
 
 object Apply2Install {
 
-  private val make         = ResourceDesc (Make.name, Native ("make"))
-
   private val debconfutils = ResourceDesc (DebConfUtils.name, Native ("debconf-utils"))
 
+  private val make = ResourceDesc (Make.name, Native ("make"))
+
+  // TODO : Can this really depend on debconfutils
   private val golang = ResourceDesc ("go", Custom ("go_setup.sh"), Localhost,
                                      Map.empty, List (debconfutils))
 
@@ -29,19 +31,20 @@ object Apply2Install {
                                    Localhost, Map.empty, List (cppc, make))
 
   private val ts = ResourceDesc (TypeScript.name, 
-                                 Custom ("npm install -g typescript@0.9.1"))
+                                 Custom ("npm install -g typescript@0.9.1"),
+                                 Localhost, Map.empty, List (node))
 
   private val nginx = ResourceDesc (Nginx.name, Native ("nginx"))
 
   // TODO : Not a full dependency map
   private val couchdb = ResourceDesc (CouchDB.name, 
                                       Native ("couchdb"),
-                                      Remote ("agent2"),
+                                      Remote ("127.0.0.1"),
                                       Map (("host" -> "agent2"), ("port" -> "5984")))
 
-  val plan = new ResourceDesc (Apply2.name, 
-                               Custom ("apply2_setup.sh"),
-                               Remote ("agent1"),
-                               Map.empty,
-                               List (make, golang, couchdb, nginx, git, ts))
+  val plan = ResourceDesc (Apply2.name, 
+                           Custom ("apply2_setup.sh"),
+                           Remote ("127.0.0.1"),
+                           Map (),
+                           List (make, golang, couchdb, nginx, git, ts))
 }

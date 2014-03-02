@@ -4,31 +4,9 @@ import akka.actor.Actor
 import akka.actor.ActorRef
 import akka.actor.Props
 
+import scala.collection._
 import scala.concurrent._
 import scala.concurrent.duration._
-
-
-
-/////////////////////////////////////////////////////////////////////////
-sealed trait InstallMethod
-case class Native (val name: String)   extends InstallMethod
-case class Custom (val cmd: String) extends InstallMethod
-
-
-object InstallResource {
-
-  type Prop = (String, String)
-
-  def apply (method: InstallMethod,
-             props: Prop*): Int = {
-    method match {
-      case Native (name) => Cmd.exec ("apt-get install -q -y" + " " + name)._1
-      case Custom (cmd)  => Cmd.exec (cmd + " " + 
-                                      props.foldLeft (" ") (_ + _)
-                                     )._1
-    }
-  }
-}
 
 // -----------------------------------------------------------------
 
