@@ -30,7 +30,9 @@ class MasterSystem (config: ResourceDesc) extends Bootable {
     val ref = system.actorOf ((Apply2ActorProps (res.name,
                                       res.installation,
                                       res.props,
-                                      dep_map)).withDeploy (Deploy (scope = RemoteScope (remote_addr))))
+                                      dep_map)).withDeploy (Deploy (scope = RemoteScope (remote_addr)))/*,
+                               name = res.name*/)
+    println ("Installed " + ref.path)
     (res.name, ref)
   }
 
