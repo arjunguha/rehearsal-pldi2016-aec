@@ -52,8 +52,6 @@ object DebConfUtils {
 /* TODO : See best practices */
 case object GetCouchDBHost
 case object GetCouchDBPort
-case class CouchDBHost (val host: String) {}
-case class CouchDBPort (val port: String) {}
 
 
 class CouchDB (i: InstallMethod,
@@ -63,8 +61,8 @@ class CouchDB (i: InstallMethod,
   override def preStart = InstallResource (i)
   override def receive = {
 
-    case GetCouchDBHost => sender ! CouchDBHost (host)
-    case GetCouchDBPort => sender ! CouchDBPort (port)
+    case GetCouchDBHost => sender ! host
+    case GetCouchDBPort => sender ! port
   }
 }
 

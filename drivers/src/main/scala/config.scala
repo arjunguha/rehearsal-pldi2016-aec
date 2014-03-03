@@ -19,7 +19,6 @@ object Apply2Install {
 
   private val make = ResourceDesc (Make.name, Native ("make"))
 
-  // TODO : Can this really depend on debconfutils
   private val golang = ResourceDesc ("go", Custom ("go_setup.sh"), Localhost,
                                      Map.empty, List (debconfutils))
 
@@ -36,7 +35,6 @@ object Apply2Install {
 
   private val nginx = ResourceDesc (Nginx.name, Native ("nginx"))
 
-  // TODO : Not a full dependency map
   private val couchdb = ResourceDesc (CouchDB.name, 
                                       Native ("couchdb"),
                                       Remote ("127.0.0.1"),
