@@ -19,14 +19,14 @@ object Apply2Install {
 
   private val make = ResourceDesc (Make.name, Native ("make"))
 
-  private val golang = ResourceDesc ("go", Custom ("go_setup.sh"), Localhost,
+  private val golang = ResourceDesc ("go", Custom ("./go_setup.sh"), Localhost,
                                      Map.empty, List (debconfutils))
 
   private val git  = ResourceDesc (Git.name, Native ("git"))
 
   private val cppc = ResourceDesc (CPPC.name, Native ("g++"))
 
-  private val node = ResourceDesc (Node.name, Custom ("node_setup.sh"), 
+  private val node = ResourceDesc (Node.name, Custom ("./node_setup.sh"), 
                                    Localhost, Map.empty, List (cppc, make))
 
   private val ts = ResourceDesc (TypeScript.name, 
@@ -41,7 +41,7 @@ object Apply2Install {
                                       Map (("host" -> "agent2"), ("port" -> "5984")))
 
   val plan = ResourceDesc (Apply2.name, 
-                           Custom ("apply2_setup.sh"),
+                           Custom ("./apply2_setup.sh"),
                            Remote ("127.0.0.1"),
                            Map (),
                            List (make, golang, couchdb, nginx, git, ts))

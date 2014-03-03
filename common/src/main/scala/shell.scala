@@ -27,9 +27,9 @@ object Cmd {
                                   (s) => errlog += (s + newline))
 
       println ("executing : " + cmd)
-      val status: Int = Process (file.getCanonicalPath (), pwd.toFile ()) ! logger
+      val status = Process (file.getCanonicalPath (), pwd.toFile ()) ! logger
 
-      // Done with file delete
+      // Done with file. Delete
       file.delete ()
 
       // Enabled now for logging purpose

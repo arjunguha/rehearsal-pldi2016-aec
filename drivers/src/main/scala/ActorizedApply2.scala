@@ -12,10 +12,11 @@ import scala.concurrent.duration._
 
 class Make (i: InstallMethod) extends Actor {
 
+  InstallResource (i)
+
   override def preStart() = {
     super.preStart ()
     println ("Make prestart")
-    InstallResource (i)
   }
 
   override def receive = {case _ =>}
