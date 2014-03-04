@@ -12,14 +12,9 @@ import scala.concurrent.duration._
 
 class Make (i: InstallMethod) extends Actor {
 
-  InstallResource (i)
+  override def preStart () = InstallResource (i)
 
-  override def preStart() = {
-    super.preStart ()
-    println ("Make prestart")
-  }
-
-  override def receive = {case _ =>}
+  override def receive = {case str: String  => sender ! "Pong"}
 }
 
 object Make {
@@ -37,7 +32,7 @@ object Make {
 class DebConfUtils (i: InstallMethod) extends Actor {
 
   override def preStart() = InstallResource (i)
-  override def receive = {case _ =>}
+  override def receive = {case str: String => sender ! "Pong"}
 }
 
 object DebConfUtils {
@@ -64,6 +59,7 @@ class CouchDB (i: InstallMethod,
 
     case GetCouchDBHost => sender ! host
     case GetCouchDBPort => sender ! port
+    case str: String => sender ! "Pong"
   }
 }
 
@@ -80,7 +76,7 @@ object CouchDB {
 class Git (i: InstallMethod) extends Actor {
 
   override def preStart() = InstallResource (i)
-  override def receive = {case _ =>}
+  override def receive = {case str: String => sender ! "Pong"}
 }
 
 object Git {
@@ -94,7 +90,7 @@ object Git {
 class CPPC (i : InstallMethod) extends Actor {
 
   override def preStart () = InstallResource (i)
-  override def receive = {case _ =>}
+  override def receive = {case str: String => sender ! "Pong"}
 }
 
 object CPPC {
@@ -110,7 +106,7 @@ class Node (i : InstallMethod,
             cppc: ActorRef) extends Actor {
 
   override def preStart() = InstallResource (i)
-  override def receive = {case _ =>}
+  override def receive = {case str: String => sender ! "Pong"}
 }
 
 object Node {
@@ -129,7 +125,7 @@ object Node {
 class TypeScript (i: InstallMethod, node: ActorRef) extends Actor {
 
   override def preStart() = InstallResource (i)
-  override def receive = {case _ =>}
+  override def receive = {case str: String => sender ! "Pong"}
 }
 
 object TypeScript {
@@ -145,7 +141,7 @@ object TypeScript {
 class GoLang (i: InstallMethod, debconfUtils: ActorRef) extends Actor {
 
   override def preStart() = InstallResource (i)
-  override def receive = {case _ =>}
+  override def receive = {case str: String => sender ! "Pong"}
 }
 
 object GoLang {
@@ -160,7 +156,7 @@ object GoLang {
 class Nginx (i : InstallMethod) extends Actor {
 
   override def preStart() = InstallResource (i)
-  override def receive = {case _ =>}
+  override def receive = {case str: String => sender ! "Pong"}
 }
 
 object Nginx {
@@ -196,7 +192,7 @@ class Apply2 (i: InstallMethod,
     InstallResource (i, ("-host", cdb_host), ("-port", cdb_port))
   }
 
-  override def receive = {case _ =>}
+  override def receive = {case str: String  => sender ! "Pong"}
 }
 
 object Apply2 {

@@ -2,6 +2,10 @@ import akka.kernel.Bootable
 import akka.actor.{Address, ActorSystem, ActorRef, Deploy}
 import akka.remote.RemoteScope
 import com.typesafe.config.ConfigFactory
+import akka.pattern.ask
+import scala.concurrent._
+import scala.concurrent.duration._
+import akka.util.Timeout
 
 
 /* Why bootable */
@@ -13,6 +17,8 @@ class MasterSystem (config: ResourceDesc) extends Bootable {
   override def shutdown = { println ("shutting down"); system.shutdown() }
 
   val agent_port = 5001
+
+  implicit val timeout = Timeout (20 seconds)
 
   // TODO : Cycle Detection
   def install_resource (res: ResourceDesc,
@@ -32,6 +38,8 @@ class MasterSystem (config: ResourceDesc) extends Bootable {
                                       res.props,
                                       dep_map)).withDeploy (Deploy (scope = RemoteScope (remote_addr)))/*,
                                name = res.name*/)
+    val future = ref ? "ping"
+    Await.result (future, timeout.duration)
     println ("Installed " + ref.path)
     (res.name, ref)
   }
