@@ -18,7 +18,7 @@ class MasterSystem (config: ResourceDesc) extends Bootable {
 
   val agent_port = 5001
 
-  implicit val timeout = Timeout (20 seconds)
+  implicit val timeout = Timeout (3600 seconds)
 
   // TODO : Cycle Detection
   def install_resource (res: ResourceDesc,
@@ -44,7 +44,7 @@ class MasterSystem (config: ResourceDesc) extends Bootable {
     (res.name, ref)
   }
 
-  install_resource (config, Remote ("127.0.0.1"))
+  install_resource (config, Remote ("192.168.10.21"))
 }
  
 

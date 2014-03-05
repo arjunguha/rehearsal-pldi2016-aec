@@ -14,8 +14,7 @@ class WorkerActor () extends Actor {
 
 
 
-class WorkerActorSystem (remoteip: String = "127.0.0.1",
-                         port: Int = 5000) extends Bootable {
+class WorkerActorSystem () extends Bootable {
 
   val system = ActorSystem ("WorkerSys", ConfigFactory.load.getConfig("slave"))
 

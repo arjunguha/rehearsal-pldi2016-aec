@@ -37,12 +37,12 @@ object Apply2Install {
 
   private val couchdb = ResourceDesc (CouchDB.name, 
                                       Native ("couchdb"),
-                                      Remote ("127.0.0.1"),
-                                      Map (("host" -> "agent2"), ("port" -> "5984")))
+                                      Remote ("192.168.10.21"),
+                                      Map (("host" -> "192.168.10.21"), ("port" -> "5984")))
 
   val plan = ResourceDesc (Apply2.name, 
                            Custom ("./apply2_setup.sh"),
-                           Remote ("127.0.0.1"),
+                           Remote ("192.168.10.21"),
                            Map (),
                            List (make, golang, couchdb, nginx, git, ts))
 }

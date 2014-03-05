@@ -14,8 +14,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     agent1.vm.box = "precise64"
     agent1.vm.hostname = "agent1"
     agent1.vm.network "private_network", ip: "192.168.10.21"
-    agent1.vm.network :forwarded_port, guest: 5000, host: 5000
-    agent1.vm.network :forwarded_port, guest: 5001, host: 5001
   end
 
   config.vm.define "agent2" do |agent2|
