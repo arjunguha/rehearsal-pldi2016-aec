@@ -54,7 +54,8 @@ class CouchDB (i: InstallMethod,
                host: String,
                port: String) extends Actor {
 
-  override def preStart = InstallResource (i)
+  override def preStart = InstallResource (i, ("-host", host),
+                                              ("-port", port))
   override def receive = {
 
     case GetCouchDBHost => sender ! host
