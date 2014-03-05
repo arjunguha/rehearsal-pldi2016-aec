@@ -90,7 +90,7 @@ object InstallResource {
     method match {
       case Native (name) => Cmd.exec ("apt-get install -q -y" + " " + name)._1
       case Custom (cmd)  => Cmd.exec (cmd + " " +
-        props.foldLeft (" ") ((acc, x) => (x._1 + ":" + x._2) + acc)
+        props.foldLeft ("") ((acc, x) => (x._1 + ":" + x._2) + " ")
       )._1
     }
   }
