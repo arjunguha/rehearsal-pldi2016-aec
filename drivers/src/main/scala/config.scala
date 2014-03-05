@@ -24,10 +24,7 @@ object Apply2Install {
 
   private val git  = ResourceDesc (Git.name, Native ("git"))
 
-  private val cppc = ResourceDesc (CPPC.name, Native ("g++"))
-
-  private val node = ResourceDesc (Node.name, Custom ("./node_setup.sh"), 
-                                   Localhost, Map.empty, List (cppc, make))
+  private val node = ResourceDesc (Node.name, Custom ("./node_setup.sh"))
 
   private val ts = ResourceDesc (TypeScript.name, 
                                  Custom ("npm install -g typescript@0.9.1"),

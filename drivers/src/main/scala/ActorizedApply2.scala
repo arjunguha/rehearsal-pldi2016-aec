@@ -88,23 +88,7 @@ object Git {
 }
 
 
-class CPPC (i : InstallMethod) extends Actor {
-
-  override def preStart () = InstallResource (i)
-  override def receive = {case str: String => sender ! "Pong"}
-}
-
-object CPPC {
-  val name = "g++"
-  def akkaProps (i: InstallMethod,
-                 props: Map[String, String],
-                 deps: Map[String, ActorRef]) = Props.create (classOf[CPPC], i)
-}
-
-
-class Node (i : InstallMethod,
-            make: ActorRef,
-            cppc: ActorRef) extends Actor {
+class Node (i : InstallMethod) extends Actor {
 
   override def preStart() = InstallResource (i)
   override def receive = {case str: String => sender ! "Pong"}
