@@ -1,4 +1,8 @@
 #! /bin/bash
 
-wget http://nodejs.org/dist/v0.10.25/node-v0.10.25.tar.gz && tar -xzf node-v0.10.25.tar.gz && cd node-v0.10.25 && ./configure && make -j$(($(nproc) + 1)) && make install
+VERSION="v0.10.26"
+PLATFORM="linux"
+ARCH="x64"
 
+cd /tmp && wget http://nodejs.org/dist/$VERSION/node-$VERSION-$PLATFORM-$ARCH.tar.gz
+cd /usr/local && tar --strip-components 1 -xzf /tmp/node-$VERSION-$PLATFORM-$ARCH.tar.gz
