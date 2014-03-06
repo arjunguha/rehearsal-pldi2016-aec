@@ -54,8 +54,8 @@ class CouchDB (i: InstallMethod,
                host: String,
                port: String) extends Actor {
 
-  override def preStart = InstallResource (i, ("-host", host),
-                                              ("-port", port))
+  override def preStart = InstallResource (i, ("host", host),
+                                              ("port", port))
   override def receive = {
 
     case GetCouchDBHost => sender ! host
@@ -98,11 +98,7 @@ object Node {
   val name = "node"
   def akkaProps (i: InstallMethod,
                  props: Map[String, String],
-                 deps: Map[String, ActorRef]) = Props.create (classOf[Node], i,
-                   deps.get (Make.name) getOrElse (throw new IllegalArgumentException
-                                                   ("Make actor ref not found")),
-                   deps.get (CPPC.name) getOrElse (throw new IllegalArgumentException
-                                                   ("Cpp compiler actor ref not found")))
+                 deps: Map[String, ActorRef]) = Props.create (classOf[Node], i)
 }
 
 
@@ -174,7 +170,7 @@ class Apply2 (i: InstallMethod,
     val cdb_port = Await.result (cdb_port_future,
                                  timeout.duration).asInstanceOf[String]
 
-    InstallResource (i, ("-host", cdb_host), ("-port", cdb_port))
+    InstallResource (i, ("host", cdb_host), ("port", cdb_port))
   }
 
   override def receive = {case str: String  => sender ! "Pong"}
@@ -211,7 +207,6 @@ object Apply2ActorProps {
       case "debconf-utils" => DebConfUtils.akkaProps (i, props, deps)
       case "couchdb"       => CouchDB.akkaProps      (i, props, deps)
       case "git"           => Git.akkaProps          (i, props, deps)
-      case "g++"           => CPPC.akkaProps         (i, props, deps)
       case "node"          => Node.akkaProps         (i, props, deps)
       case "tsc"           => TypeScript.akkaProps   (i, props, deps)
       case "nginx"         => Nginx.akkaProps        (i, props, deps)

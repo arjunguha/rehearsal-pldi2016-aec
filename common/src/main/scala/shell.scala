@@ -8,7 +8,9 @@ object Cmd {
   val newline = sys.props ("line.separator")
   var pwd = Paths.get ("./")
 
-  def exec (cmd: String): (Int, String, String) = {
+  type Prop = (String, String)
+
+  def exec (cmd: String, extraEnv: Prop*): (Int, String, String) = {
 
     // Create a temporary file
     try {
@@ -27,7 +29,7 @@ object Cmd {
                                   (s) => errlog += (s + newline))
 
       println ("executing : " + cmd)
-      val status = Process (file.getCanonicalPath (), pwd.toFile ()) ! logger
+      val status = Process (file.getCanonicalPath (), Some (pwd.toFile ()), extraEnv:_*) ! logger
 
       // Done with file. Delete
       file.delete ()
@@ -85,13 +87,11 @@ object InstallResource {
 
   type Prop = (String, String)
 
-  def apply (method: InstallMethod,
-             props: Prop*): Int = {
+  def apply (method: InstallMethod, props: Prop*): Int = {
+
     method match {
       case Native (name) => Cmd.exec ("apt-get install -q -y" + " " + name)._1
-      case Custom (cmd)  => Cmd.exec (cmd + " " +
-        props.foldLeft ("") ((acc, x) => (x._1 + ":" + x._2) + " ")
-      )._1
+      case Custom (cmd)  => Cmd.exec (cmd, props:_*)._1
     }
   }
 }
