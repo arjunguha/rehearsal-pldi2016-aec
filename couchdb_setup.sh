@@ -1,6 +1,6 @@
 #! /bin/bash
 
-apt-get install couchdb
+apt-get install -q -y couchdb
 
 cat <<__EOF__ > /etc/couchdb/local.ini
 [httpd]
