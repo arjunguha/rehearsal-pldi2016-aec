@@ -162,13 +162,11 @@ class Apply2 (i: InstallMethod,
 
   override def preStart() = {
 
-    val cdb_host_future = couchdb ? GetCouchDBHost
-    val cdb_port_future = couchdb ? GetCouchDBPort
+    val cdb_host_future = ask (couchdb, GetCouchDBHost).mapTo[String]
+    val cdb_port_future = ask (couchdb, GetCouchDBPort).mapTo[String]
 
-    val cdb_host = Await.result (cdb_host_future,
-                                 timeout.duration).asInstanceOf[String]
-    val cdb_port = Await.result (cdb_port_future,
-                                 timeout.duration).asInstanceOf[String]
+    val cdb_host = Await.result (cdb_host_future, timeout.duration)
+    val cdb_port = Await.result (cdb_port_future, timeout.duration)
 
     InstallResource (i, ("host", cdb_host), ("port", cdb_port))
   }
