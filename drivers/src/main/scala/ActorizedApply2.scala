@@ -118,8 +118,23 @@ object TypeScript {
                                                    ("Node actor ref not found")))
 }
 
+class Mercurial (i: InstallMethod) extends Actor {
 
-class GoLang (i: InstallMethod, debconfUtils: ActorRef) extends Actor {
+  override def preStart () = InstallResource (i)
+  override def receive = {case str: String => sender ! "Pong"}
+}
+
+object Mercurial {
+  val name = "mercurial"
+  def akkaProps (i: InstallMethod, 
+                 props: Map[String, String],
+                 deps: Map[String, ActorRef]) = Props.create (classOf[Nginx], i)
+}
+
+
+class GoLang (i: InstallMethod,
+              debconfUtils: ActorRef,
+              mercurial: ActorRef) extends Actor {
 
   override def preStart() = InstallResource (i)
   override def receive = {case str: String => sender ! "Pong"}
@@ -130,7 +145,8 @@ object GoLang {
   def akkaProps (i: InstallMethod,
                  props: Map[String, String],
                  deps: Map[String, ActorRef]) = Props.create (classOf[GoLang], i,
-                         deps.get (DebConfUtils.name) getOrElse (throw new IllegalArgumentException ("debconf-utils actor ref not found")))
+                         deps.get (DebConfUtils.name) getOrElse (throw new IllegalArgumentException ("debconf-utils actor ref not found")),
+                         deps.get (Mercurial.name) getOrElse (throw new IllegalArgumentException ("mercurial actor ref not found")))
 }
 
 
@@ -147,9 +163,8 @@ object Nginx {
                  deps: Map[String, ActorRef]) = Props.create (classOf[Nginx], i)
 }
 
+
  
-
-
 class Apply2 (i: InstallMethod,
               make: ActorRef,
               golang: ActorRef, 
@@ -208,6 +223,7 @@ object Apply2ActorProps {
       case "node"          => Node.akkaProps         (i, props, deps)
       case "tsc"           => TypeScript.akkaProps   (i, props, deps)
       case "nginx"         => Nginx.akkaProps        (i, props, deps)
+      case "mercurial"     => Mercurial.akkaProps    (i, props, deps)
       case "go"            => GoLang.akkaProps       (i, props, deps)
       case "apply2"        => Apply2.akkaProps       (i, props, deps)
     }

@@ -19,15 +19,17 @@ object Apply2Install {
 
   private val make = ResourceDesc (Make.name, Native ("make"))
 
+  private val mercurial = ResourceDesc (Mercurial.name, Native ("mercurial"))
+
   private val golang = ResourceDesc ("go", Custom ("./go_setup.sh"), Localhost,
-                                     Map.empty, List (debconfutils))
+                                     Map.empty, List (debconfutils, mercurial))
 
   private val git  = ResourceDesc (Git.name, Native ("git"))
 
   private val node = ResourceDesc (Node.name, Custom ("./node_setup.sh"))
 
   private val ts = ResourceDesc (TypeScript.name, 
-                                 Custom ("npm install -g typescript@0.9.1"),
+                                 Custom ("npm install -g typescript@0.9.0-1"),
                                  Localhost, Map.empty, List (node))
 
   private val nginx = ResourceDesc (Nginx.name, Native ("nginx"))
@@ -36,6 +38,7 @@ object Apply2Install {
                                       Custom ("./couchdb_setup.sh"),
                                       Remote ("192.168.10.21"),
                                       Map (("host" -> "192.168.10.21"), ("port" -> "5984")))
+
 
   val plan = ResourceDesc (Apply2.name, 
                            Custom ("./apply2_setup.sh"),
