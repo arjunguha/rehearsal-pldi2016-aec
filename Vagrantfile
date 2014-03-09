@@ -14,18 +14,23 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     agent1.vm.box = "precise64"
     agent1.vm.hostname = "agent1"
     agent1.vm.network "private_network", ip: "192.168.10.21"
+    agent1.vm.network :forwarded_port, guest: 80, host: 10050
+    agent1.vm.provision "shell" do |s|
+      s.path = "bootstrap.sh"
+      s.args = ["192.168.10.21"]
+    end
   end
 
   config.vm.define "agent2" do |agent2|
     agent2.vm.box = "precise64"
     agent2.vm.hostname = "agent2"
     agent2.vm.network "private_network", ip: "192.168.10.23"
+    agent2.vm.network :forwarded_port, guest: 80, host: 10051
+    agent2.vm.provision "shell" do |s|
+      s.path = "bootstrap.sh"
+      s.args = ["192.168.10.23"]
+    end
   end
-
-  
-
-
-  config.vm.provision "shell", path: "bootstrap.sh"
 
   # The url from where the 'config.vm.box' box will be fetched if it
   # doesn't already exist on the user's system.
