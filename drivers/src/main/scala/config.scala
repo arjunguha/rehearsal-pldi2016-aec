@@ -34,11 +34,11 @@ object Apply2Install {
 
   private val nginx = ResourceDesc (Nginx.name, Native ("nginx"))
 
+  private val couchdb_ip: String = "192.168.10.23"
   private val couchdb = ResourceDesc (CouchDB.name, 
                                       Custom ("./couchdb_setup.sh"),
-                                      Remote ("192.168.10.21"),
-                                      Map (("host" -> "192.168.10.21"), ("port" -> "5984")))
-
+                                      Remote (couchdb_ip),
+                                      Map (("host" -> couchdb_ip), ("port" -> "5984")))
 
   val plan = ResourceDesc (Apply2.name, 
                            Custom ("./apply2_setup.sh"),
