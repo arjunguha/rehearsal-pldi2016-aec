@@ -5,7 +5,7 @@ import com.typesafe.config.ConfigFactory
 class WorkerActorSystem (ip: Option[String]) extends Bootable {
 
   val config = ip match {
-    case Some (ip) => ConfigFactory.parseString ("akka.remote.netty.tcp { hostname=" + ip + "}")
+    case Some (ip) => ConfigFactory.parseString ("akka.remote.netty.tcp { hostname=\"" + ip + "\"}")
                       .withFallback (ConfigFactory.load.getConfig ("agent"))
     case None => ConfigFactory.load.getConfig ("agent")
   }
