@@ -38,11 +38,6 @@ case object LeftSubscribeDep  extends RelationOp
 case object RightSubscribeDep extends RelationOp
 
 
-sealed trait AssignOp
-case object SimplAssign  extends AssignOp
-case object AppendAssign extends AssignOp
-
-
 sealed trait CollectionOp
 case object CollOr    extends CollectionOp
 case object CollAnd   extends CollectionOp
@@ -65,73 +60,65 @@ case object Vrtexported extends VirtualResType
 
 sealed trait AST extends Positional
 
-// Branch is like main Expr? Verify
 sealed abstract class Branch extends AST
 sealed abstract class TopLevelConstruct extends AST
-// This is like values? Verify
 sealed abstract class Leaf extends AST
 
-
-// TODO : Refine, semantics are not clear yet
 case class ASTBool (val value: Boolean) extends Leaf
 case class ASTString (val value: String) extends Leaf
-case class FlatString (val value: String) extends Leaf // Uninterpreted String
 case class Concat (val lhs: AST, val rhs: AST)  extends Leaf
 case class Default extends Leaf // Default class for case statement
 case class Type (val value: String) extends Leaf 
 case class Name (val value: String)  extends Leaf
-case class ClassName extends Leaf // Double colon separated class names
-case class Undef extends Leaf
+case object Undef extends Leaf
 case class Hostname (val value: String) extends Leaf
 case class Variable (val value: String) extends Leaf
-case class HashOrArrayAccess (val variable: Leaf, var key: Branch) extends Leaf
+case class HashOrArrayAccess (val variable: Leaf, var key: AST) extends Leaf
 case class ASTRegex (val value: String) extends Leaf
-
-
+case class ASTHash (val kvs: List[(String, AST)]) extends Leaf
 
 // Semantics : When this evaluates, the value of last expression pushed is returned which is head of the children list
-case class BlockExpr (val exprs: List[Branch]) extends Branch
+case class BlockExpr (val exprs: List[AST]) extends Branch
 
 // Expressions involving operators
-case class ArithExpr    (val lval: Branch, val rval: Branch, val op: ArithOp)    extends Branch
-case class BoolBinExpr  (val lval: Branch, val rval: Branch, val op: BoolBinOp)  extends Branch
-case class CompareExpr  (val lval: Branch, val rval: Branch, val op: CompareOp)  extends Branch
-case class RelationExpr (val lval: Branch, val rval: Branch, val op: RelationOp) extends Branch
-case class MatchExpr    (val lval: Branch, val rval: ASTRegex, val op: MatchOp)    extends Branch
-case class InExpr       (val lval: Branch, val rval: Branch) extends Branch
-case class NotExpr      (val oper: Branch) extends Branch
-case class UMinusExpr   (val oper: Branch) extends Branch
+case class ArithExpr    (val lval: AST, val rval: AST, val op: ArithOp)    extends Branch
+case class BoolBinExpr  (val lval: AST, val rval: AST, val op: BoolBinOp)  extends Branch
+case class CompareExpr  (val lval: AST, val rval: AST, val op: CompareOp)  extends Branch
+case class InExpr       (val lval: AST, val rval: AST) extends Branch
+case class RelationExpr (val lval: AST, val rval: AST, val op: RelationOp) extends Branch
+case class MatchExpr    (val lval: AST, val rval: ASTRegex, val op: MatchOp)    extends Branch
+case class NotExpr      (val oper: AST) extends Branch
+case class UMinusExpr   (val oper: AST) extends Branch
 
 
 // Variable definition
-case class Vardef (val name: Leaf, val value: Branch, val op: AssignOp) extends Branch
+case class Vardef (val name: Leaf, val value: AST, val append: Boolean) extends Branch
 
 // Few Datastructures used by Puppet
-case class ASTArray (private val arr: List[Branch]) extends Branch
-case class ASTHash (val kvs: List[(String, Branch)]) extends Leaf
+case class ASTArray (private val arr: List[AST]) extends Branch
 
 // Puppet Resource Decl Related nodes
-case class ResourceParam (val param: Leaf, val value: Branch, val add: Boolean) extends Branch
-case class ResourceInstance (val title: Leaf, val params: List[ResourceParam]) extends Branch
-case class Resource (val typ: ClassName, val instances: List[ResourceInstance]) extends Branch
-case class ResourceDefaults (val typ: String, val params: List[ResourceParam]) extends Branch
+case class ResourceParam (val param: AST, val value: AST, val add: Boolean) extends Branch
+case class ResourceInstance (val title: AST, val params: List[ResourceParam]) extends Branch
+case class Resource (val typ: String, val instances: List[ResourceInstance]) extends Branch
+case class ResourceDefaults (val typ: Type, val params: List[ResourceParam]) extends Branch
 case class ResourceRef (val typ: Leaf, val title: List[Branch]) extends Branch
 case class ResourceOverride (val obj: ResourceRef, val params: List[ResourceParam]) extends Branch 
 case class VirtualResource (val res: Branch, val tvirt: VirtualResType) extends Branch
 
 // Conditional Statements
-case class IfExpr (val test: Branch, val true_exprs: BlockExpr, val false_exprs: BlockExpr) extends Branch
+case class IfExpr (val test: AST, val true_exprs: BlockExpr, val false_exprs: BlockExpr) extends Branch
 case class CaseOpt (val value: List[AST], val exprs: BlockExpr) extends Branch
-case class CaseExpr (val test: Branch, val caseopts: List[CaseOpt]) extends Branch
+case class CaseExpr (val test: AST, val caseopts: List[CaseOpt]) extends Branch
 case class Selector (val param: AST, val values: List[ResourceParam]) extends Branch
 
-case class CollectionExpr (val lhs: Branch, val rhs: Branch, val op: CollectionOp) extends Branch
+case class CollectionExpr (val lhs: AST, val rhs: AST, val op: CollectionOp) extends Branch
 case class CollectionExprTagNode (val coll: Option[CollectionExpr], val prop: VirtualResType) extends Branch
 case class Collection (val typ: Type, val collectrhand: Branch, val params: List[ResourceParam]) extends Branch
 
-case class Node (val hostnames: List[Hostname], val parent: Leaf, exprs: BlockExpr) extends TopLevelConstruct
+case class Node (val hostnames: List[Hostname], val parent: Option[String], exprs: BlockExpr) extends TopLevelConstruct
 
-case class Hostclass (val classname: String, val args: List[(String, Option[Branch])], val parent: Option[Leaf], stmts: BlockExpr) extends Branch
+case class Hostclass (val classname: String, val args: List[(String, Option[Branch])], val parent: Option[String], stmts: BlockExpr) extends Branch
 
 case class Definition (val classname: String, val args: List[(String, Option[Branch])], val exprs: BlockExpr) extends TopLevelConstruct
 
