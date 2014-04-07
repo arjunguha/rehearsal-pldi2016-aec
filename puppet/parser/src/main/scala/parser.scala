@@ -1,29 +1,22 @@
 /* Parser using parser combinator in Scala */
 
 import scala.util.parsing.combinator._
-import scala.util.parsing.combinator.syntactical._
-import scala.util.parsing.input.CharArrayReader.EofCh
 
 class PuppetParse extends RegexParsers
-                  /* with StdTokenParsers */
                   with PackratParsers {
 
   type P[+T] = PackratParser[T]
 
-
   lazy val program: P[BlockExpr] =   stmts_and_decls 
                          /*    | (EofCh  ^^^ (BlockExpr (List[Branch] ()))) */
 
-
   lazy val stmts_and_decls: P[BlockExpr] = stmt_or_decl.* ^^ (BlockExpr (_))
-
 
   lazy val stmt_or_decl: P[AST] = (
     resource | virtualresource | collection | assignment | case_stmt | ifstmt_begin | 
     unless_stmt | import_stmt | fstmt | definition | hostclass | nodedef |
     resourceoverride | append | relationship
   )
-
 
   lazy val relationship: P[AST] = 
     relationship_side ~ (("<-" | "->" | "<-" | "->") ~ relationship_side).+ ^^ { 
@@ -35,23 +28,20 @@ class PuppetParse extends RegexParsers
         }
       }
 
-
   lazy val relationship_side: P[AST] = (
     resource | resourceref | collection | variable | quotedtext | selector | case_stmt |
     hasharrayaccesses
   )
 
-
   lazy val fstmt: P[Function] = (
     NAME ~ ("(" ~> expressions.? <~ ")") ^^ { 
       case n ~ Some (es) => Function (n, es, Ftstmt)
-      case n ~ None => Function (n, List[AST] (), Fstmt)
+      case n ~ None => Function (n, List[AST] (), Ftstmt)
     }
   | NAME ~ repsep(rvalue, ",") ^^ { 
       case n ~ rvs => Function (n, rvs, Ftstmt)
     }
   )
-
 
   lazy val expressions: P[List[AST]] = repsep (expr, ("," | "=>"))
 
@@ -60,7 +50,6 @@ class PuppetParse extends RegexParsers
     quotedtext | name | asttype | boolean | selector | variable | array | hasharrayaccesses |
     resourceref | funcrvalue | undef
     
-
   lazy val resource: P[Branch] = (
     classname ~ ("{" ~> resourceinstances <~ ";".? <~ "}") ^^ {
       case cn ~ ris => Resource (cn, ris) 
@@ -71,18 +60,15 @@ class PuppetParse extends RegexParsers
     }
   )
 
-
   lazy val resourceoverride: P[ResourceOverride] =
     resourceref ~ ("{" ~> anyparams <~ ",".? <~ "}") ^^ {
       case rref ~ anyparams => ResourceOverride (rref, anyparams)
     }
 
-
   lazy val virtualresource: P[VirtualResource] = (
     "@" ~> resource ^^ (VirtualResource (_, Vrtvirtual))
   | "@@" ~> resource ^^ (VirtualResource (_, Vrtexported))
   )
-
 
   lazy val collection: P[Collection] = (
     asttype ~ collectrhand ~ ("{" ~> anyparams <~ ",".? <~ "}") ^^ {
@@ -92,7 +78,6 @@ class PuppetParse extends RegexParsers
       case t ~ cltrhnd => Collection (t, cltrhnd, List[ResourceParam] ())
     }
   )
-
 
   lazy val collectrhand: P[CollectionExprTagNode] = (
     "<|" ~> collstmts.? <~ "|>" ^^ (CollectionExprTagNode (_, Vrtvirtual))
@@ -129,13 +114,10 @@ class PuppetParse extends RegexParsers
 
   lazy val name: P[Name] = NAME ^^ (Name (_))
 
-
   lazy val asttype: P[Type] = CLASSREF ^^ (Type (_))
-
 
   lazy val resourcename: P[AST] =
     quotedtext | name | asttype | selector | variable | array | hasharrayaccesses
-
 
   lazy val assignment: P[Vardef] = (
     VARIABLE ~ ("=" ~> expr) ^^ { 
@@ -153,53 +135,48 @@ class PuppetParse extends RegexParsers
 
   lazy val params: P[List[ResourceParam]] = repsep (param, ",")
 
-  lazy val param_name: P[Leaf] = NAME | keyword | BOOLEAN
+  lazy val param_name: P[Leaf] = name | keyword ^^ (ASTString (_)) | boolean
 
-  
   lazy val keyword: P[String] = "and" | "case" | "class" | "default" |
     "define" | "else" | "elsif" | "if" | "in" | "import" | "inherits" |
     "node" | "or" | "undef" | "unless"
-
 
   lazy val param: P[ResourceParam] = 
     param_name ~ ("=>" ~> expr) ^^ {
       case pn ~ e => ResourceParam (pn, e, false)
     }
 
-
   lazy val addparam: P[ResourceParam] = 
-    NAME <~ "+>" ~> expr ^^ {
+    name ~ ("+>" ~> expr) ^^ {
       case name ~ e => ResourceParam (name, e, true)
     }
 
   lazy val anyparams: P[List[ResourceParam]] = repsep ((param | addparam), ",")
 
   lazy val funcrvalue: P[Function] = 
-    NAME <~ "(" ~> expressions.? <~ ")" ^^ {
+    NAME ~ ("(" ~> expressions.? <~ ")") ^^ {
       case name ~ Some (es) => Function (name, es,           Ftrval)
       case name ~ None      => Function (name, List[AST] (), Ftrval)
     }
 
-
-  lazy val quotedstring: P[Leaf] = 
+  lazy val quotedtext: P[Leaf] = (
     STRING ^^ (ASTString (_))
-  | (DQPRE ~ dqrval ^^ {
+  | DQPRE ~ dqrval ^^ {
       case x ~ y => Concat (x, y)
-    })
-
+    }
+  )
 
   lazy val dqrval: P[List[AST]] =
     expr ~ dqtail ^^ {
       case e ~ y => e :: y
     }
 
-
-  lazy val dqtail: P[List[AST]] =
+  lazy val dqtail: P[List[AST]] = (
     DQPOST ^^ (List[ASTString] (ASTString (_)))
   | DQMID ~ dqrval ^^ {
       case x ~ y => x :: y
     }
-
+  )
 
   lazy val boolean: P[ASTBool] =
     BOOLEAN ^^ {
@@ -208,14 +185,13 @@ class PuppetParse extends RegexParsers
     }
 
   lazy val resourceref: P[ResourceRef] = (
-    NAME <~ "[" ~> expressions <~ "]" ^^ {
+    name ~ ("[" ~> expressions <~ "]") ^^ {
       case name ~ e => ResourceRef (name, e)
     }
-  | asttype <~ "[" ~> expressoins <~ "]" ^^ {
-      case t ~ e => ResourceRef (t.value, e)
+  | asttype ~ ("[" ~> expressions <~ "]") ^^ {
+      case t ~ e => ResourceRef (t, e)
     }
   )
-
 
   // TODO: stmts_and_decls can return "nothing", do we really need to "repeat" ourself
   //      with ".?"
@@ -225,9 +201,7 @@ class PuppetParse extends RegexParsers
       case e ~ None      => IfExpr (NotExpr (e), BlockExpr (List ()), BlockExpr (List ()))
     }
 
-
   lazy val ifstmt_begin: P[IfExpr] = "if" ~> ifstmt
-
 
   lazy val ifstmt: P[IfExpr] = 
     expr ~ ("{" ~> stmts_and_decls.? <~ "}") ~ elsestmt.? ^^ {
@@ -237,24 +211,24 @@ class PuppetParse extends RegexParsers
       case e ~ Some (ss) ~ Some (es) => IfExpr (e, ss, es)
     }
 
-
   // TODO: stmts_and_decls can return "nothing", do we really need to "repeat" ourself
   //      with ".?"
   lazy val elsestmt: P[BlockExpr] = (
-    "elsif" ~> ifstmt ^^ (BlockExpr (List (_)))
+    "elsif" ~> ifstmt ^^ { 
+      case ifexp => BlockExpr (List (ifexp))
+    }
   | "else" ~> "{" ~> stmts_and_decls.? <~ "}" ^^ {
       case None => BlockExpr (List ())
-      case Some (ss) => BlockExpr (ss)
+      case Some (ss) => ss
     }
   )
-
 
   lazy val expr: P[AST] = (
     rvalue | hash
   | "-" ~> expr ^^ (UMinusExpr (_))
   | "!" ~> expr ^^ (NotExpr (_))
   | "(" ~> expr <~ ")"
-  | (expr ~ ("=~" | "!~") ~ regex ^^ {
+  | (expr ~ ("=~" | "!~") ~ regex_stmt ^^ {
       case e ~ "=~" ~ r => MatchExpr (e, r, Match)
       case e ~ "!~" ~ r => MatchExpr (e, r, NoMatch)
     })
@@ -320,7 +294,7 @@ class PuppetParse extends RegexParsers
 
   lazy val selectlhand: P[AST] = (
     name | asttype | quotedtext | variable | funcrvalue | boolean | undef |
-    hasharrayaccess | ("default" ^^^ Default) | regex
+    hasharrayaccess | ("default" ^^^ Default) | regex_stmt
   )
     
   
@@ -350,15 +324,15 @@ class PuppetParse extends RegexParsers
     }
   )
 
-  lazy val classname: P[String] = NAME | "class"
+  lazy val classname: P[String] = "class" | NAME
 
   lazy val hostnames: P[List[Hostname]] = repsep (nodename, ",") 
 
   lazy val nodename: P[Hostname] = hostname ^^ (Hostname (_))
 
-  lazy val hostname: P[String] = NAME | STRING | "default" | regex
+  lazy val hostname: P[String] = "default" | NAME | STRING | regex_stmt
 
-  lazy val argumentlist: P[List[(String, Option[Branch])]] = (
+  lazy val argumentlist: P[List[(String, Option[AST])]] = (
     "(" ~> arguments.? <~ ")" ^^ {
       case None => List ()
       case Some (ss) => ss
@@ -366,9 +340,9 @@ class PuppetParse extends RegexParsers
   | "(" ~> arguments <~ ",".? <~ ")"
   )
 
-  lazy val arguments: P[List[(String, Option[Branch])]] = repsep (argument, ",")
+  lazy val arguments: P[List[(String, Option[AST])]] = repsep (argument, ",")
 
-  lazy val argument: P[(String, Option[Branch])] = (
+  lazy val argument: P[(String, Option[AST])] = (
     VARIABLE ~ ("=" ~> expr) ^^ { case v ~ e => (v, Some (e)) }
   | VARIABLE ^^ ((_, None))
   )
@@ -387,7 +361,7 @@ class PuppetParse extends RegexParsers
   | "[" ~> expressions <~ "," <~ "]" ^^ (ASTArray (_))
   )
 
-  lazy val regex: P[ASTRegex] = REGEX ^^ (ASTRegex (_))
+  lazy val regex_stmt: P[ASTRegex] = REGEX ^^ (ASTRegex (_))
 
   lazy val hash: P[ASTHash] = (
     "{" ~> hashpairs.? <~ "}" ^^ {
@@ -403,7 +377,7 @@ class PuppetParse extends RegexParsers
     case k ~ e => (k, e)
   }
 
-  lazy val key: P[String] = NAME | quotedtext
+  lazy val key: P[String] = (NAME | quotedtext)
 
   lazy val hasharrayaccess: P[HashOrArrayAccess] =
     variable ~ ("[" ~> expr <~ "]") ^^ {
@@ -416,12 +390,23 @@ class PuppetParse extends RegexParsers
       case haa ~ e => HashOrArrayAccess (haa, e)
     }
   )
+
+  // Scanner 
+
+  lazy val BOOLEAN: P[String] = "true" | "false"
+
+  def NAME: Parser[String] = """((::)?[a-z0-9][-\w]*)(::[a-z0-9][-\w]*)*""".r
+
+  def CLASSREF: Parser[String] = """((::){0,1}[A-Z][-\w]*)+""".r
+
+  // TODO : We might need to escape end of regex
+  def REGEX: Parser[String] = """/[^/\n]*/""".r
+
+  def VARIABLE: Parser[String] = """(::)?(\w+::)*\w+""".r
     
-  // TODO : NAME
   // TODO : STRING
-  // TODO : REGEX
-  // TODO : BOOLEAN
   // TODO : DQPRE, DQMID, DQPOST
-  // TODO : quotedtext
-  // TODO : Comments
+
+  // Treat comment as white space
+  override protected val whitespace = """#.*|\s+|(?s)/\*(.*?)\*/""".r
 }

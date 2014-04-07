@@ -102,7 +102,7 @@ case class ResourceParam (val param: AST, val value: AST, val add: Boolean) exte
 case class ResourceInstance (val title: AST, val params: List[ResourceParam]) extends Branch
 case class Resource (val typ: String, val instances: List[ResourceInstance]) extends Branch
 case class ResourceDefaults (val typ: Type, val params: List[ResourceParam]) extends Branch
-case class ResourceRef (val typ: Leaf, val title: List[Branch]) extends Branch
+case class ResourceRef (val typ: Leaf, val title: List[AST]) extends Branch
 case class ResourceOverride (val obj: ResourceRef, val params: List[ResourceParam]) extends Branch 
 case class VirtualResource (val res: Branch, val tvirt: VirtualResType) extends Branch
 
@@ -118,9 +118,9 @@ case class Collection (val typ: Type, val collectrhand: Branch, val params: List
 
 case class Node (val hostnames: List[Hostname], val parent: Option[String], exprs: BlockExpr) extends TopLevelConstruct
 
-case class Hostclass (val classname: String, val args: List[(String, Option[Branch])], val parent: Option[String], stmts: BlockExpr) extends Branch
+case class Hostclass (val classname: String, val args: List[(String, Option[AST])], val parent: Option[String], stmts: BlockExpr) extends Branch
 
-case class Definition (val classname: String, val args: List[(String, Option[Branch])], val exprs: BlockExpr) extends TopLevelConstruct
+case class Definition (val classname: String, val args: List[(String, Option[AST])], val exprs: BlockExpr) extends TopLevelConstruct
 
 case class Function (val name: String, val args: List[AST], val ftype: Functype) extends Branch
 
