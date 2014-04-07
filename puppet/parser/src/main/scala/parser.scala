@@ -159,13 +159,14 @@ class PuppetParse extends RegexParsers
       case name ~ None      => Function (name, List[AST] (), Ftrval)
     }
 
-  lazy val quotedtext: P[Leaf] = (
-    STRING ^^ (ASTString (_))
+  lazy val quotedtext: P[Leaf] = STRING ^^ (ASTString (_))
+  /*
   | DQPRE ~ dqrval ^^ {
       case x ~ y => Concat (x, y)
     }
-  )
+  */
 
+  /*
   lazy val dqrval: P[List[AST]] =
     expr ~ dqtail ^^ {
       case e ~ y => e :: y
@@ -177,6 +178,7 @@ class PuppetParse extends RegexParsers
       case x ~ y => x :: y
     }
   )
+  */
 
   lazy val boolean: P[ASTBool] =
     BOOLEAN ^^ {
@@ -291,13 +293,11 @@ class PuppetParse extends RegexParsers
       case slcthnd ~ rval => ResourceParam (slcthnd, rval, false)
     }
 
-
   lazy val selectlhand: P[AST] = (
     name | asttype | quotedtext | variable | funcrvalue | boolean | undef |
     hasharrayaccess | ("default" ^^^ Default) | regex_stmt
   )
     
-  
   lazy val string: P[String] = STRING
 
   lazy val strings: P[List[String]] = repsep (string, ",") 
@@ -330,7 +330,7 @@ class PuppetParse extends RegexParsers
 
   lazy val nodename: P[Hostname] = hostname ^^ (Hostname (_))
 
-  lazy val hostname: P[String] = "default" | NAME | STRING | regex_stmt
+  lazy val hostname: P[String] = "default" | NAME | STRING | REGEX
 
   lazy val argumentlist: P[List[(String, Option[AST])]] = (
     "(" ~> arguments.? <~ ")" ^^ {
@@ -371,13 +371,13 @@ class PuppetParse extends RegexParsers
   | "{" ~> hashpairs <~ ",".? <~ "}" ^^ (ASTHash (_))
   )
 
-  lazy val hashpairs: P[List[(String, AST)]] = repsep (hashpair, ",")
+  lazy val hashpairs: P[List[(Leaf, AST)]] = repsep (hashpair, ",")
 
-  lazy val hashpair: P[(String, AST)] = key ~ ("=>" ~> expr) ^^ {
+  lazy val hashpair: P[(Leaf, AST)] = key ~ ("=>" ~> expr) ^^ {
     case k ~ e => (k, e)
   }
 
-  lazy val key: P[String] = (NAME | quotedtext)
+  lazy val key: P[Leaf] = (name | quotedtext)
 
   lazy val hasharrayaccess: P[HashOrArrayAccess] =
     variable ~ ("[" ~> expr <~ "]") ^^ {
@@ -393,20 +393,32 @@ class PuppetParse extends RegexParsers
 
   // Scanner 
 
-  lazy val BOOLEAN: P[String] = "true" | "false"
+  lazy val BOOLEAN: P[String] = ("true" | "false")
 
-  def NAME: Parser[String] = """((::)?[a-z0-9][-\w]*)(::[a-z0-9][-\w]*)*""".r
+  def NAME: Parser[String] = ("""((::)?[a-z0-9][-\w]*)(::[a-z0-9][-\w]*)*""".r
+                           | NUMBER)
+
+  def NUMBER:Parser[String] = """\b(?:0[xX][0-9A-Fa-f]+|0?\d+(?:\.\d+)?(?:[eE]-?\d+)?)\b""".r
 
   def CLASSREF: Parser[String] = """((::){0,1}[A-Z][-\w]*)+""".r
+
 
   // TODO : We might need to escape end of regex
   def REGEX: Parser[String] = """/[^/\n]*/""".r
 
-  def VARIABLE: Parser[String] = """(::)?(\w+::)*\w+""".r
-    
-  // TODO : STRING
+  // TODO : This is not the correct definition of VARIABLE
+  def VARIABLE: Parser[String] = ( 
+    """(::)?(\w+::)*\w+""".r             // Other variable
+  | """\$(?:::)?(?:[-\w]+::)*[-\w]+""".r // DOLLAR_VAR_WITH_DASH
+  | """\$(::)?(\w+::)*\w+""".r           // DOLLAR_VAR
+  | """(?:::)?(?:[-\w]+::)*[-\w]+""".r   // VARIABLE_WITH_DASH
+  )
+
+  // Single quoted or double quoted string with escape characters
+  def STRING: Parser[String] = (""""[^"]*"""".r | """'[^']*'""".r)
+
   // TODO : DQPRE, DQMID, DQPOST
 
   // Treat comment as white space
-  override protected val whitespace = """#.*|\s+|(?s)/\*(.*?)\*/""".r
+  override protected val whiteSpace = """#.*|\s+|(?s)/\*(.*?)\*/""".r
 }

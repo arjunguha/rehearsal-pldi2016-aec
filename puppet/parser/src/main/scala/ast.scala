@@ -67,7 +67,7 @@ sealed abstract class Leaf extends AST
 case class ASTBool (val value: Boolean) extends Leaf
 case class ASTString (val value: String) extends Leaf
 case class Concat (val lhs: AST, val rhs: AST)  extends Leaf
-case class Default extends Leaf // Default class for case statement
+case object Default extends Leaf // Default class for case statement
 case class Type (val value: String) extends Leaf 
 case class Name (val value: String)  extends Leaf
 case object Undef extends Leaf
@@ -75,7 +75,7 @@ case class Hostname (val value: String) extends Leaf
 case class Variable (val value: String) extends Leaf
 case class HashOrArrayAccess (val variable: Leaf, var key: AST) extends Leaf
 case class ASTRegex (val value: String) extends Leaf
-case class ASTHash (val kvs: List[(String, AST)]) extends Leaf
+case class ASTHash (val kvs: List[(Leaf, AST)]) extends Leaf
 
 // Semantics : When this evaluates, the value of last expression pushed is returned which is head of the children list
 case class BlockExpr (val exprs: List[AST]) extends Branch
