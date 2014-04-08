@@ -48,8 +48,8 @@ class PuppetParser extends RegexParsers
 
 
   lazy val rvalue: P[AST] =
-    quotedtext | name | asttype | boolean | selector | variable | array | hasharrayaccesses |
-    resourceref | funcrvalue | undef
+    quotedtext ||| name ||| asttype ||| boolean ||| selector ||| variable ||| array ||| hasharrayaccesses |||
+    resourceref ||| funcrvalue ||| undef
     
   lazy val resource: P[Branch] = (
     classname ~ ("{" ~> resourceinstances <~ ";".? <~ "}") ^^ {
@@ -307,15 +307,19 @@ class PuppetParser extends RegexParsers
     "import" ~> strings ^^ (Import (_))
 
   lazy val definition: P[Definition] = 
-    "define" ~> classname ~ argumentlist ~ ("{" ~> stmts_and_decls.? <~ "}") ^^ {
-      case cnm ~ args ~ None      => Definition (cnm, args, BlockExpr (List ()))
-      case cnm ~ args ~ Some (ss) => Definition (cnm, args, ss)
+    "define" ~> classname ~ argumentlist.? ~ ("{" ~> stmts_and_decls.? <~ "}") ^^ {
+      case cnm ~ None        ~ None      => Definition (cnm, List (), BlockExpr (List ()))
+      case cnm ~ None        ~ Some (ss) => Definition (cnm, List (), ss)
+      case cnm ~ Some (args) ~ None      => Definition (cnm, args, BlockExpr (List ()))
+      case cnm ~ Some (args) ~ Some (ss) => Definition (cnm, args, ss)
     }
 
   lazy val hostclass: P[Hostclass] = 
-    "class" ~> classname ~ argumentlist ~ classparent.? ~ ("{" ~> stmts_and_decls.? <~ "}") ^^ {
-      case cnm ~ args ~ clp ~ None => Hostclass (cnm, args, clp, BlockExpr (List ()))
-      case cnm ~ args ~ clp ~ Some (ss) => Hostclass (cnm, args, clp, ss)
+    "class" ~> classname ~ argumentlist.? ~ classparent.? ~ ("{" ~> stmts_and_decls.? <~ "}") ^^ {
+      case cnm ~ None        ~ clp ~ None      => Hostclass (cnm, List (), clp, BlockExpr (List ()))
+      case cnm ~ None        ~ clp ~ Some (ss) => Hostclass (cnm, List (), clp, ss)
+      case cnm ~ Some (args) ~ clp ~ None      => Hostclass (cnm, args, clp, BlockExpr (List ()))
+      case cnm ~ Some (args) ~ clp ~ Some (ss) => Hostclass (cnm, args, clp, ss)
     }
 
   lazy val nodedef: P[Node] = (
@@ -421,7 +425,7 @@ class PuppetParser extends RegexParsers
   // TODO : DQPRE, DQMID, DQPOST
 
   // Treat comment as white space
-  override protected val whiteSpace = """#.*\r?\n|\s+|(?s)/\*(.*?)\*/""".r
+  override protected val whiteSpace = """#.*\s+|\s+|(?s)/\*(.*?)\*/""".r
 }
 
 
