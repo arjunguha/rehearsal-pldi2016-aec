@@ -1,13 +1,14 @@
 /* Parser using parser combinator in Scala */
 
 import scala.util.parsing.combinator._
+import scala.util.parsing.input._
 
-class PuppetParse extends RegexParsers
-                  with PackratParsers {
+class PuppetParser extends RegexParsers
+                   with PackratParsers {
 
   type P[+T] = PackratParser[T]
 
-  lazy val program: P[BlockExpr] =   stmts_and_decls 
+  lazy val program: P[AST] =   stmts_and_decls 
                          /*    | (EofCh  ^^^ (BlockExpr (List[Branch] ()))) */
 
   lazy val stmts_and_decls: P[BlockExpr] = stmt_or_decl.* ^^ (BlockExpr (_))
@@ -420,5 +421,13 @@ class PuppetParse extends RegexParsers
   // TODO : DQPRE, DQMID, DQPOST
 
   // Treat comment as white space
-  override protected val whiteSpace = """#.*|\s+|(?s)/\*(.*?)\*/""".r
+  override protected val whiteSpace = """#.*\r?\n|\s+|(?s)/\*(.*?)\*/""".r
+}
+
+
+object PuppetParser extends PuppetParser {
+
+  import java.io.FileReader
+
+  def apply (in: java.io.FileReader) = parseAll (program, in)
 }
