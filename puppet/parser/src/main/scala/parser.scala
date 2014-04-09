@@ -39,7 +39,10 @@ class PuppetParser extends RegexParsers
       case n ~ Some (es) => Function (n, es, Ftstmt)
       case n ~ None => Function (n, List[AST] (), Ftstmt)
     }
-  ||| NAME ~ repsep(rvalue, ",") ^^ { 
+  ||| NAME ~ ("(" ~> expressions <~ ",".? <~ ")") ^^ {
+        case n ~ es => Function (n, es, Ftstmt)
+      }
+  ||| NAME ~ repsep (rvalue, ",") ^^ { 
       case n ~ rvs => Function (n, rvs, Ftstmt)
     }
   )
@@ -189,10 +192,10 @@ class PuppetParser extends RegexParsers
 
   lazy val resourceref: P[ResourceRef] = (
     name ~ ("[" ~> expressions <~ "]") ^^ {
-      case name ~ e => ResourceRef (name, e)
+      case name ~ es => ResourceRef (name, es)
     }
   ||| asttype ~ ("[" ~> expressions <~ "]") ^^ {
-      case t ~ e => ResourceRef (t, e)
+      case t ~ es => ResourceRef (t, es)
     }
   )
 
@@ -235,6 +238,7 @@ class PuppetParser extends RegexParsers
       case e ~ "=~" ~ r => MatchExpr (e, r, Match)
       case e ~ "!~" ~ r => MatchExpr (e, r, NoMatch)
     })
+  // TODO : Priority
   ||| (expr ~ ("in" | "+" | "-" | "/" | "*" | "%" | "<<" | ">>" | "!=" | "==" | ">" | ">=" | "<" | "<=" | "and" | "or") ~ expr ^^ {
       case e1 ~ "in" ~ e2 => InExpr (e1, e2)
       case e1 ~ "+"  ~ e2 => ArithExpr (e1, e2, Plus)
@@ -373,7 +377,7 @@ class PuppetParser extends RegexParsers
       case None => ASTHash (List ())
       case Some (kvs) => ASTHash (kvs)
     }
-  ||| "{" ~> hashpairs <~ ",".? <~ "}" ^^ (ASTHash (_))
+  ||| "{" ~> hashpairs <~ "," <~ "}" ^^ (ASTHash (_))
   )
 
   lazy val hashpairs: P[List[(Leaf, AST)]] = repsep (hashpair, ",")
@@ -425,11 +429,11 @@ class PuppetParser extends RegexParsers
 
   // Treat comment as white space
   /* There is only one shot to detect all the white space between lexemes with
-   * parser combinators. Consider the follwing cases
+   * parser combinators. Consider the following cases
    * - Consecutive single line comments
-   * - Consecutive multi-line comments optinally with white space between the two
+   * - Consecutive multi-line comments optionally with white space between the two
    */
-  override protected val whiteSpace = """(\s*#.*\s+)+|(?s)(\s*/\*(.*?)\*/\s*)+|\s+""".r
+  override protected val whiteSpace = """(\s*#.*\s+)+|\s+|(?s)(\s*/\*(.*?)\*/\s*)+""".r
 }
 
 
