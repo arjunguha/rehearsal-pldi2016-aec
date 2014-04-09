@@ -411,7 +411,6 @@ class PuppetParser extends RegexParsers
   // TODO : We might need to escape end of regex
   def REGEX: Parser[String] = """/[^/\n]*/""".r
 
-  // TODO : This is not the correct definition of VARIABLE
   def VARIABLE: Parser[String] = ( 
     """(::)?(\w+::)*\w+""".r             // Other variable
   ||| """\$(?:::)?(?:[-\w]+::)*[-\w]+""".r // DOLLAR_VAR_WITH_DASH
@@ -419,13 +418,18 @@ class PuppetParser extends RegexParsers
   ||| """(?:::)?(?:[-\w]+::)*[-\w]+""".r   // VARIABLE_WITH_DASH
   )
 
-  // Single quoted or double quoted string with escape characters
+  // Single quoted or double quoted string with (TODO) escape characters
   def STRING: Parser[String] = (""""[^"]*"""".r | """'[^']*'""".r)
 
   // TODO : DQPRE, DQMID, DQPOST
 
   // Treat comment as white space
-  override protected val whiteSpace = """#.*\s+|\s+|(?s)/\*(.*?)\*/""".r
+  /* There is only one shot to detect all the white space between lexemes with
+   * parser combinators. Consider the follwing cases
+   * - Consecutive single line comments
+   * - Consecutive multi-line comments optinally with white space between the two
+   */
+  override protected val whiteSpace = """(\s*#.*\s+)+|(?s)(\s*/\*(.*?)\*/\s*)+|\s+""".r
 }
 
 
