@@ -95,7 +95,7 @@ case class UMinusExpr   (val oper: AST) extends Branch
 case class Vardef (val name: Leaf, val value: AST, val append: Boolean) extends Branch
 
 // Few Datastructures used by Puppet
-case class ASTArray (private val arr: List[AST]) extends Branch
+case class ASTArray (val arr: List[AST]) extends Branch
 
 // Puppet Resource Decl Related nodes
 case class ResourceParam (val param: AST, val value: AST, val add: Boolean) extends Branch
