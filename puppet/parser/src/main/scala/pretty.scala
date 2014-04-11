@@ -1,161 +1,160 @@
-import scala.collection.immutable.Map
-
 object PrettyPrintAST {
 
-  private val ArithOpMap = Map (Plus   -> "+",
-                                Minus  -> "-",
-                                Div    -> "/",
-                                Mult   -> "*",
-                                Mod    -> "%",
-                                LShift -> "<<",
-                                RShift -> ">>")
+  private def ArithOpStr (op: ArithOp): String = op match {
+   case Plus   => "+"
+   case Minus  => "-"
+   case Div    => "/"
+   case Mult   => "*"
+   case Mod    => "%"
+   case LShift => "<<"
+   case RShift => ">>"
+  }
 
-  private val BoolBinOpMap = Map (And -> "and", Or -> "or")
+  private def BoolBinOpStr (op: BoolBinOp): String = op match {
+     case And => "and"
+     case Or  => "or"
+  }
 
-  private val CompareOpMap = Map (NotEqual    -> "!=",
-                                  Equal       -> "==",
-                                  GreaterThan -> ">",
-                                  GreaterEq   -> ">=",
-                                  LessThan    -> "<",
-                                  LessEq      -> "<=")
+  private def CompareOpStr (op: CompareOp): String = op match {
+    case NotEqual    => "!="
+    case Equal       => "=="
+    case GreaterThan => ">"
+    case GreaterEq   => ">="
+    case LessThan    => "<"
+    case LessEq      => "<="
+  }
 
-  private val MatchOpMap = Map (Match -> "=~", NoMatch -> "!~")
+  private def MatchOpStr (op: MatchOp): String = op match { 
+    case Match => "=~"
+    case NoMatch => "!~"
+  }
 
-  private val RelationOpMap = Map (LeftSimpleDep     -> "<-",
-                                   RightSimpleDep    -> "->",
-                                   LeftSubscribeDep  -> "<~",
-                                   RightSubscribeDep -> "~>")
+  private def RelationOpStr (op: RelationOp): String = op match {
+    case LeftSimpleDep     => "<-"
+    case RightSimpleDep    => "->"
+    case LeftSubscribeDep  => "<~"
+    case RightSubscribeDep => "~>"
+  }
 
-  private val CollectionOp = Map (CollOr    -> "or",
-                                  CollAnd   -> "and",
-                                  CollIsEq  -> "==",
-                                  CollNotEq -> "!=")
+  private def CollectionOpStr (op: CollectionOp): String = op match {
+    case CollOr    => "or"
+    case CollAnd   => "and"
+    case CollIsEq  => "=="
+    case CollNotEq => "!="
+  }
 
-  private val VirtualResTypeMap = Map (Vrtvirtual  -> "@",
-                                       Vrtexported -> "@@")
+  private def VirtualResTypeStr (op: VirtualResType): String = op match {
+    case Vrtvirtual  => "@"
+    case Vrtexported => "@@"
+  }
 
+  def printAST (ast: AST): String = ast match {
 
-
-  private def printLeaf (l: Leaf): String = {
-
-    case ASTBool (b)              => printBool (b)
+    case ASTBool (true)           => "true"
+    case ASTBool (false)          => "false"
     case ASTString (s)            => s
-    case Concat (lhs, rhs)        => printAst (lhs) + " " + printAST (rhs)
+    case Concat (lhs, rhs)        => printAST (lhs) + " " + printAST (rhs)
     case Default                  => "default"
-    case Type (t)                 => t.value
-    case Name (n)                 => n.value
+    case Type (v)                 => v
+    case Name (v)                 => v
     case Undef                    => "undef"
-    case Hostname (h)             => h.value
-    case Variable (v)             => v.value
-    case HashOrArrayAccess (v, k) => printLeaf (v) + "[" + printAst (k) + "]"
-    case ASTRegex (r)             => r.value
-    case ASTHash (h)              => "{" + 
-                                        h.kvs.foldLeft ("") { 
-                                            case (acc, (leaf, ast)) => 
-                                              acc + " " + printLeaf (leaf) + " => " printAst (ast) + ", "
+    case Hostname (v)             => v
+    case Variable (v)             => v
+    case HashOrArrayAccess (v, k) => printAST (v) + "[" + printAST (k) + "]"
+    case ASTRegex (v)             => v
+    case ASTHash (kvs)            => "{" + 
+                                        kvs.foldLeft ("") { 
+                                          case (acc, (leaf, ast)) => 
+                                            acc + " " + printAST (leaf) + " => " + printAST (ast) + ", "
                                             } +
                                       "}"
-  }
 
-
-
-
-
-  def printBranch (branch: Branch): String = {
-
-    case BlockExpr (es) => es.foldLeft ("") { case (acc, ast) => printAst (ast) + "\n" }
+    case BlockExpr (es) => es.foldLeft ("") { case (acc, ast) => printAST (ast) + "\n" }
     // TODO : Parentheses and precedence
-    case ArithExpr (ae) => printAst (ae.lhs) + " " + ArithOpMap (ae.op) + " " + printAst (ae.rhs)
-    case BoolBinExpr (be) => printAst (be.lhs) + " " + BoolBinOpMap (be.op) + " " + printAst (be.rhs)
-    case CompareExpr (ce) => printAst (ce.lhs) + " " + CompareOpMap (ce.op) + " " + printAst (ce.rhs)
-    case InExpr (ie) => printAst (ie.lhs) + " in " + printAst (ie.rhs)
-    case RelationExpr (re) => printAst (re.lhs) + " " + RelationOpMap (re.op) + " " + printAst (re.rhs)
-    case MatchExpr (me) => printAst (me.lhs) + " " + MatchOpMap (me.op) + " " + printAst (me.rhs)
-    case NotExpr (ne) => "!" + printAst (ne)
-    case UMinusExpr (ume) => "-" + printAst (ume)
-    case Vardef (nm, v, is_append) => printLeaf (nm) + (if (is_append) " += " else " = ") + printAst (v)
+    case ArithExpr    (lhs, rhs, op) => printAST (lhs) + " " + ArithOpStr (op)   + " " + printAST (rhs)
+    case BoolBinExpr  (lhs, rhs, op) => printAST (lhs) + " " + BoolBinOpStr (op) + " " + printAST (rhs)
+    case CompareExpr  (lhs, rhs, op) => printAST (lhs) + " " + CompareOpStr (op) + " " + printAST (rhs)
+    case InExpr       (lhs, rhs)     => printAST (lhs) + " in " + printAST (rhs)
+    case RelationExpr (lhs, rhs, op) => printAST (lhs) + " " + RelationOpStr (op) + " " + printAST (rhs)
+    case MatchExpr    (lhs, rhs, op) => printAST (lhs) + " " + MatchOpStr (op) + " " + printAST (rhs)
+    case NotExpr (ne) => "!" + printAST (ne)
+    case UMinusExpr (ume) => "-" + printAST (ume)
+    case Vardef (nm, v, is_append) => printAST (nm) + (if (is_append) " += " else " = ") + printAST (v)
     case ASTArray (arr) => "[" + 
-                              arr.foldLeft ("") { case (acc, x) => acc + printAst (x) + ", "} +
+                              arr.foldLeft ("") { case (acc, x) => acc + printAST (x) + ", "} +
                            "]"
-    case ResourceParam (p, v, is_add) => printAst (param) + (if(is_add) " +> " else " => ") + printAst (v)
-    case ResourceInstance (t, prms) => printAst (t) + ": " + 
-                                       prms.foldLeft ("") { case (acc, prm) => acc + printBranch (prm) + ", " }
+    case ResourceParam (p, v, is_add) => printAST (p) + (if(is_add) " +> " else " => ") + printAST (v)
+    case ResourceInstance (t, prms) => printAST (t) + ": " + 
+                                       prms.foldLeft ("") { case (acc, prm) => acc + printAST (prm) + ", " }
     case Resource (typ, insts) => typ + " " + "{" + "\n" +
-                                  insts.foldLeft ("") { case (acc, inst) => acc + printBranch (inst) + ";\n" } +
+                                  insts.foldLeft ("") { case (acc, inst) => acc + printAST (inst) + ";\n" } +
                                   "}"
-    case ResourceDefaults (typ, prms) => printLeaf (typ) + " " + "{" + "\n"
-                                         prms.foldLeft ("") { case (acc, prm) => acc + printBranch (prm) + ", " }
+    case ResourceDefaults (typ, prms) => printAST (typ) + " " + "{" + "\n"
+                                         prms.foldLeft ("") { case (acc, prm) => acc + printAST (prm) + ", " }
                                          "}"
-    case ResourceRef (typ, es) => printLeaf (typ) + " " + "[" +
-                                  es.foldLeft ("") { case (acc, e) => acc + printAst (e) + ", " }
-                                  + "]"
-    case ResourceOverride (obj, prms) => printBranch (obj) + " " + "{" + "\n" + 
-                                         prms.foldLeft ("") { case (acc, prm) => acc + printBranch (prm) + ",\n" } +
+    case ResourceRef (typ, es) => printAST (typ) + " " + "[" +
+                                  es.foldLeft ("") { case (acc, e) => acc + printAST (e) + ", " } + "]"
+    case ResourceOverride (obj, prms) => printAST (obj) + " " + "{" + "\n" + 
+                                         prms.foldLeft ("") { case (acc, prm) => acc + printAST (prm) + ",\n" } +
                                          "}"
 
-    case VirtualResource (res, tvirt) => VirtualResTypeMap (tvirt) + printBranch (res)
-    case IfExpr (test, true_es, false_es) => "if" + " " + printAst (test) + " { " printAst (tue_es) + " } else { " + printAst (false_es) + "}\n"
-    case CaseOpt (v, stmts) => printAst (v) + ":" + " " + "{" + "\n"
-                               printAst (stmts) + "}" + "\n"
-    case CaseExpr (test, caseopts) => "case" + " " + printAst (test) + "{" + "\n"
-                                      printBranch (caseopts) + "}" + "\n"
-    case Selector (prm, vs) => printAst (prm) + " " + "?" + " " + "{" + "\n"
-                               vs.foldLeft ("") { case (acc, v) => acc + printBranch (v) + ",\n" } +
+    case VirtualResource (res, tvirt) => VirtualResTypeStr (tvirt) + printAST (res)
+    case IfExpr (test, true_es, false_es) => "if" + " " + printAST (test) + " { " + printAST (true_es) + " } else { " + printAST (false_es) + "}\n"
+
+    case CaseOpt (v, stmts) => v.foldLeft ("") { 
+      case (acc, a) => acc + printAST (a) + ", " 
+    } + ":" + " " + "{" + "\n" + printAST (stmts) + "}" + "\n"
+
+    case CaseExpr (test, caseopts) => "case" + " " + printAST (test) + "{" + "\n"
+                                      caseopts.foldLeft ("") { 
+                                        case (acc, caseopt) => acc + printAST (caseopt) + " " 
+                                      } + "}" + "\n"
+
+    case Selector (prm, vs) => printAST (prm) + " " + "?" + " " + "{" + "\n"
+                               vs.foldLeft ("") { case (acc, v) => acc + printAST (v) + ",\n" } +
                                "}"
-    case CollectionExpr (lhs, rhs, op) => printAst (lhs) + " " + CollectionOp (op) + " " _ printAst (rhs)
-    case CollectionExprTagNode (None, prop) => if (prop == Vrtvirtual) "<| |>" else "<<| |>>"
-    case CollectionExprTageNode (Some (coll), prop) => 
-      if (prop == Vrtvirtual) "<|" + " " + printBranch (coll) + " " + "|>"
-      else "<<|" + " " + printBranch (coll) + " " + "|>>"
+    case CollectionExpr (lhs, rhs, op) => printAST (lhs) + " " + CollectionOpStr (op) + " " + printAST (rhs)
 
-    case Collection (typ, collectrhand, Nil) => printLeaf (typ) + " " + printBranch (collectrhand)
-    case Collection (typ, collectrhand, prms) => printLeaf (typ) + " " + printBranch (collectrhand) + " " + "{" + "\n" +
-    prms.foldLeft ("") { case (acc, prm) => acc + printBranch (prm) + "," + "\n" } +
+    case CollectionExprTagNode (None, prop) => if (prop == Vrtvirtual) "<| |>" else "<<| |>>"
+    case CollectionExprTagNode (Some (coll), prop) => 
+      if (prop == Vrtvirtual) ("<|" + " " + printAST (coll) + " " + "|>")
+      else ("<<|" + " " + printAST (coll) + " " + "|>>")
+
+    case Collection (typ, collectrhand, Nil) => printAST (typ) + " " + printAST (collectrhand)
+    case Collection (typ, collectrhand, prms) => printAST (typ) + " " + printAST (collectrhand) + " " + "{" + "\n" +
+    prms.foldLeft ("") { case (acc, prm) => acc + printAST (prm) + "," + "\n" } +
     "}" + "\n"
 
-    case Hostclass (clnm, Nil, None, stmts) => "class" + " " + clnm + " " + "{" + "\n" + printAst (stmts) + "}" + "\n"
+    case Hostclass (clnm, Nil, None, stmts) => "class" + " " + clnm + " " + "{" + "\n" + printAST (stmts) + "}" + "\n"
     case Hostclass (clnm, args, None, stmts) => "class" + " " + clnm + 
       " " + "(" + args.foldLeft ("") { 
-        case (acc, (v, None)) => acc + printLeaf (v) + ", "
-        case (acc, (v, Some (e))) => acc + printLeaf (v) + " = " + printAst (e)
-       } + ")" + " " + "{" + "\n" + printAst (stmts) + "}" + "\n"
-    case hostclass (clnm, Nil, Some (parent), stmts) => "class" + " " + clnm + " " + "inherits" + " " + printLeaf (parent) + "{" + "\n" + printAst (stmts) + "}" + "\n"
-    case Hostclass (clnm, args, Some (parent), stmts) => "class" + " " + clnm + " " + "inherits" + " " + printLeaf (parent) + " " + "(" + args.foldLeft ("") { 
-        case (acc, (v, None)) => acc + printLeaf (v) + ", "
-        case (acc, (v, Some (e))) => acc + printLeaf (v) + " = " + printAst (e) 
-      } + ")" + " " + "{" + "\n" + printAst (stmts) + "}" + "\n"
+        case (acc, (v, None)) => acc + v + ", "
+        case (acc, (v, Some (e))) => acc + v + " = " + printAST (e)
+       } + ")" + " " + "{" + "\n" + printAST (stmts) + "}" + "\n"
+    case Hostclass (clnm, Nil, Some (parent), stmts) => "class" + " " + clnm + " " + "inherits" + " " + parent + "{" + "\n" + printAST (stmts) + "}" + "\n"
+    case Hostclass (clnm, args, Some (parent), stmts) => "class" + " " + clnm + " " + "inherits" + " " + parent + " " + "(" + args.foldLeft ("") { 
+        case (acc, (v, None)) => acc + v + ", "
+        case (acc, (v, Some (e))) => acc + v + " = " + printAST (e) 
+      } + ")" + " " + "{" + "\n" + printAST (stmts) + "}" + "\n"
 
-/*
-    case class Function (nm, args, _) => nm + " " + "(" + " " + 
-      args.foldLeft ("") { case (acc, a) => acc + printAst (a) + ", " } + " " + ")"
+    case Function (nm, args, _) => nm + " " + "(" + " " + 
+      args.foldLeft ("") { case (acc, a) => acc + printAST (a) + ", " } + " " + ")"
 
-    case class Import (imps) => "import" + " " + imps.foldLeft ("") { case (acc, i) => acc + i + ", " } + "\n"
-    */
-}
+    case Import (imps) => "import" + " " + imps.foldLeft ("") { case (acc, i) => acc + i + ", " } + "\n"
 
-  def printTopLevelConstruct (tlc: TopLevelConstruct): String = {
-    
     case Node (hostnames, None, es) => "node" + " " + hostnames.foldLeft ("") {
-      case (acc, hostname) => acc + printLeaf (hostname) + ", "
-    } + " " + "{" + "\n" + printAst (es) + "}" + "\n"
+      case (acc, hostname) => acc + printAST (hostname) + ", "
+    } + " " + "{" + "\n" + printAST (es) + "}" + "\n"
 
     case Node (hostnames, Some (parent), es) => "node" + " " + hostnames.foldLeft ("") {
-      case (acc, hostname) => acc + printLeaf (hostname) + ", "
-    } + " " + "inherits" + " " + parent + " " + "{" + "\n" + printAst (es) + "}" + "\n"
+      case (acc, hostname) => acc + printAST (hostname) + ", "
+    } + " " + "inherits" + " " + parent + " " + "{" + "\n" + printAST (es) + "}" + "\n"
 
-    case Definition (classname, Nil, es) => "define" + " " + classname + " " + "{" + "\n" + printAst (es) + "}" + "\n"
+    case Definition (classname, Nil, es) => "define" + " " + classname + " " + "{" + "\n" + printAST (es) + "}" + "\n"
     case Definition (classname, args, es) => "define" + " " + classname + " " + "(" + args.foldLeft ("") { 
-        case (acc, (v, None)) => acc + printLeaf (v) + ", "
-        case (acc, (v, Some (e))) => acc + printLeaf (v) + " = " + printAst (e) 
+        case (acc, (v, None)) => acc + v + ", "
+        case (acc, (v, Some (e))) => acc + v + " = " + printAST (e) 
       } + 
-      ")" + " " + "{" + "\n" + printAst (es) + "}" + "\n"
-  }
-
-                            
-  def printAst (ast: AST): String = {
-
-    case Leaf => printLeaf (ast)
-    case Branch => printBranch (ast)
-    case TopLevelConstruct => printTopLevelConstruct (ast) 
+      ")" + " " + "{" + "\n" + printAST (es) + "}" + "\n"
   }
 }

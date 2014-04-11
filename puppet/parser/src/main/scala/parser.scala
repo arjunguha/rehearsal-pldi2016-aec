@@ -9,7 +9,7 @@ class PuppetParser extends RegexParsers
   type P[+T] = PackratParser[T]
 
   lazy val program: P[AST] =   stmts_and_decls 
-                         /*    | (EofCh  ^^^ (BlockExpr (List[Branch] ()))) */
+                         /*    | (EofCh  ^^^ (BlockExpr (List[AST] ()))) */
 
   lazy val stmts_and_decls: P[BlockExpr] = stmt_or_decl.* ^^ (BlockExpr (_))
 
@@ -54,7 +54,7 @@ class PuppetParser extends RegexParsers
     quotedtext ||| name ||| asttype ||| boolean ||| selector ||| variable ||| array ||| hasharrayaccesses |||
     resourceref ||| funcrvalue ||| undef
     
-  lazy val resource: P[Branch] = (
+  lazy val resource: P[AST] = (
     classname ~ ("{" ~> resourceinstances <~ ";".? <~ "}") ^^ {
       case cn ~ ris => Resource (cn, ris) 
     }
@@ -104,7 +104,7 @@ class PuppetParser extends RegexParsers
       case x ~ "!=" ~ y => CollectionExpr (x, y, CollNotEq)
     }
 
-  lazy val colllval: P[Leaf] = variable | name
+  lazy val colllval: P[AST] = variable | name
 
   lazy val resourceinst: P[ResourceInstance] = 
     resourcename ~ (":" ~> params.? <~ ",".?) ^^ {
@@ -114,7 +114,7 @@ class PuppetParser extends RegexParsers
 
   lazy val resourceinstances: P[List[ResourceInstance]] = repsep (resourceinst, ";")
 
-  lazy val undef: P[Leaf] = "undef" ^^^ Undef
+  lazy val undef: P[AST] = "undef" ^^^ Undef
 
   lazy val name: P[Name] = NAME ^^ (Name (_))
 
@@ -139,7 +139,7 @@ class PuppetParser extends RegexParsers
 
   lazy val params: P[List[ResourceParam]] = repsep (param, ",")
 
-  lazy val param_name: P[Leaf] = name | keyword ^^ (ASTString (_)) | boolean
+  lazy val param_name: P[AST] = name | keyword ^^ (ASTString (_)) | boolean
 
   lazy val keyword: P[String] = "and" | "case" | "class" | "default" |
     "define" | "else" | "elsif" | "if" | "in" | "import" | "inherits" |
@@ -163,7 +163,7 @@ class PuppetParser extends RegexParsers
       case name ~ None      => Function (name, List[AST] (), Ftrval)
     }
 
-  lazy val quotedtext: P[Leaf] = STRING ^^ (ASTString (_))
+  lazy val quotedtext: P[AST] = STRING ^^ (ASTString (_))
   /*
   | DQPRE ~ dqrval ^^ {
       case x ~ y => Concat (x, y)
@@ -380,13 +380,13 @@ class PuppetParser extends RegexParsers
   ||| "{" ~> hashpairs <~ "," <~ "}" ^^ (ASTHash (_))
   )
 
-  lazy val hashpairs: P[List[(Leaf, AST)]] = repsep (hashpair, ",")
+  lazy val hashpairs: P[List[(AST, AST)]] = repsep (hashpair, ",")
 
-  lazy val hashpair: P[(Leaf, AST)] = key ~ ("=>" ~> expr) ^^ {
+  lazy val hashpair: P[(AST, AST)] = key ~ ("=>" ~> expr) ^^ {
     case k ~ e => (k, e)
   }
 
-  lazy val key: P[Leaf] = (name | quotedtext)
+  lazy val key: P[AST] = (name | quotedtext)
 
   lazy val hasharrayaccess: P[HashOrArrayAccess] =
     variable ~ ("[" ~> expr <~ "]") ^^ {
