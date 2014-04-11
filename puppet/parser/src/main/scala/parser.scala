@@ -558,7 +558,5 @@ class PuppetParser extends StdTokenParsers
 
 object PuppetParser extends PuppetParser {
 
-  import java.io.FileReader
-
-  def apply (in: String /*java.io.FileReader*/) = parseAll (in)
+  def apply (in: String) = parseAll (in)
 }
