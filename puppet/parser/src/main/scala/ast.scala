@@ -82,7 +82,7 @@ case class BoolBinExpr  (val lval: AST, val rval: AST, val op: BoolBinOp)  exten
 case class CompareExpr  (val lval: AST, val rval: AST, val op: CompareOp)  extends AST
 case class InExpr       (val lval: AST, val rval: AST) extends AST
 case class RelationExpr (val lval: AST, val rval: AST, val op: RelationOp) extends AST
-case class MatchExpr    (val lval: AST, val rval: ASTRegex, val op: MatchOp)    extends AST
+case class MatchExpr    (val lval: AST, val rval: AST, val op: MatchOp)    extends AST
 case class NotExpr      (val oper: AST) extends AST
 case class UMinusExpr   (val oper: AST) extends AST
 

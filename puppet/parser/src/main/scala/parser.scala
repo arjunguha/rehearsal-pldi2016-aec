@@ -81,17 +81,13 @@ class PuppetLexical extends StdLexical
   private def CLASSREF: Parser[String] = """((::){0,1}[A-Z][-\w]*)+""".r
 
 
-  // TODO : We might need to escape end of regex
+  // TODO : We might need to escape end of regex, See puppet lexer
   private def REGEX: Parser[String] = """/[^/\n]*/""".r
 
   private def VARIABLE: Parser[String] = ( 
     """\$(?:::)?(?:[-\w]+::)*[-\w]+""".r // DOLLAR_VAR_WITH_DASH
   | """\$(::)?(\w+::)*\w+""".r           // DOLLAR_VAR
   )
-
-  // TODO : Replace in Parser by StringLit
-  // Single quoted or double quoted string with (TODO) escape characters
-  // def STRING: Parser[String] = (""""[^"]*"""".r | """'[^']*'""".r)
 
   // TODO : DQPRE, DQMID, DQPOST
 }
@@ -116,6 +112,7 @@ class PuppetParser extends StdTokenParsers
                                
   type P[+T] = PackratParser[T]
 
+  // TODO : See if we need EOF as a production here
   lazy val program: P[AST] =   stmts_and_decls 
                          /*    | (EofCh  ^^^ (BlockExpr (List[AST] ()))) */
 
@@ -337,35 +334,57 @@ class PuppetParser extends StdTokenParsers
     }
   )
 
-  lazy val expr: P[AST] = (
-    rvalue ||| hash
-  ||| "-" ~> expr ^^ (UMinusExpr (_))
-  ||| "!" ~> expr ^^ (NotExpr (_))
-  ||| "(" ~> expr <~ ")"
-  ||| (expr ~ ("=~" | "!~") ~ regex_stmt ^^ {
-      case e ~ "=~" ~ r => MatchExpr (e, r, Match)
-      case e ~ "!~" ~ r => MatchExpr (e, r, NoMatch)
-    })
-  // TODO : Priority
-  ||| (expr ~ ("in" | "+" | "-" | "/" | "*" | "%" | "<<" | ">>" | "!=" | "==" | ">" | ">=" | "<" | "<=" | "and" | "or") ~ expr ^^ {
-      case e1 ~ "in" ~ e2 => InExpr (e1, e2)
-      case e1 ~ "+"  ~ e2 => ArithExpr (e1, e2, Plus)
-      case e1 ~ "-"  ~ e2 => ArithExpr (e1, e2, Minus)
-      case e1 ~ "/"  ~ e2 => ArithExpr (e1, e2, Div)
-      case e1 ~ "*"  ~ e2 => ArithExpr (e1, e2, Mult)
-      case e1 ~ "%"  ~ e2 => ArithExpr (e1, e2, Mod)
-      case e1 ~ "<<" ~ e2 => ArithExpr (e1, e2, LShift)
-      case e1 ~ ">>" ~ e2 => ArithExpr (e1, e2, RShift)
-      case e1 ~ "!=" ~ e2 => CompareExpr (e1, e2, NotEqual)
-      case e1 ~ "==" ~ e2 => CompareExpr (e1, e2, Equal)
-      case e1 ~ ">"  ~ e2 => CompareExpr (e1, e2, GreaterThan) 
-      case e1 ~ ">=" ~ e2 => CompareExpr (e1, e2, GreaterEq)
-      case e1 ~ "<"  ~ e2 => CompareExpr (e1, e2, LessThan)
-      case e1 ~ "<=" ~ e2 => CompareExpr (e1, e2, LessEq)
-      case e1 ~ "and" ~ e2 => BoolBinExpr (e1, e2, And)
-      case e1 ~ "or" ~ e2 =>  BoolBinExpr (e1, e2, Or)
-    })
-  )
+  private lazy val parens: P[AST] = "(" ~> expr <~ ")"
+  private lazy val uminus: P[AST] = "-" ~> expr ^^ (UMinusExpr (_))
+  private lazy val not:    P[AST] = "!" ~> expr ^^ (NotExpr (_))
+  private lazy val term:   P[AST] = (rvalue | hash | parens | uminus | not | regex_stmt)
+
+
+  private def binaryOp (level: Int): Parser[((AST, AST) => AST)] = {
+    level match {
+      case 1 => "or"  ^^^ { (e1, e2) => BoolBinExpr (e1, e2, Or)  }
+      case 2 => "and" ^^^ { (e1, e2) => BoolBinExpr (e1, e2, And) }
+
+      case 3 => 
+        ">"   ^^^ { (e1: AST, e2: AST) => CompareExpr (e1, e2, GreaterThan) } |
+        ">="  ^^^ { (e1: AST, e2: AST) => CompareExpr (e1, e2, GreaterEq)   } |
+        "<"   ^^^ { (e1: AST, e2: AST) => CompareExpr (e1, e2, LessThan)    } |
+        "<="  ^^^ { (e1: AST, e2: AST) => CompareExpr (e1, e2, LessEq)      }
+
+      case 4 =>
+        "!=" ^^^ { (e1: AST, e2: AST) => CompareExpr (e1, e2, NotEqual) } |
+        "==" ^^^ { (e1: AST, e2: AST) => CompareExpr (e1, e2, Equal)    }
+        
+      case 5 =>
+        "<<" ^^^ { (e1: AST, e2: AST) => ArithExpr (e1, e2, LShift) } |
+        ">>" ^^^ { (e1: AST, e2: AST) => ArithExpr (e1, e2, RShift) } 
+
+      case 6 =>
+        "-" ^^^ { (e1: AST, e2: AST) => ArithExpr (e1, e2, Minus) } |
+        "+" ^^^ { (e1: AST, e2: AST) => ArithExpr (e1, e2, Plus)  }
+
+      case 7 =>
+        "*" ^^^ { (e1: AST, e2: AST) => ArithExpr (e1, e2, Mult) } |
+        "/" ^^^ { (e1: AST, e2: AST) => ArithExpr (e1, e2, Div)  } |
+        "%" ^^^ { (e1: AST, e2: AST) => ArithExpr (e1, e2, Mod)  }
+        
+      case 8 =>
+        "in" ^^^ { (e1: AST, e2: AST) => InExpr (e1, e2)             } |
+        "=~" ^^^ { (e1: AST, e2: AST) => MatchExpr (e1, e2, Match)   } |
+        "!~" ^^^ { (e1: AST, e2: AST) => MatchExpr (e1, e2, NoMatch) }
+
+      case _ => throw new RuntimeException ("bad precedence level " + level)
+    }
+  }
+
+  private val minPrec = 1
+  private val maxPrec = 8
+
+  private def binary (level: Int): Parser[AST] =
+    if (level > maxPrec) term
+    else binary (level + 1) * binaryOp (level)
+
+  lazy val expr: P[AST] = (binary (minPrec) | term)
 
   lazy val case_stmt: P[CaseExpr] = 
     "case" ~> expr ~ ("{" ~> caseopts <~ "}") ^^ {
