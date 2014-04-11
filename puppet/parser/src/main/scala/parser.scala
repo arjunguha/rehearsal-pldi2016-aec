@@ -1,11 +1,119 @@
 /* Parser using parser combinator in Scala */
 
 import scala.util.parsing.combinator._
-import scala.util.parsing.input._
+import scala.util.parsing.combinator.syntactical._
+import scala.util.parsing.combinator.lexical._
+import scala.util.parsing.combinator.token._
+import scala.util.parsing.input.CharArrayReader.EofCh
 
-class PuppetParser extends RegexParsers
+
+trait PuppetTokens extends StdTokens {
+
+  case class PuppetBool (chars: String) extends Token {
+    override def toString = "'"+chars+"'"
+  }
+
+  case class PuppetName (chars: String) extends Token {
+    override def toString = chars
+  }
+
+  case class PuppetClassRef (chars: String) extends Token {
+    override def toString = chars
+  }
+
+  case class PuppetRegex (chars: String) extends Token {
+    override def toString = chars
+  }
+
+  case class PuppetVariable (chars: String) extends Token {
+    override def toString = chars
+  }
+}
+
+
+
+class PuppetLexical extends StdLexical 
+                    with RegexParsers
+                    with PuppetTokens {
+
+  override type Elem = Char
+
+  override def token: Parser[Token] = (
+    NAME ^^ (processName (_))
+  | CLASSREF ^^ (PuppetClassRef (_))
+  | REGEX    ^^ (PuppetRegex (_))
+  | VARIABLE ^^ (PuppetVariable (_))
+  | '\'' ~ rep( chrExcept('\'', '\n', EofCh) ) ~ '\'' ^^ { 
+      case '\'' ~ chars ~ '\'' => StringLit(chars mkString "")
+    }
+  |  '\"' ~ rep( chrExcept('\"', '\n', EofCh) ) ~ '\"' ^^ {
+      case '\"' ~ chars ~ '\"' => StringLit(chars mkString "")
+    }
+  |  EofCh                                             ^^^ EOF
+  |  '\'' ~> failure("unclosed string literal")
+  |  '\"' ~> failure("unclosed string literal")
+  |  delim
+  |  failure("illegal character")
+  )
+
+
+  private def processName (name: String) = 
+    if (reserved contains name) Keyword (name) 
+    else if ("true" == name || "false" == name) PuppetBool (name)
+    else PuppetName (name)
+
+
+  override def whitespace: Parser[Any] = rep[Any](
+    whitespaceChar
+  | '/' ~ '*' ~ comment
+  | '#' ~ rep ( chrExcept (EofCh, '\n'))
+  | '/' ~ '*' ~ failure ("unclosed comment")
+  )
+
+
+  private def BOOLEAN: Parser[String] = ("true" | "false")
+
+  private def NAME: Parser[String] = ("""((::)?[a-z0-9][-\w]*)(::[a-z0-9][-\w]*)*""".r
+                           ||| NUMBER)
+
+  private def NUMBER:Parser[String] = """\b(?:0[xX][0-9A-Fa-f]+|0?\d+(?:\.\d+)?(?:[eE]-?\d+)?)\b""".r
+
+  private def CLASSREF: Parser[String] = """((::){0,1}[A-Z][-\w]*)+""".r
+
+
+  // TODO : We might need to escape end of regex
+  private def REGEX: Parser[String] = """/[^/\n]*/""".r
+
+  private def VARIABLE: Parser[String] = ( 
+    """\$(?:::)?(?:[-\w]+::)*[-\w]+""".r // DOLLAR_VAR_WITH_DASH
+  | """\$(::)?(\w+::)*\w+""".r           // DOLLAR_VAR
+  )
+
+  // TODO : Replace in Parser by StringLit
+  // Single quoted or double quoted string with (TODO) escape characters
+  // def STRING: Parser[String] = (""""[^"]*"""".r | """'[^']*'""".r)
+
+  // TODO : DQPRE, DQMID, DQPOST
+}
+
+
+class PuppetParser extends StdTokenParsers
                    with PackratParsers {
 
+  type Tokens = PuppetTokens
+  override val lexical = new PuppetLexical
+  lexical.delimiters ++= List ("<-", "->", "<~", "~>",
+                               "(", ")", "{", "}", "[", "]",
+                               ",", ";", ":", ".",
+                               "@@", "@", "<|", "|>", "<<|", "|>>",
+                               "=>", "==", "!=", "=", "+=", "+>", "!", "=~", "!~", "?",
+                               "+", "-", "/", "*", "%", "<<", ">>", ">", "<", ">=", "<=") 
+
+  lexical.reserved ++= List ("and" , "case" , "class" , "default" ,
+    "define" , "else" , "elsif" , "if" , "in" , "import" , "inherits" ,
+    "node" , "or" , "undef" , "unless")
+
+                               
   type P[+T] = PackratParser[T]
 
   lazy val program: P[AST] =   stmts_and_decls 
@@ -400,40 +508,32 @@ class PuppetParser extends RegexParsers
     }
   )
 
-  // Scanner 
-
-  lazy val BOOLEAN: P[String] = ("true" | "false")
-
-  def NAME: Parser[String] = ("""((::)?[a-z0-9][-\w]*)(::[a-z0-9][-\w]*)*""".r
-                           ||| NUMBER)
-
-  def NUMBER:Parser[String] = """\b(?:0[xX][0-9A-Fa-f]+|0?\d+(?:\.\d+)?(?:[eE]-?\d+)?)\b""".r
-
-  def CLASSREF: Parser[String] = """((::){0,1}[A-Z][-\w]*)+""".r
+  import lexical.{PuppetBool, PuppetName, PuppetClassRef, PuppetRegex, PuppetVariable}
 
 
-  // TODO : We might need to escape end of regex
-  def REGEX: Parser[String] = """/[^/\n]*/""".r
+  def STRING: Parser[String] = stringLit
 
-  def VARIABLE: Parser[String] = ( 
-    """(::)?(\w+::)*\w+""".r             // Other variable
-  ||| """\$(?:::)?(?:[-\w]+::)*[-\w]+""".r // DOLLAR_VAR_WITH_DASH
-  ||| """\$(::)?(\w+::)*\w+""".r           // DOLLAR_VAR
-  ||| """(?:::)?(?:[-\w]+::)*[-\w]+""".r   // VARIABLE_WITH_DASH
-  )
+  def BOOLEAN: Parser[String] =
+    elem ("boolean", _.isInstanceOf[PuppetBool]) ^^ (_.chars)
 
-  // Single quoted or double quoted string with (TODO) escape characters
-  def STRING: Parser[String] = (""""[^"]*"""".r | """'[^']*'""".r)
+  def NAME: Parser[String] =
+    elem ("name", _.isInstanceOf[PuppetName]) ^^ (_.chars)
 
-  // TODO : DQPRE, DQMID, DQPOST
+  def CLASSREF: Parser[String] =
+    elem ("classref", _.isInstanceOf[PuppetClassRef]) ^^ (_.chars)
 
-  // Treat comment as white space
-  /* There is only one shot to detect all the white space between lexemes with
-   * parser combinators. Consider the following cases
-   * - Consecutive single line comments
-   * - Consecutive multi-line comments optionally with white space between the two
-   */
-  override protected val whiteSpace = """(\s*#.*\s+)+|\s+|(?s)(\s*/\*(.*?)\*/\s*)+""".r
+  def REGEX: Parser[String] =
+    elem ("regex", _.isInstanceOf[PuppetRegex]) ^^ (_.chars)
+
+  def VARIABLE: Parser[String] =
+    elem ("classref", _.isInstanceOf[PuppetVariable]) ^^ (_.chars)
+
+
+
+  def parseAll (s: String) = {
+    val tokens  = new lexical.Scanner (s)
+    phrase (program)(tokens)
+  }
 }
 
 
@@ -441,5 +541,5 @@ object PuppetParser extends PuppetParser {
 
   import java.io.FileReader
 
-  def apply (in: java.io.FileReader) = parseAll (program, in)
+  def apply (in: String /*java.io.FileReader*/) = parseAll (in)
 }
