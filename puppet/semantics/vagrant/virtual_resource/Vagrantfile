@@ -1,0 +1,47 @@
+Vagrant.require_version ">= 1.5.0", "< 1.6.0"
+
+$master = <<SCRIPT
+
+source /vagrant/provision-common.sh
+
+sudo apt-get install -y -qq puppetmaster
+
+sudo cp /vagrant/master-puppet.conf /etc/puppet/puppet.conf
+sudo cp /vagrant/autosign.conf /etc/puppet/autosign.conf
+sudo cp /vagrant/site.pp /etc/puppet/manifests/site.pp
+
+sudo service puppetmaster restart # since puppet.conf changed
+
+SCRIPT
+
+$agent = <<SCRIPT
+
+source /vagrant/provision-common.sh
+
+sudo apt-get install -y -qq puppet
+
+sudo cp /vagrant/agent-puppet.conf /etc/puppet/puppet.conf
+sudo sed -i "s/START=no/START=yes/" /etc/default/puppet 
+sudo service puppet stop # why is this needed?
+sudo service puppet start
+
+SCRIPT
+
+Vagrant.configure("2") do |config|
+
+  config.vm.box = "hashicorp/precise64"
+  config.vm.synced_folder ".", "/vagrant"
+
+  config.vm.define "master", primary: true do |master|
+    master.vm.provision "shell", inline: $master, :privileged => false
+    master.vm.network :private_network, ip: "192.168.50.10"
+    master.vm.hostname = "master"
+  end
+
+  config.vm.define "agent1" do |agent|
+    agent.vm.provision "shell", inline: $agent, :privileged => false
+    agent.vm.network :private_network, ip: "192.168.50.11"
+    agent.vm.hostname = "agent1"
+  end
+
+end
