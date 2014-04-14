@@ -1,34 +1,33 @@
 import scala.util.parsing.input.Positional
 
 // Various Operators
+sealed trait BinOp
 
-sealed trait ArithOp
-case object Plus   extends ArithOp
-case object Minus  extends ArithOp
-case object Div    extends ArithOp
-case object Mult   extends ArithOp
-case object Mod    extends ArithOp
-case object LShift extends ArithOp
-case object RShift extends ArithOp
+case object Or          extends BinOp
 
+case object And         extends BinOp
 
-sealed trait BoolBinOp
-case object And extends BoolBinOp
-case object Or  extends BoolBinOp
+case object GreaterThan extends BinOp
+case object GreaterEq   extends BinOp
+case object LessThan    extends BinOp
+case object LessEq      extends BinOp
 
+case object NotEqual    extends BinOp
+case object Equal       extends BinOp
 
-sealed trait CompareOp
-case object NotEqual    extends CompareOp
-case object Equal       extends CompareOp
-case object GreaterThan extends CompareOp
-case object GreaterEq   extends CompareOp
-case object LessThan    extends CompareOp
-case object LessEq  extends CompareOp
+case object LShift      extends BinOp
+case object RShift      extends BinOp
 
+case object Plus        extends BinOp
+case object Minus       extends BinOp
 
-sealed trait MatchOp
-case object Match   extends MatchOp
-case object NoMatch extends MatchOp
+case object Div         extends BinOp
+case object Mult        extends BinOp
+case object Mod         extends BinOp
+
+case object Match       extends BinOp
+case object NoMatch     extends BinOp
+case object In          extends BinOp
 
 
 sealed trait RelationOp
@@ -77,15 +76,10 @@ case class ASTHash (val kvs: List[(AST, AST)]) extends AST
 case class BlockExpr (val exprs: List[AST]) extends AST
 
 // Expressions involving operators
-case class ArithExpr    (val lval: AST, val rval: AST, val op: ArithOp)    extends AST
-case class BoolBinExpr  (val lval: AST, val rval: AST, val op: BoolBinOp)  extends AST
-case class CompareExpr  (val lval: AST, val rval: AST, val op: CompareOp)  extends AST
-case class InExpr       (val lval: AST, val rval: AST) extends AST
-case class RelationExpr (val lval: AST, val rval: AST, val op: RelationOp) extends AST
-case class MatchExpr    (val lval: AST, val rval: AST, val op: MatchOp)    extends AST
+case class BinExpr      (val lhs: AST, val rhs: AST, val op: BinOp)      extends AST
+case class RelationExpr (val lhs: AST, val rhs: AST, val op: RelationOp) extends AST
 case class NotExpr      (val oper: AST) extends AST
 case class UMinusExpr   (val oper: AST) extends AST
-
 
 // Variable definition
 case class Vardef (val name: AST, val value: AST, val append: Boolean) extends AST

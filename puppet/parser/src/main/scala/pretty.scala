@@ -1,32 +1,32 @@
 object PrettyPrintAST {
 
-  private def ArithOpStr (op: ArithOp): String = op match {
-   case Plus   => "+"
-   case Minus  => "-"
-   case Div    => "/"
-   case Mult   => "*"
-   case Mod    => "%"
-   case LShift => "<<"
-   case RShift => ">>"
-  }
+  private def BinOpStr (op: BinOp): String = op match {
 
-  private def BoolBinOpStr (op: BoolBinOp): String = op match {
-     case And => "and"
-     case Or  => "or"
-  }
+    case Or          => "or"
 
-  private def CompareOpStr (op: CompareOp): String = op match {
-    case NotEqual    => "!="
-    case Equal       => "=="
+    case And         => "and"
+
     case GreaterThan => ">"
     case GreaterEq   => ">="
     case LessThan    => "<"
     case LessEq      => "<="
-  }
 
-  private def MatchOpStr (op: MatchOp): String = op match { 
-    case Match => "=~"
-    case NoMatch => "!~"
+    case NotEqual    => "!="
+    case Equal       => "=="
+
+    case LShift      => "<<"
+    case RShift      => ">>"
+
+    case Plus        => "+"
+    case Minus       => "-"
+
+    case Div         => "/"
+    case Mult        => "*"
+    case Mod         => "%"
+
+    case Match       => "=~"
+    case NoMatch     => "!~"
+    case In          => "in"
   }
 
   private def RelationOpStr (op: RelationOp): String = op match {
@@ -48,11 +48,150 @@ object PrettyPrintAST {
     case Vrtexported => "@@"
   }
 
-  private def printList[T] (lst: List[T], f: T => String, sep: String): String = {
 
-    (lst.map (f)) mkString sep 
+
+
+  private sealed abstract class ExprContext;
+
+  private case object OR_L extends ExprContext;
+  private case object OR_R extends ExprContext;
+
+  private case object AND_L extends ExprContext;
+  private case object AND_R extends ExprContext;
+
+  private case object RELATIONAL_L extends ExprContext;
+  private case object RELATIONAL_R extends ExprContext;
+
+  private case object NOTEQUAL_EQUAL_L extends ExprContext;
+  private case object NOTEQUAL_EQUAL_R extends ExprContext;
+  
+  private case object LSHIFT_RSHIFT_L extends ExprContext;
+  private case object LSHIFT_RSHIFT_R extends ExprContext;
+
+  private case object PLUS_MINUS_L extends ExprContext;
+  private case object PLUS_MINUS_R extends ExprContext;
+
+  private case object DIV_MULT_MOD_L extends ExprContext;
+  private case object DIV_MULT_MOD_R extends ExprContext;
+
+  private case object IN_MATCH_NOMATCH_L   extends ExprContext;
+  private case object IN_MATCH_NOMATCH_R   extends ExprContext;
+
+  private case object NOT    extends ExprContext;
+  private case object UMINUS extends ExprContext;
+
+  private case object TOPLEVEL extends ExprContext;
+
+
+  private def parensRequired (op: BinOp, context: ExprContext) : Boolean = op match {
+
+    case In | NoMatch | Match => context match {
+      case NOT | UMINUS | IN_MATCH_NOMATCH_R => true
+      case _ => false
+    }
+
+    case Mod | Mult | Div => context match {
+      case NOT | UMINUS | IN_MATCH_NOMATCH_R | 
+           IN_MATCH_NOMATCH_L | DIV_MULT_MOD_R => true
+      case _ => false
+    }
+
+    case Plus | Minus => context match {
+      case NOT | UMINUS | IN_MATCH_NOMATCH_R |
+           IN_MATCH_NOMATCH_L | DIV_MULT_MOD_R |
+           DIV_MULT_MOD_L | PLUS_MINUS_R => true
+      case _ => false
+    }
+
+    case LShift | RShift => context match {
+      case NOT | UMINUS | IN_MATCH_NOMATCH_R |
+           IN_MATCH_NOMATCH_L | DIV_MULT_MOD_R |
+           DIV_MULT_MOD_L | PLUS_MINUS_R | PLUS_MINUS_L |
+           LSHIFT_RSHIFT_R => true
+      case _ => false
+    }
+
+    case NotEqual | Equal => context match {
+      case NOT | UMINUS | IN_MATCH_NOMATCH_R |
+           IN_MATCH_NOMATCH_L | DIV_MULT_MOD_R |
+           DIV_MULT_MOD_L | PLUS_MINUS_R |
+           PLUS_MINUS_L | LSHIFT_RSHIFT_R |
+           LSHIFT_RSHIFT_L | NOTEQUAL_EQUAL_R => true
+      case _ => false
+    }
+
+    case GreaterThan | GreaterEq | LessThan | LessEq => context match {
+      case NOT | UMINUS | IN_MATCH_NOMATCH_R |
+           IN_MATCH_NOMATCH_L | DIV_MULT_MOD_R |
+           DIV_MULT_MOD_L | PLUS_MINUS_R |
+           PLUS_MINUS_L | LSHIFT_RSHIFT_R |
+           LSHIFT_RSHIFT_L | NOTEQUAL_EQUAL_R |
+           RELATIONAL_R => true
+      case _ => false
+    }
+
+    case And => context match {
+      case NOT | UMINUS | IN_MATCH_NOMATCH_R |
+           IN_MATCH_NOMATCH_L | DIV_MULT_MOD_R |
+           DIV_MULT_MOD_L | PLUS_MINUS_R |
+           PLUS_MINUS_L | LSHIFT_RSHIFT_R |
+           LSHIFT_RSHIFT_L | NOTEQUAL_EQUAL_R |
+           RELATIONAL_R | RELATIONAL_L | AND_R => true
+      case _ => false
+    }
+
+    case Or => context match {
+      case NOT | UMINUS | IN_MATCH_NOMATCH_R |
+           IN_MATCH_NOMATCH_L | DIV_MULT_MOD_R |
+           DIV_MULT_MOD_L | PLUS_MINUS_R |
+           PLUS_MINUS_L | LSHIFT_RSHIFT_R |
+           LSHIFT_RSHIFT_L | NOTEQUAL_EQUAL_R |
+           RELATIONAL_R | RELATIONAL_L | AND_R |
+           AND_L | OR_R => true
+      case _ => false
+    }
   }
 
+
+  private def printBinExprWithCtx (lhs: AST, rhs: AST, op: BinOp, lctx: ExprContext, rctx: ExprContext) = {
+    printExpr (lhs, lctx) + " " + BinOpStr (op) + " " + printExpr (rhs, rctx)
+  }
+
+
+  private def printExpr (a: AST, context: ExprContext) : String = a match {
+
+    case BinExpr (lhs, rhs, op) =>
+      def printer (x: String) = if (parensRequired (op, context)) "(" + x + ")" else x
+
+      op match {
+
+      case In | NoMatch | Match => printer (printBinExprWithCtx (lhs, rhs, op, IN_MATCH_NOMATCH_L, IN_MATCH_NOMATCH_R))
+      case Mod | Mult | Div     => printer (printBinExprWithCtx (lhs, rhs, op, DIV_MULT_MOD_L, DIV_MULT_MOD_R))
+      case Plus | Minus         => printer (printBinExprWithCtx (lhs, rhs, op, PLUS_MINUS_L, PLUS_MINUS_R))
+      case LShift | RShift      => printer (printBinExprWithCtx (lhs, rhs, op, LSHIFT_RSHIFT_L, LSHIFT_RSHIFT_R))
+      case NotEqual | Equal     => printer (printBinExprWithCtx (lhs, rhs, op, NOTEQUAL_EQUAL_L, NOTEQUAL_EQUAL_R))
+
+      case GreaterThan | GreaterEq | 
+           LessThan | LessEq    => printer (printBinExprWithCtx (lhs, rhs, op, RELATIONAL_L, RELATIONAL_R))
+
+      case And => printer (printBinExprWithCtx (lhs, rhs, op, AND_L, AND_R))
+
+      case Or => printer (printBinExprWithCtx (lhs, rhs, op, OR_L, OR_R))
+    }
+
+    // Op implicitly is "NOT" not in context of case
+    case NotExpr (ne) => "!" + "(" + printExpr (ne, NOT) +")"
+
+    // Op implicity is "UMINUS"
+    case UMinusExpr (ume) => "-" + "(" + printExpr (ume, UMINUS) + ")"
+
+    case _ => printAST (a)
+  }
+    
+
+  private def printList[T] (lst: List[T], f: T => String, sep: String): String = {
+    (lst.map (f)) mkString sep 
+  }
 
   def printAST (ast: AST): String = ast match {
 
@@ -74,14 +213,10 @@ object PrettyPrintAST {
     case BlockExpr (es) => printList (es, printAST, "\n") 
     
     // TODO : Parentheses and precedence
-    case ArithExpr    (lhs, rhs, op) => printAST (lhs) + " " + ArithOpStr (op)   + " " + printAST (rhs)
-    case BoolBinExpr  (lhs, rhs, op) => printAST (lhs) + " " + BoolBinOpStr (op) + " " + printAST (rhs)
-    case CompareExpr  (lhs, rhs, op) => printAST (lhs) + " " + CompareOpStr (op) + " " + printAST (rhs)
-    case InExpr       (lhs, rhs)     => printAST (lhs) + " in " + printAST (rhs)
+    case BinExpr (_, _, _) => printExpr (ast, TOPLEVEL)
     case RelationExpr (lhs, rhs, op) => printAST (lhs) + " " + RelationOpStr (op) + " " + printAST (rhs)
-    case MatchExpr    (lhs, rhs, op) => printAST (lhs) + " " + MatchOpStr (op) + " " + printAST (rhs)
-    case NotExpr (ne) => "!" + printAST (ne)
-    case UMinusExpr (ume) => "-" + printAST (ume)
+    case NotExpr (_)    => printExpr (ast, TOPLEVEL)
+    case UMinusExpr (_) => printExpr (ast, TOPLEVEL)
     case Vardef (nm, v, is_append) => printAST (nm) + (if (is_append) " += " else " = ") + printAST (v)
     case ASTArray (arr) => "[" + printList (arr, printAST, ",") + "]" 
     case ResourceParam (p, v, is_add) => printAST (p) + (if(is_add) " +> " else " => ") + printAST (v)
