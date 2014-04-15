@@ -13,10 +13,10 @@ This is a demo of a resource ordering and notification in Puppet master/agent se
 
 - Run `vagrant ssh master`
 
-- Go and change contents of `/home/vagrant/src1` in `/etc/puppet/manifest/site.pp`
+- Change contents of `/home/vagrant/src1` in `/etc/puppet/manifest/site.pp`
 
 - Run `vagrant ssh agent1`
 
 - Run `sudo service puppet restart`
 
-- The contents of `/home/vagrant/src1` will change and new md5 will be appended in `/vagrant/home/src1_md5s`
+- Contents of `/home/vagrant/src1` will change and new md5s will be appended in `/vagrant/home/src1_md5s`
