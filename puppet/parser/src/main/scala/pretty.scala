@@ -49,105 +49,79 @@ object PrettyPrintAST {
   }
 
 
+  private sealed abstract class DirContext;
+  private case object LEFT  extends DirContext;
+  private case object RIGHT extends DirContext;
 
 
   private sealed abstract class ExprContext;
-
-  private case object OR_L extends ExprContext;
-  private case object OR_R extends ExprContext;
-
-  private case object AND_L extends ExprContext;
-  private case object AND_R extends ExprContext;
-
-  private case object RELATIONAL_L extends ExprContext;
-  private case object RELATIONAL_R extends ExprContext;
-
-  private case object NOTEQUAL_EQUAL_L extends ExprContext;
-  private case object NOTEQUAL_EQUAL_R extends ExprContext;
-  
-  private case object LSHIFT_RSHIFT_L extends ExprContext;
-  private case object LSHIFT_RSHIFT_R extends ExprContext;
-
-  private case object PLUS_MINUS_L extends ExprContext;
-  private case object PLUS_MINUS_R extends ExprContext;
-
-  private case object DIV_MULT_MOD_L extends ExprContext;
-  private case object DIV_MULT_MOD_R extends ExprContext;
-
-  private case object IN_MATCH_NOMATCH_L   extends ExprContext;
-  private case object IN_MATCH_NOMATCH_R   extends ExprContext;
-
-  private case object NOT    extends ExprContext;
-  private case object UMINUS extends ExprContext;
-
+  private case class OR               (dir: DirContext) extends ExprContext;
+  private case class AND              (dir: DirContext) extends ExprContext;
+  private case class RELATIONAL       (dir: DirContext) extends ExprContext;
+  private case class NOTEQUAL_EQUAL   (dir: DirContext) extends ExprContext;
+  private case class LSHIFT_RSHIFT    (dir: DirContext) extends ExprContext;
+  private case class PLUS_MINUS       (dir: DirContext) extends ExprContext;
+  private case class DIV_MULT_MOD     (dir: DirContext) extends ExprContext;
+  private case class IN_MATCH_NOMATCH (dir: DirContext) extends ExprContext;
+  private case object NOT      extends ExprContext;
+  private case object UMINUS   extends ExprContext;
   private case object TOPLEVEL extends ExprContext;
 
 
   private def parensRequired (op: BinOp, context: ExprContext) : Boolean = op match {
 
     case In | NoMatch | Match => context match {
-      case NOT | UMINUS | IN_MATCH_NOMATCH_R => true
+      case NOT | UMINUS | IN_MATCH_NOMATCH (RIGHT) => true
       case _ => false
     }
 
     case Mod | Mult | Div => context match {
-      case NOT | UMINUS | IN_MATCH_NOMATCH_R | 
-           IN_MATCH_NOMATCH_L | DIV_MULT_MOD_R => true
+      case NOT | UMINUS | IN_MATCH_NOMATCH (_) |
+           DIV_MULT_MOD (RIGHT) => true
       case _ => false
     }
 
     case Plus | Minus => context match {
-      case NOT | UMINUS | IN_MATCH_NOMATCH_R |
-           IN_MATCH_NOMATCH_L | DIV_MULT_MOD_R |
-           DIV_MULT_MOD_L | PLUS_MINUS_R => true
+      case NOT | UMINUS | IN_MATCH_NOMATCH (_) |
+           DIV_MULT_MOD (_) | PLUS_MINUS (RIGHT) => true
       case _ => false
     }
 
     case LShift | RShift => context match {
-      case NOT | UMINUS | IN_MATCH_NOMATCH_R |
-           IN_MATCH_NOMATCH_L | DIV_MULT_MOD_R |
-           DIV_MULT_MOD_L | PLUS_MINUS_R | PLUS_MINUS_L |
-           LSHIFT_RSHIFT_R => true
+      case NOT | UMINUS | IN_MATCH_NOMATCH (_) | 
+           DIV_MULT_MOD (_) | PLUS_MINUS (_) | 
+           LSHIFT_RSHIFT (RIGHT) => true
       case _ => false
     }
 
     case NotEqual | Equal => context match {
-      case NOT | UMINUS | IN_MATCH_NOMATCH_R |
-           IN_MATCH_NOMATCH_L | DIV_MULT_MOD_R |
-           DIV_MULT_MOD_L | PLUS_MINUS_R |
-           PLUS_MINUS_L | LSHIFT_RSHIFT_R |
-           LSHIFT_RSHIFT_L | NOTEQUAL_EQUAL_R => true
+      case NOT | UMINUS | IN_MATCH_NOMATCH (_) | 
+           DIV_MULT_MOD (_) | PLUS_MINUS (_)   |
+           LSHIFT_RSHIFT (_) | NOTEQUAL_EQUAL (RIGHT) => true
       case _ => false
     }
 
     case GreaterThan | GreaterEq | LessThan | LessEq => context match {
-      case NOT | UMINUS | IN_MATCH_NOMATCH_R |
-           IN_MATCH_NOMATCH_L | DIV_MULT_MOD_R |
-           DIV_MULT_MOD_L | PLUS_MINUS_R |
-           PLUS_MINUS_L | LSHIFT_RSHIFT_R |
-           LSHIFT_RSHIFT_L | NOTEQUAL_EQUAL_R |
-           RELATIONAL_R => true
+      case NOT | UMINUS | IN_MATCH_NOMATCH (_) | 
+           DIV_MULT_MOD (_) | PLUS_MINUS (_)   |
+           LSHIFT_RSHIFT (_) | NOTEQUAL_EQUAL (_) |
+           RELATIONAL (RIGHT) => true
       case _ => false
     }
 
     case And => context match {
-      case NOT | UMINUS | IN_MATCH_NOMATCH_R |
-           IN_MATCH_NOMATCH_L | DIV_MULT_MOD_R |
-           DIV_MULT_MOD_L | PLUS_MINUS_R |
-           PLUS_MINUS_L | LSHIFT_RSHIFT_R |
-           LSHIFT_RSHIFT_L | NOTEQUAL_EQUAL_R |
-           RELATIONAL_R | RELATIONAL_L | AND_R => true
+      case NOT | UMINUS | IN_MATCH_NOMATCH (_) | 
+           DIV_MULT_MOD (_) | PLUS_MINUS (_) |
+           LSHIFT_RSHIFT (_) | NOTEQUAL_EQUAL (_) |
+           RELATIONAL (_) | AND (RIGHT) => true
       case _ => false
     }
 
     case Or => context match {
-      case NOT | UMINUS | IN_MATCH_NOMATCH_R |
-           IN_MATCH_NOMATCH_L | DIV_MULT_MOD_R |
-           DIV_MULT_MOD_L | PLUS_MINUS_R |
-           PLUS_MINUS_L | LSHIFT_RSHIFT_R |
-           LSHIFT_RSHIFT_L | NOTEQUAL_EQUAL_R |
-           RELATIONAL_R | RELATIONAL_L | AND_R |
-           AND_L | OR_R => true
+      case NOT | UMINUS | IN_MATCH_NOMATCH (_) |
+           DIV_MULT_MOD (_) | PLUS_MINUS (_) |
+           LSHIFT_RSHIFT (_) | NOTEQUAL_EQUAL (_) |
+           RELATIONAL (_) | AND (_) | OR (RIGHT) => true
       case _ => false
     }
   }
@@ -165,18 +139,18 @@ object PrettyPrintAST {
 
       op match {
 
-      case In | NoMatch | Match => printer (printBinExprWithCtx (lhs, rhs, op, IN_MATCH_NOMATCH_L, IN_MATCH_NOMATCH_R))
-      case Mod | Mult | Div     => printer (printBinExprWithCtx (lhs, rhs, op, DIV_MULT_MOD_L, DIV_MULT_MOD_R))
-      case Plus | Minus         => printer (printBinExprWithCtx (lhs, rhs, op, PLUS_MINUS_L, PLUS_MINUS_R))
-      case LShift | RShift      => printer (printBinExprWithCtx (lhs, rhs, op, LSHIFT_RSHIFT_L, LSHIFT_RSHIFT_R))
-      case NotEqual | Equal     => printer (printBinExprWithCtx (lhs, rhs, op, NOTEQUAL_EQUAL_L, NOTEQUAL_EQUAL_R))
+      case In | NoMatch | Match => printer (printBinExprWithCtx (lhs, rhs, op, IN_MATCH_NOMATCH (LEFT), IN_MATCH_NOMATCH (RIGHT)))
+      case Mod | Mult | Div     => printer (printBinExprWithCtx (lhs, rhs, op, DIV_MULT_MOD (LEFT), DIV_MULT_MOD (RIGHT)))
+      case Plus | Minus         => printer (printBinExprWithCtx (lhs, rhs, op, PLUS_MINUS (LEFT), PLUS_MINUS (RIGHT)))
+      case LShift | RShift      => printer (printBinExprWithCtx (lhs, rhs, op, LSHIFT_RSHIFT (LEFT), LSHIFT_RSHIFT (RIGHT)))
+      case NotEqual | Equal     => printer (printBinExprWithCtx (lhs, rhs, op, NOTEQUAL_EQUAL (LEFT), NOTEQUAL_EQUAL (RIGHT)))
 
       case GreaterThan | GreaterEq | 
-           LessThan | LessEq    => printer (printBinExprWithCtx (lhs, rhs, op, RELATIONAL_L, RELATIONAL_R))
+           LessThan | LessEq    => printer (printBinExprWithCtx (lhs, rhs, op, RELATIONAL (LEFT), RELATIONAL (RIGHT)))
 
-      case And => printer (printBinExprWithCtx (lhs, rhs, op, AND_L, AND_R))
+      case And => printer (printBinExprWithCtx (lhs, rhs, op, AND (LEFT), AND (RIGHT)))
 
-      case Or => printer (printBinExprWithCtx (lhs, rhs, op, OR_L, OR_R))
+      case Or => printer (printBinExprWithCtx (lhs, rhs, op, OR (LEFT), OR (RIGHT)))
     }
 
     // Op implicitly is "NOT" not in context of case
@@ -212,7 +186,6 @@ object PrettyPrintAST {
 
     case BlockExpr (es) => printList (es, printAST, "\n") 
     
-    // TODO : Parentheses and precedence
     case BinExpr (_, _, _) => printExpr (ast, TOPLEVEL)
     case RelationExpr (lhs, rhs, op) => printAST (lhs) + " " + RelationOpStr (op) + " " + printAST (rhs)
     case NotExpr (_)    => printExpr (ast, TOPLEVEL)
