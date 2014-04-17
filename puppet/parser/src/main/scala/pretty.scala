@@ -132,10 +132,11 @@ object PrettyPrintAST {
   }
 
 
+  // TODO : Could be refactored
   private def printExpr (a: AST, context: ExprContext) : String = a match {
 
     case BinExpr (lhs, rhs, op) =>
-      def printer (x: String) = if (parensRequired (op, context)) "(" + x + ")" else x
+      def printer (x: String) = if (parensRequired (op, context)) "(%s)".format (x) else x
 
       op match {
 
@@ -180,60 +181,66 @@ object PrettyPrintAST {
     case Undef                    => "undef"
     case Hostname (v)             => v
     case Variable (v)             => v
-    case HashOrArrayAccess (v, k) => printAST (v) + "[" + printAST (k) + "]"
+    case HashOrArrayAccess (v, k) => "%s[%s]".format (printAST (v), printAST (k))
     case ASTRegex (v)             => v
-    case ASTHash (kvs)            => "{" + printList[(AST, AST)] (kvs, {case (k, v) => (printAST (k)) + " => " + (printAST (v))}, ", ") + "}"
+    case ASTHash (kvs)            => "{%s}".format (printList[(AST, AST)] (kvs, {case (k, v) => "%s => %s".format (printAST (k), printAST (v))}, ", "))
 
     case BlockExpr (es) => printList (es, printAST, "\n") 
     
     case BinExpr (_, _, _) => printExpr (ast, TOPLEVEL)
-    case RelationExpr (lhs, rhs, op) => printAST (lhs) + " " + RelationOpStr (op) + " " + printAST (rhs)
+    case RelationExpr (lhs, rhs, op) => "%s %s %s".format (printAST (lhs), RelationOpStr (op), printAST (rhs))
     case NotExpr (_)    => printExpr (ast, TOPLEVEL)
     case UMinusExpr (_) => printExpr (ast, TOPLEVEL)
-    case Vardef (nm, v, is_append) => printAST (nm) + (if (is_append) " += " else " = ") + printAST (v)
-    case ASTArray (arr) => "[" + printList (arr, printAST, ",") + "]" 
-    case ResourceParam (p, v, is_add) => printAST (p) + (if(is_add) " +> " else " => ") + printAST (v)
-    case ResourceInstance (t, prms) => printAST (t) + ": " + printList (prms, printAST, ",\n")
-    case Resource (typ, insts) => typ + " " + "{" + printList (insts, printAST, ";\n") + "}"
-    case ResourceDefaults (typ, prms) => printAST (typ) + " " + "{" + "\n" + printList (prms, printAST, ", ") + "\n}"
-    case ResourceRef (typ, es) => printAST (typ) + " " + "[" + printList (es, printAST, ", ") + "]"
-    case ResourceOverride (obj, prms) => printAST (obj) + " " + "{" + "\n" + printList (prms, printAST, ",\n") + "\n}"
+    case Vardef (nm, v, true)  => "%s += %s".format (printAST (nm), printAST (v))
+    case Vardef (nm, v, false) => "%s = %s".format (printAST (nm), printAST (v))
+    case ASTArray (arr) => "[%s]".format (printList (arr, printAST, ","))
+    case ResourceParam (p, v, true)  => "%s +> %s".format (printAST (p), printAST (v))
+    case ResourceParam (p, v, false) => "%s => %s".format (printAST (p), printAST (v))
+    case ResourceInstance (t, prms) => "%s: %s".format (printAST (t), printList (prms, printAST, ",\n"))
+    case Resource (typ, insts) => "%s { %s }".format (typ, printList (insts, printAST, ";\n"))
+    case ResourceDefaults (typ, prms) => "%s {\n%s\n}".format (printAST (typ), printList (prms, printAST, ", "))
+    case ResourceRef (typ, es) => "%s [%s]".format (printAST (typ), printList (es, printAST, ", "))
+    case ResourceOverride (obj, prms) => "%s {\n%s\n}".format (printAST (obj), printList (prms, printAST, ",\n"))
 
-    case VirtualResource (res, tvirt) => VirtualResTypeStr (tvirt) + printAST (res)
-    case IfExpr (test, true_es, false_es) => "if" + " " + printAST (test) + " { " + printAST (true_es) + " } else { " + printAST (false_es) + "}\n"
+    case VirtualResource (res, tvirt) => "%s%s".format (VirtualResTypeStr (tvirt), printAST (res))
+    case IfExpr (test, true_es, false_es) => "if %s { %s } else { %s }".format (printAST (test), printAST (true_es), printAST (false_es))
 
-    case CaseOpt (v, stmts) => printList (v, printAST, ", ") + " : " + "{" + "\n" + printAST (stmts) + "}" + "\n"
+    case CaseOpt (v, stmts) => "%s : {\n %s \n}".format (printList (v, printAST, ", "), printAST (stmts))
 
-    case CaseExpr (test, caseopts) => "case" + " " + printAST (test) + " " + "{" + "\n" + printList (caseopts, printAST, " ") + "\n" + "}" + "\n"
+    case CaseExpr (test, caseopts) => "case %s {\n%s\n}".format (printAST (test), printList (caseopts, printAST, " "))
 
-    case Selector (prm, vs) => printAST (prm) + " " + "?" + " " + "{" + "\n" + printList (vs, printAST, ",\n") + "}"
-    case CollectionExpr (lhs, rhs, op) => printAST (lhs) + " " + CollectionOpStr (op) + " " + printAST (rhs)
+    case Selector (prm, vs) => "%s ? {\n%s\n}".format (printAST (prm), printList (vs, printAST, ",\n"))
+    case CollectionExpr (lhs, rhs, op) => "%s %s %s".format (printAST (lhs), CollectionOpStr (op), printAST (rhs))
 
     case CollectionExprTagNode (None, prop) => if (prop == Vrtvirtual) "<| |>" else "<<| |>>"
     case CollectionExprTagNode (Some (coll), prop) => 
-      if (prop == Vrtvirtual) ("<|" + " " + printAST (coll) + " " + "|>")
-      else ("<<|" + " " + printAST (coll) + " " + "|>>")
+      if (prop == Vrtvirtual) "<| %s |>".format (printAST (coll))
+      else "<<| %s |>>".format (printAST (coll))
 
-    case Collection (typ, collectrhand, Nil) => printAST (typ) + " " + printAST (collectrhand)
-    case Collection (typ, collectrhand, prms) => printAST (typ) + " " + printAST (collectrhand) + " " + "{" + "\n" + printList (prms, printAST, ",") + "}" + "\n"
+    case Collection (typ, collectrhand, Nil) => "%s %s".format (printAST (typ), printAST (collectrhand))
+    case Collection (typ, collectrhand, prms) => "%s %s {\n%s\n}".format (printAST (typ), printAST (collectrhand), printList (prms, printAST, ","))
 
-    case Hostclass (clnm, Nil, None, stmts) => "class" + " " + clnm + " " + "{" + "\n" + printAST (stmts) + "}" + "\n"
-    case Hostclass (clnm, args, None, stmts) => "class" + " " + clnm + " " + "(" + printList[(String, Option[AST])] (args, { case (v, None) => v
-                                                                                                      case (v, Some (e)) => v + " = " + printAST(e)}, ",") + ")" + " " + "{" + "\n" + printAST (stmts) + "}" + "\n"
-    case Hostclass (clnm, Nil, Some (parent), stmts) => "class" + " " + clnm + " " + "inherits" + " " + parent + "{" + "\n" + printAST (stmts) + "}" + "\n"
-    case Hostclass (clnm, args, Some (parent), stmts) => "class" + " " + clnm + " " + "inherits" + " " + parent + " " + "(" + printList[(String, Option[AST])] (args, { case (v, None) => v
-                                                                                                      case (v, Some (e)) => v + " = " + printAST(e)}, ",")  + ")" + " " + "{" + "\n" + printAST (stmts) + "}" + "\n"
+    case Hostclass (clnm, Nil, None, stmts) => "class %s {\n%s\n}".format (clnm, printAST (stmts))
+    case Hostclass (clnm, args, None, stmts) => "class %s (%s) {\n%s\n}".format (clnm, printList[(String, Option[AST])] (args, { case (v, None) => v
+                                                                                                                                 case (v, Some (e)) => "%s = %s".format (v, printAST(e))
+                                                                                                                               }, ","), printAST (stmts))
+    case Hostclass (clnm, Nil, Some (parent), stmts) => "class %s inherits %s {\n%s\n}".format (clnm, parent, printAST (stmts))
+    case Hostclass (clnm, args, Some (parent), stmts) => "class %s inherits %s (%s) {\n%s\n}".format (clnm, parent,
+                                                                                                      printList[(String, Option[AST])] (args, { case (v, None) => v
+                                                                                                                                                case (v, Some (e)) =>"%s = %s".format (v, printAST(e))}, ","),
+                                                                                                                                                                                                                                                                                                     printAST (stmts))
 
-    case Function (nm, args, _) => nm + " " + "(" + " " + printList (args, printAST, ",") + " " + ")"
+    case Function (nm, args, _) => "%s (%s)".format (nm, printList (args, printAST, ","))
 
-    case Import (imps) => "import" + " " + printList (imps, (x: String) => x, ",") + "\n"
+    case Import (imps) => "import %s\n".format (printList (imps, (x: String) => x, ","))
 
-    case Node (hostnames, None, es) => "node" + " " + printList (hostnames, printAST, ",") + " " + "{" + "\n" + printAST (es) + "}" + "\n"
+    case Node (hostnames, None, es) => "node %s {\n%s\n}".format (printList (hostnames, printAST, ","), printAST (es))
 
-    case Node (hostnames, Some (parent), es) => "node" + " " + printList (hostnames, printAST, ",") + " " + "inherits" + " " + parent + " " + "{" + "\n" + printAST (es) + "}" + "\n"
+    case Node (hostnames, Some (parent), es) => "node %s inherits %s {\n%s\n}".format (printList (hostnames, printAST, ","), parent, printAST (es))
 
-    case Definition (classname, Nil, es) => "define" + " " + classname + " " + "{" + "\n" + printAST (es) + "}" + "\n"
-    case Definition (classname, args, es) => "define" + " " + classname + " " + "(" + printList[(String, Option[AST])](args, { case (v, None) => v
-                                                                                                         case (v, Some (e)) => v + " = " + printAST (e)}, ",") + ")" + " " + "{" + "\n" + printAST (es) + "}" + "\n"
+    case Definition (classname, Nil, es) => "define %s {\n%s\n}".format (classname, printAST (es))
+    case Definition (classname, args, es) => "define %s (%s) {\n%s\n}".format (classname, printList[(String, Option[AST])](args, { case (v, None) => v
+                                                                                                                                   case (v, Some (e)) => "%s = %s".format (v, printAST (e))
+                                                                                                                                 }, ","), printAST (es))
   }
 }
