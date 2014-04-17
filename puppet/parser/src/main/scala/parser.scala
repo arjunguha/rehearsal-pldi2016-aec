@@ -42,7 +42,7 @@ class PuppetLexical extends StdLexical
     NAME ^^ (processName (_))
   | CLASSREF ^^ (PuppetClassRef (_))
   | REGEX    ^^ (PuppetRegex (_))
-  | VARIABLE ^^ (PuppetVariable (_))
+  | VARIABLETOK ^^ (PuppetVariable (_))
   | '\'' ~ rep( chrExcept('\'', '\n', EofCh) ) ~ '\'' ^^ { 
       case '\'' ~ chars ~ '\'' => StringLit(chars mkString "")
     }
@@ -84,7 +84,7 @@ class PuppetLexical extends StdLexical
   // TODO : We might need to escape end of regex, See puppet lexer
   private def REGEX: Parser[String] = """/[^/\n]*/""".r
 
-  private def VARIABLE: Parser[String] = ( 
+  private def VARIABLETOK: Parser[String] = ( 
     """\$(?:::)?(?:[-\w]+::)*[-\w]+""".r // DOLLAR_VAR_WITH_DASH
   | """\$(::)?(\w+::)*\w+""".r           // DOLLAR_VAR
   )
@@ -229,7 +229,7 @@ class PuppetParser extends StdTokenParsers
     quotedtext ||| name ||| asttype ||| selector ||| variable ||| array ||| hasharrayaccesses
 
   lazy val assignment: P[Vardef] = (
-    VARIABLE ~ ("=" ~> expr) ^^ { 
+    VARIABLETOK ~ ("=" ~> expr) ^^ { 
       case vrbl ~ e => Vardef (Name (vrbl), e, false)
     }
   ||| hasharrayaccess ~ ("=" ~> expr) ^^ { 
@@ -238,7 +238,7 @@ class PuppetParser extends StdTokenParsers
   )
 
   lazy val append: P[Vardef] = 
-    VARIABLE ~ ("+=" ~> expr) ^^ {
+    VARIABLETOK ~ ("+=" ~> expr) ^^ {
       case vrbl ~ e => Vardef (Name (vrbl), e, true)
     }
 
@@ -480,15 +480,15 @@ class PuppetParser extends StdTokenParsers
   lazy val arguments: P[List[(String, Option[AST])]] = repsep (argument, ",")
 
   lazy val argument: P[(String, Option[AST])] = (
-    VARIABLE ~ ("=" ~> expr) ^^ { case v ~ e => (v, Some (e)) }
-  ||| VARIABLE ^^ ((_, None))
+    VARIABLETOK ~ ("=" ~> expr) ^^ { case v ~ e => (v, Some (e)) }
+  ||| VARIABLETOK ^^ ((_, None))
   )
 
   lazy val nodeparent: P[String] = "inherits" ~> hostname
 
   lazy val classparent: P[String] = "inherits" ~> (classname | "default")
 
-  lazy val variable: P[Variable] = VARIABLE ^^ (Variable (_))
+  lazy val variable: P[Variable] = VARIABLETOK ^^ (Variable (_))
 
   lazy val array: P[ASTArray] = (
     "[" ~> expressions.? <~ "]" ^^ {
@@ -545,7 +545,7 @@ class PuppetParser extends StdTokenParsers
   def REGEX: Parser[String] =
     elem ("regex", _.isInstanceOf[PuppetRegex]) ^^ (_.chars)
 
-  def VARIABLE: Parser[String] =
+  def VARIABLETOK: Parser[String] =
     elem ("classref", _.isInstanceOf[PuppetVariable]) ^^ (_.chars)
 
 
