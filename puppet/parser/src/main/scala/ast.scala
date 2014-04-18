@@ -1,3 +1,5 @@
+package puppet;
+
 import scala.util.parsing.input.Positional
 
 // Various Operators

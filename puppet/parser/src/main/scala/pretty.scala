@@ -1,3 +1,5 @@
+package puppet;
+
 object PrettyPrintAST {
 
   private def BinOpStr (op: BinOp): String = op match {

@@ -1,4 +1,5 @@
 import org.scalatest._
+import puppet._
 
 class ParserSpec extends FunSuite {
 
@@ -6,5 +7,4 @@ class ParserSpec extends FunSuite {
     assert(PuppetParser("$a = / 4").successful == false)
 
   }
-
 }
