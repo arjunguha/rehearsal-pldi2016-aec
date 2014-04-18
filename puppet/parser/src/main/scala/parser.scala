@@ -561,5 +561,8 @@ class PuppetParser extends StdTokenParsers
 
 object PuppetParser extends PuppetParser {
 
-  def apply (in: String) = parseAll (in)
+  def apply (in: String) = parseAll (in) match {
+    case Success (ast, _) => ast
+    case e: NoSuccess => throw new RuntimeException ("Parsing failed:" + e)
+  }
 }

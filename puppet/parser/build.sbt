@@ -8,4 +8,4 @@ scalacOptions += "-unchecked"
 
 scalacOptions += "-feature"
 
-libraryDependencies += "org.scalatest" % "scalatest_2.10" % "2.0" % "test"
+libraryDependencies += "org.scalatest" % "scalatest_2.10" % "2.1.3" % "test"
