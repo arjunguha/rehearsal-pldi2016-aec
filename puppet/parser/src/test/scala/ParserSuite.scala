@@ -1,17 +1,11 @@
 import org.scalatest.PropSpec
-import org.scalatest.prop._
-import org.scalatest.matchers.ShouldMatchers
+import org.scalatest.prop.PropertyChecks
+import org.scalatest.Matchers
 import puppet._
 
 import java.io.File
 
-class ParserSpec extends PropSpec with PropertyChecks with ShouldMatchers {
-
-/*
-  test("basic test") {
-    assert(PuppetParser("$a = / 4").successful == false)
-  }
-*/
+class ParserSpec extends PropSpec with PropertyChecks with Matchers {
 
   private def recursiveListFiles (f: File): Array[File] = {
     val these = f.listFiles
