@@ -558,11 +558,12 @@ class PuppetParser extends StdTokenParsers
   }
 }
 
-
+case class PuppetParserException (msg: String) extends Exception (msg);
+  
 object PuppetParser extends PuppetParser {
 
   def apply (in: String) = parseAll (in) match {
     case Success (ast, _) => ast
-    case e: NoSuccess => throw new RuntimeException ("Parsing failed:" + e)
+    case e: NoSuccess => throw PuppetParserException ("Parsing failed:" + e)
   }
 }
