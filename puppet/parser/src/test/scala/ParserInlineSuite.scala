@@ -18,14 +18,17 @@ class ParserInlineSpec extends FunSpec with Matchers {
     }
 
     it ("should create ast::VarDef with append=true") {
-      val vardef = PuppetParser ("$var += 2")
-      vardef should be (BlockExpr (List (Vardef (Name ("$var"), Name ("2"), true))))
+      PuppetParser ("$var += 2") match {
+        case BlockExpr (List (Vardef (_, _, append))) => append should be (true)
+        case _ => fail ("Expected Vardef")
+      }
     }
 
     it ("should work with arrays too") {
-      val vardef = PuppetParser ("$var += ['test']")
-      vardef shouldBe a [Vardef]
-      // vardef.append should be (true)
+      PuppetParser ("$var += ['test']") match {
+        case BlockExpr (List (Vardef (_, ASTArray (_), append))) => append should be (true)
+        case _ => fail ("Expected Vardef")
+      }
     }
   }
 
@@ -35,11 +38,13 @@ class ParserInlineSpec extends FunSpec with Matchers {
     }
   }
 
+
   describe ("parsing 'unless'") {
     it ("should create the correct ast objects") {
-      val ast = PuppetParser ("unless false { $var = 1 }")
-      ast shouldBe a [Vardef]
-      // Puppet::Parser::AST::Not.expects(:new).with { |h| h[:value].is_a?(Puppet::Parser::AST::Boolean) }
+      PuppetParser ("unless false { $var = 1 }") match {
+        case BlockExpr (List (IfExpr (NotExpr (x), _, _))) => x shouldBe a [ASTBool]
+        case _ => fail ("Expected NotExpr")
+      }
     }
 
     it ("should not raise an error with empty statements") {
@@ -59,48 +64,64 @@ class ParserInlineSpec extends FunSpec with Matchers {
       })
     }
 
-  /*
   describe ("when parsing 'if'") {
     it ("not, it should create the correct ast objects") {
-      Puppet::Parser::AST::Not.expects(:new).with { |h| h[:value].is_a?(Puppet::Parser::AST::Boolean) }
-      PuppetParser ("if ! true { $var = 1 }")
+      PuppetParser ("if ! true { $var = 1 }") match {
+        case BlockExpr (List (IfExpr (NotExpr (x), _, _))) => x shouldBe a [ASTBool]
+        case _ => fail ("Expected NotExpr")
+      }
     }
 
     it ("boolean operation, it should create the correct ast objects") {
-      Puppet::Parser::AST::BooleanOperator.expects(:new).with {
-        |h| h[:rval].is_a?(Puppet::Parser::AST::Boolean) and h[:lval].is_a?(Puppet::Parser::AST::Boolean) and h[:operator]=="or"
+      PuppetParser ("if true or true { $var = 1 }") match {
+        case BlockExpr (List (IfExpr (BinExpr (lhs, rhs, op), _, _))) => {
+          lhs shouldBe a [ASTBool]
+          rhs shouldBe a [ASTBool]
+          op should be (Or)
+        }
+        case _ => fail ("Expected BinaryExpression")
       }
-      PuppetParser ("if true or true { $var = 1 }")
-
     }
 
     it ("comparison operation, it should create the correct ast objects") {
+      /*
       Puppet::Parser::AST::ComparisonOperator.expects(:new).with {
         |h| h[:lval].is_a?(Puppet::Parser::AST::Name) and h[:rval].is_a?(Puppet::Parser::AST::Name) and h[:operator]=="<"
       }
-      PuppetParser ("if 1 < 2 { $var = 1 }")
-
+      */
+      PuppetParser ("if 1 < 2 { $var = 1 }") match {
+        case BlockExpr (List (IfExpr (BinExpr (lhs, rhs, op), _, _))) => 
+          lhs shouldBe a [Name]
+          rhs shouldBe a [Name]
+          op should be (LessThan)
+        case _ => fail ("Expected BinaryExpression")
+      }
     }
   }
-  */
 
   describe ("when parsing if complex expressions") {
 
-  /*
     it ("should create a correct ast tree") {
-      aststub = stub_everything 'ast'
-      Puppet::Parser::AST::ComparisonOperator.expects(:new).with {
-        |h| h[:rval].is_a?(Puppet::Parser::AST::Name) and h[:lval].is_a?(Puppet::Parser::AST::Name) and h[:operator]==">"
-      }.returns(aststub)
-      Puppet::Parser::AST::ComparisonOperator.expects(:new).with {
-        |h| h[:rval].is_a?(Puppet::Parser::AST::Name) and h[:lval].is_a?(Puppet::Parser::AST::Name) and h[:operator]=="=="
-      }.returns(aststub)
-      Puppet::Parser::AST::BooleanOperator.expects(:new).with {
-        |h| h[:rval]==aststub and h[:lval]==aststub and h[:operator]=="and"
+      PuppetParser ("if (1 > 2) and (1 == 2) { $var = 1 }") match {
+        case BlockExpr (List (IfExpr (BinExpr (lhs, rhs, op), _, _))) => 
+          op should be (And)
+          lhs match {
+            case BinExpr (lhs, rhs, op) =>
+              lhs shouldBe a [Name]
+              rhs shouldBe a [Name]
+              op should be (GreaterThan)
+            case _ => fail ("Expected Binary Expression for lhs")
+          }
+          rhs match {
+            case BinExpr (lhs, rhs, op) =>
+              lhs shouldBe a [Name]
+              rhs shouldBe a [Name]
+              op should be (Equal)
+            case _ => fail ("Expected Binary Expression for rhs")
+          }
+        case _ => fail ("Expected Binary Expression for if condition")
       }
-      PuppetParser ("if (1 > 2) and (1 == 2) { $var = 1 }")
     }
-    */
 
     it ("should raise an error on incorrect expression") {
       intercept [PuppetParserException] {
@@ -118,15 +139,6 @@ class ParserInlineSpec extends FunSpec with Matchers {
     it ("should not raise syntax errors with multiple references") {
       PuppetParser ("exec { test: param => File[\"a\",\"b\"] }")
     }
-
-    /*
-    it ("should create an ast::ResourceReference") {
-      Puppet::Parser::AST::ResourceReference.expects(:new).with { |arg|
-        arg[:line]==1 and arg[:type]=="File" and arg[:title].is_a?(Puppet::Parser::AST::ASTArray)
-      }
-      @parser.parse('exec { test: command => File["a","b"] }')
-    }
-    */
   }
 
   describe ("when parsing resource overrides") {
@@ -139,18 +151,14 @@ class ParserInlineSpec extends FunSpec with Matchers {
       PuppetParser ("Resource[\"title1\",\"title2\"] { param => value }")
     }
 
-  /*
     it ("should create an ast::ResourceOverride") {
-      #Puppet::Parser::AST::ResourceOverride.expects(:new).with { |arg|
-      #  arg[:line]==1 and arg[:object].is_a?(Puppet::Parser::AST::ResourceReference) and arg[:parameters].is_a?(Puppet::Parser::AST::ResourceParam)
-      #}
-      ro = @parser.parse('Resource["title1","title2"] { param => value }').code[0]
-      ro.should be_a(Puppet::Parser::AST::ResourceOverride)
-      ro.line.should == 1
-      ro.object.should be_a(Puppet::Parser::AST::ResourceReference)
-      ro.parameters[0].should be_a(Puppet::Parser::AST::ResourceParam)
+      PuppetParser ("Resource[\"title1\",\"title2\"] { param => value }") match {
+        case BlockExpr (List (ResourceOverride (ref, resparams))) =>
+          ref shouldBe a [ResourceRef]
+          resparams shouldBe a [List[ResourceParam]]
+        case _ => fail ("Expected ResourceOverride")
+      }
     }
-  */
   }
 
   describe ("when parsing if statements") {
@@ -167,24 +175,9 @@ class ParserInlineSpec extends FunSpec with Matchers {
        PuppetParser ("if false { } else { }") 
     }
 
-  /*
-    it ("should create a nop node for empty branch") {
-      Puppet::Parser::AST::Nop.expects(:new)
-      PuppetParser ("if true { }")
-    }
-
-    it ("should create a nop node for empty else branch") {
-      Puppet::Parser::AST::Nop.expects(:new)
-      PuppetParser ("if true { notice('test') } else { }")
-    }
-
     it ("should build a chain of 'ifs' if there's an 'elsif'") {
-      expect { @parser.parse(<<-PP) }.to_not raise_error
-        if true { notice('test') } elsif true {} else { }
-      PP
+      PuppetParser ("if true { notice('test') } elsif true {} else { }")
     }
-    */
-
   }
 
   describe ("when parsing function calls") {
@@ -223,149 +216,131 @@ class ParserInlineSpec extends FunSpec with Matchers {
     }
   }
 
-  /*
-  describe ("when building ast nodes") {
-    before {
-      @lexer = stub 'lexer', :line => 50, :file => "/foo/bar", :getcomment => "whev"
-      @parser.stubs(:lexer).returns @lexer
-      @class = Puppet::Resource::Type.new(:hostclass, "myclass", :use_docs => false)
-    }
-
-    it ("should return a new instance of the provided class created with the provided options") {
-      @class.expects(:new).with { |opts| opts[:foo] == "bar" }
-      @parser.ast(@class, :foo => "bar")
-    }
-
-    it ("should merge the ast context into the provided options") {
-      @class.expects(:new).with { |opts| opts[:file] == "/foo" }
-      @parser.expects(:ast_context).returns :file => "/foo"
-      @parser.ast(@class, :foo => "bar")
-    }
-
-    it ("should prefer provided options over AST context") {
-      @class.expects(:new).with { |opts| opts[:file] == "/bar" }
-      @lexer.expects(:file).returns "/foo"
-      @parser.ast(@class, :file => "/bar")
-    }
-  }
-
   describe ("when parsing classes") {
-    before :each {
-      @krt = Puppet::Resource::TypeCollection.new("development")
-      @parser = Puppet::Parser::Parser.new "development"
-      @parser.stubs(:known_resource_types).returns @krt
-    }
 
     it ("should not create new classes") {
-      PuppetParser ("class foobar {}").code[0].should be_a(Puppet::Parser::AST::Hostclass)
-      @krt.hostclass("foobar").should be_nil
+      PuppetParser ("class foobar {}") match {
+        case BlockExpr (List (Hostclass (name , _, _, _))) => name should be ("foobar")
+        case _ => fail ("Expected Hostclass")
+      }
     }
 
     it ("should correctly set the parent class when one is provided") {
-      PuppetParser ("class foobar inherits yayness {}").code[0].instantiate('')[0].parent.should == "yayness"
+      PuppetParser ("class foobar inherits yayness {}") match {
+        case BlockExpr (List (Hostclass (_, _, Some (parent), _))) => parent should be ("yayness")
+        case _ => fail ("Exptected parent")
+      }
     }
 
     it ("should correctly set the parent class for multiple classes at a time") {
-      statements = PuppetParser ("class foobar inherits yayness {}\nclass boo inherits bar {}").code
-      statements[0].instantiate('')[0].parent.should == "yayness"
-      statements[1].instantiate('')[0].parent.should == "bar"
+      PuppetParser ("class foobar inherits yayness {}\nclass boo inherits bar {}") match {
+        case BlockExpr (List (Hostclass (_, _, Some (parent1), _), Hostclass (_, _, Some (parent2), _))) =>
+          parent1 should be ("yayness")
+          parent2 should be ("bar")
+        case _ => fail ("Expected parents")
+      }
     }
 
     it ("should define the code when some is provided") {
-      PuppetParser ("class foobar { $var = val }").code[0].code.should_not be_nil
-    }
-
-    it ("should accept parameters with trailing comma") {
-      PuppetParser ("file { '/example': ensure => file, }").should be
-    }
-
-    it ("should accept parametrized classes with trailing comma") {
-      PuppetParser ("class foobar ($var1 = 0,) { $var = val }").code[0].code.should_not be_nil
-    }
-
-    it ("should define parameters when provided") {
-      foobar = PuppetParser ("class foobar($biz,$baz) {}").code[0].instantiate('')[0]
-      foobar.arguments.should == {"biz" => nil, "baz" => nil}
+      PuppetParser ("class foobar { $var = val }") match {
+        case BlockExpr (List (Hostclass (_, _, _, stmts))) => stmts should not be (Nil)
+        case _ => fail ("Exptected statements")
+      }
     }
   }
 
   describe ("when parsing resources") {
-    before :each {
-      @krt = Puppet::Resource::TypeCollection.new("development")
-      @parser = Puppet::Parser::Parser.new "development"
-      @parser.stubs(:known_resource_types).returns @krt
-    }
 
     it ("should be able to parse class resources") {
-      @krt.add(Puppet::Resource::Type.new(:hostclass, "foobar", :arguments => {"biz" => nil}))
-       PuppetParser ("class { foobar: biz => stuff }") 
+       PuppetParser ("class { foobar: biz => stuff }") match {
+         case BlockExpr (List (Resource (_, List (ResourceInstance (Name (name), _))))) => 
+           name should be ("foobar")
+         case _ => fail ("Exptected a Resource")
+       }
     }
 
     it ("should correctly mark exported resources as exported") {
-      PuppetParser ("@@file { '/file': }").code[0].exported.should be_true
+      PuppetParser ("@@file { '/file': }") match {
+        case BlockExpr (List (VirtualResource (_, x))) => x should be (Vrtexported)
+        case _ => fail ("Expected a virtual resource")
+      }
     }
 
     it ("should correctly mark virtual resources as virtual") {
-      PuppetParser ("@file { '/file': }").code[0].virtual.should be_true
+      PuppetParser ("@file { '/file': }") match {
+        case BlockExpr (List (VirtualResource (_, x))) => x should be (Vrtvirtual)
+        case _ => fail ("Expected a virtual resource")
+      }
     }
   }
 
   describe ("when parsing nodes") {
-    it ("should be able to parse a node with a single name") {
-      node = PuppetParser ("node foo { }").code[0]
-      node.should be_a Puppet::Parser::AST::Node
-      node.names.length.should == 1
-      node.names[0].value.should == "foo"
-    }
 
-    it ("should be able to parse a node with two names") {
-      node = PuppetParser ("node foo, bar { }").code[0]
-      node.should be_a Puppet::Parser::AST::Node
-      node.names.length.should == 2
-      node.names[0].value.should == "foo"
-      node.names[1].value.should == "bar"
+    it ("should be able to parse a node with a single name") {
+      PuppetParser ("node foo { }") match {
+        case BlockExpr (List (Node (hostnames, _, _))) => 
+          hostnames.length should be (1)
+          hostnames.head.value should be ("foo")
+        case _ => fail ("Expected Node")
+      }
     }
 
     it ("should be able to parse a node with three names") {
-      node = PuppetParser ("node foo, bar, baz { }").code[0]
-      node.should be_a Puppet::Parser::AST::Node
-      node.names.length.should == 3
-      node.names[0].value.should == "foo"
-      node.names[1].value.should == "bar"
-      node.names[2].value.should == "baz"
+      PuppetParser ("node foo, bar, baz { }") match {
+        case BlockExpr (List (Node (hostnames, _, _))) => 
+          hostnames.length should be (3)
+          hostnames.head.value should be ("foo")
+          hostnames.tail.head.value should be ("bar")
+          hostnames.tail.tail.head.value should be ("baz")
+        case _ => fail ("Expected Node")
+      }
     }
   }
 
+  /*
   it ("should fail if trying to collect defaults") {
     expect {
       PuppetParser ("@Port { protocols => tcp }")
     }.to raise_error(Puppet::ParseError, /Defaults are not virtualizable/)
   }
+  */
 
-  context "when parsing collections" {
+  describe ("when parsing collections") {
     it ("should parse basic collections") {
-      PuppetParser ("Port <| |>").code.
-        should be_all {|x| x.is_a? Puppet::Parser::AST::Collection }
+      PuppetParser ("Port <| |>") match {
+        case BlockExpr (List (x)) =>
+          x shouldBe a [Collection]
+        case _ => fail ("Expected Collection")
+      }
     }
 
     it ("should parse fully qualified collections") {
-      PuppetParser ("Port::Range <| |>").code.
-        should be_all {|x| x.is_a? Puppet::Parser::AST::Collection }
+      PuppetParser ("Port::Range <| |>") match {
+        case BlockExpr (List (x)) => x shouldBe a [Collection]
+        case _ => fail ("Expected Collection")
+      }
     }
   }
 
+  /*
   it ("should not assign to a fully qualified variable") {
     expect {
       PuppetParser ("$one::two = yay")
     }.to raise_error(Puppet::ParseError, /Cannot assign to variables in other namespaces/)
   }
+  */
 
   it ("should parse assignment of undef") {
-    tree = PuppetParser ("$var = undef")
-    tree.code.children[0].should be_an_instance_of Puppet::Parser::AST::VarDef
-    tree.code.children[0].value.should be_an_instance_of Puppet::Parser::AST::Undef
+    // tree = PuppetParser ("$var = undef")
+    // tree.code.children[0].should be_an_instance_of Puppet::Parser::AST::VarDef
+    // tree.code.children[0].value.should be_an_instance_of Puppet::Parser::AST::Undef
+    PuppetParser ("$var = undef") match {
+      case BlockExpr (List (Vardef (_, x, _))) => x should be (Undef)
+      case _ => fail ("Expected Vardef")
+    }
   }
 
+  /*
   context "#namesplit" {
     { "base::sub" => %w{base sub},
       "main" => ["", "main"],
@@ -387,8 +362,6 @@ class ParserInlineSpec extends FunSpec with Matchers {
     @parser.known_resource_types.import_ast(PuppetParser ("define funtest {}"), '')
     @parser.known_resource_types.hostclass('funtest').
       should == @parser.find_hostclass("", "fUntEst")
-  }
-}
   }
   */
 }
