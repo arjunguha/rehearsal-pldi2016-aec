@@ -6,8 +6,6 @@
  * Reapply puppet manifest, it shall create dir1 as file and throw error for rest of them
  */
 
-/* Puppet can guess that dir1 is parent of file1 and file2 yet it does not mark it as a directory */
-
 file { '/vagrant/manifests/file/dir1':
   ensure => present
 }
