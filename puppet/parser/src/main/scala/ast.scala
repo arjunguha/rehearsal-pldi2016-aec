@@ -56,6 +56,9 @@ case object Vrtvirtual extends VirtualResType
 case object Vrtexported extends VirtualResType
 
 
+// TODO : strict types (traits or heirarchy of types)
+
+
 
 // AST
 
@@ -63,7 +66,7 @@ sealed trait AST extends Positional
 
 case class ASTBool (val value: Boolean) extends AST
 case class ASTString (val value: String) extends AST
-case class Concat (val lhs: AST, val rhs: AST)  extends AST
+// case class Concat (val lhs: AST, val rhs: AST)  extends AST
 case object Default extends AST // Default class for case statement
 case class Type (val value: String) extends AST 
 case class Name (val value: String)  extends AST
@@ -90,6 +93,8 @@ case class Vardef (val name: AST, val value: AST, val append: Boolean) extends A
 case class ASTArray (val arr: List[AST]) extends AST
 
 // Puppet Resource Decl Related nodes
+// TODO : No val required for case classes
+// TODO : pull out before and require from params in resource instances (separate desugaring)
 case class ResourceParam (val param: AST, val value: AST, val add: Boolean) extends AST
 case class ResourceInstance (val title: AST, val params: List[ResourceParam]) extends AST
 case class Resource (val typ: String, val instances: List[ResourceInstance]) extends AST
