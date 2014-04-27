@@ -176,7 +176,6 @@ object PrettyPrintAST {
     case ASTBool (false)          => "false"
     case ASTString (s)            => if (s.exists ({_ == '\''})) "\"" + s + "\""
                                      else "\'" + s + "\'"
-    case Concat (lhs, rhs)        => printAST (lhs) + " " + printAST (rhs)
     case Default                  => "default"
     case Type (v)                 => v
     case Name (v)                 => v

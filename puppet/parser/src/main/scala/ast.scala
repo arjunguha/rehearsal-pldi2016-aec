@@ -48,7 +48,7 @@ case object CollNotEq extends CollectionOp
 
 sealed trait Functype
 case object Ftstmt extends Functype
-case object Ftrval  extends Functype
+case object Ftrval extends Functype
 
 
 sealed trait VirtualResType
@@ -64,62 +64,61 @@ case object Vrtexported extends VirtualResType
 
 sealed trait AST extends Positional
 
-case class ASTBool (val value: Boolean) extends AST
-case class ASTString (val value: String) extends AST
-// case class Concat (val lhs: AST, val rhs: AST)  extends AST
+case class ASTBool (value: Boolean) extends AST
+case class ASTString (value: String) extends AST
 case object Default extends AST // Default class for case statement
-case class Type (val value: String) extends AST 
-case class Name (val value: String)  extends AST
+case class Type (value: String) extends AST 
+case class Name (value: String)  extends AST
 case object Undef extends AST
-case class Hostname (val value: String) extends AST
-case class Variable (val value: String) extends AST
-case class HashOrArrayAccess (val variable: AST, var key: AST) extends AST
-case class ASTRegex (val value: String) extends AST
-case class ASTHash (val kvs: List[(AST, AST)]) extends AST
+case class Hostname (value: String) extends AST
+case class Variable (value: String) extends AST
+case class HashOrArrayAccess (variable: AST, var key: AST) extends AST
+case class ASTRegex (value: String) extends AST
+case class ASTHash (kvs: List[(AST, AST)]) extends AST
 
 // Semantics : When this evaluates, the value of last expression pushed is returned which is head of the children list
-case class BlockExpr (val exprs: List[AST]) extends AST
+case class BlockExpr (exprs: List[AST]) extends AST
 
 // Expressions involving operators
-case class BinExpr      (val lhs: AST, val rhs: AST, val op: BinOp)      extends AST
-case class RelationExpr (val lhs: AST, val rhs: AST, val op: RelationOp) extends AST
-case class NotExpr      (val oper: AST) extends AST
-case class UMinusExpr   (val oper: AST) extends AST
+case class BinExpr      (lhs: AST, rhs: AST, op: BinOp)      extends AST
+case class RelationExpr (lhs: AST, rhs: AST, op: RelationOp) extends AST
+case class NotExpr      (oper: AST) extends AST
+case class UMinusExpr   (oper: AST) extends AST
 
 // Variable definition
-case class Vardef (val name: AST, val value: AST, val append: Boolean) extends AST
+case class Vardef (name: AST, value: AST, append: Boolean) extends AST
 
 // Few Datastructures used by Puppet
-case class ASTArray (val arr: List[AST]) extends AST
+case class ASTArray (arr: List[AST]) extends AST
 
 // Puppet Resource Decl Related nodes
-// TODO : No val required for case classes
+// TODO : No required for case classes
 // TODO : pull out before and require from params in resource instances (separate desugaring)
-case class ResourceParam (val param: AST, val value: AST, val add: Boolean) extends AST
-case class ResourceInstance (val title: AST, val params: List[ResourceParam]) extends AST
-case class Resource (val typ: String, val instances: List[ResourceInstance]) extends AST
-case class ResourceDefaults (val typ: Type, val params: List[ResourceParam]) extends AST
-case class ResourceRef (val typ: AST, val title: List[AST]) extends AST
-case class ResourceOverride (val obj: ResourceRef, val params: List[ResourceParam]) extends AST 
-case class VirtualResource (val res: AST, val tvirt: VirtualResType) extends AST
+case class ResourceParam (param: AST, value: AST, add: Boolean) extends AST
+case class ResourceInstance (title: AST, params: List[ResourceParam]) extends AST
+case class Resource (typ: String, instances: List[ResourceInstance]) extends AST
+case class ResourceDefaults (typ: Type, params: List[ResourceParam]) extends AST
+case class ResourceRef (typ: AST, title: List[AST]) extends AST
+case class ResourceOverride (obj: ResourceRef, params: List[ResourceParam]) extends AST 
+case class VirtualResource (res: AST, tvirt: VirtualResType) extends AST
 
 // Conditional Statements
-case class IfExpr (val test: AST, val true_exprs: BlockExpr, val false_exprs: BlockExpr) extends AST
-case class CaseOpt (val value: List[AST], val exprs: BlockExpr) extends AST
-case class CaseExpr (val test: AST, val caseopts: List[CaseOpt]) extends AST
-case class Selector (val param: AST, val values: List[ResourceParam]) extends AST
+case class IfExpr (test: AST, true_exprs: BlockExpr, false_exprs: BlockExpr) extends AST
+case class CaseOpt (value: List[AST], exprs: BlockExpr) extends AST
+case class CaseExpr (test: AST, caseopts: List[CaseOpt]) extends AST
+case class Selector (param: AST, values: List[ResourceParam]) extends AST
 
-case class CollectionExpr (val lhs: AST, val rhs: AST, val op: CollectionOp) extends AST
-case class CollectionExprTagNode (val coll: Option[CollectionExpr], val prop: VirtualResType) extends AST
-case class Collection (val typ: Type, val collectrhand: AST, val params: List[ResourceParam]) extends AST
+case class CollectionExpr (lhs: AST, rhs: AST, op: CollectionOp) extends AST
+case class CollectionExprTagNode (coll: Option[CollectionExpr], prop: VirtualResType) extends AST
+case class Collection (typ: Type, collectrhand: AST, params: List[ResourceParam]) extends AST
 
-case class Node (val hostnames: List[Hostname], val parent: Option[String], exprs: BlockExpr) extends AST
+case class Node (hostnames: List[Hostname], parent: Option[String], exprs: BlockExpr) extends AST
 
-case class Hostclass (val classname: String, val args: List[(String, Option[AST])], val parent: Option[String], stmts: BlockExpr) extends AST
+case class Hostclass (classname: String, args: List[(String, Option[AST])], parent: Option[String], stmts: BlockExpr) extends AST
 
-case class Definition (val classname: String, val args: List[(String, Option[AST])], val exprs: BlockExpr) extends AST
+case class Definition (classname: String, args: List[(String, Option[AST])], exprs: BlockExpr) extends AST
 
-case class Function (val name: String, val args: List[AST], val ftype: Functype) extends AST
+case class Function (name: String, args: List[AST], ftype: Functype) extends AST
 
 
-case class Import (val imports: List[String]) extends AST
+case class Import (imports: List[String]) extends AST

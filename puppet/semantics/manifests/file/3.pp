@@ -3,13 +3,11 @@ file { '/vagrant/manifests/file/dir1':
   force  => true
 }
 
-
 file { '/vagrant/manifests/file/dir1/file1':
-  ensure => present,
-  before => File ['/vagrant/manifests/file/dir1']
+  ensure => absent,
 }
 
 
 file { '/vagrant/manifests/file/dir1/file2':
-  ensure => present
+  ensure => absent
 }
