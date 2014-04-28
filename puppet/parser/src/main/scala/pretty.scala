@@ -172,19 +172,19 @@ object PrettyPrintAST {
 
   def printAST (ast: AST): String = ast match {
 
-    case ASTBool (true)           => "true"
-    case ASTBool (false)          => "false"
-    case ASTString (s)            => if (s.exists ({_ == '\''})) "\"" + s + "\""
-                                     else "\'" + s + "\'"
-    case Default                  => "default"
-    case Type (v)                 => v
-    case Name (v)                 => v
-    case Undef                    => "undef"
-    case Hostname (v)             => v
-    case Variable (v)             => v
-    case HashOrArrayAccess (v, k) => "%s[%s]".format (printAST (v), printAST (k))
-    case ASTRegex (v)             => v
-    case ASTHash (kvs)            => "{%s}".format (printList[(AST, AST)] (kvs, {case (k, v) => "%s => %s".format (printAST (k), printAST (v))}, ", "))
+    case ASTBool (true)            => "true"
+    case ASTBool (false)           => "false"
+    case ASTString (s)             => if (s.exists ({_ == '\''})) "\"" + s + "\""
+                                      else "\'" + s + "\'"
+    case Default                   => "default"
+    case Type (v)                  => v
+    case Name (v)                  => v
+    case Undef                     => "undef"
+    case Hostname (v)              => v
+    case Variable (v)              => v
+    case HashOrArrayAccess (v, ks) => "%s[%s]".format (printAST (v), printList (ks, printAST, "][")) // Hackish
+    case ASTRegex (v)              => v
+    case ASTHash (kvs)             => "{%s}".format (printList[(AST, AST)] (kvs, {case (k, v) => "%s => %s".format (printAST (k), printAST (v))}, ", "))
 
     case BlockExpr (es) => printList (es, printAST, "\n") 
     
@@ -222,16 +222,16 @@ object PrettyPrintAST {
     case Collection (typ, collectrhand, prms) => "%s %s {\n%s\n}".format (printAST (typ), printAST (collectrhand), printList (prms, printAST, ","))
 
     case Hostclass (clnm, Nil, None, stmts) => "class %s {\n%s\n}".format (clnm, printAST (stmts))
-    case Hostclass (clnm, args, None, stmts) => "class %s (%s) {\n%s\n}".format (clnm, printList[(String, Option[AST])] (args, { case (v, None) => v
-                                                                                                                                 case (v, Some (e)) => "%s = %s".format (v, printAST(e))
+    case Hostclass (clnm, args, None, stmts) => "class %s (%s) {\n%s\n}".format (clnm, printList[(Variable, Option[Expr])] (args, { case (v, None) => printAST (v)
+                                                                                                                                   case (v, Some (e)) => "%s = %s".format (printAST (v), printAST(e))
                                                                                                                                }, ","), printAST (stmts))
     case Hostclass (clnm, Nil, Some (parent), stmts) => "class %s inherits %s {\n%s\n}".format (clnm, parent, printAST (stmts))
     case Hostclass (clnm, args, Some (parent), stmts) => "class %s inherits %s (%s) {\n%s\n}".format (clnm, parent,
-                                                                                                      printList[(String, Option[AST])] (args, { case (v, None) => v
-                                                                                                                                                case (v, Some (e)) =>"%s = %s".format (v, printAST(e))}, ","),
+                                                                                                      printList[(Variable, Option[Expr])] (args, { case (v, None) => printAST (v)
+                                                                                                                                                  case (v, Some (e)) =>"%s = %s".format (printAST (v), printAST(e))}, ","),
                                                                                                                                                                                                                                                                                                      printAST (stmts))
 
-    case Function (nm, args, _) => "%s (%s)".format (nm, printList (args, printAST, ","))
+    case Function (nm, args, _) => "%s (%s)".format (printAST (nm), printList (args, printAST, ","))
 
     case Import (imps) => "import %s\n".format (printList (imps, (x: String) => x, ","))
 
@@ -240,8 +240,8 @@ object PrettyPrintAST {
     case Node (hostnames, Some (parent), es) => "node %s inherits %s {\n%s\n}".format (printList (hostnames, printAST, ","), parent, printAST (es))
 
     case Definition (classname, Nil, es) => "define %s {\n%s\n}".format (classname, printAST (es))
-    case Definition (classname, args, es) => "define %s (%s) {\n%s\n}".format (classname, printList[(String, Option[AST])](args, { case (v, None) => v
-                                                                                                                                   case (v, Some (e)) => "%s = %s".format (v, printAST (e))
+    case Definition (classname, args, es) => "define %s (%s) {\n%s\n}".format (classname, printList[(Variable, Option[Expr])](args, { case (v, None) => printAST (v)
+                                                                                                                                     case (v, Some (e)) => "%s = %s".format (printAST (v), printAST (e))
                                                                                                                                  }, ","), printAST (es))
   }
 }

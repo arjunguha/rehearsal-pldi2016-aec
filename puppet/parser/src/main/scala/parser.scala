@@ -127,7 +127,7 @@ class PuppetParser extends StdTokenParsers
   )
 
   lazy val relationship: P[AST] = 
-    relationship_side ~ (("<-" | "->" | "<~" | "~>") ~ relationship_side).+ ^^ { 
+    relationship_side ~ (("<-" | "->" | "<~" | "~>") ~ relationship_side).+ ^^ {
       case rs ~ rss => rss.foldLeft (rs) { 
           case (x, "<-" ~ y) => RelationExpr (x, y, LeftSimpleDep)
           case (x, "->" ~ y) => RelationExpr (x, y, RightSimpleDep)
@@ -142,24 +142,24 @@ class PuppetParser extends StdTokenParsers
   )
 
   lazy val fstmt: P[Function] = (
-    NAME ~ ("(" ~> expressions.? <~ ")") ^^ { 
+    name ~ ("(" ~> expressions.? <~ ")") ^^ { 
       case n ~ Some (es) => Function (n, es, Ftstmt)
-      case n ~ None => Function (n, List[AST] (), Ftstmt)
+      case n ~ None => Function (n, List[Expr] (), Ftstmt)
     }
-  ||| NAME ~ ("(" ~> expressions <~ ",".? <~ ")") ^^ {
+  ||| name ~ ("(" ~> expressions <~ ",".? <~ ")") ^^ {
         case n ~ es => Function (n, es, Ftstmt)
       }
-  ||| NAME ~ repsep (rvalue, ",") ^^ { 
+  ||| name ~ repsep (rvalue, ",") ^^ { 
       case n ~ rvs => Function (n, rvs, Ftstmt)
     }
   )
 
-  lazy val expressions: P[List[AST]] = repsep (expr, ("," | "=>"))
+  lazy val expressions: P[List[Expr]] = repsep (expr, ("," | "=>"))
 
 
-  lazy val rvalue: P[AST] =
-    quotedtext ||| name ||| asttype ||| boolean ||| selector ||| variable ||| array ||| hasharrayaccesses |||
-    resourceref ||| funcrvalue ||| undef
+  lazy val rvalue: P[RValue] =
+    quotedtext ||| name ||| asttype ||| boolean ||| selector ||| variable ||| 
+    array ||| hasharrayaccesses ||| resourceref ||| funcrvalue ||| undef
     
   lazy val resource: P[AST] = (
     classname ~ ("{" ~> resourceinstances <~ ";".? <~ "}") ^^ {
@@ -221,18 +221,18 @@ class PuppetParser extends StdTokenParsers
 
   lazy val resourceinstances: P[List[ResourceInstance]] = repsep (resourceinst, ";")
 
-  lazy val undef: P[AST] = "undef" ^^^ Undef
+  lazy val undef: P[RValue] = "undef" ^^^ Undef
 
   lazy val name: P[Name] = NAME ^^ (Name (_))
 
   lazy val asttype: P[Type] = CLASSREF ^^ (Type (_))
 
-  lazy val resourcename: P[AST] =
+  lazy val resourcename: P[ResourceName] =
     quotedtext ||| name ||| asttype ||| selector ||| variable ||| array ||| hasharrayaccesses
 
   lazy val assignment: P[Vardef] = (
-    VARIABLETOK ~ ("=" ~> expr) ^^ { 
-      case vrbl ~ e => Vardef (Name (vrbl), e, false)
+    variable ~ ("=" ~> expr) ^^ { 
+      case vrbl ~ e => Vardef (vrbl, e, false)
     }
   ||| hasharrayaccess ~ ("=" ~> expr) ^^ { 
       case haa ~ e => Vardef (haa, e, false)
@@ -240,8 +240,8 @@ class PuppetParser extends StdTokenParsers
   )
 
   lazy val append: P[Vardef] = 
-    VARIABLETOK ~ ("+=" ~> expr) ^^ {
-      case vrbl ~ e => Vardef (Name (vrbl), e, true)
+    variable ~ ("+=" ~> expr) ^^ {
+      case vrbl ~ e => Vardef (vrbl, e, true)
     }
 
   lazy val params: P[List[ResourceParam]] = repsep (param, ",")
@@ -264,13 +264,13 @@ class PuppetParser extends StdTokenParsers
 
   lazy val anyparams: P[List[ResourceParam]] = repsep ((param | addparam), ",")
 
-  lazy val funcrvalue: P[Function] = 
-    NAME ~ ("(" ~> expressions.? <~ ")") ^^ {
-      case name ~ Some (es) => Function (name, es,           Ftrval)
-      case name ~ None      => Function (name, List[AST] (), Ftrval)
+  lazy val funcrvalue: P[RValue] = 
+    name ~ ("(" ~> expressions.? <~ ")") ^^ {
+      case name ~ Some (es) => new Function (name, es,           Ftrval)  with RValue
+      case name ~ None      => new Function (name, List[Expr] (), Ftrval) with RValue
     }
 
-  lazy val quotedtext: P[AST] = STRING ^^ (ASTString (_))
+  lazy val quotedtext: P[ASTString] = STRING ^^ (ASTString (_))
   /*
   | DQPRE ~ dqrval ^^ {
       case x ~ y => Concat (x, y)
@@ -336,45 +336,45 @@ class PuppetParser extends StdTokenParsers
     }
   )
 
-  private lazy val parens: P[AST] = "(" ~> expr <~ ")"
-  private lazy val uminus: P[AST] = "-" ~> expr ^^ (UMinusExpr (_))
-  private lazy val not:    P[AST] = "!" ~> expr ^^ (NotExpr (_))
-  private lazy val term:   P[AST] = (rvalue | hash | parens | uminus | not | regex_stmt)
+  private lazy val parens: P[Expr] = "(" ~> expr <~ ")"
+  private lazy val uminus: P[Expr] = "-" ~> expr ^^ (UMinusExpr (_))
+  private lazy val not:    P[Expr] = "!" ~> expr ^^ (NotExpr (_))
+  private lazy val term:   P[Expr] = (rvalue | hash | parens | uminus | not | regex_stmt)
 
 
-  private def binaryOp (level: Int): Parser[((AST, AST) => AST)] = {
+  private def binaryOp (level: Int): Parser[((Expr, Expr) => Expr)] = {
     level match {
       case 1 => "or"  ^^^ { (e1, e2) => BinExpr (e1, e2, Or)  }
 
       case 2 => "and" ^^^ { (e1, e2) => BinExpr (e1, e2, And) }
 
       case 3 => 
-        ">"   ^^^ { (e1: AST, e2: AST) => BinExpr (e1, e2, GreaterThan) } |
-        ">="  ^^^ { (e1: AST, e2: AST) => BinExpr (e1, e2, GreaterEq)   } |
-        "<"   ^^^ { (e1: AST, e2: AST) => BinExpr (e1, e2, LessThan)    } |
-        "<="  ^^^ { (e1: AST, e2: AST) => BinExpr (e1, e2, LessEq)      }
+        ">"   ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, GreaterThan) } |
+        ">="  ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, GreaterEq)   } |
+        "<"   ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, LessThan)    } |
+        "<="  ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, LessEq)      }
 
       case 4 =>
-        "!=" ^^^ { (e1: AST, e2: AST) => BinExpr (e1, e2, NotEqual) } |
-        "==" ^^^ { (e1: AST, e2: AST) => BinExpr (e1, e2, Equal)    }
+        "!=" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, NotEqual) } |
+        "==" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, Equal)    }
         
       case 5 =>
-        "<<" ^^^ { (e1: AST, e2: AST) => BinExpr (e1, e2, LShift) } |
-        ">>" ^^^ { (e1: AST, e2: AST) => BinExpr (e1, e2, RShift) } 
+        "<<" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, LShift) } |
+        ">>" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, RShift) } 
 
       case 6 =>
-        "-" ^^^ { (e1: AST, e2: AST) => BinExpr (e1, e2, Minus) } |
-        "+" ^^^ { (e1: AST, e2: AST) => BinExpr (e1, e2, Plus)  }
+        "-" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, Minus) } |
+        "+" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, Plus)  }
 
       case 7 =>
-        "*" ^^^ { (e1: AST, e2: AST) => BinExpr (e1, e2, Mult) } |
-        "/" ^^^ { (e1: AST, e2: AST) => BinExpr (e1, e2, Div)  } |
-        "%" ^^^ { (e1: AST, e2: AST) => BinExpr (e1, e2, Mod)  }
+        "*" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, Mult) } |
+        "/" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, Div)  } |
+        "%" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, Mod)  }
         
       case 8 =>
-        "in" ^^^ { (e1: AST, e2: AST) => BinExpr (e1, e2, In)      } |
-        "=~" ^^^ { (e1: AST, e2: AST) => BinExpr (e1, e2, Match)   } |
-        "!~" ^^^ { (e1: AST, e2: AST) => BinExpr (e1, e2, NoMatch) }
+        "in" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, In)      } |
+        "=~" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, Match)   } |
+        "!~" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, NoMatch) }
 
       case _ => throw new RuntimeException ("bad precedence level " + level)
     }
@@ -383,11 +383,11 @@ class PuppetParser extends StdTokenParsers
   private val minPrec = 1
   private val maxPrec = 8
 
-  private def binary (level: Int): Parser[AST] =
+  private def binary (level: Int): Parser[Expr] =
     if (level > maxPrec) term
     else binary (level + 1) * binaryOp (level)
 
-  lazy val expr: P[AST] = (binary (minPrec) | term)
+  lazy val expr: P[Expr] = (binary (minPrec) | term)
 
   lazy val case_stmt: P[CaseExpr] = 
     "case" ~> expr ~ ("{" ~> caseopts <~ "}") ^^ {
@@ -471,7 +471,7 @@ class PuppetParser extends StdTokenParsers
 
   lazy val hostname: P[String] = "default" | NAME | STRING | REGEX
 
-  lazy val argumentlist: P[List[(String, Option[AST])]] = (
+  lazy val argumentlist: P[List[(Variable, Option[Expr])]] = (
     "(" ~> arguments.? <~ ")" ^^ {
       case None => List ()
       case Some (ss) => ss
@@ -479,11 +479,11 @@ class PuppetParser extends StdTokenParsers
   ||| "(" ~> arguments <~ ",".? <~ ")"
   )
 
-  lazy val arguments: P[List[(String, Option[AST])]] = repsep (argument, ",")
+  lazy val arguments: P[List[(Variable, Option[Expr])]] = repsep (argument, ",")
 
-  lazy val argument: P[(String, Option[AST])] = (
-    VARIABLETOK ~ ("=" ~> expr) ^^ { case v ~ e => (v, Some (e)) }
-  ||| VARIABLETOK ^^ ((_, None))
+  lazy val argument: P[(Variable, Option[Expr])] = (
+    variable ~ ("=" ~> expr) ^^ { case v ~ e => (v, Some (e)) }
+  ||| variable ^^ ((_, None))
   )
 
   lazy val nodeparent: P[String] = "inherits" ~> hostname
@@ -510,23 +510,22 @@ class PuppetParser extends StdTokenParsers
   ||| "{" ~> hashpairs <~ "," <~ "}" ^^ (ASTHash (_))
   )
 
-  lazy val hashpairs: P[List[(AST, AST)]] = repsep (hashpair, ",")
+  lazy val hashpairs: P[List[(HashKey, Expr)]] = repsep (hashpair, ",")
 
-  lazy val hashpair: P[(AST, AST)] = key ~ ("=>" ~> expr) ^^ {
+  lazy val hashpair: P[(HashKey, Expr)] = key ~ ("=>" ~> expr) ^^ {
     case k ~ e => (k, e)
   }
 
-  lazy val key: P[AST] = (name | quotedtext)
+  lazy val key: P[HashKey] = (name | quotedtext)
 
   lazy val hasharrayaccess: P[HashOrArrayAccess] =
     variable ~ ("[" ~> expr <~ "]") ^^ {
-      case v ~ e => HashOrArrayAccess (v, e)
+      case v ~ e => HashOrArrayAccess (v, e :: Nil)
     }
 
   lazy val hasharrayaccesses: P[HashOrArrayAccess] = (
-    hasharrayaccess 
-  ||| hasharrayaccesses ~ ("[" ~> expr <~ "]") ^^ {
-      case haa ~ e => HashOrArrayAccess (haa, e)
+    variable ~ ("[" ~> expr <~ "]").+ ^^ {
+      case v ~ es => HashOrArrayAccess (v, es)
     }
   )
 
