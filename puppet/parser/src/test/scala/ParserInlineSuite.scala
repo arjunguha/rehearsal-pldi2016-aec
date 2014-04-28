@@ -19,14 +19,14 @@ class ParserInlineSpec extends FunSpec with Matchers {
 
     it ("should create ast::VarDef with append=true") {
       PuppetParser ("$var += 2") match {
-        case BlockExpr (List (Vardef (_, _, append))) => append should be (true)
+        case BlockStmtDecls (List (Vardef (_, _, append))) => append should be (true)
         case _ => fail ("Expected Vardef")
       }
     }
 
     it ("should work with arrays too") {
       PuppetParser ("$var += ['test']") match {
-        case BlockExpr (List (Vardef (_, ASTArray (_), append))) => append should be (true)
+        case BlockStmtDecls (List (Vardef (_, ASTArray (_), append))) => append should be (true)
         case _ => fail ("Expected Vardef")
       }
     }
@@ -42,7 +42,7 @@ class ParserInlineSpec extends FunSpec with Matchers {
   describe ("parsing 'unless'") {
     it ("should create the correct ast objects") {
       PuppetParser ("unless false { $var = 1 }") match {
-        case BlockExpr (List (IfExpr (NotExpr (x), _, _))) => x shouldBe a [ASTBool]
+        case BlockStmtDecls (List (IfExpr (NotExpr (x), _, _))) => x shouldBe a [ASTBool]
         case _ => fail ("Expected NotExpr")
       }
     }
@@ -67,14 +67,14 @@ class ParserInlineSpec extends FunSpec with Matchers {
   describe ("when parsing 'if'") {
     it ("not, it should create the correct ast objects") {
       PuppetParser ("if ! true { $var = 1 }") match {
-        case BlockExpr (List (IfExpr (NotExpr (x), _, _))) => x shouldBe a [ASTBool]
+        case BlockStmtDecls (List (IfExpr (NotExpr (x), _, _))) => x shouldBe a [ASTBool]
         case _ => fail ("Expected NotExpr")
       }
     }
 
     it ("boolean operation, it should create the correct ast objects") {
       PuppetParser ("if true or true { $var = 1 }") match {
-        case BlockExpr (List (IfExpr (BinExpr (lhs, rhs, op), _, _))) => {
+        case BlockStmtDecls (List (IfExpr (BinExpr (lhs, rhs, op), _, _))) => {
           lhs shouldBe a [ASTBool]
           rhs shouldBe a [ASTBool]
           op should be (Or)
@@ -90,7 +90,7 @@ class ParserInlineSpec extends FunSpec with Matchers {
       }
       */
       PuppetParser ("if 1 < 2 { $var = 1 }") match {
-        case BlockExpr (List (IfExpr (BinExpr (lhs, rhs, op), _, _))) => 
+        case BlockStmtDecls (List (IfExpr (BinExpr (lhs, rhs, op), _, _))) => 
           lhs shouldBe a [Name]
           rhs shouldBe a [Name]
           op should be (LessThan)
@@ -103,7 +103,7 @@ class ParserInlineSpec extends FunSpec with Matchers {
 
     it ("should create a correct ast tree") {
       PuppetParser ("if (1 > 2) and (1 == 2) { $var = 1 }") match {
-        case BlockExpr (List (IfExpr (BinExpr (lhs, rhs, op), _, _))) => 
+        case BlockStmtDecls (List (IfExpr (BinExpr (lhs, rhs, op), _, _))) => 
           op should be (And)
           lhs match {
             case BinExpr (lhs, rhs, op) =>
@@ -153,7 +153,7 @@ class ParserInlineSpec extends FunSpec with Matchers {
 
     it ("should create an ast::ResourceOverride") {
       PuppetParser ("Resource[\"title1\",\"title2\"] { param => value }") match {
-        case BlockExpr (List (ResourceOverride (ref, resparams))) =>
+        case BlockStmtDecls (List (ResourceOverride (ref, resparams))) =>
           ref shouldBe a [ResourceRef]
           resparams shouldBe a [List[ResourceParam]]
         case _ => fail ("Expected ResourceOverride")
@@ -220,21 +220,21 @@ class ParserInlineSpec extends FunSpec with Matchers {
 
     it ("should not create new classes") {
       PuppetParser ("class foobar {}") match {
-        case BlockExpr (List (Hostclass (name , _, _, _))) => name should be ("foobar")
+        case BlockStmtDecls (List (Hostclass (name , _, _, _))) => name should be ("foobar")
         case _ => fail ("Expected Hostclass")
       }
     }
 
     it ("should correctly set the parent class when one is provided") {
       PuppetParser ("class foobar inherits yayness {}") match {
-        case BlockExpr (List (Hostclass (_, _, Some (parent), _))) => parent should be ("yayness")
+        case BlockStmtDecls (List (Hostclass (_, _, Some (parent), _))) => parent should be ("yayness")
         case _ => fail ("Exptected parent")
       }
     }
 
     it ("should correctly set the parent class for multiple classes at a time") {
       PuppetParser ("class foobar inherits yayness {}\nclass boo inherits bar {}") match {
-        case BlockExpr (List (Hostclass (_, _, Some (parent1), _), Hostclass (_, _, Some (parent2), _))) =>
+        case BlockStmtDecls (List (Hostclass (_, _, Some (parent1), _), Hostclass (_, _, Some (parent2), _))) =>
           parent1 should be ("yayness")
           parent2 should be ("bar")
         case _ => fail ("Expected parents")
@@ -243,7 +243,7 @@ class ParserInlineSpec extends FunSpec with Matchers {
 
     it ("should define the code when some is provided") {
       PuppetParser ("class foobar { $var = val }") match {
-        case BlockExpr (List (Hostclass (_, _, _, stmts))) => stmts should not be (Nil)
+        case BlockStmtDecls (List (Hostclass (_, _, _, stmts))) => stmts should not be (Nil)
         case _ => fail ("Exptected statements")
       }
     }
@@ -253,7 +253,7 @@ class ParserInlineSpec extends FunSpec with Matchers {
 
     it ("should be able to parse class resources") {
        PuppetParser ("class { foobar: biz => stuff }") match {
-         case BlockExpr (List (Resource (_, List (ResourceInstance (Name (name), _))))) => 
+         case BlockStmtDecls (List (Resource (_, List (ResourceInstance (Name (name), _))))) => 
            name should be ("foobar")
          case _ => fail ("Exptected a Resource")
        }
@@ -261,14 +261,14 @@ class ParserInlineSpec extends FunSpec with Matchers {
 
     it ("should correctly mark exported resources as exported") {
       PuppetParser ("@@file { '/file': }") match {
-        case BlockExpr (List (VirtualResource (_, x))) => x should be (Vrtexported)
+        case BlockStmtDecls (List (VirtualResource (_, x))) => x should be (Vrtexported)
         case _ => fail ("Expected a virtual resource")
       }
     }
 
     it ("should correctly mark virtual resources as virtual") {
       PuppetParser ("@file { '/file': }") match {
-        case BlockExpr (List (VirtualResource (_, x))) => x should be (Vrtvirtual)
+        case BlockStmtDecls (List (VirtualResource (_, x))) => x should be (Vrtvirtual)
         case _ => fail ("Expected a virtual resource")
       }
     }
@@ -278,7 +278,7 @@ class ParserInlineSpec extends FunSpec with Matchers {
 
     it ("should be able to parse a node with a single name") {
       PuppetParser ("node foo { }") match {
-        case BlockExpr (List (Node (hostnames, _, _))) => 
+        case BlockStmtDecls (List (Node (hostnames, _, _))) => 
           hostnames.length should be (1)
           hostnames.head.value should be ("foo")
         case _ => fail ("Expected Node")
@@ -287,7 +287,7 @@ class ParserInlineSpec extends FunSpec with Matchers {
 
     it ("should be able to parse a node with three names") {
       PuppetParser ("node foo, bar, baz { }") match {
-        case BlockExpr (List (Node (hostnames, _, _))) => 
+        case BlockStmtDecls (List (Node (hostnames, _, _))) => 
           hostnames.length should be (3)
           hostnames.head.value should be ("foo")
           hostnames.tail.head.value should be ("bar")
@@ -308,7 +308,7 @@ class ParserInlineSpec extends FunSpec with Matchers {
   describe ("when parsing collections") {
     it ("should parse basic collections") {
       PuppetParser ("Port <| |>") match {
-        case BlockExpr (List (x)) =>
+        case BlockStmtDecls (List (x)) =>
           x shouldBe a [Collection]
         case _ => fail ("Expected Collection")
       }
@@ -316,7 +316,7 @@ class ParserInlineSpec extends FunSpec with Matchers {
 
     it ("should parse fully qualified collections") {
       PuppetParser ("Port::Range <| |>") match {
-        case BlockExpr (List (x)) => x shouldBe a [Collection]
+        case BlockStmtDecls (List (x)) => x shouldBe a [Collection]
         case _ => fail ("Expected Collection")
       }
     }
@@ -335,7 +335,7 @@ class ParserInlineSpec extends FunSpec with Matchers {
     // tree.code.children[0].should be_an_instance_of Puppet::Parser::AST::VarDef
     // tree.code.children[0].value.should be_an_instance_of Puppet::Parser::AST::Undef
     PuppetParser ("$var = undef") match {
-      case BlockExpr (List (Vardef (_, x, _))) => x should be (Undef)
+      case BlockStmtDecls (List (Vardef (_, x, _))) => x should be (Undef)
       case _ => fail ("Expected Vardef")
     }
   }

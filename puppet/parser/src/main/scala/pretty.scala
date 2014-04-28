@@ -186,7 +186,7 @@ object PrettyPrintAST {
     case ASTRegex (v)              => v
     case ASTHash (kvs)             => "{%s}".format (printList[(AST, AST)] (kvs, {case (k, v) => "%s => %s".format (printAST (k), printAST (v))}, ", "))
 
-    case BlockExpr (es) => printList (es, printAST, "\n") 
+    case BlockStmtDecls (es) => printList (es, printAST, "\n") 
     
     case BinExpr (_, _, _) => printExpr (ast, TOPLEVEL)
     case RelationExpr (lhs, rhs, op) => "%s %s %s".format (printAST (lhs), RelationOpStr (op), printAST (rhs))
@@ -204,9 +204,8 @@ object PrettyPrintAST {
     case ResourceOverride (obj, prms) => "%s {\n%s\n}".format (printAST (obj), printList (prms, printAST, ",\n"))
 
     case VirtualResource (res, tvirt) => "%s%s".format (VirtualResTypeStr (tvirt), printAST (res))
-    case IfExpr (test, true_es, false_es) => "if %s { %s } else { %s }".format (printAST (test), printAST (true_es), printAST (false_es))
-
-    case CaseOpt (v, stmts) => "%s : {\n %s \n}".format (printList (v, printAST, ", "), printAST (stmts))
+    case IfExpr (test, true_es, false_es) => "if %s { %s } else { %s }".format (printAST (test), printList (true_es, printAST, "\n"), printList (false_es, printAST, "\n"))
+    case CaseOpt (v, stmts) => "%s : {\n %s \n}".format (printList (v, printAST, ", "), printList (stmts, printAST, "\n"))
 
     case CaseExpr (test, caseopts) => "case %s {\n%s\n}".format (printAST (test), printList (caseopts, printAST, " "))
 
@@ -235,13 +234,13 @@ object PrettyPrintAST {
 
     case Import (imps) => "import %s\n".format (printList (imps, (x: String) => x, ","))
 
-    case Node (hostnames, None, es) => "node %s {\n%s\n}".format (printList (hostnames, printAST, ","), printAST (es))
+    case Node (hostnames, None, es) => "node %s {\n%s\n}".format (printList (hostnames, printAST, ","), printList (es, printAST, "\n"))
 
-    case Node (hostnames, Some (parent), es) => "node %s inherits %s {\n%s\n}".format (printList (hostnames, printAST, ","), parent, printAST (es))
+    case Node (hostnames, Some (parent), es) => "node %s inherits %s {\n%s\n}".format (printList (hostnames, printAST, ","), parent, printList (es, printAST, "\n"))
 
-    case Definition (classname, Nil, es) => "define %s {\n%s\n}".format (classname, printAST (es))
+    case Definition (classname, Nil, es) => "define %s {\n%s\n}".format (classname, printList (es, printAST, "\n"))
     case Definition (classname, args, es) => "define %s (%s) {\n%s\n}".format (classname, printList[(Variable, Option[Expr])](args, { case (v, None) => printAST (v)
                                                                                                                                      case (v, Some (e)) => "%s = %s".format (printAST (v), printAST (e))
-                                                                                                                                 }, ","), printAST (es))
+                                                                                                                                 }, ","), printList (es, printAST, "\n"))
   }
 }

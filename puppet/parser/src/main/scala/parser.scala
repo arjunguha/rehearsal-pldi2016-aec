@@ -1,7 +1,5 @@
 package puppet;
 
-/* Parser using parser combinator in Scala */
-
 import scala.util.parsing.combinator._
 import scala.util.parsing.combinator.syntactical._
 import scala.util.parsing.combinator.lexical._
@@ -118,25 +116,30 @@ class PuppetParser extends StdTokenParsers
   lazy val program: P[AST] =   stmts_and_decls 
                          /*    | (EofCh  ^^^ (BlockExpr (List[AST] ()))) */
 
-  lazy val stmts_and_decls: P[BlockExpr] = stmt_or_decl.* ^^ (BlockExpr (_))
+  lazy val stmts_and_decls: P[BlockStmtDecls] = stmt_or_decl.* ^^ (BlockStmtDecls (_))
 
-  lazy val stmt_or_decl: P[AST] = (
+  lazy val stmt_or_decl: P[StmtOrDecl] = (stmt | decl)
+
+  lazy val decl: P[TopLevelConstruct] = (definition | hostclass | nodedef)
+
+  lazy val stmt: P[Statement] = (
     resource ||| virtualresource ||| collection ||| assignment ||| case_stmt ||| 
-    ifstmt_begin ||| unless_stmt ||| import_stmt ||| fstmt ||| definition |||
-    hostclass ||| nodedef ||| resourceoverride ||| append ||| relationship
+    ifstmt_begin ||| unless_stmt ||| import_stmt ||| fstmt ||| resourceoverride |||
+    append ||| relationship
   )
 
-  lazy val relationship: P[AST] = 
+
+  lazy val relationship: P[RelationExpr] = 
     relationship_side ~ (("<-" | "->" | "<~" | "~>") ~ relationship_side).+ ^^ {
-      case rs ~ rss => rss.foldLeft (rs) { 
+      case rs ~ rss => (rss.foldLeft (rs) { 
           case (x, "<-" ~ y) => RelationExpr (x, y, LeftSimpleDep)
           case (x, "->" ~ y) => RelationExpr (x, y, RightSimpleDep)
           case (x, "<~" ~ y) => RelationExpr (x, y, LeftSubscribeDep)
           case (x, "~>" ~ y) => RelationExpr (x, y, RightSubscribeDep)
-        }
+        }).asInstanceOf [RelationExpr]
       }
 
-  lazy val relationship_side: P[AST] = (
+  lazy val relationship_side: P[RelationExprOperand] = (
     resource ||| resourceref ||| collection ||| variable ||| quotedtext ||| selector ||| 
     case_stmt ||| hasharrayaccesses
   )
@@ -156,12 +159,11 @@ class PuppetParser extends StdTokenParsers
 
   lazy val expressions: P[List[Expr]] = repsep (expr, ("," | "=>"))
 
-
   lazy val rvalue: P[RValue] =
     quotedtext ||| name ||| asttype ||| boolean ||| selector ||| variable ||| 
     array ||| hasharrayaccesses ||| resourceref ||| funcrvalue ||| undef
     
-  lazy val resource: P[AST] = (
+  lazy val resource = (
     classname ~ ("{" ~> resourceinstances <~ ";".? <~ "}") ^^ {
       case cn ~ ris => Resource (cn, ris) 
     }
@@ -211,7 +213,7 @@ class PuppetParser extends StdTokenParsers
       case x ~ "!=" ~ y => CollectionExpr (x, y, CollNotEq)
     }
 
-  lazy val colllval: P[AST] = variable | name
+  lazy val colllval: P[CollectionExprOperand] = variable | name
 
   lazy val resourceinst: P[ResourceInstance] = 
     resourcename ~ (":" ~> params.? <~ ",".?) ^^ {
@@ -221,7 +223,7 @@ class PuppetParser extends StdTokenParsers
 
   lazy val resourceinstances: P[List[ResourceInstance]] = repsep (resourceinst, ";")
 
-  lazy val undef: P[RValue] = "undef" ^^^ Undef
+  lazy val undef = "undef" ^^^ Undef
 
   lazy val name: P[Name] = NAME ^^ (Name (_))
 
@@ -246,7 +248,7 @@ class PuppetParser extends StdTokenParsers
 
   lazy val params: P[List[ResourceParam]] = repsep (param, ",")
 
-  lazy val param_name: P[AST] = name | keyword ^^ (ASTString (_)) | boolean
+  lazy val param_name: P[ParamNameType] = name | keyword ^^ (ASTString (_)) | boolean
 
   lazy val keyword: P[String] = "and" | "case" | "class" | "default" |
     "define" | "else" | "elsif" | "if" | "in" | "import" | "inherits" |
@@ -264,10 +266,10 @@ class PuppetParser extends StdTokenParsers
 
   lazy val anyparams: P[List[ResourceParam]] = repsep ((param | addparam), ",")
 
-  lazy val funcrvalue: P[RValue] = 
-    name ~ ("(" ~> expressions.? <~ ")") ^^ {
-      case name ~ Some (es) => new Function (name, es,           Ftrval)  with RValue
-      case name ~ None      => new Function (name, List[Expr] (), Ftrval) with RValue
+  lazy val funcrvalue: P[Function] = 
+      name ~ ("(" ~> expressions.? <~ ")") ^^ {
+      case name ~ Some (es) => Function (name, es,           Ftrval)
+      case name ~ None      => Function (name, List[Expr] (), Ftrval)
     }
 
   lazy val quotedtext: P[ASTString] = STRING ^^ (ASTString (_))
@@ -306,34 +308,22 @@ class PuppetParser extends StdTokenParsers
     }
   )
 
-  // TODO: stmts_and_decls can return "nothing", do we really need to "repeat" ourself
-  //      with ".?"
   lazy val unless_stmt: P[IfExpr] =
-    "unless" ~> expr ~ ("{" ~> stmts_and_decls.? <~ "}") ^^ {
-      case e ~ Some (ss) => IfExpr (NotExpr (e), ss,                  BlockExpr (List ()))
-      case e ~ None      => IfExpr (NotExpr (e), BlockExpr (List ()), BlockExpr (List ()))
+    "unless" ~> expr ~ ("{" ~> stmt.* <~ "}") ^^ {
+      case e ~ ss => IfExpr (NotExpr (e), ss, List ())
     }
 
   lazy val ifstmt_begin: P[IfExpr] = "if" ~> ifstmt
 
   lazy val ifstmt: P[IfExpr] = 
-    expr ~ ("{" ~> stmts_and_decls.? <~ "}") ~ elsestmt.? ^^ {
-      case e ~ None      ~ None      => IfExpr (e, BlockExpr (List ()), BlockExpr (List ()))
-      case e ~ Some (ss) ~ None      => IfExpr (e, ss,                  BlockExpr (List ()))
-      case e ~ None      ~ Some (es) => IfExpr (e, BlockExpr (List ()), es)
-      case e ~ Some (ss) ~ Some (es) => IfExpr (e, ss, es)
+    expr ~ ("{" ~> stmt.* <~ "}") ~ elsestmt.? ^^ {
+      case e ~ ss ~ None      => IfExpr (e, ss, List ())
+      case e ~ ss ~ Some (es) => IfExpr (e, ss, es)
     }
 
-  // TODO: stmts_and_decls can return "nothing", do we really need to "repeat" ourself
-  //      with ".?"
-  lazy val elsestmt: P[BlockExpr] = (
-    "elsif" ~> ifstmt ^^ { 
-      case ifexp => BlockExpr (List (ifexp))
-    }
-  ||| "else" ~> "{" ~> stmts_and_decls.? <~ "}" ^^ {
-      case None => BlockExpr (List ())
-      case Some (ss) => ss
-    }
+  lazy val elsestmt: P[List[Statement]] = (
+    "elsif" ~> ifstmt ^^ { case ifexp => List (ifexp) }
+  ||| "else" ~> "{" ~> stmt.* <~ "}"
   )
 
   private lazy val parens: P[Expr] = "(" ~> expr <~ ")"
@@ -401,15 +391,10 @@ class PuppetParser extends StdTokenParsers
     }
   )
 
-  // TODO: stmts_and_decls can return "nothing", do we really need to "repeat" ourself
-  //      with ".?"
   lazy val caseopt: P[CaseOpt] =
-    casevalues ~ (":" ~> "{" ~> stmts_and_decls.? <~ "}") ^^ {
-      case csvs ~ None => CaseOpt (csvs, BlockExpr (List ()))
-      case csvs ~ Some (ss) => CaseOpt (csvs, ss)
-    }
+    casevalues ~ (":" ~> "{" ~> stmt.* <~ "}") ^^ { case csvs ~ ss => CaseOpt (csvs, ss) }
 
-  lazy val casevalues: P[List[AST]] = repsep (selectlhand, ",")
+  lazy val casevalues: P[List[SelectLHS]] = repsep (selectlhand, ",")
 
 
   lazy val selector: P[Selector] =
@@ -428,9 +413,9 @@ class PuppetParser extends StdTokenParsers
       case slcthnd ~ rval => ResourceParam (slcthnd, rval, false)
     }
 
-  lazy val selectlhand: P[AST] = (
-    name ||| asttype ||| quotedtext ||| variable ||| funcrvalue ||| boolean ||| undef |||
-    hasharrayaccess ||| ("default" ^^^ Default) ||| regex_stmt
+  lazy val selectlhand: P[SelectLHS] = (
+    name ||| asttype ||| quotedtext ||| variable ||| funcrvalue |||
+    boolean ||| undef ||| hasharrayaccess ||| ("default" ^^^ Default) ||| regex_stmt
   )
     
   lazy val string: P[String] = STRING
@@ -441,25 +426,22 @@ class PuppetParser extends StdTokenParsers
     "import" ~> strings ^^ (Import (_))
 
   lazy val definition: P[Definition] = 
-    "define" ~> classname ~ argumentlist.? ~ ("{" ~> stmts_and_decls.? <~ "}") ^^ {
-      case cnm ~ None        ~ None      => Definition (cnm, List (), BlockExpr (List ()))
-      case cnm ~ None        ~ Some (ss) => Definition (cnm, List (), ss)
-      case cnm ~ Some (args) ~ None      => Definition (cnm, args, BlockExpr (List ()))
-      case cnm ~ Some (args) ~ Some (ss) => Definition (cnm, args, ss)
+    "define" ~> classname ~ argumentlist.? ~ ("{" ~> stmt.* <~ "}") ^^ {
+      case cnm ~ None        ~ ss => Definition (cnm, List (), ss)
+      case cnm ~ Some (args) ~ ss => Definition (cnm, args, ss)
     }
 
   lazy val hostclass: P[Hostclass] = 
     "class" ~> classname ~ argumentlist.? ~ classparent.? ~ ("{" ~> stmts_and_decls.? <~ "}") ^^ {
-      case cnm ~ None        ~ clp ~ None      => Hostclass (cnm, List (), clp, BlockExpr (List ()))
+      case cnm ~ None        ~ clp ~ None      => Hostclass (cnm, List (), clp, BlockStmtDecls (List ()))
       case cnm ~ None        ~ clp ~ Some (ss) => Hostclass (cnm, List (), clp, ss)
-      case cnm ~ Some (args) ~ clp ~ None      => Hostclass (cnm, args, clp, BlockExpr (List ()))
+      case cnm ~ Some (args) ~ clp ~ None      => Hostclass (cnm, args, clp, BlockStmtDecls (List ()))
       case cnm ~ Some (args) ~ clp ~ Some (ss) => Hostclass (cnm, args, clp, ss)
     }
 
   lazy val nodedef: P[Node] = (
-    "node" ~> hostnames ~ nodeparent.? ~ ("{" ~> stmts_and_decls.? <~ "}") ^^ {
-      case hosts ~ ndp ~ None => Node (hosts, ndp, BlockExpr (List ()))
-      case hosts ~ ndp ~ Some (ss) => Node (hosts, ndp, ss)
+    "node" ~> hostnames ~ nodeparent.? ~ ("{" ~> stmt.* <~ "}") ^^ {
+      case hosts ~ ndp ~ ss => Node (hosts, ndp, ss)
     }
   )
 

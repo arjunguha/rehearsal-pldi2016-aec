@@ -58,90 +58,171 @@ case object Vrtexported extends VirtualResType
 
 // TODO : strict types (traits or heirarchy of types)
 
-// AST
-
 sealed trait AST extends Positional
 
-sealed trait Expr extends AST
-trait RValue extends Expr
+sealed trait StmtOrDecl extends AST
+
+sealed trait TopLevelConstruct extends StmtOrDecl
+sealed trait Statement extends StmtOrDecl
+
+
+sealed trait CollectionExprOperand extends AST
+sealed trait Expr extends CollectionExprOperand
+sealed trait RValue extends Expr
 
 sealed trait HashKey extends AST
 sealed trait VardefLHS extends AST
-
 sealed trait ResourceName extends AST
 sealed trait ResourceRefType extends AST
+sealed trait RelationExprOperand extends AST
+sealed trait VirtualResourceRes extends AST
 
-case class ASTBool (value: Boolean) extends AST with RValue
-case class ASTString (value: String) extends AST with RValue with HashKey with ResourceName
-case object Default extends AST // Default class for case statement
-case class Type (value: String) extends AST  with RValue with ResourceName with ResourceRefType
-case class Name (value: String)  extends AST with RValue with HashKey with ResourceName with ResourceRefType
-case object Undef extends AST with RValue
+sealed trait ParamNameType extends AST
+sealed trait SelectLHS extends ParamNameType
+
+
+
+case class ASTBool (value: Boolean) extends AST with RValue with SelectLHS with ParamNameType
+case class ASTString (value: String) extends AST 
+                                     with RValue
+                                     with HashKey
+                                     with ResourceName
+                                     with SelectLHS
+                                     with RelationExprOperand
+                                     with ParamNameType
+
+case object Default extends AST with SelectLHS // Default class for case statement
+case class Type (value: String) extends AST
+                                with RValue
+                                with ResourceName
+                                with ResourceRefType
+                                with SelectLHS
+
+case class Name (value: String)  extends AST
+                                 with RValue 
+                                 with HashKey
+                                 with ResourceName
+                                 with ResourceRefType
+                                 with CollectionExprOperand
+                                 with SelectLHS
+                                 with ParamNameType
+
+case object Undef extends AST with RValue with SelectLHS
 case class Hostname (value: String) extends AST
-case class Variable (value: String) extends AST with RValue with VardefLHS with ResourceName
+case class Variable (value: String) extends AST
+                                    with RValue
+                                    with VardefLHS
+                                    with ResourceName
+                                    with CollectionExprOperand
+                                    with SelectLHS
+                                    with RelationExprOperand
+
 case class HashOrArrayAccess (variable: Variable, 
-                              key: List[Expr]) extends AST with RValue with VardefLHS with ResourceName
-case class ASTRegex (value: String) extends AST with Expr
+                              key: List[Expr]) extends AST 
+                                               with RValue
+                                               with VardefLHS
+                                               with ResourceName
+                                               with SelectLHS
+                                               with RelationExprOperand
+
+case class ASTRegex (value: String) extends AST with Expr with SelectLHS
 case class ASTHash (kvs: List[(HashKey, Expr)]) extends AST with Expr
 
 
 case class ASTArray (arr: List[Expr]) extends AST with RValue with ResourceName
 
-// Semantics : When this evaluates, the value of last expression pushed is returned which is head of the children list
-// TODO : BlockExpr can go away
-case class BlockExpr (exprs: List[AST]) extends AST
+case class BlockStmtDecls (stmts_decls: List[StmtOrDecl]) extends AST
 
 // Expressions involving operators
-case class BinExpr      (lhs: Expr, rhs: Expr, op: BinOp) extends AST with Expr
-case class NotExpr      (oper: Expr) extends AST with Expr
-case class UMinusExpr   (oper: Expr) extends AST with Expr
+case class BinExpr    (lhs: Expr, rhs: Expr, op: BinOp) extends AST with Expr
+case class NotExpr    (oper: Expr) extends AST with Expr
+case class UMinusExpr (oper: Expr) extends AST with Expr
 
 
-case class RelationExpr (lhs: AST, rhs: AST, op: RelationOp) extends AST
+case class RelationExpr (lhs: RelationExprOperand,
+                         rhs: RelationExprOperand,
+                          op: RelationOp) extends AST
+                                          with RelationExprOperand
+                                          with Statement
 
-// Variable definition
-case class Vardef (variable: VardefLHS, value: Expr, append: Boolean) extends AST
+case class Vardef (variable: VardefLHS,
+                   value: Expr, 
+                   append: Boolean) extends AST with Statement 
 
-// Few Datastructures used by Puppet
 
 // Puppet Resource Decl Related nodes
 // TODO : pull out before and require from params in resource instances (separate desugaring)
-case class ResourceParam (param: AST, value: Expr, add: Boolean) extends AST
+case class ResourceParam (param: ParamNameType, value: Expr, add: Boolean) extends AST
 case class ResourceInstance (title: ResourceName, params: List[ResourceParam]) extends AST
-case class Resource (typ: String, instances: List[ResourceInstance]) extends AST
-case class ResourceDefaults (typ: Type, params: List[ResourceParam]) extends AST
-case class ResourceRef (typ: ResourceRefType, title: List[Expr]) extends AST with RValue
-case class ResourceOverride (obj: ResourceRef, params: List[ResourceParam]) extends AST 
-case class VirtualResource (res: AST, tvirt: VirtualResType) extends AST
+case class Resource (typ: String,
+                     instances: List[ResourceInstance]) extends AST 
+                                                        with RelationExprOperand
+                                                        with VirtualResourceRes
+                                                        with Statement
+case class ResourceDefaults (typ: Type, 
+                             params: List[ResourceParam]) extends AST
+                                                          with RelationExprOperand
+                                                          with VirtualResourceRes
+                                                          with Statement
+
+case class ResourceRef (typ: ResourceRefType,
+                        title: List[Expr]) extends AST with RValue with RelationExprOperand
+case class ResourceOverride (obj: ResourceRef,
+                             params: List[ResourceParam]) extends AST
+                                                          with Statement
+
+case class VirtualResource (res: VirtualResourceRes,
+                            tvirt: VirtualResType) extends AST
+                                                   with Statement
 
 // Conditional Statements
-case class IfExpr (test: AST, true_exprs: BlockExpr, false_exprs: BlockExpr) extends AST
-case class CaseOpt (value: List[AST], exprs: BlockExpr) extends AST
-case class CaseExpr (test: AST, caseopts: List[CaseOpt]) extends AST
-case class Selector (param: AST, values: List[ResourceParam]) extends AST with RValue with ResourceName
+case class IfExpr (test: Expr,
+                   true_exprs: List[Statement],
+                   false_exprs: List[Statement]) extends AST
+                                            with Statement
 
-case class CollectionExpr (lhs: AST, rhs: AST, op: CollectionOp) extends AST
+case class CaseOpt (value: List[SelectLHS], exprs: List[Statement]) extends AST
+
+case class CaseExpr (test: Expr, caseopts: List[CaseOpt]) extends AST
+                                                          with RelationExprOperand
+                                                          with Statement
+
+case class Selector (param: SelectLHS,
+                     values: List[ResourceParam]) extends AST
+                                                  with RValue
+                                                  with ResourceName
+                                                  with RelationExprOperand
+
+case class CollectionExpr (lhs: CollectionExprOperand,
+                           rhs: CollectionExprOperand,
+                            op: CollectionOp) extends AST with CollectionExprOperand
+
 case class CollectionExprTagNode (coll: Option[CollectionExpr], 
                                   prop: VirtualResType) extends AST
 case class Collection (typ: Type,
                        collectrhand: CollectionExprTagNode, 
-                       params: List[ResourceParam]) extends AST
+                       params: List[ResourceParam]) extends AST 
+                                                    with RelationExprOperand
+                                                    with Statement
 
 case class Node (hostnames: List[Hostname],
                  parent: Option[String],
-                 exprs: BlockExpr) extends AST
+                 stmts: List[Statement]) extends AST with TopLevelConstruct
 
 case class Hostclass (classname: String,
                       args: List[(Variable, Option[Expr])],
                       parent: Option[String],
-                      stmts: BlockExpr) extends AST
+                      stmts: BlockStmtDecls) extends AST with TopLevelConstruct
 
 case class Definition (classname: String,
                        args: List[(Variable, Option[Expr])],
-                       exprs: BlockExpr) extends AST
+                       stmts: List[Statement]) extends AST with TopLevelConstruct
 
 case class Function (name: Name,
                      args: List[Expr],
-                     ftype: Functype) extends AST
+                     ftype: Functype) extends AST 
+                                      with RValue
+                                      with SelectLHS
+                                      with Statement
 
-case class Import (imports: List[String]) extends AST
+case class Import (imports: List[String]) extends AST with Statement
