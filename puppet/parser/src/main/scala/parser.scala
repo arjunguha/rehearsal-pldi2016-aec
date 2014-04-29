@@ -452,9 +452,7 @@ class PuppetParser extends StdTokenParsers
 
   lazy val classname: P[String] = "class" | NAME
 
-  lazy val hostnames: P[List[Hostname]] = repsep (nodename, ",") 
-
-  lazy val nodename: P[Hostname] = hostname
+  lazy val hostnames: P[List[Hostname]] = repsep (hostname, ",") 
 
   lazy val hostname: P[Hostname] = default | name | quotedtext | regex
 
