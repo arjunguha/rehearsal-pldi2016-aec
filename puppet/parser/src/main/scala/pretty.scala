@@ -211,13 +211,16 @@ object PrettyPrintAST {
     case Selector (prm, vs) => "%s ? {\n%s\n}".format (printAST (prm), printList (vs, printAST, ",\n"))
     case CollectionExpr (lhs, rhs, op) => "%s %s %s".format (printAST (lhs), CollectionOpStr (op), printAST (rhs))
 
-    case CollectionExprTagNode (None, prop) => if (prop == Vrtvirtual) "<| |>" else "<<| |>>"
-    case CollectionExprTagNode (Some (coll), prop) => 
-      if (prop == Vrtvirtual) "<| %s |>".format (printAST (coll))
-      else "<<| %s |>>".format (printAST (coll))
-
-    case Collection (typ, collectrhand, Nil) => "%s %s".format (printAST (typ), printAST (collectrhand))
-    case Collection (typ, collectrhand, prms) => "%s %s {\n%s\n}".format (printAST (typ), printAST (collectrhand), printList (prms, printAST, ","))
+    case Collection (typ, filterexpr, restype, attribs) => {
+      restype match {
+        case Vrtvirtual => "%s <| %s |> %s".format (printAST (typ), 
+                                                    (filterexpr match { case None => ""; case Some (expr) => printAST (expr) }),
+                                                    (if (attribs.length > 0) "{\n%s\n}".format (printList (attribs, printAST, "\n")) else ""))
+        case Vrtexported => "%s <<| %s |>> %s".format (printAST (typ), 
+                                                    (filterexpr match { case None => ""; case Some (expr) => printAST (expr) }),
+                                                    (if (attribs.length > 0) "{\n%s\n}".format (printList (attribs, printAST, "\n")) else ""))
+      }
+    }
 
     case Hostclass (clnm, Nil, None, stmts) => "class %s {\n%s\n}".format (clnm, printAST (stmts))
     case Hostclass (clnm, args, None, stmts) => "class %s (%s) {\n%s\n}".format (clnm, printList[(Variable, Option[Expr])] (args, { case (v, None) => printAST (v)

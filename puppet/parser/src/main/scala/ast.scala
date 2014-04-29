@@ -196,10 +196,9 @@ case class CollectionExpr (lhs: CollectionExprOperand,
                            rhs: CollectionExprOperand,
                             op: CollectionOp) extends AST with CollectionExprOperand
 
-case class CollectionExprTagNode (coll: Option[CollectionExpr], 
-                                  prop: VirtualResType) extends AST
 case class Collection (typ: Type,
-                       collectrhand: CollectionExprTagNode, 
+                       collexpr: Option[CollectionExpr],
+                       restype: VirtualResType,
                        params: List[Attribute]) extends AST 
                                                     with RelationExprOperand
                                                     with Statement

@@ -41,7 +41,7 @@ class PuppetLexical extends StdLexical
   override def token: Parser[Token] = (
     NAME ^^ (processName (_))
   | CLASSREF ^^ (PuppetClassRef (_))
-  | REGEX    ^^ (PuppetRegex (_))
+  | REGEXTOK    ^^ (PuppetRegex (_))
   | VARIABLETOK ^^ (PuppetVariable (_))
   | '\'' ~ rep( chrExcept('\'', '\n', EofCh) ) ~ '\'' ^^ { 
       case '\'' ~ chars ~ '\'' => StringLit(chars mkString "")
@@ -82,7 +82,7 @@ class PuppetLexical extends StdLexical
 
 
   // TODO : We might need to escape end of regex, See puppet lexer
-  private def REGEX: Parser[String] = """/[^/\n]*/""".r
+  private def REGEXTOK: Parser[String] = """/[^/\n]*/""".r
 
   private def VARIABLETOK: Parser[String] = ( 
     """\$(?:::)?(?:[-\w]+::)*[-\w]+""".r // DOLLAR_VAR_WITH_DASH
@@ -188,16 +188,16 @@ class PuppetParser extends StdTokenParsers
 
   lazy val collection: P[Collection] = (
     asttype ~ collectrhand ~ ("{" ~> anyparams <~ ",".? <~ "}") ^^ {
-      case t ~ cltrhnd ~ anyparams => Collection (t, cltrhnd, anyparams)
+      case t ~ collrhand ~ anyparams => Collection (t, collrhand._1, collrhand._2, anyparams)
     }
   ||| asttype ~ collectrhand ^^ { 
-      case t ~ cltrhnd => Collection (t, cltrhnd, List[Attribute] ())
+      case t ~ collrhand => Collection (t, collrhand._1, collrhand._2, List[Attribute] ())
     }
   )
 
-  lazy val collectrhand: P[CollectionExprTagNode] = (
-    "<|" ~> collstmts.? <~ "|>" ^^ (CollectionExprTagNode (_, Vrtvirtual))
-  ||| "<<|" ~> collstmts.? <~ "|>>" ^^ (CollectionExprTagNode (_, Vrtexported))
+  lazy val collectrhand: P[(Option[CollectionExpr], VirtualResType)] = (
+    "<|" ~> collstmts.? <~ "|>" ^^ ((_, Vrtvirtual))
+  ||| "<<|" ~> collstmts.? <~ "|>>" ^^ ((_, Vrtexported))
   )
 
   lazy val collstmts: P[CollectionExpr] = (
@@ -485,7 +485,7 @@ class PuppetParser extends StdTokenParsers
   ||| "[" ~> expressions <~ "," <~ "]" ^^ (ASTArray (_))
   )
 
-  lazy val regex: P[ASTRegex] = REGEX ^^ (ASTRegex (_))
+  lazy val regex: P[ASTRegex] = REGEXTOK ^^ (ASTRegex (_))
 
   lazy val hash: P[ASTHash] = (
     "{" ~> hashpairs.? <~ "}" ^^ {
@@ -528,7 +528,7 @@ class PuppetParser extends StdTokenParsers
   def CLASSREF: Parser[String] =
     elem ("classref", _.isInstanceOf[PuppetClassRef]) ^^ (_.chars)
 
-  def REGEX: Parser[String] =
+  def REGEXTOK: Parser[String] =
     elem ("regex", _.isInstanceOf[PuppetRegex]) ^^ (_.chars)
 
   def VARIABLETOK: Parser[String] =
