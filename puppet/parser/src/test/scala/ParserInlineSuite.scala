@@ -275,7 +275,10 @@ class ParserInlineSpec extends FunSpec with Matchers {
       PuppetParser ("node foo { }") match {
         case BlockStmtDecls (List (Node (hostnames, _, _))) => 
           hostnames.length should be (1)
-          hostnames.head.value should be ("foo")
+          (hostnames.head match {
+             case Name (value) => value
+             case _ => fail ("Expected Name")
+           }) should be ("foo")
         case _ => fail ("Expected Node")
       }
     }
@@ -284,9 +287,18 @@ class ParserInlineSpec extends FunSpec with Matchers {
       PuppetParser ("node foo, bar, baz { }") match {
         case BlockStmtDecls (List (Node (hostnames, _, _))) => 
           hostnames.length should be (3)
-          hostnames.head.value should be ("foo")
-          hostnames.tail.head.value should be ("bar")
-          hostnames.tail.tail.head.value should be ("baz")
+          (hostnames.head match {
+            case Name (value) => value
+            case _ => fail ("Expected Name")
+          }) should be ("foo")
+          (hostnames.tail.head match {
+             case Name (value) => value
+             case _ => fail ("Expected Name")
+          }) should be ("bar")
+          (hostnames.tail.tail.head match {
+             case Name (value) => value
+             case _ => fail ("Expected Name")
+          }) should be ("baz")
         case _ => fail ("Expected Node")
       }
     }

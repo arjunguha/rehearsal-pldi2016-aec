@@ -180,7 +180,6 @@ object PrettyPrintAST {
     case Type (v)                  => v
     case Name (v)                  => v
     case Undef                     => "undef"
-    case Hostname (v)              => v
     case Variable (v)              => v
     case HashOrArrayAccess (v, ks) => "%s[%s]".format (printAST (v), printList (ks, printAST, "][")) // Hackish
     case ASTRegex (v)              => v

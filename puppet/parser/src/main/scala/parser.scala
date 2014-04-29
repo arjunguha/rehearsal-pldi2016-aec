@@ -228,6 +228,8 @@ class PuppetParser extends StdTokenParsers
 
   lazy val undef = "undef" ^^^ Undef
 
+  lazy val default = "default" ^^^ Default
+
   lazy val name: P[Name] = NAME ^^ (Name (_))
 
   lazy val asttype: P[Type] = CLASSREF ^^ (Type (_))
@@ -332,7 +334,7 @@ class PuppetParser extends StdTokenParsers
   private lazy val parens: P[Expr] = "(" ~> expr <~ ")"
   private lazy val uminus: P[Expr] = "-" ~> expr ^^ (UMinusExpr (_))
   private lazy val not:    P[Expr] = "!" ~> expr ^^ (NotExpr (_))
-  private lazy val term:   P[Expr] = (rvalue | hash | parens | uminus | not | regex_stmt)
+  private lazy val term:   P[Expr] = (rvalue | hash | parens | uminus | not | regex)
 
 
   private def binaryOp (level: Int): Parser[((Expr, Expr) => Expr)] = {
@@ -418,7 +420,7 @@ class PuppetParser extends StdTokenParsers
 
   lazy val selectlhand: P[SelectLHS] = (
     name ||| asttype ||| quotedtext ||| variable ||| funcrvalue |||
-    boolean ||| undef ||| hasharrayaccess ||| ("default" ^^^ Default) ||| regex_stmt
+    boolean ||| undef ||| hasharrayaccess ||| default ||| regex
   )
     
   lazy val string: P[String] = STRING
@@ -452,9 +454,9 @@ class PuppetParser extends StdTokenParsers
 
   lazy val hostnames: P[List[Hostname]] = repsep (nodename, ",") 
 
-  lazy val nodename: P[Hostname] = hostname ^^ (Hostname (_))
+  lazy val nodename: P[Hostname] = hostname
 
-  lazy val hostname: P[String] = "default" | NAME | STRING | REGEX
+  lazy val hostname: P[Hostname] = default | name | quotedtext | regex
 
   lazy val argumentlist: P[List[(Variable, Option[Expr])]] = (
     "(" ~> arguments.? <~ ")" ^^ {
@@ -471,7 +473,7 @@ class PuppetParser extends StdTokenParsers
   ||| variable ^^ ((_, None))
   )
 
-  lazy val nodeparent: P[String] = "inherits" ~> hostname
+  lazy val nodeparent: P[Hostname] = "inherits" ~> hostname
 
   lazy val classparent: P[String] = "inherits" ~> (classname | "default")
 
@@ -485,7 +487,7 @@ class PuppetParser extends StdTokenParsers
   ||| "[" ~> expressions <~ "," <~ "]" ^^ (ASTArray (_))
   )
 
-  lazy val regex_stmt: P[ASTRegex] = REGEX ^^ (ASTRegex (_))
+  lazy val regex: P[ASTRegex] = REGEX ^^ (ASTRegex (_))
 
   lazy val hash: P[ASTHash] = (
     "{" ~> hashpairs.? <~ "}" ^^ {

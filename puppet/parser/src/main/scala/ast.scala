@@ -77,6 +77,8 @@ sealed trait RelationExprOperand extends AST
 sealed trait ParamNameType extends AST
 sealed trait SelectLHS extends ParamNameType
 
+sealed trait Hostname extends AST
+
 
 
 case class ASTBool (value: Boolean) extends AST with RValue with SelectLHS with ParamNameType
@@ -87,8 +89,9 @@ case class ASTString (value: String) extends AST
                                      with SelectLHS
                                      with RelationExprOperand
                                      with ParamNameType
+                                     with Hostname
 
-case object Default extends AST with SelectLHS // Default class for case statement
+case object Default extends AST with SelectLHS with Hostname // Default class for case statement
 case class Type (value: String) extends AST
                                 with RValue
                                 with ResourceName
@@ -103,9 +106,9 @@ case class Name (value: String)  extends AST
                                  with CollectionExprOperand
                                  with SelectLHS
                                  with ParamNameType
+                                 with Hostname
 
 case object Undef extends AST with RValue with SelectLHS
-case class Hostname (value: String) extends AST
 case class Variable (value: String) extends AST
                                     with RValue
                                     with VardefLHS
@@ -122,7 +125,7 @@ case class HashOrArrayAccess (variable: Variable,
                                                with SelectLHS
                                                with RelationExprOperand
 
-case class ASTRegex (value: String) extends AST with Expr with SelectLHS
+case class ASTRegex (value: String) extends AST with Expr with SelectLHS with Hostname
 
 case class ASTHash (kvs: List[(HashKey, Expr)]) extends AST with Expr
 case class ASTArray (arr: List[Expr]) extends AST with RValue with ResourceName
@@ -150,7 +153,7 @@ case class Vardef (variable: VardefLHS,
 // TODO : pull out before and require from params in resource instances (separate desugaring)
 case class ResourceParam (param: ParamNameType, value: Expr, add: Boolean) extends AST
 case class ResourceInstance (title: ResourceName, params: List[ResourceParam]) extends AST
-case class Resource (typ: String,
+case class Resource (typ: String, // TODO : String or AST String?
                      instances: List[ResourceInstance]) extends AST 
                                                         with RelationExprOperand
                                                         with Statement
@@ -200,7 +203,7 @@ case class Collection (typ: Type,
                                                     with Statement
 
 case class Node (hostnames: List[Hostname],
-                 parent: Option[String],
+                 parent: Option[Hostname],
                  stmts: List[Statement]) extends AST with TopLevelConstruct
 
 case class Hostclass (classname: String,
