@@ -163,15 +163,18 @@ class PuppetParser extends StdTokenParsers
     quotedtext ||| name ||| asttype ||| boolean ||| selector ||| variable ||| 
     array ||| hasharrayaccesses ||| resourceref ||| funcrvalue ||| undef
     
-  lazy val resource = (
+  lazy val resource = ( resource_from_instance | resource_from_defaults )
+
+  lazy val resource_from_instance: P[Resource] =
     classname ~ ("{" ~> resourceinstances <~ ";".? <~ "}") ^^ {
       case cn ~ ris => Resource (cn, ris) 
     }
-  ||| asttype ~ ("{" ~> params.? <~ ",".? <~ "}") ^^ {
+
+  lazy val resource_from_defaults: P[ResourceDefaults] = 
+    asttype ~ ("{" ~> params.? <~ ",".? <~ "}") ^^ {
       case t ~ None => ResourceDefaults (t, List ())
       case t ~ Some (params) => ResourceDefaults (t, params)
     }
-  )
 
   lazy val resourceoverride: P[ResourceOverride] =
     resourceref ~ ("{" ~> anyparams <~ ",".? <~ "}") ^^ {
@@ -179,8 +182,8 @@ class PuppetParser extends StdTokenParsers
     }
 
   lazy val virtualresource: P[VirtualResource] = (
-    "@" ~> resource ^^ (VirtualResource (_, Vrtvirtual))
-  ||| "@@" ~> resource ^^ (VirtualResource (_, Vrtexported))
+    "@" ~> resource_from_instance ^^ (VirtualResource (_, Vrtvirtual))
+  ||| "@@" ~> resource_from_instance ^^ (VirtualResource (_, Vrtexported))
   )
 
   lazy val collection: P[Collection] = (

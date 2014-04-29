@@ -56,8 +56,6 @@ case object Vrtvirtual  extends VirtualResType
 case object Vrtexported extends VirtualResType
 
 
-// TODO : strict types (traits or heirarchy of types)
-
 sealed trait AST extends Positional
 
 sealed trait StmtOrDecl extends AST
@@ -75,7 +73,6 @@ sealed trait VardefLHS extends AST
 sealed trait ResourceName extends AST
 sealed trait ResourceRefType extends AST
 sealed trait RelationExprOperand extends AST
-sealed trait VirtualResourceRes extends AST
 
 sealed trait ParamNameType extends AST
 sealed trait SelectLHS extends ParamNameType
@@ -126,9 +123,8 @@ case class HashOrArrayAccess (variable: Variable,
                                                with RelationExprOperand
 
 case class ASTRegex (value: String) extends AST with Expr with SelectLHS
+
 case class ASTHash (kvs: List[(HashKey, Expr)]) extends AST with Expr
-
-
 case class ASTArray (arr: List[Expr]) extends AST with RValue with ResourceName
 
 case class BlockStmtDecls (stmts_decls: List[StmtOrDecl]) extends AST
@@ -157,12 +153,10 @@ case class ResourceInstance (title: ResourceName, params: List[ResourceParam]) e
 case class Resource (typ: String,
                      instances: List[ResourceInstance]) extends AST 
                                                         with RelationExprOperand
-                                                        with VirtualResourceRes
                                                         with Statement
 case class ResourceDefaults (typ: Type, 
                              params: List[ResourceParam]) extends AST
                                                           with RelationExprOperand
-                                                          with VirtualResourceRes
                                                           with Statement
 
 case class ResourceRef (typ: ResourceRefType,
@@ -171,7 +165,7 @@ case class ResourceOverride (obj: ResourceRef,
                              params: List[ResourceParam]) extends AST
                                                           with Statement
 
-case class VirtualResource (res: VirtualResourceRes,
+case class VirtualResource (res: Resource,
                             tvirt: VirtualResType) extends AST
                                                    with Statement
 
