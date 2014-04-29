@@ -74,24 +74,24 @@ sealed trait ResourceName extends AST
 sealed trait ResourceRefType extends AST
 sealed trait RelationExprOperand extends AST
 
-sealed trait ParamNameType extends AST
-sealed trait SelectLHS extends ParamNameType
+sealed trait AttributeNameType extends AST
+sealed trait SelectLHS extends AttributeNameType
 
 sealed trait Hostname extends AST
 
 
 
-case class ASTBool (value: Boolean) extends AST with RValue with SelectLHS with ParamNameType
+case class ASTBool (value: Boolean) extends AST with RValue with SelectLHS with AttributeNameType
 case class ASTString (value: String) extends AST 
                                      with RValue
                                      with HashKey
                                      with ResourceName
                                      with SelectLHS
                                      with RelationExprOperand
-                                     with ParamNameType
+                                     with AttributeNameType
                                      with Hostname
 
-case object Default extends AST with SelectLHS with Hostname // Default class for case statement
+case object Default extends AST with SelectLHS with Hostname
 case class Type (value: String) extends AST
                                 with RValue
                                 with ResourceName
@@ -105,7 +105,7 @@ case class Name (value: String)  extends AST
                                  with ResourceRefType
                                  with CollectionExprOperand
                                  with SelectLHS
-                                 with ParamNameType
+                                 with AttributeNameType
                                  with Hostname
 
 case object Undef extends AST with RValue with SelectLHS
@@ -149,23 +149,25 @@ case class Vardef (variable: VardefLHS,
                    append: Boolean) extends AST with Statement 
 
 
+case class Attribute (name: AttributeNameType, value: Expr, add: Boolean) extends AST
+
+
 // Puppet Resource Decl Related nodes
 // TODO : pull out before and require from params in resource instances (separate desugaring)
-case class ResourceParam (param: ParamNameType, value: Expr, add: Boolean) extends AST
-case class ResourceInstance (title: ResourceName, params: List[ResourceParam]) extends AST
+case class ResourceInstance (title: ResourceName, params: List[Attribute]) extends AST
 case class Resource (typ: String, // TODO : String or AST String?
                      instances: List[ResourceInstance]) extends AST 
                                                         with RelationExprOperand
                                                         with Statement
 case class ResourceDefaults (typ: Type, 
-                             params: List[ResourceParam]) extends AST
+                             params: List[Attribute]) extends AST
                                                           with RelationExprOperand
                                                           with Statement
 
 case class ResourceRef (typ: ResourceRefType,
                         title: List[Expr]) extends AST with RValue with RelationExprOperand
 case class ResourceOverride (obj: ResourceRef,
-                             params: List[ResourceParam]) extends AST
+                             params: List[Attribute]) extends AST
                                                           with Statement
 
 case class VirtualResource (res: Resource,
@@ -185,7 +187,7 @@ case class CaseExpr (test: Expr, caseopts: List[CaseOpt]) extends AST
                                                           with Statement
 
 case class Selector (param: SelectLHS,
-                     values: List[ResourceParam]) extends AST
+                     values: List[Attribute]) extends AST
                                                   with RValue
                                                   with ResourceName
                                                   with RelationExprOperand
@@ -198,7 +200,7 @@ case class CollectionExprTagNode (coll: Option[CollectionExpr],
                                   prop: VirtualResType) extends AST
 case class Collection (typ: Type,
                        collectrhand: CollectionExprTagNode, 
-                       params: List[ResourceParam]) extends AST 
+                       params: List[Attribute]) extends AST 
                                                     with RelationExprOperand
                                                     with Statement
 

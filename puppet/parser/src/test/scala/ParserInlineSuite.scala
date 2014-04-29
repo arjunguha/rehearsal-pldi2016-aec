@@ -150,7 +150,7 @@ class ParserInlineSpec extends FunSpec with Matchers {
       PuppetParser ("Resource[\"title1\",\"title2\"] { param => value }") match {
         case BlockStmtDecls (List (ResourceOverride (ref, resparams))) =>
           ref shouldBe a [ResourceRef]
-          resparams shouldBe a [List[ResourceParam]]
+          resparams shouldBe a [List[Attribute]]
         case _ => fail ("Expected ResourceOverride")
       }
     }

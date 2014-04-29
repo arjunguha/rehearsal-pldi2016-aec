@@ -191,7 +191,7 @@ class PuppetParser extends StdTokenParsers
       case t ~ cltrhnd ~ anyparams => Collection (t, cltrhnd, anyparams)
     }
   ||| asttype ~ collectrhand ^^ { 
-      case t ~ cltrhnd => Collection (t, cltrhnd, List[ResourceParam] ())
+      case t ~ cltrhnd => Collection (t, cltrhnd, List[Attribute] ())
     }
   )
 
@@ -251,25 +251,25 @@ class PuppetParser extends StdTokenParsers
       case vrbl ~ e => Vardef (vrbl, e, true)
     }
 
-  lazy val params: P[List[ResourceParam]] = repsep (param, ",")
+  lazy val params: P[List[Attribute]] = repsep (param, ",")
 
-  lazy val param_name: P[ParamNameType] = name | keyword ^^ (ASTString (_)) | boolean
+  lazy val param_name: P[AttributeNameType] = name | keyword ^^ (ASTString (_)) | boolean
 
   lazy val keyword: P[String] = "and" | "case" | "class" | "default" |
     "define" | "else" | "elsif" | "if" | "in" | "import" | "inherits" |
     "node" | "or" | "undef" | "unless"
 
-  lazy val param: P[ResourceParam] = 
+  lazy val param: P[Attribute] = 
     param_name ~ ("=>" ~> expr) ^^ {
-      case pn ~ e => ResourceParam (pn, e, false)
+      case pn ~ e => Attribute (pn, e, false)
     }
 
-  lazy val addparam: P[ResourceParam] = 
+  lazy val addparam: P[Attribute] = 
     name ~ ("+>" ~> expr) ^^ {
-      case name ~ e => ResourceParam (name, e, true)
+      case name ~ e => Attribute (name, e, true)
     }
 
-  lazy val anyparams: P[List[ResourceParam]] = repsep ((param | addparam), ",")
+  lazy val anyparams: P[List[Attribute]] = repsep ((param | addparam), ",")
 
   lazy val funcrvalue: P[Function] = 
       name ~ ("(" ~> expressions.? <~ ")") ^^ {
@@ -407,15 +407,15 @@ class PuppetParser extends StdTokenParsers
       case slctlhnd ~ svals => Selector (slctlhnd, svals)
     }
 
-  lazy val svalues: P[List[ResourceParam]] = 
+  lazy val svalues: P[List[Attribute]] = 
     (selectval ^^ (List (_))
   ||| "{" ~> sintvalues <~ ",".? <~ "}")
 
-  lazy val sintvalues: P[List[ResourceParam]] = repsep (selectval, ("," | "=>"))
+  lazy val sintvalues: P[List[Attribute]] = repsep (selectval, ("," | "=>"))
 
-  lazy val selectval: P[ResourceParam] =
+  lazy val selectval: P[Attribute] =
     selectlhand ~ ("=>" ~> rvalue) ^^ {
-      case slcthnd ~ rval => ResourceParam (slcthnd, rval, false)
+      case slcthnd ~ rval => Attribute (slcthnd, rval, false)
     }
 
   lazy val selectlhand: P[SelectLHS] = (
