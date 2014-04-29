@@ -84,11 +84,6 @@ class ParserInlineSpec extends FunSpec with Matchers {
     }
 
     it ("comparison operation, it should create the correct ast objects") {
-      /*
-      Puppet::Parser::AST::ComparisonOperator.expects(:new).with {
-        |h| h[:lval].is_a?(Puppet::Parser::AST::Name) and h[:rval].is_a?(Puppet::Parser::AST::Name) and h[:operator]=="<"
-      }
-      */
       PuppetParser ("if 1 < 2 { $var = 1 }") match {
         case BlockStmtDecls (List (IfExpr (BinExpr (lhs, rhs, op), _, _))) => 
           lhs shouldBe a [Name]
@@ -297,14 +292,6 @@ class ParserInlineSpec extends FunSpec with Matchers {
     }
   }
 
-  /*
-  it ("should fail if trying to collect defaults") {
-    expect {
-      PuppetParser ("@Port { protocols => tcp }")
-    }.to raise_error(Puppet::ParseError, /Defaults are not virtualizable/)
-  }
-  */
-
   describe ("when parsing collections") {
     it ("should parse basic collections") {
       PuppetParser ("Port <| |>") match {
@@ -331,9 +318,6 @@ class ParserInlineSpec extends FunSpec with Matchers {
   */
 
   it ("should parse assignment of undef") {
-    // tree = PuppetParser ("$var = undef")
-    // tree.code.children[0].should be_an_instance_of Puppet::Parser::AST::VarDef
-    // tree.code.children[0].value.should be_an_instance_of Puppet::Parser::AST::Undef
     PuppetParser ("$var = undef") match {
       case BlockStmtDecls (List (Vardef (_, x, _))) => x should be (Undef)
       case _ => fail ("Expected Vardef")
