@@ -103,7 +103,6 @@ case class Name (value: String)  extends AST
                                  with HashKey
                                  with ResourceName
                                  with ResourceRefType
-                                 with CollectionExprOperand
                                  with SelectLHS
                                  with AttributeNameType
                                  with Hostname
@@ -113,7 +112,6 @@ case class Variable (value: String) extends AST
                                     with RValue
                                     with VardefLHS
                                     with ResourceName
-                                    with CollectionExprOperand
                                     with SelectLHS
                                     with RelationExprOperand
 
@@ -145,17 +143,17 @@ case class RelationExpr (lhs: RelationExprOperand,
                                           with Statement
 
 case class Vardef (variable: VardefLHS,
-                   value: Expr, 
+                   value: Expr,
                    append: Boolean) extends AST with Statement 
 
 
-case class Attribute (name: AttributeNameType, value: Expr, add: Boolean) extends AST
+case class Attribute (name: AttributeNameType, value: Expr, is_append: Boolean) extends AST
 
 
 // Puppet Resource Decl Related nodes
 // TODO : pull out before and require from params in resource instances (separate desugaring)
 case class ResourceInstance (title: ResourceName, params: List[Attribute]) extends AST
-case class Resource (typ: String, // TODO : String or AST String?
+case class Resource (name: String, // TODO : String or AST String?
                      instances: List[ResourceInstance]) extends AST 
                                                         with RelationExprOperand
                                                         with Statement
@@ -164,15 +162,27 @@ case class ResourceDefaults (typ: Type,
                                                           with RelationExprOperand
                                                           with Statement
 
+// TODO: What are the semantics of title
 case class ResourceRef (typ: ResourceRefType,
                         title: List[Expr]) extends AST with RValue with RelationExprOperand
-case class ResourceOverride (obj: ResourceRef,
+case class ResourceOverride (ref: ResourceRef,
                              params: List[Attribute]) extends AST
-                                                          with Statement
+                                                      with Statement
 
 case class VirtualResource (res: Resource,
                             tvirt: VirtualResType) extends AST
                                                    with Statement
+
+case class CollectionExpr (lhs: CollectionExprOperand,
+                           rhs: CollectionExprOperand,
+                            op: CollectionOp) extends AST with CollectionExprOperand
+
+case class Collection (typ: Type,
+                       collexpr: Option[CollectionExpr],
+                       restype: VirtualResType,
+                       params: List[Attribute]) extends AST 
+                                                with RelationExprOperand
+                                                with Statement
 
 // Conditional Statements
 case class IfExpr (test: Expr,
@@ -188,20 +198,11 @@ case class CaseExpr (test: Expr, caseopts: List[CaseOpt]) extends AST
 
 case class Selector (param: SelectLHS,
                      values: List[Attribute]) extends AST
-                                                  with RValue
-                                                  with ResourceName
-                                                  with RelationExprOperand
+                                              with RValue
+                                              with ResourceName
+                                              with RelationExprOperand
 
-case class CollectionExpr (lhs: CollectionExprOperand,
-                           rhs: CollectionExprOperand,
-                            op: CollectionOp) extends AST with CollectionExprOperand
 
-case class Collection (typ: Type,
-                       collexpr: Option[CollectionExpr],
-                       restype: VirtualResType,
-                       params: List[Attribute]) extends AST 
-                                                    with RelationExprOperand
-                                                    with Statement
 
 case class Node (hostnames: List[Hostname],
                  parent: Option[Hostname],
@@ -216,6 +217,7 @@ case class Definition (classname: String,
                        args: List[(Variable, Option[Expr])],
                        stmts: List[Statement]) extends AST with TopLevelConstruct
 
+// This is a function application rather than function declaration
 case class Function (name: Name,
                      args: List[Expr],
                      ftype: Functype) extends AST 
