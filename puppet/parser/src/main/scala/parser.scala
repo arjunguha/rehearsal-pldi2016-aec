@@ -305,6 +305,10 @@ class PuppetParser extends StdTokenParsers
     }
 
   lazy val resourceref: P[ResourceRef] = (
+    /* TODO : Name production is deprecated and comes as a warning in original puppet parser
+     *        It has to be a captitalized 
+     */
+
     name ~ ("[" ~> expressions <~ "]") ^^ {
       case name ~ es => ResourceRef (name, es)
     }

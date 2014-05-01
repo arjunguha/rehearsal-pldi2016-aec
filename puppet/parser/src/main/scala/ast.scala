@@ -151,7 +151,6 @@ case class Attribute (name: AttributeNameType, value: Expr, is_append: Boolean) 
 
 
 // Puppet Resource Decl Related nodes
-// TODO : pull out before and require from params in resource instances (separate desugaring)
 case class ResourceInstance (title: ResourceName, params: List[Attribute]) extends AST
 case class Resource (name: String, // TODO : String or AST String?
                      instances: List[ResourceInstance]) extends AST 
@@ -162,9 +161,8 @@ case class ResourceDefaults (typ: Type,
                                                           with RelationExprOperand
                                                           with Statement
 
-// TODO: What are the semantics of title
 case class ResourceRef (typ: ResourceRefType,
-                        title: List[Expr]) extends AST with RValue with RelationExprOperand
+                        titles: List[Expr]) extends AST with RValue with RelationExprOperand
 case class ResourceOverride (ref: ResourceRef,
                              params: List[Attribute]) extends AST
                                                       with Statement
@@ -208,11 +206,14 @@ case class Node (hostnames: List[Hostname],
                  parent: Option[Hostname],
                  stmts: List[Statement]) extends AST with TopLevelConstruct
 
+// TODO : Should classname be string? or a 'Name' node or a 'Type' node?
 case class Hostclass (classname: String,
                       args: List[(Variable, Option[Expr])],
                       parent: Option[String],
                       stmts: BlockStmtDecls) extends AST with TopLevelConstruct
 
+
+// TODO : Should classname be string? or a 'Name' node or a 'Type' node?
 case class Definition (classname: String,
                        args: List[(Variable, Option[Expr])],
                        stmts: List[Statement]) extends AST with TopLevelConstruct
