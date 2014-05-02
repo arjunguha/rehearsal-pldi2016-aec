@@ -152,38 +152,42 @@ package puppet
 
 
 /*
- * No Brainer :-
  * All branching constructs like switch, selector and if-else
  * desugar into if-else constructs
  */
 
 sealed abstract trait ASTCore
 sealed trait ExprC extends ASTCore
+sealed trait RValueC extends ExprC
+sealed trait ResourceRefTypeC extends ASTCore
 
 // TODO : Precise Types
-case object UndefC extends ASTCore // Special value for unassigned variables
-case class BoolC (value: Boolean) extends ASTCore
-case class StringC (value: String) extends ASTCore
-case class TypeC (value: String) extends ASTCore
-case class NameC (value: String) extends ASTCore
-case class RegexC (value: String) extends ASTCore
-case class VariableC (value: String) extends ASTCore
-case class BlockStmtC (exprs: List[ASTCore])
-case class BranchExprC (test: ExprC, true_br: BlockStmtC, false_br: BlockStmtC) extends ASTCore
-case class BinaryExprC (lhs: ExprC, rhs: ExprC, op: BinOp) extends ASTCore
-case class NotExprC (oper: ExprC) extends ASTCore
-case class FuncAppC (name: ASTCore, args: List[ExprC]) extends ASTCore
+case object UndefC extends ASTCore with RValue // Special value for unassigned variables
+case class BoolC (value: Boolean) extends ASTCore with Rvalue
+case class StringC (value: String) extends ASTCore with RValue
+case class TypeC (value: String) extends ASTCore with RValue
+case class NameC (value: String) extends ASTCore with RValue
+case class RegexC (value: String) extends ASTCore with RValue
+case class ASTHashC (kvs: List[(ASTCore, ExprC)]) extends ASTCore with ExprC
+case class ASTArrayC (arr: List[ExprC]) extends ASTCore with RValue
+case class HashOrArrayAccessC (variable: VariableC, keys: List[ExprC]) extends ASTCore with RValue
+case class VariableC (value: String) extends ASTCore with ResourceRefTypeC with RValue
+case class BlockStmtC (exprs: List[ASTCore]) extends ASTCore
+case class IfElseC (test: ExprC, true_br: BlockStmtC, false_br: BlockStmtC) extends ASTCore with ExprC
+case class BinaryExprC (lhs: ExprC, rhs: ExprC, op: BinOp) extends ASTCore with ExprC
+case class NotExprC (oper: ExprC) extends ASTCore with ExprC
+case class FuncAppC (name: ASTCore, args: List[ExprC]) extends ASTCore with RValue
 case class ImportC (imports: List[String]) extends ASTCore
-case class Vardef (variable: ASTCore, value : ExprC , append: Boolean) extends ASTCore
-case class OrderResourceC (source: ExprC, target: ExprC, notify: Boolean) extends ASTCore 
-case class Attribute (name: ASTCore, value: ExprC, is_append: Boolean)
+case class VardefC (variable: ASTCore, value : ExprC , append: Boolean) extends ASTCore
+case class OrderResourceC (source: ExprC, target: ExprC, notify: Boolean) extends ASTCore
+case class AttributeC (name: ASTCore, value: ExprC, is_append: Boolean) extends ASTCore
 case class ResourceDeclC (attrs: List[AttributeC]) extends ASTCore
-case class ResourceRefC (filter: ExprC) extends ASTCore
-case class ResourceOverrideC (ref : ResourceRefC, attrs : List[AttributeC]) extends ASTCore
+case class ResourceRefC (filter: ExprC) extends ASTCore with ResourceRefTypeC with RValue
+case class ResourceOverrideC (ref : ResourceRefTypeC, attrs : List[AttributeC]) extends ASTCore
 case class NodeC (hostnames: ASTCore, parent: Option[ASTCore], stmts: List[ASTCore]) extends ASTCore
 
 /* 
- * A class in puppet is a collection of (possibly distinct types) of resources. The
+ * A class in puppet is a collection of (possibly distinct types) resources. The
  * parameters add flexibility to the resources in class
  */
 case class HostclassC (classname: String, args: List[(VariableC, Option[ExprC])], parent: Option[String], stmts: BlockStmtC) extends ASTCore
@@ -213,23 +217,23 @@ object DesugarPuppetAST {
 
     case ASTBool (b) => BoolC (b)
     case ASTString (s) => StringC (s)
-    case Default => // TODO
+    case Default => failure ("Default Unreachable")
     case Type (t) => TypeC (t)
     case Name (name) => NameC (name)
     case Undef => UndefC
     case Variable (v) => VariableC (v)
     case Vardef (v, value, append) => VardefC (v, value, append)
     case ASTRegex (r) => RegexC (r)
-    case ASTHash (kvs) => // TODO
-    case ASTArray (arr) => // TODO
-    case HashOrArrayAccess (v, ks) => // TODO
+    case ASTHash (kvs) => ASTHashC (kvs.map ((desugarAST (_), desugarAST (_))))
+    case ASTArray (arr) => ASTArrayC (arr.map (desugarAST (_)))
+    case HashOrArrayAccess (v, ks) => HashOrArrayAccessC (desugarAST (v), ks.map (desugar (_)))
     case BlockStmtDecls (stmts_decls) => BlockStmtC ( stmts_decls.map { desugarAST (_) })
     case BinExpr (lhs, rhs. op) => BinExprC (desugarAST (lhs), desugarAST (rhs), op)
     case NotExpr (oper) => NotExprC (oper)
     case UMinusExpr (oper) => BinExpr (Name ("-1"), oper, Mult)
 
     
-    case RelationExpr (lhs, rhs, op) => // TODO
+    case RelationExpr (lhs, rhs, op) => failure ("YTD")
 
     case Attribute (name, value, add) => AttributeC (desugarAST (name), desugarAST (value), add)
 
@@ -253,48 +257,124 @@ object DesugarPuppetAST {
       resources.map { case ResourceDeclC (attrs) => ResourceDeclC (attr :: attrs) }
     }
  
-    case ResourceRef (typ, titles) => typ match {
-      // Name is effectively a type, see the corresponding production rule
-      case Name (name) => Type (capitalize (name))
-      case typ => typ
+    case ResourceRef (typ, titles) => {
+      val _typ = typ match {
+        // Name is effectively a type, see the corresponding production rule
+        case Name (name) => Type (capitalize (name))
+        case typ => typ
+      }
+      val typmatch = BinExprC (NameC ("type"), desugarAST (_typ), Eq)
+      val filters = titles.map (BinExprC (BinExprC (NameC ("title"), desugarAST (_), Eq),
+                                          typmatch, And))
+      val filter = filters.foldRight (BoolC (false)) (BinExprC (_, _, Or))
+      ResourceExprC (filter)
     }
-    case CollectionExpr (lhs, rhs, op) => // TODO
-    case Collection (typ, collexpr, restype, params) => // TODO 
-    case ResourceOverride (ref, params) => // TODO
+
+    case CollectionExpr (lhs, rhs, op) => op match {
+      case CollOr    => BinExprC (desugarAST (lhs), desugarAST (rhs), Or)
+      case CollAnd   => BinExprC (desugarAST (lhs), desugarAST (rhs), And)
+      case CollIsEq  => BinExprC (desugarAST (lhs), desugarAST (rhs), Eq)
+      case CollNotEq => BinExprC (desugarAST (lhs), desugarAST (rhs), NotEq)
+    }
+
+    case Collection (typ, collexpr, tvirt, params) => {
+     /*
+      * Behaviour: 
+      *   - When used in chaining, virtual tag is ignored
+      *   - When used as overriding construct, virtual tag is ignored
+      *   - When used as a value they realize virtual resources (virtual tag kicks in)
+      */
+
+      if (params.length == 0) {
+        // Either chaining or realizing virtual resource, lets preserve the virtual tag
+        val typmatchexpr = CollectionExpr (Name ("type"), typ, CollIsEq)
+        val virtmatchexpr = tvirt match {
+          case Vrtvirtual => CollectionExpr (Name ("virtual"), ASTString ("virtual"), CollIsEq)
+          case Vrtexported => CollectionExpr (Name ("virtual"), ASTString ("exported"), CollIsEq)
+        }
+
+        val filter = desugarAST (CollectionExpr (collexpr, 
+                                                 CollectionExpr (virtmatchexpr, typmatchexpr, CollAnd),
+                                                 CollAnd))
+        ResourceRefC (filter)
+      }
+      else {
+        // Overriding, virtual tag should be ignored
+        val typmatchexpr = CollectionExpr (Name ("type"), typ, CollIsEq)
+        val filter = desugarAST (CollectionExpr (collexpr, typmatchexpr, CollAnd))
+        ResourceOverrideC (ResourceRefC (filter), params.map (desugarAST (_)))
+      }
+    }
+
+    case ResourceOverride (ref, params) => ResourceOverrideC (desugarAST (ref), params.map (desugarAST (_)))
     case ResourceDefaults (typ, params) => {
       val filter = BinExprC (NameC ("type"), TypeC (capitalize (typ)), Equal)
-      // TODO : Reconsider
-      ResourceOverrideC (ResourceRefC (List (filter)), params.map { desugarAST (_) })
+      ResourceOverrideC (ResourceRefC (filter), params.map { desugarAST (_) })
     }
 
     case IfExpr (test, true_exprs, false_exprs) =>
-      IfExprC (desugarAST (test), desugarAST (true_exprs), desugarAST (false_exprs))
+      IfElseC (desugarAST (test), desugarAST (true_exprs), desugarAST (false_exprs))
 
     case CaseOpt (values, exprs) => failure ("Unreachable")
 
     case CaseExpr (test, caseopts) => {
 
-      // Separate 'default' case expression
-      def is_default (co: CaseOpt) = match co.value {
+      // extract 'default' case expression
+      def is_default (co: CaseOpt) = co.value match {
         case Default => true
         case _ => false
       }
+
+      /* Order of tests is important and needs to be preserved except for 'default'
+       * case expression
+       */
       val p = caseopts.partition (is_default)
+
       val default_caseopt  = p._1
       val regular_caseopts = p._2
 
+      val testC = desugarAST (test)
+      val defaultBlockC = BlockStmtC (default_caseopt.map (_.exprs.map (desguarAST (_))))
+
       // Desugar "regular" case options to if-else constructs
-      regular_caseopts.map {
-        case CaseOpt (values, exprs) => values.foldLeft (desugarAST (test)) => 
+      regular_caseopts.foldRight (defaultBlockC) { (elem, acc) => 
+        val iftestC = elem.values.foldRight (BoolC (false)) ((acc, elem) => BinExprC (BinExprC (elem, testC, Eq), acc, Or))
+        IfElseC (iftestC, BlockStmtC (elem.exprs.map (desugarAST (_))), acc)
       }
     }
 
-    case Selector (param, values) => 
+    // Selector return values (that can possibly be assigned to variables) while case statement evaluation do not return any valuE
+    case Selector (test, caseopts) => {
+
+      // extract 'default' case expression
+      def is_default (co: CaseOpt) = co.value match {
+        case Default => true
+        case _ => false
+      }
+
+      /* Order of tests is important and needs to be preserved except for 'default'
+       * case expression
+       */
+      val p = caseopts.partition (is_default)
+
+      val default_caseopt  = p._1
+      val regular_caseopts = p._2
+
+      val testC = desugarAST (test)
+      val defaultBlockC = BlockStmtC (default_caseopt.map (_.exprs.map (desguarAST (_))))
+
+      // Desugar "regular" case options to if-else constructs
+      regular_caseopts.foldRight (defaultBlockC) { (elem, acc) => 
+        val iftestC = elem.values.foldRight (BoolC (false)) ((acc, elem) => BinExprC (BinExprC (elem, testC, Eq), acc, Or))
+        IfElseC (iftestC, BlockStmtC (elem.exprs.map (desugarAST (_))), acc)
+      }
+    }
+
 
     case Node (hostnames, None, stmts) => 
-      NodeC (desugarAST (hostnames), None, desugarAST (stmts))
+      NodeC (hostnames.map (desugarAST (_)), None, desugarAST (stmts))
     case Node (hostnames, Some (parent), stmts) => 
-      NodeC (desugarAST (hostnames), Some (desugarAST (parent)), desugarAST (stmts))
+      NodeC (hostnames.map (desugarAST (_)), Some (desugarAST (parent)), desugarAST (stmts))
 
     case Hostclass (classname, args, parent, stmts) => 
       HostclassC (classname,
@@ -303,9 +383,9 @@ object DesugarPuppetAST {
                   desugarAST (stmts))
 
     case Definition (classname, args, stmts) => 
-      DefinitionC (classname, args.map { desugarAST (_) }, desugarAST (stmts))
+      DefinitionC (classname, args.map (desugarAST (_)), desugarAST (stmts))
 
-    case Function (name, args, _) => FuncAppC (desugarAST (name), args.map { desugarAST (_) })
+    case Function (name, args, _) => FuncAppC (desugarAST (name), args.map (desugarAST (_)))
     case Import (imports) => ImportC (imports)
   }
 }
