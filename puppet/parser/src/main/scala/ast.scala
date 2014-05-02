@@ -70,7 +70,7 @@ sealed trait RValue extends Expr
 
 sealed trait HashKey extends AST
 sealed trait VardefLHS extends AST
-sealed trait ResourceName extends AST
+sealed trait ResourceName extends AST with RValue
 sealed trait ResourceRefType extends AST
 sealed trait RelationExprOperand extends AST
 
@@ -177,7 +177,7 @@ case class CollectionExpr (lhs: CollectionExprOperand,
 
 case class Collection (typ: Type,
                        collexpr: Option[CollectionExpr],
-                       restype: VirtualResType,
+                       tvirt: VirtualResType,
                        params: List[Attribute]) extends AST 
                                                 with RelationExprOperand
                                                 with Statement
@@ -188,7 +188,7 @@ case class IfExpr (test: Expr,
                    false_exprs: List[Statement]) extends AST
                                             with Statement
 
-case class CaseOpt (value: List[SelectLHS], exprs: List[Statement]) extends AST
+case class CaseOpt (values: List[SelectLHS], exprs: List[Statement]) extends AST
 
 case class CaseExpr (test: Expr, caseopts: List[CaseOpt]) extends AST
                                                           with RelationExprOperand

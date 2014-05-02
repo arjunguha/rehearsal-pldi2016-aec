@@ -458,7 +458,7 @@ class PuppetParser extends StdTokenParsers
 
   lazy val hostnames: P[List[Hostname]] = repsep (hostname, ",") 
 
-  lazy val hostname: P[Hostname] = default | name | quotedtext | regex
+  lazy val hostname: P[Hostname] = ("default" ^^ (Name (_))) | name | quotedtext | regex
 
   lazy val argumentlist: P[List[(Variable, Option[Expr])]] = (
     "(" ~> arguments.? <~ ")" ^^ {
