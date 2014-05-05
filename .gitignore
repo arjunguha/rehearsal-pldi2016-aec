@@ -5,3 +5,7 @@
 # scala specific
 project/
 target/
+
+# Mac OS junk
+.DS_Store
+
