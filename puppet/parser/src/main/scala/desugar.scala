@@ -1,16 +1,5 @@
 package puppet;
 
-/* How to go about desugaring
- *  - Resource Ordering/Dependencies should be clearly visible
- *  - Some operators are superfluous
- *  - IfExprs, Case options and Selectors into a common node
- *  - "node" concept is only applicable when we get into master and client mode
- *  - Functions
- *  - Imports
- *  - Declarations: Node vs Hostclass vs Definition
- */
-
-
 /* A 'Resource node' comprises of a type and numerous instances of that type.
  * It can be desugared from a list of resources grouped by their types into
  * individual resources with their types tagged onto them.
@@ -62,7 +51,7 @@ package puppet;
  *  @file {'/tmp/file': ensure => present } is desugared into
  *
  *  ResourceDeclaration {
- *     type => File,
+ *     type => 'File',
  *     title => '/tmp/file',
  *     virtual => true,
  *     ensure => present
@@ -75,13 +64,12 @@ package puppet;
  * 
  * Semantically, they are same as they try to refer to one or more
  * resources. The former references a single resource by its type and
- * title and the latter is a generic search over a particular type of 
- * resource involving some property (match or no match) on its attributes.
- * We can treat 'ResourceReference' as a special case of 'Collection' as a
- * search on the title (which happens to be unique for a type of resource 
- * across catalog/system). Since we have title of a resource as another
- * attribute due to one of the above desugaring, it blends nicely with our
- * core AST semantics. 
+ * title and the latter is a generic search over attributes of a particular
+ * type of resource. We can treat 'ResourceReference' as a special case of
+ * 'Collection' as a search on the title (which happens to be unique for a
+ * type of resource across catalog/system). Since we have title of a resource
+ * as another attribute due to one of the above desugaring, it blends nicely
+ * with our core AST semantics.
  */
 
 
@@ -120,8 +108,6 @@ package puppet;
  *
  * in-attribute ('before', 'after', 'subscribe', 'notify') dependencies are supposed
  * to be handled at the time of evaluation.
- *
- * TODO : Ignoring refresh events for now
  */
 
 
@@ -329,7 +315,6 @@ object DesugarPuppetAST {
       }
 
       /* Order of tests is important and needs to be preserved except for 'default'
-       * case expression
        */
       val p = caseopts.partition (is_default)
 
@@ -360,7 +345,6 @@ object DesugarPuppetAST {
       }
 
       /* Order of tests is important and needs to be preserved except for 'default'
-       * case expression
        */
       val p = attrs.partition (is_default)
 
