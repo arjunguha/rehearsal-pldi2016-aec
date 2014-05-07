@@ -227,10 +227,13 @@ object PrettyPrintAST {
                                                                                                                                    case (v, Some (e)) => "%s = %s".format (printAST (v), printAST(e))
                                                                                                                                }, ","), printAST (stmts))
     case Hostclass (clnm, Nil, Some (parent), stmts) => "class %s inherits %s {\n%s\n}".format (clnm, parent, printAST (stmts))
-    case Hostclass (clnm, args, Some (parent), stmts) => "class %s inherits %s (%s) {\n%s\n}".format (clnm, parent,
-                                                                                                      printList[(Variable, Option[Expr])] (args, { case (v, None) => printAST (v)
-                                                                                                                                                  case (v, Some (e)) =>"%s = %s".format (printAST (v), printAST(e))}, ","),
-                                                                                                                                                                                                                                                                                                     printAST (stmts))
+    case Hostclass (clnm, args, Some (parent), stmts) => 
+      "class %s (%s) inherits %s {\n%s\n}".format (clnm, 
+                                                   printList[(Variable, Option[Expr])] (args, { 
+                                                     case (v, None) => printAST (v)
+                                                     case (v, Some (e)) =>"%s = %s".format (printAST (v), printAST(e))
+                                                   }, ","),
+                                                   parent, printAST (stmts))
 
     case Function (nm, args, _) => "%s (%s)".format (printAST (nm), printList (args, printAST, ","))
 
