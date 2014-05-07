@@ -43,19 +43,21 @@ class PuppetLexical extends StdLexical
   | CLASSREF ^^ (PuppetClassRef (_))
   | REGEXTOK    ^^ (PuppetRegex (_))
   | VARIABLETOK ^^ (PuppetVariable (_))
-  | '\'' ~ rep( chrExcept('\'', '\n', EofCh) ) ~ '\'' ^^ { 
-      case '\'' ~ chars ~ '\'' => StringLit(chars mkString "")
-    }
-  |  '\"' ~ rep( chrExcept('\"', '\n', EofCh) ) ~ '\"' ^^ {
-      case '\"' ~ chars ~ '\"' => StringLit(chars mkString "")
-    }
-  |  EofCh                                             ^^^ EOF
+  | '\'' ~> stringlit ('\'') <~ '\'' ^^ (StringLit(_))
+  |  '\"' ~> stringlit ('\"') <~ '\"' ^^ (StringLit(_))
+  |  EofCh ^^^ EOF
   |  '\'' ~> failure("unclosed string literal")
   |  '\"' ~> failure("unclosed string literal")
   |  delim
   |  failure("illegal character")
   )
 
+  private def stringlit (quote_char: Char): Parser[String] = (
+    rep (chrExcept ('\\', quote_char))  ~ escape_seq ~ stringlit (quote_char) ^^ { case chars ~ es ~ strlit => (chars mkString "") + es + strlit }
+  | rep (chrExcept ('\\', quote_char, EofCh)) ^^ (_ mkString "")
+  )
+
+  private def escape_seq: Parser[String] = '\\' ~ chrExcept (EofCh) ^^ { case '\\' ~ ch => "\\" + ch }
 
   private def processName (name: String) = 
     if (reserved contains name) Keyword (name) 
