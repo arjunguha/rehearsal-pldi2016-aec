@@ -174,8 +174,7 @@ object PrettyPrintAST {
 
     case ASTBool (true)            => "true"
     case ASTBool (false)           => "false"
-    case ASTString (s)             => if (s.exists ({_ == '\''})) "\"" + s + "\""
-                                      else "\'" + s + "\'"
+    case ASTString (s)             => s
     case Default                   => "default"
     case Type (v)                  => v
     case Name (v)                  => v
@@ -237,7 +236,7 @@ object PrettyPrintAST {
 
     case Function (nm, args, _) => "%s (%s)".format (printAST (nm), printList (args, printAST, ","))
 
-    case Import (imps) => "import %s\n".format (printList (imps, (x: String) => "\"%s\"".format (x), ","))
+    case Import (imps) => "import %s\n".format (printList (imps, (x: String) => x, ","))
 
     case Node (hostnames, None, es) => "node %s {\n%s\n}".format (printList (hostnames, printAST, ","), printList (es, printAST, "\n"))
 

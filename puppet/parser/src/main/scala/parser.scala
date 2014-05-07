@@ -43,8 +43,8 @@ class PuppetLexical extends StdLexical
   | CLASSREF ^^ (PuppetClassRef (_))
   | REGEXTOK    ^^ (PuppetRegex (_))
   | VARIABLETOK ^^ (PuppetVariable (_))
-  | '\'' ~> stringlit ('\'') <~ '\'' ^^ (StringLit(_))
-  |  '\"' ~> stringlit ('\"') <~ '\"' ^^ (StringLit(_))
+  | '\'' ~ stringlit ('\'') ~ '\'' ^^ { case '\'' ~ chars ~ '\'' => StringLit ("\'" +  chars + "\'") }
+  |  '\"' ~ stringlit ('\"') ~ '\"' ^^ { case '\"' ~ chars ~ '\"' => StringLit ("\"" + chars + "\"") }
   |  EofCh ^^^ EOF
   |  '\'' ~> failure("unclosed string literal")
   |  '\"' ~> failure("unclosed string literal")
@@ -556,6 +556,6 @@ object PuppetParser extends PuppetParser {
 
   def apply (in: String) = parseAll (in) match {
     case Success (ast, _) => ast
-    case e: NoSuccess => throw PuppetParserException ("Parsing failed:" + e)
+    case NoSuccess (msg, next) => throw PuppetParserException ("Parsing failed: %s\n Rest of Input: %s".format (msg, next))
   }
 }
