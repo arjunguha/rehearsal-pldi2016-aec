@@ -434,6 +434,8 @@ class PuppetParser extends StdTokenParsers
   lazy val strings: P[List[String]] = repsep (string, ",") 
 
   lazy val import_stmt: P[Import] = 
+    // TODO : Deprecated in puppet, Should show as warning
+    // Consider saving quotes
     "import" ~> strings ^^ (Import (_))
 
   lazy val definition: P[Definition] = 

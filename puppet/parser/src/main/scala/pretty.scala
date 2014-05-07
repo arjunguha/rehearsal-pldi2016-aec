@@ -237,7 +237,7 @@ object PrettyPrintAST {
 
     case Function (nm, args, _) => "%s (%s)".format (printAST (nm), printList (args, printAST, ","))
 
-    case Import (imps) => "import %s\n".format (printList (imps, (x: String) => x, ","))
+    case Import (imps) => "import %s\n".format (printList (imps, (x: String) => "\"%s\"".format (x), ","))
 
     case Node (hostnames, None, es) => "node %s {\n%s\n}".format (printList (hostnames, printAST, ","), printList (es, printAST, "\n"))
 
