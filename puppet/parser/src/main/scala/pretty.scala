@@ -70,6 +70,29 @@ object PrettyPrintAST {
   private case object TOPLEVEL extends ExprContext;
 
 
+  def eqParensReq(context : ExprContext) = context match {
+    case NOT => true
+    case UMINUS => true
+    case IN_MATCH_NOMATCH (_) => true
+    case DIV_MULT_MOD (_) => true
+    case PLUS_MINUS (_) => true
+    case LSHIFT_RSHIFT (_) => true
+    case NOTEQUAL_EQUAL (RIGHT) => true
+    case _ => false
+  }
+
+  def neqParensReq(context : ExprContext) = context match {
+      case NOT => true
+      case UMINUS => true
+      case IN_MATCH_NOMATCH (_) => true
+      case DIV_MULT_MOD (_) => true
+      case PLUS_MINUS (_) => true
+      case LSHIFT_RSHIFT (_) => true
+      case NOTEQUAL_EQUAL (_) => true
+      case RELATIONAL (RIGHT) => true
+      case _ => false
+    }
+
   private def parensRequired (op: BinOp, context: ExprContext) : Boolean = op match {
 
     case In | NoMatch | Match => context match {
@@ -95,35 +118,37 @@ object PrettyPrintAST {
            LSHIFT_RSHIFT (RIGHT) => true
       case _ => false
     }
-
-    case NotEqual | Equal => context match {
-      case NOT | UMINUS | IN_MATCH_NOMATCH (_) | 
-           DIV_MULT_MOD (_) | PLUS_MINUS (_)   |
-           LSHIFT_RSHIFT (_) | NOTEQUAL_EQUAL (RIGHT) => true
-      case _ => false
-    }
-
-    case GreaterThan | GreaterEq | LessThan | LessEq => context match {
-      case NOT | UMINUS | IN_MATCH_NOMATCH (_) | 
-           DIV_MULT_MOD (_) | PLUS_MINUS (_)   |
-           LSHIFT_RSHIFT (_) | NOTEQUAL_EQUAL (_) |
-           RELATIONAL (RIGHT) => true
-      case _ => false
-    }
+    case NotEqual => eqParensReq(context)
+    case Equal => eqParensReq(context)
+    case GreaterThan => neqParensReq(context)
+    case GreaterEq => neqParensReq(context)
+    case LessThan => neqParensReq(context)
+    case LessEq => neqParensReq(context)
 
     case And => context match {
-      case NOT | UMINUS | IN_MATCH_NOMATCH (_) | 
-           DIV_MULT_MOD (_) | PLUS_MINUS (_) |
-           LSHIFT_RSHIFT (_) | NOTEQUAL_EQUAL (_) |
-           RELATIONAL (_) | AND (RIGHT) => true
+      case NOT => true
+      case UMINUS => true
+      case IN_MATCH_NOMATCH (_) => true
+      case DIV_MULT_MOD (_) => true
+      case PLUS_MINUS (_) => true
+      case LSHIFT_RSHIFT (_) => true
+      case NOTEQUAL_EQUAL (_) => true
+      case RELATIONAL (_) => true
+      case AND (RIGHT) => true
       case _ => false
     }
 
     case Or => context match {
-      case NOT | UMINUS | IN_MATCH_NOMATCH (_) |
-           DIV_MULT_MOD (_) | PLUS_MINUS (_) |
-           LSHIFT_RSHIFT (_) | NOTEQUAL_EQUAL (_) |
-           RELATIONAL (_) | AND (_) | OR (RIGHT) => true
+      case NOT => true
+      case UMINUS => true
+      case IN_MATCH_NOMATCH (_) => true
+      case DIV_MULT_MOD (_) => true
+      case PLUS_MINUS (_) => true
+      case LSHIFT_RSHIFT (_) => true
+      case NOTEQUAL_EQUAL (_) => true
+      case RELATIONAL (_) => true
+      case AND (_) => true
+      case OR (RIGHT) => true
       case _ => false
     }
   }
