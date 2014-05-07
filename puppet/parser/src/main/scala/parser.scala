@@ -253,7 +253,7 @@ class PuppetParser extends StdTokenParsers
 
   lazy val params: P[List[Attribute]] = repsep (param, ",")
 
-  lazy val param_name: P[AttributeNameType] = name | keyword ^^ (ASTString (_)) | boolean
+  lazy val param_name: P[AttributeNameType] = keyword ^^ (Name (_)) | name | boolean
 
   lazy val keyword: P[String] = "and" | "case" | "class" | "default" |
     "define" | "else" | "elsif" | "if" | "in" | "import" | "inherits" |
