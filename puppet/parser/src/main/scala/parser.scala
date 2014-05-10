@@ -91,7 +91,7 @@ class PuppetLexical extends StdLexical
   | """\$(::)?(\w+::)*\w+""".r           // DOLLAR_VAR
   )
 
-  // TODO : DQPRE, DQMID, DQPOST
+  // TODO : DQPRE, DQMID, DQPOST or String Interpolation
 }
 
 
@@ -114,7 +114,7 @@ class PuppetParser extends StdTokenParsers
                                
   type P[+T] = PackratParser[T]
 
-  // TODO : See if we need EOF as a production here
+  // TODO : See if we need EOF as a production here || Check with empty manifest
   lazy val program: P[AST] =   stmts_and_decls 
                          /*    | (EofCh  ^^^ (BlockExpr (List[AST] ()))) */
 
@@ -240,6 +240,7 @@ class PuppetParser extends StdTokenParsers
     quotedtext ||| name ||| asttype ||| selector ||| variable ||| array ||| hasharrayaccesses
 
   lazy val assignment: P[Vardef] = (
+    // TODO : A variable from another namespace cannot be assigned, see puppet parser
     variable ~ ("=" ~> expr) ^^ { 
       case vrbl ~ e => Vardef (vrbl, e, false)
     }
