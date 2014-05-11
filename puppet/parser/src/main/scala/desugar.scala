@@ -166,7 +166,7 @@ case class AttributeC (name: ASTCore, value: ASTCore, is_append: Boolean) extend
 case class ResourceDeclC (attrs: List[ASTCore]) extends ASTCore
 case class ResourceRefC (filter: ASTCore) extends ASTCore 
 case class ResourceOverrideC (ref : ASTCore, attrs : List[ASTCore]) extends ASTCore
-case class NodeC (hostnames: List[ASTCore], parent: Option[ASTCore], stmts: List[ASTCore]) extends ASTCore
+case class NodeC (hostname: ASTCore, parent: Option[ASTCore], stmts: List[ASTCore]) extends ASTCore
 
 /* 
  * A class in puppet is a collection of (possibly distinct types) resources. The
@@ -363,10 +363,15 @@ object DesugarPuppetAST {
     }
 
 
-    case Node (hostnames, None, stmts) => 
-      NodeC (hostnames.map (desugarAST (_)), None, stmts.map (desugarAST (_)))
-    case Node (hostnames, Some (parent), stmts) => 
-      NodeC (hostnames.map (desugarAST (_)), Some (desugarAST (parent)), stmts.map (desugarAST (_)))
+    case Node (hostnames, None, stmts) => {
+      val desugared_stmts = stmts.map (desugarAST (_))
+      ASTArrayC (hostnames.map (desugarAST (_)).map (NodeC (_, None, desugared_stmts)))
+    }
+
+    case Node (hostnames, Some (parent), stmts) => {
+      val desugared_stmts = stmts.map (desugarAST (_))
+      ASTArrayC (hostnames.map (desugarAST (_)).map (NodeC (_, Some (desugarAST (parent)), desugared_stmts)))
+    }
 
     case Hostclass (classname, args, parent, stmts) => 
       HostclassC (classname,
