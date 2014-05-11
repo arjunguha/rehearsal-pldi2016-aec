@@ -52,13 +52,14 @@ object Cmd {
 
 object cd {
 
-  def apply (loc: String): Int = {
+  def apply (loc: String) {
 
     var tmp = Cmd.pwd
     tmp = tmp.resolve (loc)
-    val st = Cmd.exec ("cd" + " " + tmp.toString ())._1
-    if (0 == st) Cmd.pwd = tmp
-    st
+    if (Cmd.exec ("cd" + " " + tmp.toString).isSuccess)
+    {
+      Cmd.pwd = tmp
+    }
   }
 }
 
@@ -68,12 +69,11 @@ object ENV_PATH {
   var elems = System.getenv ("PATH").split (':').map (Paths.get (_))
 
   /* Idempotent */
-  def append (path: String): Int = {
+  def append (path: String) {
 
     if (! elems.contains (Paths.get (path))) {
       elems = elems :+ Paths.get (path)
-      (Cmd.exec ("export PATH=$PATH:" + path))._1
+      (Cmd.exec ("export PATH=$PATH:" + path)).get
     }
-    else { 0 }
   }
 }
