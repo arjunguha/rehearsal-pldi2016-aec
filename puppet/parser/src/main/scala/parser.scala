@@ -43,7 +43,6 @@ class PuppetLexical extends StdLexical
   | VARIABLETOK ^^ (PuppetVariable (_))
   | '\'' ~ stringlit ('\'') ~ '\'' ^^ { case '\'' ~ chars ~ '\'' => StringLit ("\'" +  chars + "\'") }
   |  '\"' ~ stringlit ('\"') ~ '\"' ^^ { case '\"' ~ chars ~ '\"' => StringLit ("\"" + chars + "\"") }
-  |  EofCh ^^^ EOF
   |  '\'' ~> failure("unclosed string literal")
   |  '\"' ~> failure("unclosed string literal")
   |  delim
@@ -107,9 +106,7 @@ class PuppetParser extends StdTokenParsers
                                
   type P[+T] = PackratParser[T]
 
-  // TODO : See if we need EOF as a production here || Check with empty manifest
   lazy val program: P[BlockStmtDecls] = stmts_and_decls
-                         /*    | (EofCh  ^^^ (BlockExpr (List[AST] ()))) */
 
   lazy val stmts_and_decls: P[BlockStmtDecls] = stmt_or_decl.* ^^ (BlockStmtDecls (_))
 
@@ -535,7 +532,8 @@ class PuppetParser extends StdTokenParsers
 
   def parseAll (s: String) = {
     val tokens  = new lexical.Scanner (s)
-    phrase (program)(tokens)
+    // Parses up to EOF, otherwise fails.
+    phrase(program)(tokens)
   }
 }
 
