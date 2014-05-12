@@ -146,7 +146,7 @@ class PuppetParser extends StdTokenParsers
   ||| name ~ ("(" ~> expressions <~ ",".? <~ ")") ^^ {
         case n ~ es => Function (n, es, Ftstmt)
       }
-  ||| name ~ repsep (rvalue, ",") ^^ { 
+  ||| name ~ rep1sep (rvalue, ",") ^^ {
       case n ~ rvs => Function (n, rvs, Ftstmt)
     }
   )

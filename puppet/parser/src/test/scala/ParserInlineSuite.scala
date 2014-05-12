@@ -195,6 +195,22 @@ class ParserInlineSpec extends FunSpec with Matchers {
     it ("should not raise errors with multiple arguments and a trailing comma") {
        PuppetParser ("notice(1,2,)") 
     }
+
+    it ("should signal an error parsing function applications with two args and no commas") {
+      intercept [PuppetParserException] {
+        PuppetParser("foo foo foo")
+      }
+    }
+
+    it ("should parse a function application without parentheses") {
+      PuppetParser("foo foo")
+    }
+
+    it ("should parse two function applications without parentheses") {
+      // This is awful.
+      PuppetParser("foo foo foo foo")
+    }
+
   }
 
   describe ("when parsing arrays") {
