@@ -1,7 +1,7 @@
 import org.scalatest.FunSpec
 import org.scalatest.Matchers
-import puppet._
-
+import puppet.syntax._
+import puppet.parser._
 
 class ParserInlineSpec extends FunSpec with Matchers {
 

@@ -1,4 +1,6 @@
-package puppet;
+package puppet.core
+
+import puppet.syntax._
 
 /* A 'Resource node' comprises of a type and numerous instances of that type.
  * It can be desugared from a list of resources grouped by their types into

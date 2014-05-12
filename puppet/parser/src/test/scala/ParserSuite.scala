@@ -1,7 +1,8 @@
 import org.scalatest.PropSpec
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.Matchers
-import puppet._
+import puppet.syntax._
+import puppet.parser._
 
 import java.io.File
 

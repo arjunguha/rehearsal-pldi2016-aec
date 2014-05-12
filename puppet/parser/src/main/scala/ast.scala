@@ -1,4 +1,4 @@
-package puppet
+package puppet.syntax
 
 import scala.util.parsing.input.Positional
 
