@@ -1,4 +1,4 @@
-package puppet;
+package puppet
 
 import scala.util.parsing.input.Positional
 
@@ -141,8 +141,15 @@ case class Vardef (variable: VardefLHS,
                    append: Boolean) extends AST with Statement 
 
 
-case class Attribute (name: AttributeNameType, value: Expr, is_append: Boolean) extends AST
-
+/**
+ * <b>Examples</b>
+ *
+ * {@code name => value} has {@code is_append} set to {@code false}.
+ *
+ * {@code name +> value} has {@code is_append} set to {@code true}.
+ */
+case class Attribute (name: AttributeNameType, value: Expr, is_append: Boolean)
+  extends AST
 
 // Puppet Resource Decl Related nodes
 case class ResourceInstance (title: ResourceName, params: List[Attribute]) extends AST
@@ -194,8 +201,6 @@ case class Selector (param: SelectLHS,
                                               with ResourceName
                                               with RelationExprOperand
 
-
-
 case class Node (hostnames: List[Hostname],
                  parent: Option[Hostname],
                  stmts: List[Statement]) extends AST with TopLevelConstruct
@@ -213,7 +218,6 @@ case class Definition (classname: String,
                        stmts: List[Statement]) extends AST with TopLevelConstruct
 
 // This is a function application rather than function declaration
-//
 case class Function (name: Name,
                      args: List[Expr],
                      ftype: Functype) extends AST 

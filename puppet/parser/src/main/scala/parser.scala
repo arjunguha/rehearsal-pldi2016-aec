@@ -108,7 +108,7 @@ class PuppetParser extends StdTokenParsers
   type P[+T] = PackratParser[T]
 
   // TODO : See if we need EOF as a production here || Check with empty manifest
-  lazy val program: P[AST] =   stmts_and_decls 
+  lazy val program: P[BlockStmtDecls] = stmts_and_decls
                          /*    | (EofCh  ^^^ (BlockExpr (List[AST] ()))) */
 
   lazy val stmts_and_decls: P[BlockStmtDecls] = stmt_or_decl.* ^^ (BlockStmtDecls (_))
@@ -543,7 +543,7 @@ case class PuppetParserException (msg: String) extends Exception (msg);
   
 object PuppetParser extends PuppetParser {
 
-  def apply (in: String) = parseAll (in) match {
+  def apply (in: String) : BlockStmtDecls = parseAll (in) match {
     case Success (ast, _) => ast
     case NoSuccess (msg, next) => throw PuppetParserException ("Parsing failed: %s\n Rest of Input: %s".format (msg, next))
   }
