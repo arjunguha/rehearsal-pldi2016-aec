@@ -30,8 +30,6 @@ trait PuppetTokens extends StdTokens {
   }
 }
 
-
-
 class PuppetLexical extends StdLexical 
                     with RegexParsers
                     with PuppetTokens {
@@ -64,14 +62,12 @@ class PuppetLexical extends StdLexical
     else if ("true" == name || "false" == name) PuppetBool (name)
     else PuppetName (name)
 
-
   override def whitespace: Parser[Any] = rep[Any](
     whitespaceChar
   | '/' ~ '*' ~ comment
   | '#' ~ rep ( chrExcept (EofCh, '\n'))
   | '/' ~ '*' ~ failure ("unclosed comment")
   )
-
 
   private def BOOLEAN: Parser[String] = ("true" | "false")
 
@@ -81,7 +77,6 @@ class PuppetLexical extends StdLexical
   private def NUMBER:Parser[String] = """\b(?:0[xX][0-9A-Fa-f]+|0?\d+(?:\.\d+)?(?:[eE]-?\d+)?)\b""".r
 
   private def CLASSREF: Parser[String] = """((::){0,1}[A-Z][-\w]*)+""".r
-
 
   // TODO : We might need to escape end of regex, See puppet lexer
   private def REGEXTOK: Parser[String] = """/[^/\n]*/""".r
@@ -93,7 +88,6 @@ class PuppetLexical extends StdLexical
 
   // TODO : DQPRE, DQMID, DQPOST or String Interpolation
 }
-
 
 class PuppetParser extends StdTokenParsers
                    with PackratParsers {
@@ -110,7 +104,6 @@ class PuppetParser extends StdTokenParsers
   lexical.reserved ++= List ("and" , "case" , "class" , "default" ,
     "define" , "else" , "elsif" , "if" , "in" , "import" , "inherits" ,
     "node" , "or" , "undef" , "unless")
-
                                
   type P[+T] = PackratParser[T]
 
@@ -129,7 +122,6 @@ class PuppetParser extends StdTokenParsers
     ifstmt_begin ||| unless_stmt ||| import_stmt ||| fstmt ||| resourceoverride |||
     append ||| relationship
   )
-
 
   lazy val relationship: P[RelationExpr] = 
     relationship_side ~ (("<-" | "->" | "<~" | "~>") ~ relationship_side).+ ^^ {
@@ -343,7 +335,6 @@ class PuppetParser extends StdTokenParsers
   private lazy val not:    P[Expr] = "!" ~> expr ^^ (NotExpr (_))
   private lazy val term:   P[Expr] = (rvalue | hash | parens | uminus | not | regex)
 
-
   private def binaryOp (level: Int): Parser[((Expr, Expr) => Expr)] = {
     level match {
       case 1 => "or"  ^^^ { (e1, e2) => BinExpr (e1, e2, Or)  }
@@ -525,7 +516,6 @@ class PuppetParser extends StdTokenParsers
 
   import lexical.{PuppetBool, PuppetName, PuppetClassRef, PuppetRegex, PuppetVariable}
 
-
   def STRING: Parser[String] = stringLit
 
   def BOOLEAN: Parser[String] =
@@ -542,8 +532,6 @@ class PuppetParser extends StdTokenParsers
 
   def VARIABLETOK: Parser[String] =
     elem ("classref", _.isInstanceOf[PuppetVariable]) ^^ (_.chars)
-
-
 
   def parseAll (s: String) = {
     val tokens  = new lexical.Scanner (s)

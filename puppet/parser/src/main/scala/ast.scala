@@ -6,7 +6,6 @@ import scala.util.parsing.input.Positional
 sealed trait BinOp
 
 case object Or          extends BinOp
-
 case object And         extends BinOp
 
 case object GreaterThan extends BinOp
@@ -31,13 +30,11 @@ case object Match       extends BinOp
 case object NoMatch     extends BinOp
 case object In          extends BinOp
 
-
 sealed trait RelationOp
 case object LeftSimpleDep     extends RelationOp
 case object RightSimpleDep    extends RelationOp
 case object LeftSubscribeDep  extends RelationOp
 case object RightSubscribeDep extends RelationOp
-
 
 sealed trait CollectionOp
 case object CollOr    extends CollectionOp
@@ -45,16 +42,13 @@ case object CollAnd   extends CollectionOp
 case object CollIsEq  extends CollectionOp
 case object CollNotEq extends CollectionOp
 
-
 sealed trait Functype
 case object Ftstmt extends Functype
 case object Ftrval extends Functype
 
-
 sealed trait VirtualResType
 case object Vrtvirtual  extends VirtualResType
 case object Vrtexported extends VirtualResType
-
 
 sealed trait AST extends Positional
 
@@ -219,6 +213,7 @@ case class Definition (classname: String,
                        stmts: List[Statement]) extends AST with TopLevelConstruct
 
 // This is a function application rather than function declaration
+//
 case class Function (name: Name,
                      args: List[Expr],
                      ftype: Functype) extends AST 
