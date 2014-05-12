@@ -136,6 +136,8 @@ package puppet;
  * respectively.
  */
 
+/* Nodes are desugared into array of Node */
+
 
 /*
  * All branching constructs like switch, selector and if-else
@@ -182,6 +184,7 @@ case class DefinitionC (classname: String, args: List[(VariableC, Option[ASTCore
 
 
 
+/* TODO : Flatmap of block stmt */
 object DesugarPuppetAST {
 
   private def desugarAST (ast: AST): ASTCore = ast match {
