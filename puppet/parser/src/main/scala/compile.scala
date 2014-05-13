@@ -1,23 +1,25 @@
 package puppet.core.eval
 
 import puppet.core._
+import puppet.syntax._
+import puppet.util._
+
 import scala.util.matching.Regex
 
-// TODO : Collection of puppet pre-defined functions
-/*
-object <funcname> {
+object PuppetFunction {
 
-  def apply (args): PuppetValue {
+  // TODO : Collection of puppet pre-defined functions
 
+  def apply (fname: String, args: PuppetValue*): PuppetValue = {
+    UndefV
   }
 }
-*/
+
 
 class Resource (val typ: String, /* TODO : Odd for now, resolve later */
     val name: String,
     val params: Map[String, String],
-    val scope: PuppetScope.ScopeRef,
-    val virtual: Boolean) {
+    val scope: ScopeChain) {
 
   // Both type and title attribute should be present and the combination should be unique
 }
@@ -28,8 +30,8 @@ class Resource (val typ: String, /* TODO : Odd for now, resolve later */
 class Catalog {
 
   // Lazy compilation: collect and compile
-  var classes:     List[(HostclassC, ScopeChain)]
-  var definitions: List[(DefinitionC, ScopeChain)]
+  var classes:     List[(HostclassC, ScopeChain)] = List ()
+  var definitions: List[(DefinitionC, ScopeChain)] = List ()
 
   type Filter = Map[String, PuppetValue /* TODO: should rather be a subtype of PuppetValue */]
   type Attrs = Map[String, PuppetValue /* all values */]
@@ -37,17 +39,28 @@ class Catalog {
   type Collection  = Filter
   type ResourceRef = Filter
 
-  var resources:   List[Resource]
-  var overrides:   List[Override]
-  var collections: List[Collection]
-  var orderings:   List[(ResourceRef, ResourceRef)]
+  var resources:   List[Resource] = List ()
+  var overrides:   List[Override] = List ()
+  var collections: List[Collection] = List ()
+  var orderings:   List[(ResourceRef, ResourceRef)] = List ()
+
+  def add_resource (attrs: List[PuppetValue]): PuppetValue = {
+    UndefV
+  }
 
   def add_resource (attrs: Attrs) {
     // check if defined type then add definitions and a list of params
   }
 
-  def add_evaled_resource (res: Resource) {
+  def add_resource (res: Resource) {
     resources = res :: resources
+  }
+
+  def add_override (filter: Filter, attrs: Attrs) {
+  }
+
+  def add_relationship (src: PuppetValue, dst: PuppetValue, refresh: Boolean): PuppetValue = {
+    UndefV
   }
 
 
@@ -58,14 +71,16 @@ class Catalog {
     eval_generators ()
     finish ()
     */
+    /* Process resources */
+    /* Process relationships */
   }
 
+  def eval_overrides () {}
   def eval_classes () {}
   def eval_collections () {}
   def eval_definitions () {}
 
   def eval_relationships () {}
-
 }
 
 
@@ -92,7 +107,7 @@ object PuppetCompile {
   }
   
   private def puppetvalue_to_int (v: PuppetValue): Try[Int] = v match {
-    case StringV (s) => Try (s.ToInt) // TODO: Not supporting hex and octal for now 
+    case StringV (s) => Try (s.toInt) // TODO: Not supporting hex and octal for now 
     case _ => throw new Exception ("Cannot convert to Integer")
   }
 
@@ -101,11 +116,24 @@ object PuppetCompile {
 
     // Cases : Octal, Hexadecimal, Decimal (Negative, Positive), Double (Scientific, negative, positive)
     // First try to parse Octal, if it fails then hex then decimal else double
-    val n = puppetalue_to_int (v)
+    val n = puppetvalue_to_int (v)
     if (n.isSuccess) Right (n.get) else Left (puppetvalue_to_double (v).get)
   }
 
+  private def puppetvalue_to_string (v: PuppetValue): String = v match {
+    case UndefV => ""
+    case BoolV (b) => if (b) "true" else "false"
+    case StringV (s) => s
+    case RegexV (r) => r.toString
+    case ASTArrayV (arr) => arr.foldLeft ("") ({ case (acc, elem) => acc + puppetvalue_to_string (elem) })
+    case ASTHashV (hash) => hash.foldLeft ("") ({ case (acc, elem) => acc + puppetvalue_to_string (elem._1) +
+                                                                            puppetvalue_to_string (elem._2) })
+  }
 
+    
+
+
+  /*
   private def eval_op (lhs: PuppetValue,
                        rhs: PuppetValue,
                        op: BinOp): PuppetValue = op match {
@@ -149,11 +177,13 @@ object PuppetCompile {
     case LShift      => {
       val lhsn = puppetvalue_to_num (lhs)
       val rhsn = puppetvalue_to_num (rhs)
+    */
 
       /*
        * Being ruby compliant, when we ask for left shift by a negative
        * number, ruby does a right shift by its absolute value
        */
+      /*
       if (rhsn < 0) lhsn >> Math.abs (rhsn)
       else lhsn << rhsn
     }
@@ -161,10 +191,12 @@ object PuppetCompile {
     case RShift      => {
       val lhsn = puppetvalue_to_num (lhs)
       val rhsn = puppetvalue_to_num (rhs)
+    */
 
       /* Being ruby compliant, when we ask for right shift by a negative
        * number, ruby does a right shift by its absolute value
        */
+      /*
       if (rhsn < 0) lhsn << Math.abs (rhsn)
       else lhsn >> rhsn
     }
@@ -235,42 +267,44 @@ object PuppetCompile {
 
       // rhs could be either a String, Array or Hashes
       rhs match {
-        case StringV (value) => /* Check if lhsstr is a substring */ BoolV (value contains lhsstr)
-        case ASTArrayV (arr) => /* Check if any array element is identical to left operand */ BoolV (arr contains lhs)
-        case ASTHashV (hash) => /* Check if any key is identical to left operand */ BoolV (hash contains lhs)
+        case StringV (value) => */ /* Check if lhsstr is a substring */ /* BoolV (value contains lhsstr) */
+        /* case ASTArrayV (arr) => */ /* Check if any array element is identical to left operand */ /* BoolV (arr contains lhs) */
+        /* case ASTHashV (hash) => */ /* Check if any key is identical to left operand */ /* BoolV (hash contains lhs) */
 
         // TODO : Position in error
-        case _ => throw new Exception ("Type error: \"in\" expects a string, array or hash")
+        /* case _ => throw new Exception ("Type error: \"in\" expects a string, array or hash")
       }
     }
   }
+  */
 
 
   private def interpolate (str: String,
-                           env: Environment): String = {
-    // TODO
-    // See puppet interpolation
-    throw new Exception ("YTD")
+                           env: ScopeChain): String = {
+    // TODO: interpolate!!
+    str
   }
 
+  private def variable_to_string (variable: VariableC): String = {
+
+    variable.value.stripPrefix ("$")
+  }
+
+  // Catalog is fixed, can be curried away
   private def eval (ast: ASTCore, env: ScopeChain, catalog: Catalog): PuppetValue = ast match {
 
     case UndefC          => UndefV
     case BoolC (value)   => BoolV (value)
-    case StringC (value) => StringV (interpolate (value))
+    case StringC (value) => StringV (interpolate (value, env))
     case TypeC (value)   => StringV (value) // XXX: Not sure
     case NameC (value)   => StringV (value) // XXX: Not sure
-    case RegexC (value)  => RegexV (Regex (value.r))
+    case RegexC (value)  => RegexV (new Regex (value))
 
-    case ASTHashC (kvs) => {
-      var hashmap = new ValueHashMap ()
-      kvs.foreach ({ case (k, v) => hashmap ++ (eval (k, env), eval (v, env))})
-      ASTHashV (hashmap)
-    }
+    case ASTHashC (kvs) => ASTHashV (kvs.map ({ case (k, v) => (eval (k, env, catalog), eval (v, env, catalog)) }).toMap)
 
-    case ASTArrayC (arr) => ASTArrayV (arr.map (eval (_, env)).toArray)
-    case HashOrArrayAccessC (variable, keys) => /* lookup variable and apply key */
-    case VariableC (value) => env.lookup (value) getOrElse UndefV
+    case ASTArrayC (arr) => ASTArrayV (arr.map (eval (_, env, catalog)).toArray)
+    case HashOrArrayAccessC (variable, keys) => /* TODO: lookup variable and apply key */ throw new Exception ("HashOrArrayAccess not evaluated")
+    case VariableC (value) => env.getvar (value) getOrElse UndefV
 
     case BlockStmtC (exprs) => {
 
@@ -282,26 +316,35 @@ object PuppetCompile {
     }
 
     case IfElseC (test, true_br, false_br) => {
-      if (eval (test, env, catalog).value)
+      if (puppetvalue_to_bool (eval (test, env, catalog)))
         eval (true_br, env, catalog)
       else
         eval (false_br, env, catalog)
     }
 
-    case BinExprC (lhs, rhs, op) => eval_op (eval (lhs), eval (rhs), op)
-    case NotExprC (oper) => BoolV (! puppetvalue_to_bool (eval (oper)))
-    case FuncAppC (name, args) => /* TODO : lookup predefined set of functions */
-    case ImportC (imports) => /* TODO : Include */
-    case VardefC (variable, value, append) => env.setvar (variable, value, append)
+    case BinExprC (lhs, rhs, op) => StringV ("Unevaluated") /* val_op (eval (lhs), eval (rhs), op) */
+    case NotExprC (oper) => BoolV (! puppetvalue_to_bool (eval (oper, env, catalog)))
+    case FuncAppC (name, args) => PuppetFunction (puppetvalue_to_string (eval (name, env, catalog)),  args.map (eval (_, env, catalog)).toSeq:_*)
+    case ImportC (imports) => throw new Exception ("Feature not supported yet")
+
+    // TODO :Get Rid of coercing: More stronger types
+    case VardefC (variable, value, append) => {
+      val puppet_value = eval (value, env, catalog)
+      env.setvar (variable_to_string (variable.asInstanceOf[VariableC]), puppet_value, append)
+      puppet_value
+    }
 
     case OrderResourceC (source, target, refresh) => catalog.add_relationship (eval (source, env, catalog),
                                                                                eval (target, env, catalog),
                                                                                refresh)
 
-    case AttributeC (name, value, is_append) => // TODO : Eval attribute
-    case ResourceDeclC (attrs) => catalog.add_resource (attrs_ev = attrs.map (eval (_, env, catalog)))
-    case ResourceRefC (filter) => // TODO
-    case ResourceOverrideC (ref, attrs) => // TODO
+    case AttributeC (name, value, is_append) => throw new Exception ("Feature not supported yet")
+    case ResourceDeclC (attrs) => catalog.add_resource (attrs.map (eval (_, env, catalog)))
+    case ResourceRefC (filter) => throw new Exception ("Feature not supported yet")
+    case ResourceOverrideC (ref, attrs) => throw new Exception ("Feature not supported yet") // catalog.add_override ()
+
+    // TODO : Bad, convert into partial function
+    case _ => UndefV
   }
 
 
@@ -309,9 +352,9 @@ object PuppetCompile {
 
     // Setup node scope
     val node_scope = PuppetScope.createNamedScope (name)
-    val env_new = env.add (node_scope)
+    val env_new = env.addScope (node_scope)
 
-    ast.foreach (eval (_, env_new, catalog))
+    ast.exprs.foreach (eval (_, env_new, catalog))
   }
 
 
@@ -328,43 +371,54 @@ object PuppetCompile {
       }
     })
   
-    val main_resource = new Resource ("class", 'main, env)
-    catalog.add_resource (main_resource, env)
+    val main_resource = new Resource ("class", 'main.toString, Map[String, String] (), env)
+    catalog.add_resource (main_resource)
     
-    ast.foreach (eval (_, env, catalog))
+    ast.exprs.foreach (eval (_, env, catalog))
     env
   }
 
 
-  def compile (ast: BlockStmtC): Either[List[NodeName, Catalog], Catalog] = {
+  def compile (ast: BlockStmtC): Either[List[(String, Catalog)], Catalog] = {
+
+    import puppet.core.eval.PuppetCompositeValueTypes._
 
     /* TODO : Handle Staging in puppet
      * Add main to catalog
      * catalog.add_resource (Resource ("stage", 'main, topscope)
      */
 
-    TypeCollection.add (HostclassC ('main, List (), None, ast))
-    ast.stmts.map ( { case hc: HostclassC => TypeCollection.add (hc); hc.stmts.map (apply) 
-                      case defn: DefinitionC => TypeCollection.add (defn) } )
+    TypeCollection.add (HostclassC ('main.toString, List (), None, ast))
 
-    val nodes = ast.stmts.filter (_.isInstanceOf [NodeC])
+    def f (s: ASTCore): Unit = s match {
+      case hc:   HostclassC => TypeCollection.add (hc); hc.stmts.exprs.foreach (f)
+      case defn: DefinitionC => TypeCollection.add (defn)
+      case _ => ()
+    }
+    ast.exprs.foreach (f)
+
+    // Filtering + Type extraction via partial function
+    val nodes = ast.exprs.collect ({ case node: NodeC => node })
     if (nodes.exists (!_.parent.isEmpty))
       throw new Exception ("Node inheritance not supported, deprecated by Puppet")
 
     // Wrap in original hostclass for main
-    if (nodes.length)
+    if (nodes.length > 0)
     {
       Left (nodes.map ({ case node => {
-        catalog = new Catalog ()
+        val catalog = new Catalog ()
         val env = eval_toplevel (ast, catalog)
-        eval_node (node.name, node.stmts, env, catalog)
+        val nodename = puppetvalue_to_string (eval (node.hostname, env, catalog))
+        // TODO: Bad Type coercion
+
+        eval_node (nodename, node.stmts.asInstanceOf[BlockStmtC], env, catalog)
 
         catalog.eval_classes ()
         catalog.eval_collections ()
         catalog.eval_definitions ()
         catalog.eval_overrides ()
         catalog.eval_relationships ()
-        catalog
+        (nodename, catalog)
       }}))
     }
     else
@@ -374,7 +428,7 @@ object PuppetCompile {
       catalog.eval_classes ()
       catalog.eval_collections ()
       catalog.eval_definitions ()
-      catalog.eval_relationsihps ()
+      catalog.eval_relationships ()
 
       Right (catalog)
     }
