@@ -1,3 +1,6 @@
+package puppet.util
+
+
 import java.io.File
 import java.io.FileOutputStream
 import scala.sys.process._
