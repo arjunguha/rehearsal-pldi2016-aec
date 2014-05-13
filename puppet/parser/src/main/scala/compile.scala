@@ -8,8 +8,13 @@ import scala.collection.mutable.HashMap
 
 sealed abstract trait PuppetValue
 
-type ValueHashMap = HashMap[PuppetValue, PuppetValue]
-type ValueArray   = Array[PuppetValue]
+object PuppetCompositeValueTypes {
+
+  type ValueHashMap = HashMap[PuppetValue, PuppetValue]
+  type ValueArray   = Array[PuppetValue]
+}
+
+import PuppetCompositeValueTypes._
 
 case object UndefV extends PuppetValue
 case class BoolV (value: Boolean) extends PuppetValue
@@ -17,10 +22,6 @@ case class StringV (value: String) extends PuppetValue
 case class RegexV (value: Regex) extends PuppetValue
 case class ASTHashV (value: ValueHashMap) extends PuppetValue
 case class ASTArrayV (value: ValueArray) extends PuppetValue
-/* TODO : Resource should be a value
- * case class ResourceV (value: 
- */
-
 
 
 /*
@@ -63,6 +64,8 @@ case class ASTArrayV (value: ValueArray) extends PuppetValue
  * treated as a new variable definition in current scope 
  */
 
+
+// TODO : This should be a class
 object PuppetScope {
 
   type ScopeRef = String
@@ -74,61 +77,119 @@ object PuppetScope {
     private val env = Env ()
 
     def setvar (varname: String, value: Puppetvalue) = env += (varname, value)
-    def getvar (varname: String): PuppetValue = env getOrElse (varname, UndefV)
+    def getvar (varname: String): PuppetValue = env (varname)
   }
 
   private val named_scopes = Map [ScopeName, Scope.Env] ("__toplevel__", new Scope)
 
-  private def scope_exists (name: String): Boolean = {
+  def scope_exists (name: String): Boolean = {
     (Try (named_scopes (name))).map (true) getOrElse false
   }
 
   def createNamedScope (name: String): ScopeRef = {
 
-    if (scope_exists (name)) throw new Exception ("Scope by this name already exists")
+    if (scope_exists (name))
+      throw new Exception ("Scope by this name already exists")
 
     named_scopes += (name, new Scope ())
     name
   }
 
-  // TODO : Have to be consistent be createNamedScope
-  def createEphemeralScope (): Scope = { new Scope }
+  // XXX: Need not mix ephemeral scopes with named scopes
+  def createEphemeralScope (): Scope = { 
 
-  private def getScopeByName (name: String): Scope = named_scopes (name)
+    // alphanumeric random string
+    val name = Random.alphanumeric.take (8).mkString
+    if (scope_exists (name)) createEphemeralScope ()
+    else named_scopes += (name, new Scope ())
+  }
 
-  val toplevel = named_scopes ("__toplevel__")
+  private def getScopeByName (name: String): Try[Scope] = named_scopes (name)
 
+  val toplevel = named_scopes ("")
 
-  def setvar (ref: ScopeRef, varname: String, value: PuppetValue): Try[Unit] = {
+  def setvar (ref: ScopeRef, varname: String, value: PuppetValue) {
 
-    Try (getScopeByName (ref).setvar (varname, value))
+    var scope = getScopeByName (ref)
+
+    if (scope.isSuccess) scope.flatMap (_.setvar (varname, value))
+    else throw new Exception ("Invalid Scope")
   }
 
   def getvar (ref: ScopeRef, varname: String): Try[PuppetValue] = {
 
-    Try (getScopeByName (ref).getvar (varname))
+    var scope = getScopeByName (ref)
+
+    if (scope.isSuccess) scope.flatMap (_.getvar (varname))
+    else throw new Exception ("Invalid Scope")
   }
 }
 
 
-// TODO : Probably wrap in object
-class ScopeChain {
 
-  val scopes: List[PuppetScope.ScopeRef]
+class ScopeChain (val scopes: List[PuppetScope.ScopeRef] = List[PuppetScope.ScopeRef] ()) {
 
-  val getvar (varfqname: String): PuppetValue = {
+  private def is_qualified (name: String): Boolean = ((name indexOf "::") > 0)
 
-    // TODO
+  val getvar (varfqname: String): Try[PuppetValue] = {
+
+    if (is_qualified (name)) {
+
+      // Make sure that scopes are valid
+      val tokens = (name split "::")
+      val scoperefs = tokens.slice (0, tokens.length - 1)
+      val varname = tokens (tokens.length - 1)
+
+      if (!scoperefs.forall (PuppetScope.scope_exists))
+        throw new Exception ("Invalid scope chain")
+
+      // the last one is variable name, all others are scope names
+      Try (PuppetScope.getvar (scoperefs (scorerefs.length - 1), varname))
+    }
+    else {
+
+      // Order is important
+      val foundscope = scopes.find (PuppetScope.getvar (_, varfqname).isSuccess)
+      if (!foundscope.isEmpty)
+         PuppetScope.getvar (foundscope.get, varfqname)
+      else
+         Try (throw new Exception ("Variable not found in any scope"))
+    }
   }
 
-  val setvar (varfqname: String, value: PuppetValue) = {
+  def setvar (varfqname: String, value: PuppetValue, append: Boolean = false) {
 
-    // TODO
+    // Variable can only be assigned using their short name
+    if (!append && is_qualified (varfqname))
+      throw new Exception ("Cannot assign a fully qualified variable")
+
+    val cur_scope = scopes.head
+
+    if (append) {
+
+      val old_val = getvar (varfqname)
+
+      if (!old_val.isSuccess)
+        throw new Exception ("Cannot append to non existing variable")
+
+      val new_val = (old_val.get, value) match {
+        case (StringV (ov), StringV (nv)) => StringV (ov + nv)
+        case (ASTHashV (ov), ASTHashV (nv)) => ASTHashV (nv.map ( { case (k,v) => ov += (k -> v) }))
+        case (ASTArrayV (ov), ASTArray (nv)) => ASTArrayV (ov.append (nv))
+        case _ => throw new Exception ("Type mismatch for append")
+      }
+    }
+    else {
+      if (PuppetScope.getvar (cur_scope, varfqname).isSuccess)
+        throw new Exception ("Cannot reassign variable")
+
+      PuppetScope.setvar (cur_scope, varfqname, value)
+    }
   }
 
-  val addScope (scoperef: PuppetScope.ScopeRef): Scopechain = {
-    val x = new ScopeChain
-  } 
+  val addScope (scoperef: PuppetScope.ScopeRef): ScopeChain = {
+    new ScopeChain (scoperef :: scopes)
+  }
 }
 
 
@@ -142,6 +203,53 @@ object <funcname> {
   }
 }
 */
+
+
+class Resource (val typ: String, /* TODO : Odd for now, resolve later */
+    val name: String,
+    val params: Map[String, String],
+    val scope: PuppetScope.ScopeRef,
+    val virtual: Boolean) {
+
+  // Both type and title attribute should be present and the combination should be unique
+}
+
+
+
+class Catalog {
+
+  val resources:   List[Resource]
+  val overrides:   List[Override]
+  val collections: List[Collection]
+  val classes:     List[HostclassC]
+  val definitions: List[DefinitionC, Params]
+  val orderings:   List[(ResourceRef, ResourceRef)]
+
+
+  def add_resource (attrs: ) {
+    // check if defined type then add definitions and a list of params
+  }
+
+  def add_evaled_resource (res: Resource) {
+    resources = res :: resources
+  }
+
+
+
+  def to_graph () /* scala-graph */ = {
+    eval_node_classes ()
+    eval_generators ()
+    finish ()
+
+  }
+
+  def eval_classes () {}
+  def eval_collections () {}
+  def eval_definitions () {}
+
+  def eval_relationships () {}
+
+}
 
 
 object PuppetCompile {
@@ -328,10 +436,7 @@ object PuppetCompile {
     throw new Exception ("YTD")
   }
 
-
-
-    
-  private def eval (ast: ASTCore, env: Environment): PuppetValue = ast match {
+  private def eval (ast: ASTCore, env: ScopeChain, catalog: Catalog): PuppetValue = ast match {
 
     case UndefC          => UndefV
     case BoolC (value)   => BoolV (value)
@@ -348,150 +453,69 @@ object PuppetCompile {
 
     case ASTArrayC (arr) => ASTArrayV (arr.map (eval (_, env)).toArray)
     case HashOrArrayAccessC (variable, keys) => /* lookup variable and apply key */
-    case VariableC (value) => /* lookup variable and apply key */
-    case BlockStmtC (exprs) =>
-    case IfElseC (test, true_br, false_br) =>
+    case VariableC (value) => env.lookup (value) getOrElse UndefV
+
+    case BlockStmtC (exprs) => {
+
+      val scope = PuppetScope.createEphemeralScope ()
+      val new_env = env.addScope (scope)
+      // Return the last evaluated value
+      exprs.map (eval (_, new_env, catalog)).head
+      // XXX: Maybe destroy newly created ephemeral scope
+    }
+
+    case IfElseC (test, true_br, false_br) => {
+      if (eval (test, env, catalog).value)
+        eval (true_br, env, catalog)
+      else
+        eval (false_br, env, catalog)
+    }
+
     case BinExprC (lhs, rhs, op) => eval_op (eval (lhs), eval (rhs), op)
     case NotExprC (oper) => BoolV (! puppetvalue_to_bool (eval (oper)))
     case FuncAppC (name, args) => /* TODO : lookup predefined set of functions */
-    case ImportC (imports) =>
-    case VardefC (variable, value, append) =>
-    case OrderResourceC (source, target, refresh) =>
-    case AttributeC (name, value, is_append) =>
-    case ResourceDeclC (attrs) =>
-    case ResourceRefC (filter) =>
-    case ResourceOverrideC (ref, attrs) =>
-    case NodeC (hostnames, parent, stmts) =>
-    case HostclassC (classname, args, parent, stmts) =>
-    case DefinitionC (classname, args, stmts) =>
+    case ImportC (imports) => /* TODO : Include */
+    case VardefC (variable, value, append) => env.setvar (variable, value, append)
+
+    case OrderResourceC (source, target, refresh) => catalog.add_relationship (eval (source, env, catalog),
+                                                                               eval (target, env, catalog),
+                                                                               refresh)
+
+    case AttributeC (name, value, is_append) => // TODO : Eval attribute
+    case ResourceDeclC (attrs) => catalog.add_resource (attrs_ev = attrs.map (eval (_, env, catalog)))
+    case ResourceRefC (filter) => // TODO
+    case ResourceOverrideC (ref, attrs) => // TODO
   }
 
 
-  class Resource (val typ: String, /* TODO : Odd for now, resolve later */
-                  val name: String,
-                  val scope: PuppetScope.ScopeRef) {
+  def eval_node (name: String, ast: BlockStmtC, env: ScopeChain, catalog: Catalog) {
 
-    var evaluated: Boolean = false
+    // Setup node scope
+    val node_scope = PuppetScope.createNamedScope (name)
+    val env_new = env.add (node_scope)
 
-    def evaluate () {
-
-      if (!evaluated) {
-        evaluated = true
-        // If its not a class then evaluate
-        if (typ != "class") {
-
-          /* TODO:
-           * 1. Pull out resoure from type collection
-           * 2. If resource has parent then evaluate parent
-           * 3. Form the scope for evaluation of resource (toplevel + node + parent + local
-           * 4. Eval resource element by element
-           */
-        }
-      }
-    }
+    ast.foreach (eval (_, env_new, catalog))
   }
 
 
-  val resource_overrides = Map [Source, Target]
-  val collections = List[Collection]
-  val relationships = List[Source, Target]
-  val catalog = new Catalog ()
-  val topscope = PuppetScope.toplevel
-  var resources = List[Resource] () // Local resource array to maintain resource ordering
+  def eval_toplevel (ast: BlockStmtC, catalog: Catalog): ScopeChain = {
 
+    val toplevel_scope = PuppetScope.createNamedScope ("")
+    val env = (new ScopeChain ()).addScope (toplevel_scope)
 
-  val resources = List[Resource] ()
-
-  // TODO: Should give a type collection object
-  def import_ast (ast: ASTCore) { ast match {
-    case BlockStmtC (stmts) => stmts.foreach (import_ast)
-    case node: NodeC => TypeCollection.add_node (node)
-    case hc: HostclassC => TypeCollection.add_hostclass (hc); hc.stmts.foreach (import_ast)
-    case defn: DefinitionC => TypeCollection.add_definition (defn)
-    case _ => Unit ()
-  }}
-
-
-  def init_node_environment () {
-    
     val facter_env = Cmd.exec ("facter").get
-    facter_env.lines.foreach ({
-      case line => {
+ 
+    facter_env.lines.foreach ({ case line => {
         val kv = line.split ("=>").map (_.trim)
-        PuppetScope.setvar (toplevelscope, kv(0), StringV (kv(1)))
+        env.setvar (kv(0), StringV (kv(1)))
       }
     })
-  }
-
-
-  def add_resource (scope: PuppetScope.ScopeRef, resource: Resource) {
-
-    resources = resource :: resourses
-    catalog.add_resource (resource)
-
-    // TODO : If resource type is not class and resource has stage parameter then error that only classes can set stage
-
-    // TODO : If resource is not a class then add a edge to the class that contains this resource.
-
-  }
-
-  def eval_collections () {
-
-  }
-
-  def eval_definitions () {
-  }
-
-
-  def eval_generators () {
-    eval_collections ()
-    eval_definitions ()
-  }
-
-  def eval_classes (klass: List[HostclassC], scope: ScopeChain, lazy_evaluate: Boolean, fqname: Boolean) {
-
-    /* TODO :
-     * 1. Find class from TypeCollection, raise error if not found
-     * 2. catalog.ensure_in_catalog (klass)
-     * 3. Create and save scope of class
-     * 4. if lazy_evaluate is not set then setup scope chain and evaluate class
-     */
-  }
-
-  def eval_node_classes () {
+  
+    val main_resource = new Resource ("class", 'main, env)
+    catalog.add_resource (main_resource, env)
     
-    // What are node classes?
-    
-    /* TODO : evaluate all of the node classes 
-     * filter ast for node in classes with params and classes without params
-     * evaluate_classes (resources_without_params)
-     * evaluate_classes (resources_with_params)
-     */
-  }
-
-
-  def eval_ast_node (name: Option[String]) {
-
-    if (TypeCollection.nodes_present) {
-
-      val node = TypeCollection.find_node_by_name (name getOrElse "default").get
-
-      catalog.ensure_in_catalog (node)
-
-      val resource = new Resource ("node", node.name, PuppetScope.createNamedScope (node.name))
-
-      add_resource (PuppetScope.getScopeByName (node.name), resource)
-
-      resource.evaluate ()
-    }
-  }
-
-
-  def eval_main () {
-
-    val main_resource = new Resource ("class", 'main, topscope)
-    add_resource (topscope, main_resource)
-    main_resource.evaluate ()
+    ast.foreach (eval (_, env, catalog))
+    env
   }
 
 
@@ -502,18 +526,43 @@ object PuppetCompile {
      * catalog.add_resource (Resource ("stage", 'main, topscope)
      */
 
-    ast.stmts.map ( { case hc: HostclassC => TypeCollection.add_hostclass (hc); hc.stmts.map (apply) })
-    ast.stmts.filter (_.isIntanceOf[DefinitionC]).foreach (TypeCollection.add_definition)
-    val nodes = ast.stmts.filter (_.isInstanceOf[NodeC])
+    TypeCollection.add (HostclassC ('main, List (), None, ast))
+    ast.stmts.map ( { case hc: HostclassC => TypeCollection.add (hc); hc.stmts.map (apply) 
+                      case defn: DefinitionC => TypeCollection.add (defn) } )
+
+    val nodes = ast.stmts.filter (_.isInstanceOf [NodeC])
+    if (nodes.exists (!_.parent.isEmpty))
+      throw new Exception ("Node inheritance not supported, deprecated by Puppet")
 
     // Wrap in original hostclass for main
-    import_ast (HostClassC ('main, List (), None, ast))
-    init_node_environment ()
-    eval_main ()
-    eval_ast_node ()
-    eval_node_classes ()
-    eval_generators ()
-    finish ()
+    if (nodes.length)
+    {
+      val catalogs = nodes.map ({ case node => {
+        catalog = new Catalog ()
+        val env = eval_toplevel (ast, catalog)
+        eval_node (node.name, node.stmts, env, catalog)
+
+        catalog.eval_classes ()
+        catalog.eval_collections ()
+        catalog.eval_definitions ()
+        catalog.eval_overrides ()
+        catalog.eval_relationships ()
+        catalog
+      }})
+
+      Left (catalogs)
+    }
+    else
+    {
+      catalog = new Catalog ()
+      val env = eval_toplevel (ast, catalog)
+      catalog.eval_classes ()
+      catalog.eval_collections ()
+      catalog.eval_definitions ()
+      catalog.eval_relationsihps ()
+
+      Right (catalog)
+    }
   }
 }
 
@@ -522,7 +571,6 @@ object PuppetCompile {
 object TypeCollection {
 
   // mutable objects
-  private val nodes       = List[NodeC] () // It has to be a list to find the first defined match
   private val hostclasses = Map [String, HostclassC] ()
   private val definitions = Map [String, DefinitionC] ()
 
@@ -534,7 +582,7 @@ object TypeCollection {
     (Try (hostnames (classname))).map (true) getOrElse false
   }
 
-  def add_hostclass (hc: HostclassC) {
+  def add (hc: HostclassC) {
 
     if (definition_exists (hc.classname)) throw new Exception ("Class by this name already exists")
 
@@ -550,24 +598,11 @@ object TypeCollection {
     hostclasses += (merged.classname, merged)
   }
 
-
-  def add_node (node: NodeC) {
-    if (nodes.exists (node.hostname == _.hostname)) throw new Exception ("Duplicate node")
-    else nodes = node :: nodes
-  }
-
-  def add_definition (definition: DefinitionC) {
+  def add (definition: DefinitionC) {
 
     if (definition_exists (definition.classname) || hostclass_exists (definition.classname))
       throw new Exception ("Duplicate definition, either a class or definition by this name already exists")
     else
       definitions += (definition.classname, definition)
-  }
-
-  def nodes_present (): Boolean = nodes.length > 0
-
-  def find_node_by_name (name: String): NodeC {
-    // Reverse is important for ordering
-    nodes.reverse.find (...)
   }
 }
