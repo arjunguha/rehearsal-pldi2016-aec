@@ -37,7 +37,6 @@ import puppet.syntax._
  * }
  */
 
-
 /*
  * One more difference from the Sugar Language AST is that some key attributes
  * of a resource now occur explicitly as attributes, like -
@@ -46,7 +45,7 @@ import puppet.syntax._
  * - virtual status of resource
  *
  * These are just attributes and I don't see any point why they should
- * receive special treatment at this time.
+  * receive special treatment at this time.
  *
  * Example:
  * 
@@ -59,7 +58,6 @@ import puppet.syntax._
  *     ensure => present
  *  }
  */
-
 
 /*
  * An important desugaring is that of ResourceReference and ResourceCollection
@@ -74,50 +72,19 @@ import puppet.syntax._
  * with our core AST semantics.
  */
 
-
-/* RelationExpr is desugared into a ordering relation of two resources.
- *
- * A difference from sugared AST semantics is that the sugared AST accepts
- * either a resource, or a resource reference, effectively mixing resource
- * declaration and ordering. Here, we keep the declaration of resource 
- * separate from ordering to keep types simple. This will simplify
- * its evaluation as well. An example is discussed below :-
- *
- * file { '/tmp/dir/': ensure => directory } 
- *   -> file { '/tmp/dir/file1': ensure => file }
- * is desugared into
+/* RelationExpr
  * 
- * file {'/tmp/dir': ensure => directory }
- * file {'/tmp/dir/file': ensure => file }
- * File ['/tmp/dir'] -> Fiel ['/tmp/dir/file']
- *
  * Multiple possible directions of dependence are desugared into a single direction
  *
- * The original AST node could order a list of resources (groups of resources)
- * but to keep things simple here, we order only two (groups of) resources. It
- * specifies the order among any two (groups of) resources. This should keep the
- * types simple (at expense of some redundancy in core AST) without having an
- * impact on evaluation.
- *
- * Example: 
- *
- * File ['/tmp/dir1'] -> File['/tmp/dir1/dir2'] -> File ['/tmp/dir1/dir2/file']
- *
- * is desugared into
- *
- * File ['/tmp/dir1'] -> File['/tmp/dir1/dir2']
- * File ['/tmp/dir1/dir2'] -> File['/tmp/dir1/dir2/file']
- *
- * in-attribute ('before', 'after', 'subscribe', 'notify') dependencies are supposed
- * to be handled at the time of evaluation.
+ * in-attribute ('before', 'after', 'subscribe', 'notify') dependencies are handled
+ * at the time of evaluation.
  */
-
 
 /*
  * Another important desugaring aspect is ResourceDefaults, Collection and
- * ResourceOverriding. Semantically, these are equivalent as ResourceDefaults
+ * ResourceOverriding. Semantically, these are equivalent. ResourceDefaults
  * and Collection overrides the default behaviour of resources of a particular
- * type and ResourceOverriding overrides a particular instance of a type of
+ * type and ResourceOverride construct overrides a particular instance of a type of
  * resource. Changing the default behaviour of resources applies the new property to
  * every instance of that resource and hence overriding a particular instance
  * is a special case which can be desugared similarly to the desugaring of 
@@ -138,16 +105,18 @@ import puppet.syntax._
  * respectively.
  */
 
-/* Nodes are desugared into array of Node */
-
+/* Node construct that specifies multiple node declaration sharing common code
+ * is desugared into array of Nodes.
+ */
 
 /*
- * All branching constructs like switch, selector and if-else
- * desugar into if-else constructs
+ * Branching constructs like case, selector and if-else are desugared into if-else
+ * constructs.
  */
 
 sealed abstract trait ASTCore
 
+// TODO : Use scala type system for precise types
 case object UndefC extends ASTCore  // Special value for unassigned variables
 case class BoolC (value: Boolean) extends ASTCore 
 case class StringC (value: String) extends ASTCore 
@@ -170,26 +139,33 @@ case class AttributeC (name: ASTCore, value: ASTCore, is_append: Boolean) extend
 case class ResourceDeclC (attrs: List[ASTCore]) extends ASTCore
 case class ResourceRefC (filter: ASTCore) extends ASTCore 
 case class ResourceOverrideC (ref : ASTCore, attrs : List[ASTCore]) extends ASTCore
-case class NodeC (hostname: ASTCore, parent: Option[ASTCore], stmts: List[ASTCore]) extends ASTCore
+case class NodeC (hostname: ASTCore, parent: Option[ASTCore], stmts: ASTCore /* BlockStmtC */) extends ASTCore
 
 /* 
  * A class in puppet is a collection of (possibly distinct types) resources. The
  * parameters add flexibility to the resources in class
  */
-case class HostclassC (classname: String, args: List[(VariableC, Option[ASTCore])], parent: Option[String], stmts: BlockStmtC) extends ASTCore
+case class HostclassC (classname: String, args: List[(VariableC, Option[ASTCore])], parent: Option[String], stmts: ASTCore /* BlockStmtC */) extends ASTCore
 
 /* 
  * A 'define' is like a user-defined resource type and the parameters of a 'define'
  * are like attributes of that resource type
  */
-case class DefinitionC (classname: String, args: List[(VariableC, Option[ASTCore])], stmts: List[ASTCore]) extends ASTCore
+case class DefinitionC (classname: String, args: List[(VariableC, Option[ASTCore])], stmts: ASTCore /* BlockStmtC */) extends ASTCore
 
 
 
-/* TODO : Flatmap of block stmt */
 object DesugarPuppetAST {
 
-  private def desugarAST (ast: AST): ASTCore = ast match {
+  private def flatMap (block: BlockStmtC): BlockStmtC = {
+    BlockStmtC (block.exprs.map ({ case ast: ASTCore => ast match {
+      case b : BlockStmtC => b.exprs
+      case _ => List (ast)
+    }}).flatten)
+  }
+
+
+  def desugarAST (ast: AST): ASTCore = ast match {
 
     case ASTBool (b) => BoolC (b)
     case ASTString (s) => StringC (s)
@@ -204,14 +180,25 @@ object DesugarPuppetAST {
                                                     (desugarAST (key), desugarAST (value)) })
     case ASTArray (arr) => ASTArrayC (arr.map (desugarAST (_)))
     case HashOrArrayAccess (v, ks) => HashOrArrayAccessC (VariableC (v.value), ks.map (desugarAST (_)))
-    case BlockStmtDecls (stmts_decls) => BlockStmtC ( stmts_decls.map { desugarAST (_) })
+    case BlockStmtDecls (stmts_decls) => flatMap (BlockStmtC ( stmts_decls.map { desugarAST (_) }))
     case BinExpr (lhs, rhs, op) => BinExprC (desugarAST (lhs), desugarAST (rhs), op)
     case NotExpr (oper) => NotExprC (desugarAST (oper))
     case UMinusExpr (oper) => BinExprC (NameC ("-1"), desugarAST (oper), Mult)
 
     
-    case RelationExpr (lhs, rhs, op) => throw new Exception ("YTD")
+    case RelationExpr (lhs, rhs, op) => {
+      val lhsd = desugarAST (lhs)
+      val rhsd = desugarAST (rhs)
 
+      op match {
+        case LeftSimpleDep => OrderResourceC (rhsd, lhsd, false)
+        case RightSimpleDep =>  OrderResourceC (lhsd, rhsd, false)
+        case LeftSubscribeDep => OrderResourceC (rhsd, lhsd, true)
+        case RightSubscribeDep => OrderResourceC (lhsd, rhsd, true)
+      }
+    }
+       
+     
     case Attribute (name, value, add) => AttributeC (desugarAST (name), desugarAST (value), add)
 
     case ResourceInstance (title, params) => {
@@ -225,7 +212,7 @@ object DesugarPuppetAST {
       val typeattr = Attribute (Name ("type"), Type (typ.capitalize), false /*no add*/)
       val insts_with_tattr = instances.map ((r) => ResourceInstance (r.title, typeattr :: r.params))
 
-      ASTArrayC (insts_with_tattr.map (desugarAST (_)))
+      BlockStmtC (insts_with_tattr.map (desugarAST (_)))
     }
 
     case VirtualResource (res, tvirt) => {
@@ -369,13 +356,13 @@ object DesugarPuppetAST {
 
 
     case Node (hostnames, None, stmts) => {
-      val desugared_stmts = stmts.map (desugarAST (_))
-      ASTArrayC (hostnames.map (desugarAST (_)).map (NodeC (_, None, desugared_stmts)))
+      val desugared_stmts = desugarAST (BlockStmtDecls (stmts))
+      BlockStmtC (hostnames.map (desugarAST (_)).map (NodeC (_, None, desugared_stmts)))
     }
 
     case Node (hostnames, Some (parent), stmts) => {
-      val desugared_stmts = stmts.map (desugarAST (_))
-      ASTArrayC (hostnames.map (desugarAST (_)).map (NodeC (_, Some (desugarAST (parent)), desugared_stmts)))
+      val desugared_stmts = desugarAST (BlockStmtDecls (stmts))
+      BlockStmtC (hostnames.map (desugarAST (_)).map (NodeC (_, Some (desugarAST (parent)), desugared_stmts)))
     }
 
     case Hostclass (classname, args, parent, stmts) => 
@@ -383,14 +370,17 @@ object DesugarPuppetAST {
                   args.map { case (v, None)     => (VariableC (v.value), None)
                              case (v, Some (e)) => (VariableC (v.value), Some (desugarAST (e))) },
                   parent,
-                  BlockStmtC (stmts.stmts_decls.map (desugarAST (_))))
+                  desugarAST (stmts))
 
     case Definition (classname, args, stmts) => 
       DefinitionC (classname, args.map ({ case (v, None) => (VariableC (v.value), None)
                                           case (v, Some (e)) => (VariableC (v.value), Some (desugarAST (e))) }),
-                   stmts.map (desugarAST (_)))
+                   desugarAST (BlockStmtDecls (stmts)))
 
     case Function (name, args, _) => FuncAppC (desugarAST (name), args.map (desugarAST (_)))
     case Import (imports) => ImportC (imports)
   }
+
+
+  // TODO : apply method
 }

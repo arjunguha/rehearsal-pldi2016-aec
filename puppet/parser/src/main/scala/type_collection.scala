@@ -27,7 +27,7 @@ object TypeCollection {
     val merged = hostclasses.get (hc.classname) match {
 
       case Some (other_hc) => 
-        if (other_hc.parent == hc.parent) HostclassC (hc.classname, hc.args, hc.parent, BlockStmtC (other_hc.stmts.exprs ::: hc.stmts.exprs))
+        if (other_hc.parent == hc.parent) HostclassC (hc.classname, hc.args, hc.parent, BlockStmtC (other_hc.stmts.asInstanceOf[BlockStmtC].exprs ::: hc.stmts.asInstanceOf[BlockStmtC].exprs))
         else throw new Exception ("Cannot merge two hostclasses inheriting different parents")
 
       case None => hc
