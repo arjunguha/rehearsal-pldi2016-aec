@@ -42,8 +42,8 @@ object Cmd {
       file.delete ()
 
       // Enabled now for logging purpose
-      println (outlog)
-      println (errlog)
+      // println (outlog)
+      // println (errlog)
 
       Try (if (0 == status) outlog else throw new CmdException (status, outlog))
     } catch {
