@@ -15,3 +15,5 @@ libraryDependencies += "org.scalatest" % "scalatest_2.10" % "2.1.3" % "test"
 libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.10.1" % "test"
 
 libraryDependencies += "com.assembla.scala-incubator" %% "graph-core" % "1.8.1"
+
+libraryDependencies += "com.assembla.scala-incubator" %% "graph-json" % "1.8.0"

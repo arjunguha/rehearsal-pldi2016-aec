@@ -9,21 +9,25 @@ import scalax.collection.Graph
 import scalax.collection.GraphEdge._
 import scalax.collection.GraphPredef._
 
-object PuppetFunction {
+/*
+ * There are 3 kinds of resources => Stage, Class and a Resource.
+ * Stage and Class are meta resources
+ */
+case class Resource (val kind: String, // TODO : Odd for now, resolve later
+                val title: String, // Combination of type of resource + its name
+                val params: Map[String, Value]) {
 
-  def apply (fname: String, args: PuppetValue*): PuppetValue = {
-    throw new Exception ("feature not supported yet")
+  // Both type and title attribute should be present and the combination should be unique
+
+  def isVirtual (): Boolean = {
+    throw new Exception ("Not determined yet")
+  }
+
+  def isExported (): Boolean = {
+    throw new Exception ("Not determined yet")
   }
 }
 
-
-class Resource (val kind: String, // TODO : Odd for now, resolve later
-                val title: String, // Combination of type of resource + its name
-                val params: Map[String, PuppetValue],
-                val scope: ScopeChain) {
-
-  // Both type and title attribute should be present and the combination should be unique
-}
 
 
 class Catalog {
@@ -32,8 +36,8 @@ class Catalog {
   var classes:     List[(HostclassC, ScopeChain)] = List ()
   var definitions: List[(DefinitionC, ScopeChain)] = List ()
 
-  type Filter = ASTHashV /* Map[String, PuppetValue TODO: should rather be a subtype of PuppetValue] */
-  type Attrs = Map[String, PuppetValue /* all values */]
+  type Filter = ASTHashV /* Map[String, Value TODO: should rather be a subtype of Value] */
+  type Attrs = Map[String, Value /* all values */]
   type Override = (Filter, Attrs)
   type Collection  = Filter
   type ResourceRef = Filter
@@ -42,6 +46,7 @@ class Catalog {
   var overrides:   List[Override] = List ()
   var collections: List[Collection] = List ()
   var orderings:   List[(ResourceRef, ResourceRef)] = List ()
+
 
   def add_resource (res: Resource) {
     // TODO : Check for duplicates
@@ -54,7 +59,7 @@ class Catalog {
     // Name and type of resource are unique 
     val res_typ = mp ("type")
     val res_name = mp ("title")
-    add_resource (new Resource ("Resource", res_typ + "::" + res_name, mp, new ScopeChain ()))
+    add_resource (new Resource ("Resource", res_typ + "::" + res_name, mp))
   }
 
   def add_override (filter: Filter, attrs: Attrs) {
@@ -78,8 +83,9 @@ class Catalog {
 
   def to_graph (): Graph[Resource, DiEdge] = {
 
-    val rels = orderings.map ({ case (x, y) => resourceref_to_resource (x) ~> resourceref_to_resource (y) })
-    Graph.from (resources, rels)
+    val nodes = resources
+    val edges = orderings.map ({ case (x, y) => resourceref_to_resource (x) ~> resourceref_to_resource (y) })
+    Graph.from (nodes, edges)
   }
 
   def eval_overrides () {
@@ -97,204 +103,58 @@ class Catalog {
   def eval_definitions () {
     throw new Exception ("feature not supported yet")
   }
-
-  def eval_relationships () {
-    throw new Exception ("feature not supported yet")
-  }
 }
 
 
 object PuppetCompile {
-
-  private def puppetvalue_to_bool (v: PuppetValue): Boolean = v match {
-
-    /* Puppets idiosyncracies on what can be (automatically) coerced
-     * into a bool
-     */
-    case UndefV => false
-    case BoolV (b) => b
-    case StringV (s) => ! (s == "" || s == "\"\"" || s == "''") // Empty strings are false
-    case RegexV (_) => throw new Exception ("Cannot convert a regex to bool")
-    case ASTHashV (_) | ASTArrayV (_) => true // Any hash or array, even empty ones are boolean true
-  }
-
-  import scala.util.Try
-   
-  private def puppetvalue_to_double (v: PuppetValue): Try[Double] = v match {
-    case StringV (s) => Try (s.toDouble)
-    case _ => throw new Exception ("Cannot convert to double")
-  }
   
-  private def puppetvalue_to_int (v: PuppetValue): Try[Int] = v match {
-    case StringV (s) => Try (s.toInt) // TODO: Not supporting hex and octal for now 
-    case _ => throw new Exception ("Cannot convert to Integer")
-  }
-
-  import scala.util.Either
-  private def puppetvalue_to_num (v: PuppetValue): Either [Double, Int] = {
-
-    // Cases : Octal, Hexadecimal, Decimal (Negative, Positive), Double (Scientific, negative, positive)
-    // First try to parse Octal, if it fails then hex then decimal else double
-    val n = puppetvalue_to_int (v)
-    if (n.isSuccess) Right (n.get) else Left (puppetvalue_to_double (v).get)
-  }
-
-  private def puppetvalue_to_string (v: PuppetValue): String = v match {
-    case UndefV => ""
-    case BoolV (b) => if (b) "true" else "false"
-    case StringV (s) => s
-    case RegexV (r) => r.toString
-    case ASTArrayV (arr) => arr.foldLeft ("") ({ case (acc, elem) => acc + puppetvalue_to_string (elem) })
-    case ASTHashV (hash) => hash.foldLeft ("") ({ case (acc, elem) => acc + puppetvalue_to_string (elem._1) +
-                                                                            puppetvalue_to_string (elem._2) })
-  }
-
-
+  import scala.util.Try
 
   /*
-  private def eval_op (lhs: PuppetValue,
-                       rhs: PuppetValue,
-                       op: BinOp): PuppetValue = op match {
+   * All integer related operations have to follow ruby semantics and its flexibility/limitations
+   *
+   * Being ruby compliant, when we ask for left shift by a negative
+   * number, ruby does a right shift by its absolute value.
+   * Vice Versa for right shift
+   */
+  private def eval_op (op: BinOp, x: Value, y: Value): Value = op match {
 
+    case Or          => BoolV (x.toBool || y.toBool)
+    case And         => BoolV (x.toBool && y.toBool)
+    case GreaterThan => BoolV (x.toDouble >  y.toDouble)
+    case GreaterEq   => BoolV (x.toDouble >= y.toDouble)
+    case LessThan    => BoolV (x.toDouble <  y.toDouble)
+    case LessEq      => BoolV (x.toDouble <= y.toDouble)
+    case NotEqual    => throw new Exception ("Not supported yet")
+    case Equal       => throw new Exception ("Not supported yet")
 
-    // Takes in boolean operands or operands that can be converted to boolean
-    case Or          => BoolV (puppetvalue_to_bool (lhs) || puppetvalue_to_bool (rhs))
-    case And         => BoolV (puppetvalue_to_bool (lhs) && puppetvalue_to_bool (rhs))
+    case LShift => StringV ((if (y.toInt > 0) x.toInt << y.toInt else x.toInt >> y.toInt).toString)
+    case RShift => StringV ((if (y.toInt > 0) x.toInt >> y.toInt else x.toInt << y.toInt).toString)
 
-    // XXX: All integer related operations have to follow ruby semantics and its flexibility/limitations
+    case Plus  => StringV (if (Try (x.toInt).isSuccess && Try (y.toInt).isSuccess) (x.toInt + y.toInt).toString
+                           else (x.toDouble + y.toDouble).toString)
 
-    // comparison operators: takes operands of several data types and resolve to Boolean
-    case GreaterThan => {
-      val lhsn = puppetvalue_to_num (lhs)
-      val rhsn = puppetvalue_to_num (rhs)
-      BoolV (lhsn > rhsn)
-    }
-    case GreaterEq   => {
-      val lhsn = puppetvalue_to_num (lhs)
-      val rhsn = puppetvalue_to_num (rhs)
-      BoolV (lhsn >= rhsn)
-    }
+    case Minus => StringV (if (Try (x.toInt).isSuccess && Try (y.toInt).isSuccess) (x.toInt - y.toInt).toString
+                           else (x.toDouble - y.toDouble).toString)
 
-    case LessThan    => {
-      val lhsn = puppetvalue_to_num (lhs)
-      val rhsn = puppetvalue_to_num (rhs)
-      BoolV (lhsn < rhsn)
-    }
+    case Div   => StringV (if (Try (x.toInt).isSuccess && Try (y.toInt).isSuccess) (x.toInt / y.toInt).toString
+                           else (x.toDouble / y.toDouble).toString)
 
-    case LessEq      => {
-      val lhsn = puppetvalue_to_num (lhs)
-      val rhsn = puppetvalue_to_num (rhs)
-      BoolV (lhsn <= rhsn)
-    }
+    case Mult  => StringV (if (Try (x.toInt).isSuccess && Try (y.toInt).isSuccess) (x.toInt * y.toInt).toString
+                           else (x.toDouble * y.toDouble).toString)
 
-    // TODO : Define equality
-    case NotEqual    =>
-    case Equal       =>
-
-    // Arithmetic operators, Takes in numbers and resolve to Numbers
-    case LShift      => {
-      val lhsn = puppetvalue_to_num (lhs)
-      val rhsn = puppetvalue_to_num (rhs)
-    */
-
-      /*
-       * Being ruby compliant, when we ask for left shift by a negative
-       * number, ruby does a right shift by its absolute value
-       */
-      /*
-      if (rhsn < 0) lhsn >> Math.abs (rhsn)
-      else lhsn << rhsn
-    }
-
-    case RShift      => {
-      val lhsn = puppetvalue_to_num (lhs)
-      val rhsn = puppetvalue_to_num (rhs)
-    */
-
-      /* Being ruby compliant, when we ask for right shift by a negative
-       * number, ruby does a right shift by its absolute value
-       */
-      /*
-      if (rhsn < 0) lhsn << Math.abs (rhsn)
-      else lhsn >> rhsn
-    }
-
-    case Plus        => {
-      val lhsn = puppetvalue_to_num (lhs)
-      val rhsn = puppetvalue_to_num (rhs)
-      
-      lhsn + rhsn
-    }
-
-    case Minus       => {
-      val lhsn = puppetvalue_to_num (lhs)
-      val rhsn = puppetvalue_to_num (rhs)
-
-      lhsn - rhsn
-    }
-
-    case Div         => {
-      val lhsn = puppetvalue_to_num (lhs)
-      val rhsn = puppetvalue_to_num (rhs)
-
-      lhsn / rhsn
-    }
-
-    case Mult        => {
-      val lhsn = puppetvalue_to_num (lhs)
-      val rhsn = puppetvalue_to_num (rhs)
-
-      lhsn * rhsn
-    }
-
-    case Mod         => {
-      val lhsn = puppetvalue_to_num (lhs)
-      val rhsn = puppetvalue_to_num (rhs)
-
-      lhsn % rhsn
-    }
-
+    case Mod   => StringV ((x.toInt % y.toInt).toString)
 
     // Regex related match, string is left operand and regular expression as right operand, returns a boolean
-    case Match       => {
-      val lhsstr   = puppetval_to_string (lhs)
-      val rhsregex = puppetal_to_regex (rhs)
-
-      // Check for any match
-      rhsregex.findFirstIn (lhsstr) match {
-        case Some (_) => BoolV (false)
-        case None     => BoolV (true)
-      }
-    }
-
-    case NoMatch     => {
-      val lhsstr   = puppetval_to_string (lhs)
-      val rhsregex = puppetal_to_regex (rhs)
-
-      // Check for any match
-      rhsregex.findFirstIn (lhsstr) match {
-        case Some (_) => BoolV (false)
-        case None     => BoolV (true)
-      }
-    }
-
-    case In          => {
-
-      // lhs has to be a string
-      lhsstr = puppetval_to_string (lhs)
-
-      // rhs could be either a String, Array or Hashes
-      rhs match {
-        case StringV (value) => */ /* Check if lhsstr is a substring */ /* BoolV (value contains lhsstr) */
-        /* case ASTArrayV (arr) => */ /* Check if any array element is identical to left operand */ /* BoolV (arr contains lhs) */
-        /* case ASTHashV (hash) => */ /* Check if any key is identical to left operand */ /* BoolV (hash contains lhs) */
-
-        // TODO : Position in error
-        /* case _ => throw new Exception ("Type error: \"in\" expects a string, array or hash")
-      }
+    case Match   => BoolV (!(y.asInstanceOf[RegexV].value findFirstIn x.toPString).isEmpty)
+    case NoMatch => BoolV ( (y.asInstanceOf[RegexV].value findFirstIn x.toPString).isEmpty) // TODO : Should have been desugared
+    case In      => y match {
+      case StringV   (v) => BoolV (v contains x.toPString)
+      case ASTArrayV (v) => BoolV (v contains StringV (x.toPString))
+      case ASTHashV  (v) => BoolV (v contains StringV (x.toPString))
+      case _ => throw new Exception ("\"In\" Operator not supported for types other than String, Array or Hash")
     }
   }
-  */
 
 
   private def interpolate (str: String,
@@ -308,9 +168,6 @@ object PuppetCompile {
     variable.value.stripPrefix ("$")
   }
 
-  private def merge_hash (lhs: ASTHashV, rhs: ASTHashV): ASTHashV = {
-    ASTHashV ((lhs.value.toList ::: rhs.value.toList).toMap)
-  }
 
   private def resourceprops_to_ref (attrs: ASTHashV): ASTHashV = {
     val mp = attrs.value.map ({ case (k: StringV, v) => (k.value.toLowerCase -> v) })
@@ -324,8 +181,8 @@ object PuppetCompile {
 
 
   // TODO : Catalog is fixed, can be curried away
-  // TODO : More precise type than puppet value
-  private def eval (ast: ASTCore, env: ScopeChain, catalog: Catalog): PuppetValue = ast match {
+  // TODO : More precise type than Value
+  private def eval (ast: ASTCore, env: ScopeChain, catalog: Catalog): Value = ast match {
 
     case UndefC          => UndefV
     case BoolC (value)   => BoolV (value)
@@ -350,15 +207,15 @@ object PuppetCompile {
     }
 
     case IfElseC (test, true_br, false_br) => {
-      if (puppetvalue_to_bool (eval (test, env, catalog)))
+      if ((eval (test, env, catalog)).toBool)
         eval (true_br, env, catalog)
       else
         eval (false_br, env, catalog)
     }
 
-    case BinExprC (lhs, rhs, op) => throw new Exception ("feature not supported yet")
-    case NotExprC (oper) => BoolV (! puppetvalue_to_bool (eval (oper, env, catalog)))
-    case FuncAppC (name, args) => PuppetFunction (puppetvalue_to_string (eval (name, env, catalog)),  args.map (eval (_, env, catalog)).toSeq:_*)
+    case BinExprC (lhs, rhs, op) => eval_op (op, eval (lhs, env, catalog), eval (rhs, env, catalog))
+    case NotExprC (oper) => BoolV (!(eval (oper, env, catalog)).toBool)
+    case FuncAppC (name, args) => PuppetFunction ((eval (name, env, catalog)).toPString,  args.map (eval (_, env, catalog)).toSeq:_*)
     case ImportC (imports) => throw new Exception ("Feature not supported yet")
 
     // TODO :Get Rid of coercing: More stronger types
@@ -382,7 +239,7 @@ object PuppetCompile {
 
     case ResourceDeclC (attrs) => {
       val listhash = attrs.map (eval (_, env, catalog)) collect ({ case x: ASTHashV => x })
-      val singlehash = listhash.reduce (merge_hash)
+      val singlehash = listhash.reduce (_.append (_))
       catalog.add_resource (singlehash)
       resourceprops_to_ref (singlehash)
       // Should return a subset of attributes to identify this resource: basically type and title
@@ -408,6 +265,8 @@ object PuppetCompile {
 
   def eval_toplevel (ast: BlockStmtC, catalog: Catalog): ScopeChain = {
 
+    PuppetScope.clear ()
+
     val toplevel_scope = PuppetScope.createNamedScope ("")
     val env = (new ScopeChain ()).addScope (toplevel_scope)
 
@@ -419,7 +278,7 @@ object PuppetCompile {
 ) env.setvar (kv(0), StringV (kv(1)))       }
     })
   
-    val main_resource = new Resource ("class", 'main.toString, Map[String, PuppetValue] (), env)
+    val main_resource = new Resource ("class", 'main.toString, Map[String, Value] ())
     catalog.add_resource (main_resource)
     
     ast.exprs.foreach (eval (_, env, catalog))
@@ -456,7 +315,7 @@ object PuppetCompile {
       Left (nodes.map ({ case node => {
         val catalog = new Catalog ()
         val env = eval_toplevel (ast, catalog)
-        val nodename = puppetvalue_to_string (eval (node.hostname, env, catalog))
+        val nodename = (eval (node.hostname, env, catalog)).toPString
 
         // TODO: Bad Type coercion
         eval_node (nodename, node.stmts.asInstanceOf[BlockStmtC], env, catalog)
@@ -465,7 +324,6 @@ object PuppetCompile {
         catalog.eval_collections ()
         catalog.eval_definitions ()
         catalog.eval_overrides ()
-        catalog.eval_relationships ()
         (nodename, catalog)
       }}))
     }
@@ -478,7 +336,6 @@ object PuppetCompile {
       catalog.eval_classes ()
       catalog.eval_collections ()
       catalog.eval_definitions ()
-      catalog.eval_relationships ()
       */
 
       Right (catalog)

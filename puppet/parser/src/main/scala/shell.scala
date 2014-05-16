@@ -35,15 +35,10 @@ object Cmd {
       var logger = ProcessLogger ((s) => outlog += (s + newline),
                                   (s) => errlog += (s + newline))
 
-      println ("executing : " + cmd)
       val status = Process (file.getCanonicalPath (), Some (pwd.toFile ()), extraEnv:_*) ! logger
 
       // Done with file. Delete
       file.delete ()
-
-      // Enabled now for logging purpose
-      // println (outlog)
-      // println (errlog)
 
       Try (if (0 == status) outlog else throw new CmdException (status, outlog))
     } catch {

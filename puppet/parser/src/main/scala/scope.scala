@@ -45,24 +45,22 @@ import scala.util.Random
  */
 
 
-// TODO : This should be a class
+// TODO : Make it a class
 object PuppetScope {
 
   type ScopeRef = String
 
   private class Scope {
 
-    private val env = scala.collection.mutable.Map[String, PuppetValue] ()
+    private val env = scala.collection.mutable.Map[String, Value] ()
 
-    def setvar (varname: String, value: PuppetValue) = env += (varname -> value)
-    def getvar (varname: String): PuppetValue = env (varname)
+    def setvar (varname: String, value: Value) = env += (varname -> value)
+    def getvar (varname: String): Value = env (varname)
   }
 
   private val named_scopes = scala.collection.mutable.Map [ScopeRef, Scope] ()
 
-  def scope_exists (name: String): Boolean = {
-    (Try (named_scopes (name))).isSuccess
-  }
+  def scope_exists (name: String): Boolean = named_scopes contains name
 
   def createNamedScope (name: String): ScopeRef = {
 
@@ -74,7 +72,7 @@ object PuppetScope {
   }
 
   // XXX: Need not mix ephemeral scopes with named scopes
-  def createEphemeralScope (): ScopeRef = { 
+  def createEphemeralScope (): ScopeRef = {
 
     // alphanumeric random string
     val name = Random.alphanumeric.take (8).mkString
@@ -87,7 +85,7 @@ object PuppetScope {
 
   private def getScopeByName (name: String): Try[Scope] = Try (named_scopes (name))
 
-  def setvar (ref: ScopeRef, varname: String, value: PuppetValue) {
+  def setvar (ref: ScopeRef, varname: String, value: Value) {
 
     var scope = getScopeByName (ref)
 
@@ -95,12 +93,17 @@ object PuppetScope {
     else throw new Exception ("Invalid Scope")
   }
 
-  def getvar (ref: ScopeRef, varname: String): Try[PuppetValue] = {
+  def getvar (ref: ScopeRef, varname: String): Try[Value] = {
 
     var scope = getScopeByName (ref)
 
     if (scope.isSuccess) scope.map (_.getvar (varname))
     else throw new Exception ("Invalid Scope")
+  }
+
+  // TODO: Should go away when we have made this object a class
+  def clear () = {
+    named_scopes.clear ()
   }
 }
 
@@ -110,7 +113,7 @@ class ScopeChain (val scopes: List[PuppetScope.ScopeRef] = List[PuppetScope.Scop
 
   private def is_qualified (name: String): Boolean = ((name indexOf "::") > 0)
 
-  def getvar (varfqname: String): Try[PuppetValue] = {
+  def getvar (varfqname: String): Try[Value] = {
 
     if (is_qualified (varfqname)) {
 
@@ -136,7 +139,7 @@ class ScopeChain (val scopes: List[PuppetScope.ScopeRef] = List[PuppetScope.Scop
     }
   }
 
-  def setvar (varfqname: String, value: PuppetValue, append: Boolean = false) {
+  def setvar (varfqname: String, value: Value, append: Boolean = false) {
 
     // Variable can only be assigned using their short name
     if (!append && is_qualified (varfqname))
@@ -151,14 +154,16 @@ class ScopeChain (val scopes: List[PuppetScope.ScopeRef] = List[PuppetScope.Scop
       if (!old_val.isSuccess)
         throw new Exception ("Cannot append to non existing variable")
 
+      // Replace by append in Value
       val new_val = (old_val.get, value) match {
         case (StringV (ov), StringV (nv)) => StringV (ov + nv)
-        case (ASTHashV (ov), ASTHashV (nv)) => ASTHashV ((ov.toList ++ nv.toList).toMap /*[PuppetValue, PuppetValue]*/)
+        case (ASTHashV (ov), ASTHashV (nv)) => ASTHashV ((ov.toList ++ nv.toList).toMap)
         case (ASTArrayV (ov), ASTArrayV (nv)) => ASTArrayV (ov ++ nv)
         case _ => throw new Exception ("Type mismatch for append")
       }
     }
     else {
+
       if (PuppetScope.getvar (cur_scope, varfqname).isSuccess)
         throw new Exception ("Cannot reassign variable")
 
