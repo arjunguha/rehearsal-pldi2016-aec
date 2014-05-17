@@ -114,6 +114,13 @@ import puppet.syntax._
  * constructs.
  */
 
+
+sealed abstract trait FilterOp
+case object FEqOp    extends FilterOp
+case object FNotEqOp extends FilterOp
+case object FAndOp   extends FilterOp
+case object FOrOp    extends FilterOp
+
 sealed abstract trait ASTCore
 
 // TODO : Use scala type system for precise types
@@ -137,7 +144,9 @@ case class VardefC (variable: ASTCore, value : ASTCore , append: Boolean) extend
 case class OrderResourceC (source: ASTCore, target: ASTCore, refresh: Boolean) extends ASTCore
 case class AttributeC (name: ASTCore, value: ASTCore, is_append: Boolean) extends ASTCore
 case class ResourceDeclC (attrs: List[ASTCore]) extends ASTCore
-case class ResourceRefC (filter: ASTCore) extends ASTCore 
+// case class ResourceRefC (filter: ASTCore) extends ASTCore 
+case class FilterExprC (lhs: ASTCore, rhs: ASTCore, op: FilterOp) extends ASTCore
+
 case class ResourceOverrideC (ref : ASTCore, attrs : List[ASTCore]) extends ASTCore
 case class NodeC (hostname: ASTCore, parent: Option[ASTCore], stmts: ASTCore /* BlockStmtC */) extends ASTCore
 
@@ -230,24 +239,25 @@ object DesugarPuppetAST {
 
  
     case ResourceRef (typ, titles) => {
+      // A resource should have the attributes
       val restyp = typ match {
         // Name is effectively a type, see the corresponding production rule
         case Name (name) => Type (name.capitalize)
         case typ => typ
       }
 
-      val typmatch = BinExprC (NameC ("type"), desugarAST (restyp), Equal)
-      val filters = titles.map ((title) => (BinExprC (BinExprC (NameC ("title"), desugarAST (title), Equal),
-                                            typmatch, And)))
-      val filter = filters.foldRight (BoolC (false): ASTCore) (BinExprC (_, _, Or))
-      ResourceRefC (filter)
+      val typmatch = FilterExprC (NameC ("type"), desugarAST (restyp), FEqOp)
+      val filters = titles.map ((title) => (FilterExprC (FilterExprC (NameC ("title"), desugarAST (title), FEqOp),
+                                                         typmatch, FAndOp)))
+      val filter = filters.foldRight (BoolC (false): ASTCore) (FilterExprC (_, _, FOrOp))
+      filter
     }
 
     case CollectionExpr (lhs, rhs, op) => op match {
-      case CollOr    => BinExprC (desugarAST (lhs), desugarAST (rhs), Or)
-      case CollAnd   => BinExprC (desugarAST (lhs), desugarAST (rhs), And)
-      case CollIsEq  => BinExprC (desugarAST (lhs), desugarAST (rhs), Equal)
-      case CollNotEq => BinExprC (desugarAST (lhs), desugarAST (rhs), NotEqual)
+      case CollOr    => FilterExprC (desugarAST (lhs), desugarAST (rhs), FOrOp)
+      case CollAnd   => FilterExprC (desugarAST (lhs), desugarAST (rhs), FAndOp)
+      case CollIsEq  => FilterExprC (desugarAST (lhs), desugarAST (rhs), FEqOp)
+      case CollNotEq => FilterExprC (desugarAST (lhs), desugarAST (rhs), FNotEqOp)
     }
 
     case Collection (typ, collexpr, tvirt, params) => {
@@ -273,7 +283,7 @@ object DesugarPuppetAST {
           case None => CollectionExpr (virtmatchexpr, typmatchexpr, CollAnd)
         })
 
-        ResourceRefC (filter)
+        filter
       }
       else {
         // Overriding, virtual tag should be ignored
@@ -283,14 +293,14 @@ object DesugarPuppetAST {
           case None => typmatchexpr
         })
 
-        ResourceOverrideC (ResourceRefC (filter), params.map (desugarAST (_)))
+        ResourceOverrideC (filter, params.map (desugarAST (_)))
       }
     }
 
     case ResourceOverride (ref, params) => ResourceOverrideC (desugarAST (ref), params.map (desugarAST (_)))
     case ResourceDefaults (typ, params) => {
-      val filter = BinExprC (NameC ("type"), TypeC (typ.value.capitalize), Equal)
-      ResourceOverrideC (ResourceRefC (filter), params.map (desugarAST (_)))
+      val filter = FilterExprC (NameC ("type"), TypeC (typ.value.capitalize), FEqOp)
+      ResourceOverrideC (filter, params.map (desugarAST (_)))
     }
 
     case IfExpr (test, true_exprs, false_exprs) =>

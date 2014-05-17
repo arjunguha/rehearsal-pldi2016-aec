@@ -16,9 +16,8 @@ case class Resource (title: String,
 
   private def depsToResRefs (v: Value): List[ResourceRefV] = {
     v match {
-      case ASTArrayV (arr) => (arr.toList flatMap depsToResRefs)
-      case ASTHashV (hash) => List (ResourceRefV (hash))
-      case ResourceRefV (attrs) => List (ResourceRefV (attrs))
+      case v : ASTArrayV => (v.value.toList flatMap depsToResRefs)
+      case v : ResourceRefV  => (List (v))
       case _ => throw new Exception ("Value is not a valid resource reference")
     }
   }
@@ -45,11 +44,13 @@ case class Resource (title: String,
   def getAttr (name: String): Option[Value] = params get name
 
   def isReferredByRef (ref: ResourceRefV): Boolean = {
-    ref.value.forall ({ case (k, v) => (params get k) == Some (v) })
+    PuppetCompile.evalRefOnResource (ref, this)
+    // ref.value.forall ({ case (k, v) => (params get k) == Some (v) })
   }
 
   def toResourceRefV: ResourceRefV = {
-    ResourceRefV (params.filterKeys ((k: String) => k == "type" || k == "title").toMap)
+    ResourceRefV (ResourceRefV (StringV ("type"), params ("type"), FEqOp),
+                  ResourceRefV (StringV ("title"), params ("title"), FEqOp), FAndOp)
   }
 }
 
@@ -59,6 +60,15 @@ case class Stage (title: String) extends Node (title) {}
 
 
 object PuppetCompile {
+
+  def evalRefOnResource (ref: ResourceRefV, resource: Resource): Boolean = ref.op match {
+    case FEqOp    => resource.params get ref.lhs.toPString map (_ == ref.rhs) getOrElse false
+    case FNotEqOp => resource.params get ref.lhs.toPString map (_ != ref.rhs) getOrElse false
+    case FAndOp   => evalRefOnResource (ref.lhs.asInstanceOf[ResourceRefV], resource) &&
+                     evalRefOnResource (ref.lhs.asInstanceOf[ResourceRefV], resource)
+    case FOrOp    => evalRefOnResource (ref.lhs.asInstanceOf[ResourceRefV], resource) ||
+                     evalRefOnResource (ref.lhs.asInstanceOf[ResourceRefV], resource)
+  }
   
   import scala.util.Try
 
@@ -152,6 +162,7 @@ object PuppetCompile {
     case BinExprC (lhs, rhs, op) => eval_op (op, eval (lhs, env, catalog), eval (rhs, env, catalog))
     case NotExprC (oper) => BoolV (!(eval (oper, env, catalog)).toBool)
     case FuncAppC (name, args) => Function ((eval (name, env, catalog)).toPString,  args.map (eval (_, env, catalog)).toSeq:_*)
+
     // TODO : I dont think that Import should have reached this far, it should have been eliminated earlier
     case ImportC (imports) => throw new Exception ("Feature not supported yet")
 
@@ -184,8 +195,12 @@ object PuppetCompile {
       resourceref
     }
 
-    case ResourceRefC (filter) =>
-      ResourceRefV ((eval (filter, env, catalog)).asInstanceOf[ASTHashV].value)
+    case FilterExprC (lhs, rhs, op) => op match {
+      case FEqOp    => ResourceRefV (eval (lhs, env, catalog), eval (rhs, env, catalog), FEqOp)
+      case FNotEqOp => ResourceRefV (eval (lhs, env, catalog), eval (rhs, env, catalog), FNotEqOp)
+      case FAndOp   => ResourceRefV (eval (lhs, env, catalog), eval (rhs, env, catalog), FAndOp)
+      case FOrOp    => ResourceRefV (eval (lhs, env, catalog), eval (rhs, env, catalog), FOrOp)
+    }
 
     case ResourceOverrideC (ref, attrs) => { 
       val refv = eval (ref, env, catalog)
