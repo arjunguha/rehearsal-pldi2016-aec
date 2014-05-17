@@ -16,16 +16,18 @@ object PuppetDriver {
     val g = 
       PuppetCompile.compile (desugared_ast.asInstanceOf[BlockStmtC]) match {
         case Left (l) => throw new Exception ("Not supported")
-        case Right (catalog) => catalog.to_graph ()
+        case Right (catalog) => catalog.toGraph
       }
 
-    val node_desc = new NodeDescriptor[Resource] (typeId = "Resources") {
+    val node_desc = new NodeDescriptor[Node] (typeId = "Resources") {
       def id (node: Any): String = node match {
-        case x: Resource  => "%s[%s]".format (x.kind, x.title)
+        case x: Resource  => "Resource[%s]".format (x.title)
+        case x: HostClass => "Class[%s]".format (x.title)
+        case x: Stage     => "Stage[%s]".format (x.title)
       }
     }
 
-    val quickJson = new Descriptor[Resource] (
+    val quickJson = new Descriptor[Node] (
       defaultNodeDescriptor = node_desc,
       defaultEdgeDescriptor = Di.descriptor ()
     )

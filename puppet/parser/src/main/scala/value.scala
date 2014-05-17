@@ -46,16 +46,17 @@ case class RegexV (value: Regex) extends Value {
 
 object PuppetCompositeValueTypes {
 
-  type ValueHashMap = Map[StringV, Value]
+  type ValueHashMap = Map[String, Value]
   type ValueArray   = Array[Value]
+  type ValueRef     = Map[String, Value]
 }
 
 import PuppetCompositeValueTypes._
 
-case class ASTHashV (value: ValueHashMap) extends Value {
+case class ASTHashV (value: Map[String, Value]) extends Value {
   override def toBool = true // Even empty hashes are coerced to true
   override def toPString = 
-    value.foldLeft ("") ({ case (a, e) => a + e._1.toPString + e._2.toPString })
+    value.foldLeft ("") ({ case (a, e) => a + e._1 + e._2.toPString })
 
   type T = ASTHashV
   type U = ASTHashV
@@ -69,4 +70,12 @@ case class ASTArrayV (value: ValueArray) extends Value {
   type T = ASTArrayV
   type U = ASTArrayV
   override def append (other: T): U = ASTArrayV (value ++ other.value)
+}
+
+case class ResourceRefV (value: Map[String, Value]) extends Value {
+  override def toBool = true /* any resource reference is true */
+  /*
+  override def toPString = "%s[%s]". format (value._1.captialize,
+                                             value._2 mkString ", ")
+  */
 }

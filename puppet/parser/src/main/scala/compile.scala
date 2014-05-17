@@ -4,106 +4,58 @@ import puppet.core._
 import puppet.syntax._
 import puppet.util._
 
+import scala.collection._
 import scala.util.matching.Regex
-import scalax.collection.Graph
-import scalax.collection.GraphEdge._
-import scalax.collection.GraphPredef._
 
-/*
- * There are 3 kinds of resources => Stage, Class and a Resource.
- * Stage and Class are meta resources
- */
-case class Resource (val kind: String, // TODO : Odd for now, resolve later
-                val title: String, // Combination of type of resource + its name
-                val params: Map[String, Value]) {
 
-  // Both type and title attribute should be present and the combination should be unique
+sealed abstract class Node (title: String)
 
-  def isVirtual (): Boolean = {
-    throw new Exception ("Not determined yet")
+// TODO : Add staging support
+case class Resource (title: String, 
+                     params: mutable.Map[String, Value]) extends Node (title) {
+
+  private def depsToResRefs (v: Value): List[ResourceRefV] = {
+    v match {
+      case ASTArrayV (arr) => (arr.toList flatMap depsToResRefs)
+      case ASTHashV (hash) => List (ResourceRefV (hash))
+      case ResourceRefV (attrs) => List (ResourceRefV (attrs))
+      case _ => throw new Exception ("Value is not a valid resource reference")
+    }
   }
 
-  def isExported (): Boolean = {
-    throw new Exception ("Not determined yet")
-  }
-}
-
-
-
-class Catalog {
-
-  // Lazy compilation: collect and compile
-  var classes:     List[(HostclassC, ScopeChain)] = List ()
-  var definitions: List[(DefinitionC, ScopeChain)] = List ()
-
-  type Filter = ASTHashV /* Map[String, Value TODO: should rather be a subtype of Value] */
-  type Attrs = Map[String, Value /* all values */]
-  type Override = (Filter, Attrs)
-  type Collection  = Filter
-  type ResourceRef = Filter
-
-  var resources:   List[Resource] = List ()
-  var overrides:   List[Override] = List ()
-  var collections: List[Collection] = List ()
-  var orderings:   List[(ResourceRef, ResourceRef)] = List ()
-
-
-  def add_resource (res: Resource) {
-    // TODO : Check for duplicates
-    resources = res :: resources
+  private def attrToResRefs (key: String): List[ResourceRefV] = {
+    (params.get (key) map depsToResRefs) getOrElse List ()
   }
 
-  def add_resource (attrs: ASTHashV) {
-    val mp = attrs.value.map ({ case (k: StringV, v) => (k.value.toLowerCase -> v) })
-
-    // Name and type of resource are unique 
-    val res_typ = mp ("type")
-    val res_name = mp ("title")
-    add_resource (new Resource ("Resource", res_typ + "::" + res_name, mp))
+  def sources: List[ResourceRefV] = {
+    attrToResRefs ("require") ::: attrToResRefs ("subscribe")
   }
 
-  def add_override (filter: Filter, attrs: Attrs) {
-    throw new Exception ("feature not supported yet")
+  def targets: List[ResourceRefV] = {
+    attrToResRefs ("before") ::: attrToResRefs ("notify")
   }
 
-  def add_relationship (src: ASTHashV, dst: ASTHashV, refresh: Boolean) {
-    orderings = (src, dst) :: orderings
+  def mergeAttr (name: String, value: Value, append: Boolean = false) {
+    if (append)
+      throw new Exception ("Append not supported yet")
+
+    params += (name -> value)
+  }
+  
+  def getAttr (name: String): Option[Value] = params get name
+
+  def isReferredByRef (ref: ResourceRefV): Boolean = {
+    ref.value.forall ({ case (k, v) => (params get k) == Some (v) })
   }
 
-  private def resourceref_to_resource (ref: ASTHashV): Resource = {
-    val res = resources.find ({ 
-      case res => ref.value.forall ({ 
-        case (k, v) => res.params.contains (k.value) && res.params (k.value) == v 
-      }) 
-    })
-
-    res getOrElse (throw new Exception ("Not found"))
-  }
-
-
-  def to_graph (): Graph[Resource, DiEdge] = {
-
-    val nodes = resources
-    val edges = orderings.map ({ case (x, y) => resourceref_to_resource (x) ~> resourceref_to_resource (y) })
-    Graph.from (nodes, edges)
-  }
-
-  def eval_overrides () {
-    throw new Exception ("feature not supported yet")
-  }
-
-  def eval_classes () {
-    throw new Exception ("feature not supported yet")
-  }
-
-  def eval_collections () {
-    throw new Exception ("feature not supported yet")
-  }
-
-  def eval_definitions () {
-    throw new Exception ("feature not supported yet")
+  def toResourceRefV: ResourceRefV = {
+    ResourceRefV (params.filterKeys ((k: String) => k == "type" || k == "title").toMap)
   }
 }
+
+
+case class HostClass (title: String) extends Node (title) {}
+case class Stage (title: String) extends Node (title) {}
 
 
 object PuppetCompile {
@@ -125,8 +77,8 @@ object PuppetCompile {
     case GreaterEq   => BoolV (x.toDouble >= y.toDouble)
     case LessThan    => BoolV (x.toDouble <  y.toDouble)
     case LessEq      => BoolV (x.toDouble <= y.toDouble)
-    case NotEqual    => throw new Exception ("Not supported yet")
-    case Equal       => throw new Exception ("Not supported yet")
+    case NotEqual    => throw new Exception ("Not supported yet") // TODO
+    case Equal       => throw new Exception ("Not supported yet") // TODO
 
     case LShift => StringV ((if (y.toInt > 0) x.toInt << y.toInt else x.toInt >> y.toInt).toString)
     case RShift => StringV ((if (y.toInt > 0) x.toInt >> y.toInt else x.toInt << y.toInt).toString)
@@ -147,41 +99,27 @@ object PuppetCompile {
 
     // Regex related match, string is left operand and regular expression as right operand, returns a boolean
     case Match   => BoolV (!(y.asInstanceOf[RegexV].value findFirstIn x.toPString).isEmpty)
-    case NoMatch => BoolV ( (y.asInstanceOf[RegexV].value findFirstIn x.toPString).isEmpty) // TODO : Should have been desugared
+    case NoMatch => BoolV ( (y.asInstanceOf[RegexV].value findFirstIn x.toPString).isEmpty) // XXX : Should have been desugared
     case In      => y match {
       case StringV   (v) => BoolV (v contains x.toPString)
       case ASTArrayV (v) => BoolV (v contains StringV (x.toPString))
-      case ASTHashV  (v) => BoolV (v contains StringV (x.toPString))
+      case ASTHashV  (v) => BoolV (v contains x.toPString)
       case _ => throw new Exception ("\"In\" Operator not supported for types other than String, Array or Hash")
     }
   }
 
 
-  private def interpolate (str: String,
-                           env: ScopeChain): String = {
+  private def interpolate (str: String, env: ScopeChain): String = {
     // TODO: interpolate!!
     str
   }
 
-  // TODO : "$" could be stripped at parser stage rendering this function obsolete
-  private def variable_to_string (variable: VariableC): String = {
-    variable.value.stripPrefix ("$")
+  private def resourceASTToTitle (attrs: ASTHashV): String = {
+    attrs.value ("type").toPString + ":" + attrs.value ("title").toPString
   }
-
-
-  private def resourceprops_to_ref (attrs: ASTHashV): ASTHashV = {
-    val mp = attrs.value.map ({ case (k: StringV, v) => (k.value.toLowerCase -> v) })
-
-    // Name and type of resource are unique 
-    val res_typ = mp ("type")
-    val res_name = mp ("title")
-
-    ASTHashV (Map (StringV ("type") -> res_typ, StringV ("title") -> res_name))
-  }
-
 
   // TODO : Catalog is fixed, can be curried away
-  // TODO : More precise type than Value
+  // TODO : More precise type than 'Value'
   private def eval (ast: ASTCore, env: ScopeChain, catalog: Catalog): Value = ast match {
 
     case UndefC          => UndefV
@@ -190,10 +128,10 @@ object PuppetCompile {
     case TypeC (value)   => StringV (value) // XXX: Not sure
     case NameC (value)   => StringV (value) // XXX: Not sure
     case RegexC (value)  => RegexV (new Regex (value))
-
-    case ASTHashC (kvs) => ASTHashV (kvs.map ({ case (k, v) => (eval (k, env, catalog).asInstanceOf[StringV], eval (v, env, catalog)) }).toMap)
-
+    case ASTHashC (kvs)  => ASTHashV (kvs.map ({ case (k, v) => (eval (k, env, catalog).asInstanceOf[StringV].value,
+                                                                 eval (v, env, catalog))}).toMap)
     case ASTArrayC (arr) => ASTArrayV (arr.map (eval (_, env, catalog)).toArray)
+
     case HashOrArrayAccessC (variable, keys) => /* TODO: lookup variable and apply key */ throw new Exception ("HashOrArrayAccess not evaluated")
     case VariableC (value) => env.getvar (value) getOrElse UndefV
 
@@ -207,54 +145,61 @@ object PuppetCompile {
     }
 
     case IfElseC (test, true_br, false_br) => {
-      if ((eval (test, env, catalog)).toBool)
-        eval (true_br, env, catalog)
-      else
-        eval (false_br, env, catalog)
+      if ((eval (test, env, catalog)).toBool) eval (true_br, env, catalog)
+      else eval (false_br, env, catalog)
     }
 
     case BinExprC (lhs, rhs, op) => eval_op (op, eval (lhs, env, catalog), eval (rhs, env, catalog))
     case NotExprC (oper) => BoolV (!(eval (oper, env, catalog)).toBool)
-    case FuncAppC (name, args) => PuppetFunction ((eval (name, env, catalog)).toPString,  args.map (eval (_, env, catalog)).toSeq:_*)
+    case FuncAppC (name, args) => Function ((eval (name, env, catalog)).toPString,  args.map (eval (_, env, catalog)).toSeq:_*)
+    // TODO : I dont think that Import should have reached this far, it should have been eliminated earlier
     case ImportC (imports) => throw new Exception ("Feature not supported yet")
 
-    // TODO :Get Rid of coercing: More stronger types
     case VardefC (variable, value, append) => {
       val puppet_value = eval (value, env, catalog)
-      env.setvar (variable_to_string (variable.asInstanceOf[VariableC]), puppet_value, append)
+      env.setvar (variable.asInstanceOf[VariableC].value, puppet_value, append)
       puppet_value
     }
 
     case OrderResourceC (source, target, refresh) => {
-      val lhs = eval (source, env, catalog).asInstanceOf[ASTHashV]
-      val rhs = eval (target, env, catalog).asInstanceOf[ASTHashV]
-      catalog.add_relationship (lhs, rhs, refresh)
+      val lhs = eval (source, env, catalog).asInstanceOf[ResourceRefV]
+      val rhs = eval (target, env, catalog).asInstanceOf[ResourceRefV]
+      catalog.addRelationship (lhs, rhs, refresh)
       rhs
     }
 
-
     case AttributeC (name, value, is_append) =>
       if (is_append) throw new Exception ("Appending of attributes is not supported yet")
-      else  ASTHashV (Map (eval (name, env, catalog).asInstanceOf[StringV] -> eval (value, env, catalog)))
+      else  ASTHashV (immutable.Map ((eval (name, env, catalog)).asInstanceOf[StringV].toPString -> eval (value, env, catalog)))
 
     case ResourceDeclC (attrs) => {
-      val listhash = attrs.map (eval (_, env, catalog)) collect ({ case x: ASTHashV => x })
-      val singlehash = listhash.reduce (_.append (_))
-      catalog.add_resource (singlehash)
-      resourceprops_to_ref (singlehash)
-      // Should return a subset of attributes to identify this resource: basically type and title
+      val params = attrs.map (eval (_, env, catalog)) map (_.asInstanceOf[ASTHashV]) reduce (_.append (_))
+      val resource = Resource (resourceASTToTitle (params), mutable.Map (params.value.toSeq:_*))
+      val resourceref = resource.toResourceRefV
+
+      resource.sources.foreach (catalog.addRelationship (_, resourceref))
+      resource.targets.foreach (catalog.addRelationship (resourceref, _))
+      catalog.addResource (resource)
+
+      resourceref
     }
 
-    case ResourceRefC (filter) => /* filter.map (eval (_, env, catalog)).collect ({ case x: ASTHashV => x}).reduce (merge_hash (_, _)) */
-      throw new Exception ("Resource references not supported yet")
-    case ResourceOverrideC (ref, attrs) => throw new Exception ("Feature not supported yet") // catalog.add_override ()
+    case ResourceRefC (filter) =>
+      ResourceRefV ((eval (filter, env, catalog)).asInstanceOf[ASTHashV].value)
+
+    case ResourceOverrideC (ref, attrs) => { 
+      val refv = eval (ref, env, catalog)
+      val params = (attrs map (eval (_, env, catalog)) map (_.asInstanceOf[ASTHashV]) reduce (_.append (_)))
+      catalog.addOverride (refv.asInstanceOf[ResourceRefV], params.value)
+      UndefV // return value, dont know what to return
+    }
 
     // TODO : Bad, convert into partial function
     case _ => UndefV
   }
 
 
-  def eval_node (name: String, ast: BlockStmtC, env: ScopeChain, catalog: Catalog) {
+  def evalNode (name: String, ast: BlockStmtC, env: ScopeChain, catalog: Catalog) {
 
     // Setup node scope
     val node_scope = PuppetScope.createNamedScope (name)
@@ -263,7 +208,7 @@ object PuppetCompile {
     ast.exprs.foreach (eval (_, env_new, catalog))
   }
 
-  def eval_toplevel (ast: BlockStmtC, catalog: Catalog): ScopeChain = {
+  def evalToplevel (ast: BlockStmtC, catalog: Catalog): ScopeChain = {
 
     PuppetScope.clear ()
 
@@ -278,8 +223,8 @@ object PuppetCompile {
 ) env.setvar (kv(0), StringV (kv(1)))       }
     })
   
-    val main_resource = new Resource ("class", 'main.toString, Map[String, Value] ())
-    catalog.add_resource (main_resource)
+    val main_resource = HostClass ('main.toString/*, Map[String, Value] ()*/)
+    // catalog.addResource (main_resource) TODO
     
     ast.exprs.foreach (eval (_, env, catalog))
     env
@@ -288,11 +233,9 @@ object PuppetCompile {
 
   def compile (ast: BlockStmtC): Either[List[(String, Catalog)], Catalog] = {
 
-    import puppet.core.eval.PuppetCompositeValueTypes._
-
     /* TODO : Handle Staging in puppet
      * Add main to catalog
-     * catalog.add_resource (Resource ("stage", 'main, topscope)
+     * catalog.addResource (Resource ("stage", 'main, topscope)
      */
 
     TypeCollection.add (HostclassC ('main.toString, List (), None, ast))
@@ -314,31 +257,47 @@ object PuppetCompile {
     {
       Left (nodes.map ({ case node => {
         val catalog = new Catalog ()
-        val env = eval_toplevel (ast, catalog)
+        val env = evalToplevel (ast, catalog)
         val nodename = (eval (node.hostname, env, catalog)).toPString
 
         // TODO: Bad Type coercion
-        eval_node (nodename, node.stmts.asInstanceOf[BlockStmtC], env, catalog)
+        evalNode (nodename, node.stmts.asInstanceOf[BlockStmtC], env, catalog)
 
-        catalog.eval_classes ()
-        catalog.eval_collections ()
-        catalog.eval_definitions ()
-        catalog.eval_overrides ()
+        evalClasses ()
+        evalDefinitions ()
+        evalOverrides (catalog)
         (nodename, catalog)
       }}))
     }
     else
     {
       val catalog = new Catalog ()
-      val env = eval_toplevel (ast, catalog)
+      val env = evalToplevel (ast, catalog)
+      // evalClasses ()
+      evalOverrides (catalog)
       /*
       TODO 
-      catalog.eval_classes ()
-      catalog.eval_collections ()
-      catalog.eval_definitions ()
+      catalog.evalDefinitions (catalog)
       */
 
       Right (catalog)
     }
+  }
+
+  def evalOverrides (catalog: Catalog): Catalog = {
+    catalog.overrides.foreach ({ case (ref, attrs) => 
+      catalog.findResourcesFromRef (ref).foreach ({ case res =>
+        attrs.foreach ({ case (k, v) => res.mergeAttr (k, v) })
+      })
+    })
+    catalog
+  }
+
+  def evalClasses () {
+    throw new Exception ("feature not supported yet")
+  }
+
+  def evalDefinitions () {
+    throw new Exception ("feature not supported yet")
   }
 }

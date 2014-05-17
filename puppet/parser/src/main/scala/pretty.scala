@@ -192,7 +192,7 @@ object PrettyPrintAST {
     
 
   private def printList[T] (lst: List[T], f: T => String, sep: String): String = {
-    (lst.map (f)) mkString sep 
+    (lst map f) mkString sep 
   }
 
   def printAST (ast: AST): String = ast match {
@@ -204,7 +204,7 @@ object PrettyPrintAST {
     case Type (v)                  => v
     case Name (v)                  => v
     case Undef                     => "undef"
-    case Variable (v)              => v
+    case Variable (v)              => "$" + v
     case HashOrArrayAccess (v, ks) => "%s[%s]".format (printAST (v), printList (ks, printAST, "][")) // Hackish
     case ASTRegex (v)              => v
     case ASTHash (kvs)             => "{%s}".format (printList[(AST, AST)] (kvs, {case (k, v) => "%s => %s".format (printAST (k), printAST (v))}, ", "))

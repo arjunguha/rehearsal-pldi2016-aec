@@ -41,7 +41,7 @@ class PuppetLexical extends StdLexical
     NAME ^^ (processName (_))
   | CLASSREF ^^ (PuppetClassRef (_))
   | REGEXTOK    ^^ (PuppetRegex (_))
-  | VARIABLETOK ^^ (PuppetVariable (_))
+  | VARIABLETOK ^^ ({ case v => PuppetVariable (v.stripPrefix ("$")) })
   | '\'' ~ stringlit ('\'') ~ '\'' ^^ { case '\'' ~ chars ~ '\'' => StringLit ("\'" +  chars + "\'") }
   |  '\"' ~ stringlit ('\"') ~ '\"' ^^ { case '\"' ~ chars ~ '\"' => StringLit ("\"" + chars + "\"") }
   |  '\'' ~> failure("unclosed string literal")
