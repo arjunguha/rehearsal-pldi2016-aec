@@ -72,9 +72,6 @@ case class ASTArrayV (value: ValueArray) extends Value {
   override def append (other: T): U = ASTArrayV (value ++ other.value)
 }
 
-/* Semantics of value is that either, it could be a simple value like bool, string, or it could be an array */
-/* if its an array then, only one of the array values has to be present
-*/
 case class ResourceRefV (lhs: Value, rhs: Value, op: puppet.core.FilterOp) extends Value {
   override def toBool = true /* any resource reference is true */
   /*
