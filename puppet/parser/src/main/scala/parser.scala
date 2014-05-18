@@ -69,6 +69,11 @@ class PuppetLexical extends StdLexical
   | '/' ~ '*' ~ failure ("unclosed comment")
   )
 
+  override def comment: Parser[Any] = (
+      rep (chrExcept (EofCh, '*')) ~ '*' ~ '/' ^^ { case _ => ' ' }
+    | rep (chrExcept (EofCh, '*')) ~ '*' ~ comment ^^ { case _ => ' ' }
+  )
+
   private def BOOLEAN: Parser[String] = ("true" | "false")
 
   private def NAME: Parser[String] = ("""((::)?[a-z0-9][-\w]*)(::[a-z0-9][-\w]*)*""".r
