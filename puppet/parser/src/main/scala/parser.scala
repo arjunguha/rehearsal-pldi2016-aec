@@ -40,7 +40,7 @@ class PuppetLexical extends StdLexical
   override def token: Parser[Token] = (
     NAME ^^ (processName (_))
   | CLASSREF ^^ (PuppetClassRef (_))
-  | REGEXTOK    ^^ (PuppetRegex (_))
+  | '/' ~ regextok ~ '/' ^^ { case '/' ~ reg ~ '/' => PuppetRegex ("/%s/".format (reg)) }
   | VARIABLETOK ^^ (PuppetVariable (_))
   | '\'' ~ stringlit ('\'') ~ '\'' ^^ { case '\'' ~ chars ~ '\'' => StringLit ("\'" +  chars + "\'") }
   |  '\"' ~ stringlit ('\"') ~ '\"' ^^ { case '\"' ~ chars ~ '\"' => StringLit ("\"" + chars + "\"") }
@@ -56,6 +56,12 @@ class PuppetLexical extends StdLexical
   )
 
   private def escape_seq: Parser[String] = '\\' ~ chrExcept (EofCh) ^^ { case '\\' ~ ch => "\\" + ch }
+
+  private def regextok: Parser[String] = (
+    rep (chrExcept ('\\', '/', EofCh, '\n')) ~ '\\' ~ '/' ~ regextok ^^ { case chars ~ '\\' ~ '/' ~ reg => (chars mkString "") + "\\/" + reg }
+  | rep (chrExcept ('\\', '/', EofCh, '\n')) ~ '\\' ~ regextok ^^ { case chars ~ '\\' ~ reg => (chars mkString "") + "\\" + reg }
+  | rep (chrExcept ('\\', '/', EofCh, '\n')) ^^ (_ mkString "")
+  )
 
   private def processName (name: String) = 
     if (reserved contains name) Keyword (name) 
@@ -82,9 +88,6 @@ class PuppetLexical extends StdLexical
   private def NUMBER:Parser[String] = """\b(?:0[xX][0-9A-Fa-f]+|0?\d+(?:\.\d+)?(?:[eE]-?\d+)?)\b""".r
 
   private def CLASSREF: Parser[String] = """((::){0,1}[A-Z][-\w]*)+""".r
-
-  // TODO : We might need to escape end of regex, See puppet lexer
-  private def REGEXTOK: Parser[String] = """/[^/\n]*/""".r
 
   private def VARIABLETOK: Parser[String] = ( 
     """\$(?:::)?(?:[-\w]+::)*[-\w]+""".r // DOLLAR_VAR_WITH_DASH
