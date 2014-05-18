@@ -239,10 +239,10 @@ object PrettyPrintAST {
       restype match {
         case Vrtvirtual => "%s <| %s |> %s".format (printAST (typ), 
                                                     (filterexpr match { case None => ""; case Some (expr) => printAST (expr) }),
-                                                    (if (attribs.length > 0) "{\n%s\n}".format (printList (attribs, printAST, "\n")) else ""))
+                                                    (if (attribs.length > 0) "{\n%s\n}".format (printList (attribs, printAST, ",\n")) else ""))
         case Vrtexported => "%s <<| %s |>> %s".format (printAST (typ), 
                                                     (filterexpr match { case None => ""; case Some (expr) => printAST (expr) }),
-                                                    (if (attribs.length > 0) "{\n%s\n}".format (printList (attribs, printAST, "\n")) else ""))
+                                                    (if (attribs.length > 0) "{\n%s\n}".format (printList (attribs, printAST, ",\n")) else ""))
       }
     }
 
