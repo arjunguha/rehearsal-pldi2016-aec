@@ -265,7 +265,7 @@ object PrettyPrintAST {
 
     case Node (hostnames, None, es) => "node %s {\n%s\n}".format (printList (hostnames, printAST, ","), printList (es, printAST, "\n"))
 
-    case Node (hostnames, Some (parent), es) => "node %s inherits %s {\n%s\n}".format (printList (hostnames, printAST, ","), parent, printList (es, printAST, "\n"))
+    case Node (hostnames, Some (parent), es) => "node %s inherits %s {\n%s\n}".format (printList (hostnames, printAST, ","), printAST (parent), printList (es, printAST, "\n"))
 
     case Definition (classname, Nil, es) => "define %s {\n%s\n}".format (classname, printList (es, printAST, "\n"))
     case Definition (classname, args, es) => "define %s (%s) {\n%s\n}".format (classname, printList[(Variable, Option[Expr])](args, { case (v, None) => printAST (v)
