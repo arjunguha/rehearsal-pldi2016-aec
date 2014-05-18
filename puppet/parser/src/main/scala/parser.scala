@@ -329,8 +329,8 @@ class PuppetParser extends StdTokenParsers
   )
 
   private lazy val parens: P[Expr] = "(" ~> expr <~ ")"
-  private lazy val uminus: P[Expr] = "-" ~> expr ^^ (UMinusExpr (_))
-  private lazy val not:    P[Expr] = "!" ~> expr ^^ (NotExpr (_))
+  private lazy val uminus: P[Expr] = "-" ~> term ^^ (UMinusExpr (_))
+  private lazy val not:    P[Expr] = "!" ~> term ^^ (NotExpr (_))
   private lazy val term:   P[Expr] = (rvalue | hash | parens | uminus | not | regex)
 
   private def binaryOp (level: Int): Parser[((Expr, Expr) => Expr)] = {
