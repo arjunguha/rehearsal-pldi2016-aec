@@ -15,7 +15,7 @@ class ParserSpec extends PropSpec with PropertyChecks with Matchers {
 
   property ("Parse -> Pretty -> Parse should be identity") {
 
-  val files = Table ("file", recursiveListFiles (new File ("./example/")).filter (_.isFile).toSeq: _*)
+  val files = Table ("file", recursiveListFiles (new File ("./example/good/")).filter (_.isFile).toSeq: _*)
 
   forAll (files) {(f: File) => {
     val content = scala.io.Source.fromFile (f).getLines () mkString "\n"
