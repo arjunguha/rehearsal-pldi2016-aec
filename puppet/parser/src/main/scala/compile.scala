@@ -70,8 +70,8 @@ object PuppetCompile {
                      evalRefOnResource (ref.lhs.asInstanceOf[ResourceRefV], resource)
   }
   
-  import scala.util.Try
 
+  import scala.util.Try
   /*
    * All integer related operations have to follow ruby semantics and its flexibility/limitations
    *
@@ -80,6 +80,7 @@ object PuppetCompile {
    * Vice Versa for right shift
    */
   private def eval_op (op: BinOp, x: Value, y: Value): Value = op match {
+
 
     case Or          => BoolV (x.toBool || y.toBool)
     case And         => BoolV (x.toBool && y.toBool)
@@ -119,111 +120,109 @@ object PuppetCompile {
   }
 
 
-  private def interpolate (str: String, env: ScopeChain): String = {
-    // TODO: interpolate!!
-    str
-  }
+  // TODO: interpolate!!
+  private def interpolate (str: String, env: ScopeChain): String = str
 
-  private def resourceASTToTitle (attrs: ASTHashV): String = {
+  private def resourceASTToTitle (attrs: ASTHashV): String =
     attrs.value ("type").toPString + ":" + attrs.value ("title").toPString
+
+  private def eval (ast: ASTCore, env: ScopeChain, catalog: Catalog, parent: HostClass): Value = {
+
+    // TODO : More precise type than 'Value
+    def evalpf (ast: ASTCore, env: ScopeChain): Value = (ast, env) match {
+
+      case (UndefC, _)            => UndefV
+      case (BoolC (value), _)     => BoolV (value)
+      case (StringC (value), env) => StringV (interpolate (value, env))
+      case (TypeC (value),  _)    => StringV (value) // XXX: Not sure
+      case (NameC (value),  _)    => StringV (value) // XXX: Not sure
+      case (RegexC (value), _)    => RegexV (new Regex (value))
+      case (ASTHashC (kvs), _)    => ASTHashV (kvs.map ({ case (k, v) => (evalpf (k, env).asInstanceOf[StringV].value,
+                                                                          evalpf (v, env))}).toMap)
+      case (ASTArrayC (arr), env) => ASTArrayV (arr.map (evalpf (_, env)).toArray) // TODO : Should have been toArray from beginning
+      case (HashOrArrayAccessC (variable, keys), env) => /* TODO: lookup variable and apply key */ throw new Exception ("HashOrArrayAccess not evaluated")
+      case (VariableC (value), env) => env.getvar (value) getOrElse UndefV
+
+      case (BlockStmtC (exprs), env) => {
+        val scope = PuppetScope.createEphemeralScope ()
+        val new_env = env.addScope (scope)
+        // Return the last evaluated value
+        exprs.map (evalpf (_, new_env)).head
+        // XXX: Maybe destroy newly created ephemeral scope
+      }
+
+      case (IfElseC (test, true_br, false_br), env) =>
+        if ((evalpf (test, env)).toBool) evalpf (true_br, env)
+        else evalpf (false_br, env)
+
+      case (BinExprC (lhs, rhs, op), env) => eval_op (op, evalpf (lhs, env), evalpf (rhs, env))
+      case (NotExprC (oper), env) => BoolV (!(evalpf (oper, env)).toBool)
+      case (FuncAppC (name, args), env) => Function ((evalpf (name, env)).toPString,  args.map (evalpf (_, env)).toSeq:_*)
+
+      // TODO : I dont think that Import should have reached this far, it should have been eliminated earlier
+      case (ImportC (imports), _) => throw new Exception ("Feature not supported yet")
+
+      case (VardefC (variable, value, append), _) => {
+        val puppet_value = evalpf (value, env)
+        env.setvar (variable.asInstanceOf[VariableC].value, puppet_value, append)
+        puppet_value
+      }
+
+      case (OrderResourceC (source, target, refresh), _) => {
+        val lhs = evalpf (source, env).asInstanceOf[ResourceRefV]
+        val rhs = evalpf (target, env).asInstanceOf[ResourceRefV]
+        catalog.addRelationship (lhs, rhs, refresh)
+        rhs
+      }
+
+      case (AttributeC (name, value, is_append), env) =>
+        if (is_append) throw new Exception ("Appending of attributes is not supported yet")
+        else  ASTHashV (immutable.Map ((evalpf (name, env)).asInstanceOf[StringV].toPString -> evalpf (value, env)))
+
+      case (ResourceDeclC (attrs), env) => {
+        val params = attrs.map (evalpf (_, env)) map (_.asInstanceOf[ASTHashV]) reduce (_.append (_))
+        val resource = Resource (resourceASTToTitle (params), mutable.Map (params.value.toSeq:_*))
+        val resourceref = resource.toResourceRefV
+
+        resource.sources.foreach (catalog.addRelationship (_, resourceref))
+        resource.targets.foreach (catalog.addRelationship (resourceref, _))
+        catalog.addResource (resource, parent)
+
+        resourceref
+      }
+
+      case (FilterExprC (lhs, rhs, op), env) => op match {
+        case FEqOp    => ResourceRefV (evalpf (lhs, env), evalpf (rhs, env), FEqOp)
+        case FNotEqOp => ResourceRefV (evalpf (lhs, env), evalpf (rhs, env), FNotEqOp)
+        case FAndOp   => ResourceRefV (evalpf (lhs, env), evalpf (rhs, env), FAndOp)
+        case FOrOp    => ResourceRefV (evalpf (lhs, env), evalpf (rhs, env), FOrOp)
+      }
+
+      case (ResourceOverrideC (ref, attrs), env) => { 
+        val refv = evalpf (ref, env)
+        val params = (attrs map (evalpf (_, env)) map (_.asInstanceOf[ASTHashV]) reduce (_.append (_)))
+        catalog.addOverride (refv.asInstanceOf[ResourceRefV], params.value)
+        UndefV // return value, dont know what to return
+      }
+      
+      // TODO : Partial function
+      case _ => UndefV
+    }
+
+    evalpf (ast, env)
   }
+  
 
-  // TODO : Catalog is fixed, can be curried away
-  // TODO : More precise type than 'Value'
-  private def eval (ast: ASTCore, env: ScopeChain, catalog: Catalog): Value = ast match {
-
-    case UndefC          => UndefV
-    case BoolC (value)   => BoolV (value)
-    case StringC (value) => StringV (interpolate (value, env))
-    case TypeC (value)   => StringV (value) // XXX: Not sure
-    case NameC (value)   => StringV (value) // XXX: Not sure
-    case RegexC (value)  => RegexV (new Regex (value))
-    case ASTHashC (kvs)  => ASTHashV (kvs.map ({ case (k, v) => (eval (k, env, catalog).asInstanceOf[StringV].value,
-                                                                 eval (v, env, catalog))}).toMap)
-    case ASTArrayC (arr) => ASTArrayV (arr.map (eval (_, env, catalog)).toArray)
-
-    case HashOrArrayAccessC (variable, keys) => /* TODO: lookup variable and apply key */ throw new Exception ("HashOrArrayAccess not evaluated")
-    case VariableC (value) => env.getvar (value) getOrElse UndefV
-
-    case BlockStmtC (exprs) => {
-
-      val scope = PuppetScope.createEphemeralScope ()
-      val new_env = env.addScope (scope)
-      // Return the last evaluated value
-      exprs.map (eval (_, new_env, catalog)).head
-      // XXX: Maybe destroy newly created ephemeral scope
-    }
-
-    case IfElseC (test, true_br, false_br) => {
-      if ((eval (test, env, catalog)).toBool) eval (true_br, env, catalog)
-      else eval (false_br, env, catalog)
-    }
-
-    case BinExprC (lhs, rhs, op) => eval_op (op, eval (lhs, env, catalog), eval (rhs, env, catalog))
-    case NotExprC (oper) => BoolV (!(eval (oper, env, catalog)).toBool)
-    case FuncAppC (name, args) => Function ((eval (name, env, catalog)).toPString,  args.map (eval (_, env, catalog)).toSeq:_*)
-
-    // TODO : I dont think that Import should have reached this far, it should have been eliminated earlier
-    case ImportC (imports) => throw new Exception ("Feature not supported yet")
-
-    case VardefC (variable, value, append) => {
-      val puppet_value = eval (value, env, catalog)
-      env.setvar (variable.asInstanceOf[VariableC].value, puppet_value, append)
-      puppet_value
-    }
-
-    case OrderResourceC (source, target, refresh) => {
-      val lhs = eval (source, env, catalog).asInstanceOf[ResourceRefV]
-      val rhs = eval (target, env, catalog).asInstanceOf[ResourceRefV]
-      catalog.addRelationship (lhs, rhs, refresh)
-      rhs
-    }
-
-    case AttributeC (name, value, is_append) =>
-      if (is_append) throw new Exception ("Appending of attributes is not supported yet")
-      else  ASTHashV (immutable.Map ((eval (name, env, catalog)).asInstanceOf[StringV].toPString -> eval (value, env, catalog)))
-
-    case ResourceDeclC (attrs) => {
-      val params = attrs.map (eval (_, env, catalog)) map (_.asInstanceOf[ASTHashV]) reduce (_.append (_))
-      val resource = Resource (resourceASTToTitle (params), mutable.Map (params.value.toSeq:_*))
-      val resourceref = resource.toResourceRefV
-
-      resource.sources.foreach (catalog.addRelationship (_, resourceref))
-      resource.targets.foreach (catalog.addRelationship (resourceref, _))
-      catalog.addResource (resource)
-
-      resourceref
-    }
-
-    case FilterExprC (lhs, rhs, op) => op match {
-      case FEqOp    => ResourceRefV (eval (lhs, env, catalog), eval (rhs, env, catalog), FEqOp)
-      case FNotEqOp => ResourceRefV (eval (lhs, env, catalog), eval (rhs, env, catalog), FNotEqOp)
-      case FAndOp   => ResourceRefV (eval (lhs, env, catalog), eval (rhs, env, catalog), FAndOp)
-      case FOrOp    => ResourceRefV (eval (lhs, env, catalog), eval (rhs, env, catalog), FOrOp)
-    }
-
-    case ResourceOverrideC (ref, attrs) => { 
-      val refv = eval (ref, env, catalog)
-      val params = (attrs map (eval (_, env, catalog)) map (_.asInstanceOf[ASTHashV]) reduce (_.append (_)))
-      catalog.addOverride (refv.asInstanceOf[ResourceRefV], params.value)
-      UndefV // return value, dont know what to return
-    }
-
-    // TODO : Bad, convert into partial function
-    case _ => UndefV
-  }
-
-
-  def evalNode (name: String, ast: BlockStmtC, env: ScopeChain, catalog: Catalog) {
+  def evalNode (name: String, block: ASTCore, env: ScopeChain, catalog: Catalog, parent: HostClass) {
 
     // Setup node scope
     val node_scope = PuppetScope.createNamedScope (name)
     val env_new = env.addScope (node_scope)
 
-    ast.exprs.foreach (eval (_, env_new, catalog))
+    eval (block, env_new, catalog, parent)
   }
 
-  def evalToplevel (ast: BlockStmtC, catalog: Catalog): ScopeChain = {
+  def evalToplevel (block: ASTCore, catalog: Catalog, parent: HostClass): ScopeChain = {
 
     PuppetScope.clear ()
 
@@ -237,11 +236,8 @@ object PuppetCompile {
         if (kv.length > 1 // TODO : Hack to get past the failing smoke test for now
 ) env.setvar (kv(0), StringV (kv(1)))       }
     })
-  
-    val main_resource = HostClass ('main.toString/*, Map[String, Value] ()*/)
-    // catalog.addResource (main_resource) TODO
     
-    ast.exprs.foreach (eval (_, env, catalog))
+    eval (block, env, catalog, parent)
     env
   }
 
@@ -254,6 +250,8 @@ object PuppetCompile {
      */
 
     TypeCollection.add (HostclassC ('main.toString, List (), None, ast))
+
+
 
     def f (s: ASTCore): Unit = s match {
       case hc:   HostclassC => TypeCollection.add (hc); hc.stmts.asInstanceOf[BlockStmtC].exprs.foreach (f)
@@ -272,11 +270,15 @@ object PuppetCompile {
     {
       Left (nodes.map ({ case node => {
         val catalog = new Catalog ()
-        val env = evalToplevel (ast, catalog)
-        val nodename = (eval (node.hostname, env, catalog)).toPString
+
+        val main_resource = HostClass ('main.toString/*, Map[String, Value] ()*/)
+        // catalog.addResource (main_resource) TODO
+
+        val env = evalToplevel (ast, catalog, main_resource)
+        val nodename = (eval (node.hostname, env, catalog, main_resource)).toPString
 
         // TODO: Bad Type coercion
-        evalNode (nodename, node.stmts.asInstanceOf[BlockStmtC], env, catalog)
+        evalNode (nodename, node.stmts.asInstanceOf[BlockStmtC], env, catalog, main_resource)
 
         evalClasses ()
         evalDefinitions ()
@@ -287,7 +289,11 @@ object PuppetCompile {
     else
     {
       val catalog = new Catalog ()
-      val env = evalToplevel (ast, catalog)
+
+      val main_resource = HostClass ('main.toString/*, Map[String, Value] ()*/)
+      // catalog.addResource (main_resource) TODO
+
+      val env = evalToplevel (ast, catalog, main_resource)
       // evalClasses ()
       evalOverrides (catalog)
       /*
