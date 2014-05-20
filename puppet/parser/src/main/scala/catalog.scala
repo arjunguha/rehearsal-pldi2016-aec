@@ -21,6 +21,9 @@ class Catalog {
   var res_orderings = List[(ResourceRefV, ResourceRefV)] ()
   var class_orderings = List [(Resource, HostClass)] ()
 
+  type Params = List[(String, Value)]
+  var classes = List [(String, Params)] ()
+
   private def resourceExists (res: Resource): Boolean = {
     resources.exists (_.title == res.title)
   }
@@ -32,6 +35,12 @@ class Catalog {
       class_orderings = (res, parent) :: class_orderings
       nodes = res :: (parent :: nodes)
     }
+  }
+
+  // TODO : Params
+  def addClass (name: String, params: Params) {
+    // Add only if does not exist
+    if (!(classes exists (_._1 == name))) classes = (name, params) :: classes
   }
 
   def addOverride (filter: Filter, attrs: Attrs) {
