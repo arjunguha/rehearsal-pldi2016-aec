@@ -32,6 +32,6 @@ object PuppetDriver {
       defaultEdgeDescriptor = Di.descriptor ()
     )
 
-    // println (g.toJson (quickJson))
+    println (g.toJson (quickJson))
   }
 }

@@ -165,7 +165,7 @@ class ScopeChain (val scopes: List[PuppetScope.ScopeRef] = List[PuppetScope.Scop
     else {
 
       if (PuppetScope.getvar (cur_scope, varfqname).isSuccess)
-        throw new Exception ("Cannot reassign variable")
+        throw new Exception ("Cannot reassign variable \"%s\" in scope %s".format (varfqname, cur_scope))
 
       PuppetScope.setvar (cur_scope, varfqname, value)
     }

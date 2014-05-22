@@ -11,7 +11,8 @@ sealed abstract trait Value {
   def toInt: Int        = throw new Exception ("Incompatible type for conversion to Int")
   def toDouble: Double  = throw new Exception ("Incompatible type for conversion to Double")
   def toPString: String = throw new Exception ("Incompatible type for conversion to String")
-
+  def isEqual (other: Value): Boolean = false
+   
   type T <: Value
   type U <: Value
   def append (other: T): U = throw new Exception ("Incompatible type for appending")
@@ -25,6 +26,8 @@ case object UndefV extends Value {
 case class BoolV (value: Boolean) extends Value {
   override def toBool = value
   override def toPString = value.toString
+  override def isEqual (other: Value): Boolean =
+    other.isInstanceOf[BoolV] && other.asInstanceOf[BoolV].value == value
 }
 
 case class StringV (value: String) extends Value {
@@ -34,6 +37,10 @@ case class StringV (value: String) extends Value {
   // First try to parse Octal, if it fails then hex then decimal
   override def toInt = value.toInt // TODO : Add support for hex and octal
   override def toPString = value
+  override def isEqual (other: Value): Boolean =
+    // this is a case insensitive equality
+    other.isInstanceOf[StringV] && 
+    other.asInstanceOf[StringV].value.toLowerCase == value.toLowerCase
 
   type T = Value
   type U = StringV
@@ -57,6 +64,12 @@ case class ASTHashV (value: Map[String, Value]) extends Value {
   override def toBool = true // Even empty hashes are coerced to true
   override def toPString = 
     value.foldLeft ("") ({ case (a, e) => a + e._1 + e._2.toPString })
+  override def isEqual (other: Value): Boolean =
+    other.isInstanceOf[ASTHashV] &&
+    other.asInstanceOf[ASTHashV].value.size == value.size &&
+    other.asInstanceOf[ASTHashV].value.forall ({ case (k, v) => 
+      (value contains k) && ((value (k)).isEqual (v))
+    })
 
   type T = ASTHashV
   type U = ASTHashV
@@ -66,6 +79,11 @@ case class ASTHashV (value: Map[String, Value]) extends Value {
 case class ASTArrayV (value: ValueArray) extends Value {
   override def toBool = true // Even empty arrays are coerced to true
   override def toPString = value.foldLeft ("") (_ + _.toPString)
+  override def isEqual (other: Value): Boolean = 
+    other.isInstanceOf[ASTArrayV] &&
+    other.asInstanceOf[ASTArrayV].value.size == value.size &&
+    ((for (i <- value.indices 
+           if ! value (i).isEqual (other.asInstanceOf[ASTArrayV].value (i))) yield false).length  == 0)
 
   type T = ASTArrayV
   type U = ASTArrayV

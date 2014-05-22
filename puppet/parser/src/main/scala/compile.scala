@@ -88,8 +88,8 @@ object PuppetCompile {
     case GreaterEq   => BoolV (x.toDouble >= y.toDouble)
     case LessThan    => BoolV (x.toDouble <  y.toDouble)
     case LessEq      => BoolV (x.toDouble <= y.toDouble)
-    case NotEqual    => throw new Exception ("Not supported yet") // TODO
-    case Equal       => throw new Exception ("Not supported yet") // TODO
+    case NotEqual    => BoolV (! x.isEqual (y))
+    case Equal       => BoolV (  x.isEqual (y))
 
     case LShift => StringV ((if (y.toInt > 0) x.toInt << y.toInt else x.toInt >> y.toInt).toString)
     case RShift => StringV ((if (y.toInt > 0) x.toInt >> y.toInt else x.toInt << y.toInt).toString)
@@ -112,9 +112,9 @@ object PuppetCompile {
     case Match   => BoolV (!(y.asInstanceOf[RegexV].value findFirstIn x.toPString).isEmpty)
     case NoMatch => BoolV ( (y.asInstanceOf[RegexV].value findFirstIn x.toPString).isEmpty) // XXX : Should have been desugared
     case In      => y match {
-      case StringV   (v) => BoolV (v contains x.toPString)
-      case ASTArrayV (v) => BoolV (v contains StringV (x.toPString))
-      case ASTHashV  (v) => BoolV (v contains x.toPString)
+      case StringV   (v) => BoolV (v contains x.asInstanceOf[StringV].value)
+      case ASTArrayV (v) => BoolV (v contains StringV (x.asInstanceOf[StringV].value))
+      case ASTHashV  (v) => BoolV (v contains x.asInstanceOf[StringV].value)
       case _ => throw new Exception ("\"In\" Operator not supported for types other than String, Array or Hash")
     }
   }
@@ -168,7 +168,7 @@ object PuppetCompile {
 
       case (BinExprC (lhs, rhs, op), env) => eval_op (op, evalpf (lhs, env), evalpf (rhs, env))
       case (NotExprC (oper), env) => BoolV (!(evalpf (oper, env)).toBool)
-      case (FuncAppC (name, args), env) => Function ((evalpf (name, env)).toPString, parent, args.map (evalpf (_, env)).toSeq:_*)
+      case (FuncAppC (name, args), env) => Function ((evalpf (name, env)).toPString, catalog, parent, args.map (evalpf (_, env)).toSeq:_*)
 
       // TODO : I dont think that Import should have reached this far, it should have been eliminated earlier
       case (ImportC (imports), _) => throw new Exception ("Feature not supported yet")
@@ -420,7 +420,9 @@ object PuppetCompile {
 
   def evalClasses (catalog: Catalog, parent: HostClass): Catalog = {
     // Evaluating a class can generate more classes
-    catalog.classes.foreach ({ case klass => evalClass (catalog, TypeCollection.getClass (klass._1).get, klass._2, parent) })
+    catalog.classes.foreach ({ case klass => 
+      evalClass (catalog,
+                 TypeCollection.getClass (klass._1) getOrElse (throw new Exception ("\"%s\" class not found in catalog".format (klass._1))), klass._2, parent) })
     catalog
   }
 
