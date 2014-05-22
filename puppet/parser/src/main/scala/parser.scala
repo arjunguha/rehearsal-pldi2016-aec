@@ -11,7 +11,7 @@ import scala.util.parsing.input.CharArrayReader.EofCh
 trait PuppetTokens extends StdTokens {
 
   case class PuppetBool (chars: String) extends Token {
-    override def toString = "'"+chars+"'"
+    override def toString = "'"+chars+""
   }
 
   case class PuppetName (chars: String) extends Token {
@@ -29,37 +29,61 @@ trait PuppetTokens extends StdTokens {
   case class PuppetVariable (chars: String) extends Token {
     override def toString = chars
   }
+
+  case class PuppetInterpolation (chars: String) extends Token {
+    override def toString = chars
+  }
 }
 
 class PuppetLexical extends StdLexical 
                     with RegexParsers
                     with PuppetTokens {
 
+  // XXX: imperative
   override type Elem = Char
 
   override def token: Parser[Token] = (
     NAME ^^ (processName (_))
   | CLASSREF ^^ (PuppetClassRef (_))
-  | '/' ~ regextok ~ '/' ^^ { case '/' ~ reg ~ '/' => PuppetRegex ("/%s/".format (reg)) }
+  | '/' ~ regexTok ~ '/' ^^ { case '/' ~ reg ~ '/' => PuppetRegex ("/%s/".format (reg)) }
   | VARIABLETOK ^^ (PuppetVariable (_))
-  | '\'' ~ stringlit ('\'') ~ '\'' ^^ { case '\'' ~ chars ~ '\'' => StringLit ("\'" +  chars + "\'") }
-  |  '\"' ~ stringlit ('\"') ~ '\"' ^^ { case '\"' ~ chars ~ '\"' => StringLit ("\"" + chars + "\"") }
+  | '\'' ~> stringLit ('\'') <~ '\'' ^^ { case str => StringLit ("\'" + str + "\'") }
+  | '\"' ~> interpolation <~ '\"' ^^ { case str => PuppetInterpolation ("\"" + str + "\"") }
+  |  '\"' ~> stringLit ('\"') <~ '\"' ^^ { case str => StringLit ("\"" + str + "\"") }
   |  '\'' ~> failure("unclosed string literal")
   |  '\"' ~> failure("unclosed string literal")
   |  delim
   |  failure("illegal character")
   )
 
-  private def stringlit (quote_char: Char): Parser[String] = (
-    rep (chrExcept ('\\', quote_char))  ~ escape_seq ~ stringlit (quote_char) ^^ { case chars ~ es ~ strlit => (chars mkString "") + es + strlit }
-  | rep (chrExcept ('\\', quote_char, EofCh)) ^^ (_ mkString "")
+  private def interpolation: Parser[String] = 
+    (partInterpolation).+ ~ postInterpolation ^^ {
+      case pl ~ postInterp => pl.foldLeft ("") ({ case (acc, elem) => acc + elem }) + postInterp
+    }
+
+  private def partInterpolation: Parser[String] = 
+    preInterpolation ~ inInterpolation ^^ { case x ~ y => x + "${" + y + "}" }
+
+  private def preInterpolation: Parser[String] = (
+    rep (chrExcept ('\\', '\"')) ~ escapeSeq ~ preInterpolation ^^ { case chars ~ es ~ interpstr => (chars mkString "") + es + interpstr }
+  | rep (chrExcept ('\"', '$', EofCh)) <~ '$' <~ '{' ^^ (_ mkString "")
   )
 
-  private def escape_seq: Parser[String] = '\\' ~ chrExcept (EofCh) ^^ { case '\\' ~ ch => "\\" + ch }
+  private def inInterpolation: Parser[String] =
+    rep (chrExcept ('}', EofCh)) <~ '}' ^^ (_ mkString "")
 
-  private def regextok: Parser[String] = (
-    rep (chrExcept ('\\', '/', EofCh, '\n')) ~ '\\' ~ '/' ~ regextok ^^ { case chars ~ '\\' ~ '/' ~ reg => (chars mkString "") + "\\/" + reg }
-  | rep (chrExcept ('\\', '/', EofCh, '\n')) ~ '\\' ~ regextok ^^ { case chars ~ '\\' ~ reg => (chars mkString "") + "\\" + reg }
+  private def postInterpolation: Parser[String] = stringLit ('\"')
+
+  private def stringLit (quote_char: Char): Parser[String] = (
+    rep (chrExcept ('\\', quote_char))  ~ escapeSeq ~ stringLit (quote_char) ^^ { case chars ~ es ~ strlit => (chars mkString "") + es + strlit }
+  | rep (chrExcept (quote_char, EofCh)) ^^ (_ mkString "")
+  )
+
+  private def escapeSeq: Parser[String] = '\\' ~ chrExcept (EofCh) ^^ { case '\\' ~ ch => "\\" + ch }
+
+  private def regexTok: Parser[String] = (
+    rep (chrExcept ('\\', '/', EofCh, '\n')) ~ '\\' ~ '/' ~ regexTok ^^ { case chars ~ '\\' ~ '/' ~ reg => (chars mkString "") + "\\/" + reg }
+  | rep (chrExcept ('\\', '/', EofCh, '\n')) ~ '\\' ~ regexTok ^^ { case chars ~ '\\' ~ reg => (chars mkString "") + "\\" + reg }
   | rep (chrExcept ('\\', '/', EofCh, '\n')) ^^ (_ mkString "")
   )
 
@@ -93,8 +117,6 @@ class PuppetLexical extends StdLexical
     """\$(?:::)?(?:[-\w]+::)*[-\w]+""".r // DOLLAR_VAR_WITH_DASH
   | """\$(::)?(\w+::)*\w+""".r           // DOLLAR_VAR
   )
-
-  // TODO : DQPRE, DQMID, DQPOST or String Interpolation
 }
 
 class PuppetParser extends StdTokenParsers
@@ -149,10 +171,10 @@ class PuppetParser extends StdTokenParsers
       case n ~ Some (es) => Function (n, es, Ftstmt)
       case n ~ None => Function (n, List[Expr] (), Ftstmt)
     }
-  ||| name ~ ("(" ~> expressions <~ ",".? <~ ")") ^^ {
+  | name ~ ("(" ~> expressions <~ ",".? <~ ")") ^^ {
         case n ~ es => Function (n, es, Ftstmt)
       }
-  ||| name ~ rep1sep (rvalue, ",") ^^ {
+  | name ~ rep1sep (rvalue, ",") ^^ {
       case n ~ rvs => Function (n, rvs, Ftstmt)
     }
   )
@@ -273,31 +295,15 @@ class PuppetParser extends StdTokenParsers
   lazy val anyparams: P[List[Attribute]] = repsep ((param | addparam), ",")
 
   lazy val funcrvalue: P[Function] = 
-      name ~ ("(" ~> expressions.? <~ ")") ^^ {
+      name ~ ("(" ~> (expressions.?) <~ ")") ^^ {
       case name ~ Some (es) => Function (name, es,           Ftrval)
       case name ~ None      => Function (name, List[Expr] (), Ftrval)
     }
 
-  lazy val quotedtext: P[ASTString] = STRING ^^ (ASTString (_))
-  /*
-  | DQPRE ~ dqrval ^^ {
-      case x ~ y => Concat (x, y)
-    }
-  */
-
-  /*
-  lazy val dqrval: P[List[AST]] =
-    expr ~ dqtail ^^ {
-      case e ~ y => e :: y
-    }
-
-  lazy val dqtail: P[List[AST]] = (
-    DQPOST ^^ (List[ASTString] (ASTString (_)))
-  | DQMID ~ dqrval ^^ {
-      case x ~ y => x :: y
-    }
+  lazy val quotedtext: P[ASTString] = (
+    STRING ^^ (ASTString (_))
+  | INTERPOLATION ^^ (ASTString (_))
   )
-  */
 
   lazy val boolean: P[ASTBool] =
     BOOLEAN ^^ {
@@ -333,7 +339,7 @@ class PuppetParser extends StdTokenParsers
 
   lazy val elsestmt: P[List[Statement]] = (
     "elsif" ~> ifstmt ^^ { case ifexp => List (ifexp) }
-  ||| "else" ~> "{" ~> stmt.* <~ "}"
+  | "else" ~> "{" ~> stmt.* <~ "}"
   )
 
   private lazy val parens: P[Expr] = "(" ~> expr <~ ")"
@@ -520,7 +526,8 @@ class PuppetParser extends StdTokenParsers
     }
   )
 
-  import lexical.{PuppetBool, PuppetName, PuppetClassRef, PuppetRegex, PuppetVariable}
+  import lexical.{PuppetBool, PuppetName, PuppetClassRef, PuppetRegex,
+                  PuppetVariable, PuppetInterpolation}
 
   def STRING: Parser[String] = stringLit
 
@@ -538,6 +545,9 @@ class PuppetParser extends StdTokenParsers
 
   def VARIABLETOK: Parser[String] =
     elem ("classref", _.isInstanceOf[PuppetVariable]) ^^ (_.chars)
+
+  def INTERPOLATION: Parser[String] =
+    elem ("interpolation", _.isInstanceOf[PuppetInterpolation]) ^^ (_.chars)
 
   def parseAll (s: String) = {
     val tokens  = new lexical.Scanner (s)
