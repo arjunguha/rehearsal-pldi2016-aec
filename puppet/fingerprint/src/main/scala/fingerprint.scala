@@ -12,22 +12,15 @@ object FingerPrint {
 
   val aufs_root = "/var/lib/docker/aufs/diff"
 
-  private def filesInPath (f: File): Array[File] = {
-    val these = f.listFiles
-    these ++ these.filter(_.isDirectory).flatMap(filesInPath)
-  }
-
   private def toLocalPath(dockerPath: String, containerId: String): String = 
     "%s/%s%s".format(aufs_root, containerId, dockerPath)
 
-  private def digestfile (f: String): String = {
+  private def digestFile (f: String): String = {
     val fis = new FileInputStream(new File(f));
     val md5 = codec.digest.DigestUtils.md5Hex(fis);
     fis.close()
     md5
   }
-
-  import scala.collection.{mutable => mut}
 
   /* returns a map of files created/modified by command and 
    * their corresponding md5 sums
@@ -41,16 +34,14 @@ object FingerPrint {
     val containerRef = Await.result(docker.createContainer(cfg), Duration.Inf)
     Await.result(docker.startContainer(containerRef.Id), Duration.Inf)
     Await.result(docker.waitContainer(containerRef.Id), Duration.Inf)
-    // Container has stopped running now, check this might not be true in case of services
-    val fschanges = Await.result(docker.containerFileSystemChanges(containerRef.Id), Duration.Inf)
-    val files = fschanges.map({ case ch if ch.Kind == 0 || ch.Kind == 1 => ch.Path})
-                         .filterNot(_.startsWith("/dev/"))
-                         .filterNot({case f => (new File(toLocalPath(f, containerRef.Id))).isDirectory})
-    // files.foreach(println)
-    val fp = mut.Map[String, String]()
-    files.map({case f => fp += (f -> digestfile(toLocalPath(f,containerRef.Id)))})
+    // Container has stopped running now, check. This might not be true in case of services
+    val fp = Await.result(docker.containerFileSystemChanges(containerRef.Id), Duration.Inf)
+             .map({case ch if ch.Kind == 0 || ch.Kind == 1 => ch.Path}) // Filter only file creation and change events
+             .filterNot(_.startsWith("/dev/")) // hack for excluding immediately apparent special files
+             .filterNot({case f => (new File(toLocalPath(f, containerRef.Id))).isDirectory}) // filter out directories
+             .map({case f => (f, digestFile(toLocalPath(f,containerRef.Id)))})
+             .toMap
     Await.result(docker.deleteContainer(containerRef.Id), Duration.Inf)
-    // Check that it should not have invalid entries and duplicates
-    fp.toMap // Immutable
+    fp
   }
 }
