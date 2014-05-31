@@ -10,27 +10,30 @@ import ExecutionContext.Implicits.global
 
 object FingerPrint {
 
-  val docker_root = "/var/lib/docker/aufs/diff/"
+  val aufs_root = "/var/lib/docker/aufs/diff"
 
-  import scala.collection.{mutable => mut}
-
-  private def recursiveListFiles (f: File): Array[File] = {
+  private def filesInPath (f: File): Array[File] = {
     val these = f.listFiles
-    these ++ these.filter (_.isDirectory).flatMap (recursiveListFiles)
+    these ++ these.filter(_.isDirectory).flatMap(filesInPath)
   }
 
-  private def digestfile (file: File): String = {
-    val fis = new FileInputStream(file);
+  private def toLocalPath(dockerPath: String, containerId: String): String = 
+    "%s/%s%s".format(aufs_root, containerId, dockerPath)
+
+  private def digestfile (f: String): String = {
+    val fis = new FileInputStream(new File(f));
     val md5 = codec.digest.DigestUtils.md5Hex(fis);
     fis.close()
     md5
   }
 
+  import scala.collection.{mutable => mut}
+
   /* returns a map of files created/modified by command and 
    * their corresponding md5 sums
    */
   def apply(docker_url: String,
-            cmd: String): mut.Map[String, String] = {
+            cmd: String): Map[String, String] = {
     val docker = new Docker(docker_url)
     val cfg = ContainerConfig("ubuntu", "", "", 0, 0, false, true, true, false, false,
                               List[String](), "", List[String](), cmd.split(' ').toList,
@@ -39,12 +42,15 @@ object FingerPrint {
     Await.result(docker.startContainer(containerRef.Id), Duration.Inf)
     Await.result(docker.waitContainer(containerRef.Id), Duration.Inf)
     // Container has stopped running now, check this might not be true in case of services
-    // val fschanges = Await.result(docker.containerFileSystemChanges(containerRef.Id), Duration.Inf)
-    // val files = filterFiles(fschanges.filter({ case ch if ch.Kind == 0 || ch.Kind == 1 => ch.Path))
-    val files = recursiveListFiles (new File (docker_root + "/" + containerRef.Id)).filter(_.isFile)
+    val fschanges = Await.result(docker.containerFileSystemChanges(containerRef.Id), Duration.Inf)
+    val files = fschanges.map({ case ch if ch.Kind == 0 || ch.Kind == 1 => ch.Path})
+                         .filterNot(_.startsWith("/dev/"))
+                         .filterNot({case f => (new File(toLocalPath(f, containerRef.Id))).isDirectory})
+    // files.foreach(println)
     val fp = mut.Map[String, String]()
-    files.map({case f => fp += (f.getPath -> digestfile(f))})
+    files.map({case f => fp += (f -> digestfile(toLocalPath(f,containerRef.Id)))})
     Await.result(docker.deleteContainer(containerRef.Id), Duration.Inf)
-    fp
+    // Check that it should not have invalid entries and duplicates
+    fp.toMap // Immutable
   }
 }
