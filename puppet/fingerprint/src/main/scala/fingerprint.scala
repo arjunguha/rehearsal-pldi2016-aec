@@ -38,7 +38,10 @@ object FingerPrint {
     val fp = Await.result(docker.containerFileSystemChanges(containerRef.Id), Duration.Inf)
              .map({case ch if ch.Kind == 0 || ch.Kind == 1 => ch.Path}) // Filter only file creation and change events
              .filterNot(_.startsWith("/dev/")) // hack for excluding immediately apparent special files
-             .filterNot({case f => (new File(toLocalPath(f, containerRef.Id))).isDirectory}) // filter out directories
+             .filterNot({case f => {
+                val file = new File(toLocalPath(f, containerRef.Id))
+                !file.exists || file.isDirectory
+              }})
              .map({case f => (f, digestFile(toLocalPath(f,containerRef.Id)))})
              .toMap
     Await.result(docker.deleteContainer(containerRef.Id), Duration.Inf)
