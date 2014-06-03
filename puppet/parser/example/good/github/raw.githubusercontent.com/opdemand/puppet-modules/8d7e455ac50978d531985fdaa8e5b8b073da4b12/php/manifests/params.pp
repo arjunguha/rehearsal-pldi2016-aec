@@ -1,0 +1,4 @@
+class php::params (
+  $packages)
+{
+} 
