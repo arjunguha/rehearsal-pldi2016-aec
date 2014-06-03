@@ -39,22 +39,33 @@ class PuppetLexical extends StdLexical
                     with RegexParsers
                     with PuppetTokens {
 
-  // XXX: imperative
   override type Elem = Char
 
-  override def token: Parser[Token] = (
-    NAME ^^ (processName (_))
-  | CLASSREF ^^ (PuppetClassRef (_))
-  | '/' ~ regexTok ~ '/' ^^ { case '/' ~ reg ~ '/' => PuppetRegex ("/%s/".format (reg)) }
-  | VARIABLETOK ^^ (PuppetVariable (_))
-  | '\'' ~> stringLit ('\'') <~ '\'' ^^ { case str => StringLit ("\'" + str + "\'") }
-  | '\"' ~> interpolation <~ '\"' ^^ { case str => PuppetInterpolation ("\"" + str + "\"") }
-  |  '\"' ~> stringLit ('\"') <~ '\"' ^^ { case str => StringLit ("\"" + str + "\"") }
-  |  '\'' ~> failure("unclosed string literal")
-  |  '\"' ~> failure("unclosed string literal")
-  |  delim
-  |  failure("illegal character")
-  )
+  var ctx: Token = EOF
+  val regexCtx = List(Keyword("node"), Keyword("{"), Keyword("}"), Keyword("=~"), Keyword("!~"), Keyword(","))
+
+  private def matchCtx(ctx: Token, tests: List[Token]): Boolean =
+    tests.exists(_ == ctx)
+
+  override def token(): Parser[Token] = Parser ((in: Input) => {
+    val res = (
+      NAME ^^ (processName (_))
+    | CLASSREF ^^ (PuppetClassRef (_))
+    // Regex can only appear in certain contexts
+    | '/' ~ regexTok(ctx) ~ '/' ^^ { case '/' ~ reg ~ '/' => PuppetRegex ("/%s/".format (reg)) }
+    | VARIABLETOK ^^ (PuppetVariable (_))
+    | '\'' ~> stringLit ('\'') <~ '\'' ^^ { case str => StringLit ("\'" + str + "\'") }
+    | '\"' ~> interpolation <~ '\"' ^^ { case str => PuppetInterpolation ("\"" + str + "\"") }
+    | '\"' ~> stringLit ('\"') <~ '\"' ^^ { case str => StringLit ("\"" + str + "\"") }
+    | '\'' ~> failure("unclosed string literal")
+    | '\"' ~> failure("unclosed string literal")
+    | delim
+    | failure("illegal character")
+    )(in)
+    if (res.successful)
+      ctx = res.get
+    res
+  })
 
   private def interpolation: Parser[String] = 
     (partInterpolation).+ ~ postInterpolation ^^ {
@@ -81,11 +92,14 @@ class PuppetLexical extends StdLexical
 
   private def escapeSeq: Parser[String] = '\\' ~ chrExcept (EofCh) ^^ { case '\\' ~ ch => "\\" + ch }
 
-  private def regexTok: Parser[String] = (
-    rep (chrExcept ('\\', '/', EofCh, '\n')) ~ '\\' ~ '/' ~ regexTok ^^ { case chars ~ '\\' ~ '/' ~ reg => (chars mkString "") + "\\/" + reg }
-  | rep (chrExcept ('\\', '/', EofCh, '\n')) ~ '\\' ~ regexTok ^^ { case chars ~ '\\' ~ reg => (chars mkString "") + "\\" + reg }
-  | rep (chrExcept ('\\', '/', EofCh, '\n')) ^^ (_ mkString "")
-  )
+  private def regexTok (ctx: Token): Parser[String] = 
+    if (matchCtx(ctx, regexCtx))
+      (
+        rep (chrExcept ('\\', '/', EofCh, '\n')) ~ '\\' ~ '/' ~ regexTok(ctx) ^^ { case chars ~ '\\' ~ '/' ~ reg => (chars mkString "") + "\\/" + reg }
+      | rep (chrExcept ('\\', '/', EofCh, '\n')) ~ '\\' ~ regexTok(ctx) ^^ { case chars ~ '\\' ~ reg => (chars mkString "") + "\\" + reg }
+      | rep (chrExcept ('\\', '/', EofCh, '\n')) ^^ (_ mkString "")
+      )
+   else failure("context not matching")
 
   private def processName (name: String) = 
     if (reserved contains name) Keyword (name) 
@@ -146,9 +160,9 @@ class PuppetParser extends StdTokenParsers
   lazy val decl: P[TopLevelConstruct] = (definition | hostclass | nodedef)
 
   lazy val stmt: P[Statement] = (
-    resource ||| virtualresource ||| collection ||| assignment ||| case_stmt ||| 
-    ifstmt_begin ||| unless_stmt ||| import_stmt ||| fstmt ||| resourceoverride |||
-    append ||| relationship
+    (resource ||| relationship ||| resourceoverride ) | virtualresource |
+    collection | assignment | case_stmt | ifstmt_begin | unless_stmt | 
+    import_stmt | fstmt | append
   )
 
   lazy val relationship: P[RelationExpr] = 
@@ -181,9 +195,10 @@ class PuppetParser extends StdTokenParsers
 
   lazy val expressions: P[List[Expr]] = repsep (expr, ("," | "=>"))
 
-  lazy val rvalue: P[RValue] =
-    quotedtext ||| name ||| asttype ||| boolean ||| selector ||| variable ||| 
-    array ||| hasharrayaccesses ||| resourceref ||| funcrvalue ||| undef
+  lazy val rvalue: P[RValue] = (
+    selector |  array | hasharrayaccesses | resourceref | funcrvalue |
+    undef | variable | quotedtext | boolean | name | asttype
+  )
     
   lazy val resource = ( resource_from_instance | resource_from_defaults )
 
@@ -205,21 +220,21 @@ class PuppetParser extends StdTokenParsers
 
   lazy val virtualresource: P[VirtualResource] = (
     "@" ~> resource_from_instance ^^ (VirtualResource (_, Vrtvirtual))
-  ||| "@@" ~> resource_from_instance ^^ (VirtualResource (_, Vrtexported))
+  | "@@" ~> resource_from_instance ^^ (VirtualResource (_, Vrtexported))
   )
 
   lazy val collection: P[Collection] = (
     asttype ~ collectrhand ~ ("{" ~> anyparams <~ ",".? <~ "}") ^^ {
       case t ~ collrhand ~ anyparams => Collection (t, collrhand._1, collrhand._2, anyparams)
     }
-  ||| asttype ~ collectrhand ^^ { 
+  | asttype ~ collectrhand ^^ { 
       case t ~ collrhand => Collection (t, collrhand._1, collrhand._2, List[Attribute] ())
     }
   )
 
   lazy val collectrhand: P[(Option[CollectionExpr], VirtualResType)] = (
     "<|" ~> collstmts.? <~ "|>" ^^ ((_, Vrtvirtual))
-  ||| "<<|" ~> collstmts.? <~ "|>>" ^^ ((_, Vrtexported))
+  | "<<|" ~> collstmts.? <~ "|>>" ^^ ((_, Vrtexported))
   )
 
   lazy val collstmts: P[CollectionExpr] = (
@@ -230,7 +245,7 @@ class PuppetParser extends StdTokenParsers
     }
   )
 
-  lazy val collstmt: P[CollectionExpr] = collexpr ||| "(" ~> collstmts <~ ")"
+  lazy val collstmt: P[CollectionExpr] = collexpr | "(" ~> collstmts <~ ")"
 
   lazy val collexpr: P[CollectionExpr] =
     colllval ~ ("==" | "!=") ~ expr ^^ {
@@ -260,12 +275,12 @@ class PuppetParser extends StdTokenParsers
     quotedtext ||| name ||| asttype ||| selector ||| variable ||| array ||| hasharrayaccesses
 
   lazy val assignment: P[Vardef] = (
-    // TODO : A variable from another namespace cannot be assigned, see puppet parser
-    variable ~ ("=" ~> expr) ^^ { 
-      case vrbl ~ e => Vardef (vrbl, e, false)
-    }
-  ||| hasharrayaccess ~ ("=" ~> expr) ^^ { 
+    hasharrayaccess ~ ("=" ~> expr) ^^ { 
       case haa ~ e => Vardef (haa, e, false)
+    }
+    // TODO : A variable from another namespace cannot be assigned, see puppet parser
+  | variable ~ ("=" ~> expr) ^^ { 
+      case vrbl ~ e => Vardef (vrbl, e, false)
     }
   )
 
@@ -274,7 +289,9 @@ class PuppetParser extends StdTokenParsers
       case vrbl ~ e => Vardef (vrbl, e, true)
     }
 
-  lazy val params: P[List[Attribute]] = repsep (param, ",")
+  lazy val params: P[List[Attribute]] = (
+    "," ~> rep1sep (param, ",") | repsep (param, ",")
+  )
 
   lazy val param_name: P[AttributeNameType] = keyword ^^ (Name (_)) | name | boolean
 
@@ -319,7 +336,7 @@ class PuppetParser extends StdTokenParsers
     name ~ ("[" ~> expressions <~ "]") ^^ {
       case name ~ es => ResourceRef (name, es)
     }
-  ||| asttype ~ ("[" ~> expressions <~ "]") ^^ {
+  | asttype ~ ("[" ~> expressions <~ "]") ^^ {
       case t ~ es => ResourceRef (t, es)
     }
   )
@@ -419,7 +436,7 @@ class PuppetParser extends StdTokenParsers
 
   lazy val svalues: P[List[Attribute]] = 
     (selectval ^^ (List (_))
-  ||| "{" ~> sintvalues <~ ",".? <~ "}")
+  | "{" ~> sintvalues <~ ",".? <~ "}")
 
   lazy val sintvalues: P[List[Attribute]] = repsep (selectval, ("," | "=>"))
 
@@ -429,8 +446,8 @@ class PuppetParser extends StdTokenParsers
     }
 
   lazy val selectlhand: P[SelectLHS] = (
-    name ||| asttype ||| quotedtext ||| variable ||| funcrvalue |||
-    boolean ||| undef ||| hasharrayaccess ||| default ||| regex
+    funcrvalue | hasharrayaccess | boolean | undef | default |
+    name | asttype | quotedtext | variable | regex
   )
     
   lazy val string: P[String] = STRING
@@ -473,14 +490,14 @@ class PuppetParser extends StdTokenParsers
       case None => List ()
       case Some (ss) => ss
     }
-  ||| "(" ~> arguments <~ ",".? <~ ")"
+  | "(" ~> arguments <~ ",".? <~ ")"
   )
 
   lazy val arguments: P[List[(Variable, Option[Expr])]] = repsep (argument, ",")
 
   lazy val argument: P[(Variable, Option[Expr])] = (
     variable ~ ("=" ~> expr) ^^ { case v ~ e => (v, Some (e)) }
-  ||| variable ^^ ((_, None))
+  | variable ^^ ((_, None))
   )
 
   lazy val nodeparent: P[Hostname] = "inherits" ~> hostname
@@ -494,7 +511,7 @@ class PuppetParser extends StdTokenParsers
       case None => ASTArray (List ())
       case Some (es) => ASTArray (es)
     }
-  ||| "[" ~> expressions <~ "," <~ "]" ^^ (ASTArray (_))
+  | "[" ~> expressions <~ "," <~ "]" ^^ (ASTArray (_))
   )
 
   lazy val regex: P[ASTRegex] = REGEXTOK ^^ (ASTRegex (_))
@@ -504,7 +521,7 @@ class PuppetParser extends StdTokenParsers
       case None => ASTHash (List ())
       case Some (kvs) => ASTHash (kvs)
     }
-  ||| "{" ~> hashpairs <~ "," <~ "}" ^^ (ASTHash (_))
+  | "{" ~> hashpairs <~ "," <~ "}" ^^ (ASTHash (_))
   )
 
   lazy val hashpairs: P[List[(HashKey, Expr)]] = repsep (hashpair, ",")
