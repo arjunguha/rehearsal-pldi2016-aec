@@ -1,0 +1,5 @@
+[1;31mWarning: Setting templatedir is deprecated. See http://links.puppetlabs.com/env-settings-deprecations
+   (at /usr/lib/ruby/vendor_ruby/puppet/settings.rb:1071:in `each')[0m
+[1;31mError: Could not retrieve catalog from remote server: Error 400 on SERVER: Could not find template 'ghost/config/app.conf' at /etc/puppet/modules/ghost/manifests/upstart.pp:6 on node agent[0m
+[1;31mWarning: Not using cache on failed catalog[0m
+[1;31mError: Could not retrieve catalog; skipping run[0m

@@ -1,0 +1,1 @@
+puppet apply src/tests/init.pp --modulepath=src/tests/modules --debug --verbose

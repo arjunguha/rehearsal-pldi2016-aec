@@ -1,0 +1,10 @@
+[0;32mInfo: Creating a new SSL key for agent[0m
+[0;32mInfo: Caching certificate for ca[0m
+[0;32mInfo: csr_attributes file loading from /etc/puppet/csr_attributes.yaml[0m
+[0;32mInfo: Creating a new SSL certificate request for agent[0m
+[0;32mInfo: Certificate Request fingerprint (SHA256): A1:49:C1:FE:04:97:04:A0:87:F9:C0:4C:AB:33:42:0D:15:A7:D9:A7:20:96:D5:37:97:85:AF:64:14:E7:8D:20[0m
+[0;32mInfo: Caching certificate for agent[0m
+[0;32mInfo: Caching certificate_revocation_list for ca[0m
+[0;32mInfo: Caching certificate for ca[0m
+[0;32mInfo: Retrieving pluginfacts[0m
+[0;32mInfo: Retrieving plugin[0m

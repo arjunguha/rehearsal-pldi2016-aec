@@ -1,0 +1,36 @@
+[1;31mWarning: Setting templatedir is deprecated. See http://links.puppetlabs.com/env-settings-deprecations
+   (at /usr/lib/ruby/vendor_ruby/puppet/settings.rb:1071:in `each')[0m
+[1;31mError: composer create-project laravel/laravel laravel.dev --prefer-dist returned 1 instead of one of [0][0m
+[1;31mError: /Stage[main]/Laravel/Exec[Install-Laravel]/returns: change from notrun to 0 failed: composer create-project laravel/laravel laravel.dev --prefer-dist returned 1 instead of one of [0][0m
+[1;31mError: /Stage[main]/Mysql/File[/etc/mysql/conf.d/mysqld_default_utf8.cnf]: Could not evaluate: Could not retrieve information from environment production source(s) puppet:///modules/mysql/mysqld_default_utf8.cnf[0m
+[1;31mWarning: /Stage[main]/Mysql/Service[mysql]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Mysql/Exec[set-mysql-password]: Skipping because of failed dependencies[0m
+[1;31mError: /Stage[main]/Vim/File[/home/vagrant/.vim/colors/wombat256mod.vim]: Could not evaluate: Could not retrieve information from environment production source(s) puppet:///modules/vim/wombat256mod.vim[0m
+[1;31mError: /Stage[main]/Php/File[/etc/php5/mods-available/xdebug.ini]: Could not evaluate: Could not retrieve information from environment production source(s) puppet:///modules/php/xdebug.ini[0m
+[1;31mWarning: /Stage[main]/Php/Exec[prepand-extension]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Php::Tools/Exec[pear-autodiscover]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Php::Tools/Exec[pear-upgrade]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Php::Tools::Pdepend/Exec[discover-pdepend]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Php::Tools::Pdepend/Exec[install-pdepend]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Nginx/Exec[remove-apache2-startup]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Nginx/Exec[kill-apache2]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Package[nginx]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Nginx/File[/etc/nginx/conf.d/global/]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Nginx/File[/etc/nginx/sites-available/default]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Package[nginx-full]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Nginx/File[/etc/nginx/sites-enabled/default]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Nginx/File[/etc/nginx/conf.d/global/20-deny-access.conf]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Nginx/File[/etc/nginx/conf.d/global/10-php-fpm.conf]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Package[phpmyadmin]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Phpmyadmin/File[/etc/phpmyadmin/config.inc.php]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Phpmyadmin/File[/etc/nginx/conf.d/global/30-phpmyadmin.conf]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Phpmyadmin/Exec[extract-pma-tables]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Phpmyadmin/File[/etc/phpmyadmin/config-db.php]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Phpmyadmin/Exec[install-pma-tables]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Phpmyadmin/Exec[grant-access]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Nginx/Exec[disable-sendfile]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Package[nginx-common]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Php::Tools::Phpdoc/Exec[discover-phpdoc-channel]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Php::Tools::Phpdoc/Exec[install-phpdocumentor]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Nginx/File[/etc/nginx/conf.d/global/00-cachecontrol.conf]: Skipping because of failed dependencies[0m
+[1;31mWarning: /Stage[main]/Nginx/Service[nginx]: Skipping because of failed dependencies[0m

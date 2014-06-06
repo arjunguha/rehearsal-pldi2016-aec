@@ -1,2 +1,0 @@
-include 'yoxos_server'
-
