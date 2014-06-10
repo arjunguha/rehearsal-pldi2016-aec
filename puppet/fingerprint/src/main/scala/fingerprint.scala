@@ -5,8 +5,7 @@ import java.nio.file
 import java.io._
 import org.apache.commons._ 
 import scala.concurrent._
-import scala.concurrent.duration._
-import ExecutionContext.Implicits.global
+import scala.async.Async.{async, await}
 
 object FingerPrint {
 
@@ -22,29 +21,31 @@ object FingerPrint {
     md5
   }
 
-  /* returns a map of files created/modified by command and 
+  /* fingerprint is map of files created/modified by command and 
    * their corresponding md5 sums
    */
   def apply(docker_url: String,
-            cmd: String): Map[String, String] = {
+            cmd: String)
+    (implicit ec: ExecutionContext): Future[Map[String, String]] = async {
     val docker = new Docker(docker_url)
     val cfg = ContainerConfig("ubuntu", "", "", 0, 0, false, true, true, false, false,
                               List[String](), "", List[String](), cmd.split(' ').toList,
                               false, false, Map("/tmp" -> None), "", Map("22/tcp" -> None))
-    val containerRef = Await.result(docker.createContainer(cfg), Duration.Inf)
-    Await.result(docker.startContainer(containerRef.Id), Duration.Inf)
-    Await.result(docker.waitContainer(containerRef.Id), Duration.Inf)
-    // Container has stopped running now, check. This might not be true in case of services
-    val fp = Await.result(docker.containerFileSystemChanges(containerRef.Id), Duration.Inf)
-             .map({case ch if ch.Kind == 0 || ch.Kind == 1 => ch.Path}) // Filter only file creation and change events
-             .filterNot(_.startsWith("/dev/")) // hack for excluding immediately apparent special files
-             .filterNot({case f => {
-                val file = new File(toLocalPath(f, containerRef.Id))
-                !file.exists || file.isDirectory
-              }})
-             .map({case f => (f, digestFile(toLocalPath(f,containerRef.Id)))})
-             .toMap
-    Await.result(docker.deleteContainer(containerRef.Id), Duration.Inf)
-    fp
+    await (for {
+      containerRef <- docker.createContainer(cfg)
+      fp <- for {
+        _ <- docker.startContainer(containerRef.Id)
+        _ <- docker.waitContainer(containerRef.Id)
+        chgs <- docker.containerFileSystemChanges(containerRef.Id)
+      } yield chgs.map({case ch if ch.Kind == 0 || ch.Kind == 1 => ch.Path}) // Filter only file creation and change events
+                  .filterNot(_.startsWith("/dev/")) // hack for excluding immediately apparent special files
+                  .filterNot(f => {
+                    val file = new File(toLocalPath(f, containerRef.Id))
+                    !file.exists || file.isDirectory
+                  }) // Exclude Directories
+                  .map(f => (f, digestFile(toLocalPath(f,containerRef.Id))))
+                  .toMap
+      _ <- docker.deleteContainer(containerRef.Id)
+    } yield fp)
   }
 }
