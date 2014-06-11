@@ -9,7 +9,7 @@ import java.io.File
 class CompilerSpec extends PropSpec with PropertyChecks with Matchers {
 
   // val src = "./example/compiler"
-  val src = "./example"
+  val src = "./example/compiler/"
 
   private def recursiveListFiles (f: File): Array[File] = {
     val these = f.listFiles
