@@ -18,7 +18,7 @@ object Function {
     override def apply (catalog: Catalog,
                         parent: Parent,
                         arg: Value*): Value = { 
-      println (arg (0).asInstanceOf[StringV].value)
+      println(arg(0).toPString)
       UndefV
     }
   }
@@ -27,9 +27,7 @@ object Function {
     override def apply (catalog: Catalog,
                         parent: Parent,
                         arg: Value*): Value = { 
-      arg.foreach ({ case v: Value => 
-        catalog.addClass (v.asInstanceOf[StringV].value, List ())
-      })
+      arg.foreach(v => catalog.addClass(v.asInstanceOf[StringV].value, List ()))
       UndefV
     }
   }
@@ -63,6 +61,6 @@ object Function {
              catalog: Catalog,
              parent: Parent,
              args: Value*): Value = {
-    (fmap (fname)) apply (catalog, parent, args:_*)
+    (fmap(fname))(catalog, parent, args:_*)
   }
 }

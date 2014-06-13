@@ -22,14 +22,14 @@ class Catalog {
   var class_orderings = List [(Resource, HostClass)] ()
 
   type Params = List[(String, Value)]
-  var classes = List [(String, Params)] ()
+  var classes = List[(String, Params)] ()
 
   private def resourceExists (res: Resource): Boolean = {
     resources.exists (_.title == res.title)
   }
 
   def addResource (res: Resource, parent: HostClass) {
-    if (resourceExists (res)) throw new Exception ("Resource already exists")
+    if (resourceExists (res)) throw new Exception ("Resource: %s already exists".format(res.toString))
     else { 
       resources = res :: resources
       class_orderings = (res, parent) :: class_orderings
@@ -55,23 +55,18 @@ class Catalog {
     res_orderings = (src, dst) :: res_orderings
   }
 
-  def findResourcesFromRef (ref: ResourceRefV): List[Resource] = {
-    resources.filter (_.isReferredByRef (ref))
-  }
-
-
+  def findResourcesFromRef(ref: ResourceRefV): List[Resource] =
+    resources.filter(PuppetCompile.evalResourceRef(ref)(_))
 
   def toGraph (): Graph[eval.Node, DiEdge] = {
-
-    val _edges = res_orderings.map ({ case (x, y) => 
-      for (source <- findResourcesFromRef (x).asInstanceOf[List[eval.Node]]; 
-           target <- findResourcesFromRef (y).asInstanceOf[List[eval.Node]]) 
-        yield (source ~> target)
+    val _edges = res_orderings.map({ case (x, y) =>
+      for(source <- findResourcesFromRef(x).asInstanceOf[List[eval.Node]];
+          target <- findResourcesFromRef(y).asInstanceOf[List[eval.Node]])
+        yield source ~> target
     })
 
     var edges = _edges.flatten
-    val class_edges = class_orderings map ({ case (r, c) => c.asInstanceOf[eval.Node] ~> r.asInstanceOf[eval.Node] })
-
+    val class_edges = class_orderings map ({case (r, c) => c.asInstanceOf[eval.Node] ~> r.asInstanceOf[eval.Node]})
     edges = class_edges ::: edges
     Graph.from (nodes, edges)
   }

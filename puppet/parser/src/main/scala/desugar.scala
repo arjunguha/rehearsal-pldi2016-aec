@@ -173,7 +173,6 @@ object DesugarPuppetAST {
     }}).flatten)
   }
 
-
   def desugarAST (ast: AST): ASTCore = ast match {
 
     case ASTBool (b) => BoolC (b)
@@ -194,20 +193,18 @@ object DesugarPuppetAST {
     case NotExpr (oper) => NotExprC (desugarAST (oper))
     case UMinusExpr (oper) => BinExprC (NameC ("-1"), desugarAST (oper), Mult)
 
-    
     case RelationExpr (lhs, rhs, op) => {
-      val lhsd = desugarAST (lhs)
-      val rhsd = desugarAST (rhs)
+      val lhsd = desugarAST(lhs)
+      val rhsd = desugarAST(rhs)
 
       op match {
-        case LeftSimpleDep => OrderResourceC (rhsd, lhsd, false)
-        case RightSimpleDep =>  OrderResourceC (lhsd, rhsd, false)
-        case LeftSubscribeDep => OrderResourceC (rhsd, lhsd, true)
+        case LeftSimpleDep     => OrderResourceC (rhsd, lhsd, false)
+        case RightSimpleDep    => OrderResourceC (lhsd, rhsd, false)
+        case LeftSubscribeDep  => OrderResourceC (rhsd, lhsd, true)
         case RightSubscribeDep => OrderResourceC (lhsd, rhsd, true)
       }
     }
        
-     
     case Attribute (name, value, add) => AttributeC (desugarAST (name), desugarAST (value), add)
 
     case ResourceInstance (title, params) => {
@@ -218,7 +215,7 @@ object DesugarPuppetAST {
     case Resource (typ, instances) => {
 
       // Desugar into a ResourceC while adding 'type' as another attribute
-      val typeattr = Attribute (Name ("type"), Type (typ.capitalize), false /*no add*/)
+      val typeattr = Attribute (Name("type"), Type (typ.capitalize), false /*no add*/)
       val insts_with_tattr = instances.map ((r) => ResourceInstance (r.title, typeattr :: r.params))
 
       BlockStmtC (insts_with_tattr.map (desugarAST (_)))
@@ -249,15 +246,15 @@ object DesugarPuppetAST {
       val typmatch = FilterExprC (NameC ("type"), desugarAST (restyp), FEqOp)
       val filters = titles.map ((title) => (FilterExprC (FilterExprC (NameC ("title"), desugarAST (title), FEqOp),
                                                          typmatch, FAndOp)))
-      val filter = filters.foldRight (BoolC (false): ASTCore) (FilterExprC (_, _, FOrOp))
+      val filter = filters.reduce(FilterExprC (_, _, FOrOp))
       filter
     }
 
     case CollectionExpr (lhs, rhs, op) => op match {
-      case CollOr    => FilterExprC (desugarAST (lhs), desugarAST (rhs), FOrOp)
-      case CollAnd   => FilterExprC (desugarAST (lhs), desugarAST (rhs), FAndOp)
-      case CollIsEq  => FilterExprC (desugarAST (lhs), desugarAST (rhs), FEqOp)
-      case CollNotEq => FilterExprC (desugarAST (lhs), desugarAST (rhs), FNotEqOp)
+      case CollOr    => FilterExprC(desugarAST(lhs), desugarAST(rhs), FOrOp)
+      case CollAnd   => FilterExprC(desugarAST(lhs), desugarAST(rhs), FAndOp)
+      case CollIsEq  => FilterExprC(desugarAST(lhs), desugarAST(rhs), FEqOp)
+      case CollNotEq => FilterExprC(desugarAST(lhs), desugarAST(rhs), FNotEqOp)
     }
 
     case Collection (typ, collexpr, tvirt, params) => {
@@ -277,10 +274,10 @@ object DesugarPuppetAST {
         }
 
         val filter = desugarAST (collexpr match {
-          case Some (collexpr) => CollectionExpr (collexpr, 
-                                                  CollectionExpr (virtmatchexpr, typmatchexpr, CollAnd),
-                                                  CollAnd)
-          case None => CollectionExpr (virtmatchexpr, typmatchexpr, CollAnd)
+          case Some (collexpr) => CollectionExpr(collexpr,
+                                                 CollectionExpr (virtmatchexpr, typmatchexpr, CollAnd),
+                                                 CollAnd)
+          case None => CollectionExpr(virtmatchexpr, typmatchexpr, CollAnd)
         })
 
         filter
@@ -364,7 +361,6 @@ object DesugarPuppetAST {
       }
     }
 
-
     case Node (hostnames, None, stmts) => {
       val desugared_stmts = desugarAST (BlockStmtDecls (stmts))
       BlockStmtC (hostnames.map (desugarAST (_)).map (NodeC (_, None, desugared_stmts)))
@@ -390,7 +386,6 @@ object DesugarPuppetAST {
     case Function (name, args, _) => FuncAppC (desugarAST (name), args.map (desugarAST (_)))
     case Import (imports) => ImportC (imports)
   }
-
 
   // TODO : apply method
 }

@@ -55,10 +55,11 @@ object PuppetScope {
     private val env = scala.collection.mutable.Map[String, Value] ()
 
     def setvar (varname: String, value: Value) = env += (varname -> value)
-    def getvar (varname: String): Value = env (varname)
+    def getvar (varname: String): Value = env(varname)
+    def print() { println (env.mkString("{", "\n", "}")) }
   }
 
-  private val named_scopes = scala.collection.mutable.Map [ScopeRef, Scope] ()
+  private val named_scopes = scala.collection.mutable.Map[ScopeRef, Scope] ()
 
   def scope_exists (name: String): Boolean = named_scopes contains name
 
@@ -75,8 +76,8 @@ object PuppetScope {
   def createEphemeralScope (): ScopeRef = {
 
     // alphanumeric random string
-    val name = Random.alphanumeric.take (8).mkString
-    if (scope_exists (name)) createEphemeralScope ()
+    val name = Random.alphanumeric.take(8).mkString
+    if (scope_exists (name)) createEphemeralScope()
     else {
       named_scopes += (name -> new Scope ())
       name
@@ -93,7 +94,7 @@ object PuppetScope {
     else throw new Exception ("Invalid Scope")
   }
 
-  def getvar (ref: ScopeRef, varname: String): Try[Value] = {
+  def getvar(ref: ScopeRef, varname: String): Try[Value] = {
 
     var scope = getScopeByName (ref)
 
@@ -105,17 +106,21 @@ object PuppetScope {
   def clear () = {
     named_scopes.clear ()
   }
+
+  def printScope (ref: ScopeRef) {
+    val scope = getScopeByName (ref)
+    if (scope.isSuccess) scope.get.print()
+    else throw new Exception ("Invalid Scope")
+  }
 }
-
-
 
 class ScopeChain (val scopes: List[PuppetScope.ScopeRef] = List[PuppetScope.ScopeRef] ()) {
 
-  private def is_qualified (name: String): Boolean = ((name indexOf "::") > 0)
+  private def isQualified(name: String): Boolean = (name indexOf "::") >= 0
 
   def getvar (varfqname: String): Try[Value] = {
 
-    if (is_qualified (varfqname)) {
+    if (isQualified(varfqname)) {
 
       // Make sure that scopes are valid
       val tokens = (varfqname split "::")
@@ -135,43 +140,51 @@ class ScopeChain (val scopes: List[PuppetScope.ScopeRef] = List[PuppetScope.Scop
       if (!foundscope.isEmpty)
          PuppetScope.getvar (foundscope.get, varfqname)
       else
-         Try (throw new Exception ("Variable not found in any scope"))
+         Try(throw new Exception("Variable \"%s\" not found in any scope".format(varfqname)))
     }
   }
 
-  def setvar (varfqname: String, value: Value, append: Boolean = false) {
+  def setvar (varname: String, value: Value, append: Boolean = false) {
 
     // Variable can only be assigned using their short name
-    if (!append && is_qualified (varfqname))
+    if (!append && isQualified (varname))
       throw new Exception ("Cannot assign a fully qualified variable")
 
     val cur_scope = scopes.head
 
     if (append) {
 
-      val old_val = getvar (varfqname)
+      val old_val = getvar (varname)
 
       if (!old_val.isSuccess)
         throw new Exception ("Cannot append to non existing variable")
 
       // Replace by append in Value
       val new_val = (old_val.get, value) match {
-        case (StringV (ov), StringV (nv)) => StringV (ov + nv)
-        case (ASTHashV (ov), ASTHashV (nv)) => ASTHashV ((ov.toList ++ nv.toList).toMap)
-        case (ASTArrayV (ov), ASTArrayV (nv)) => ASTArrayV (ov ++ nv)
-        case _ => throw new Exception ("Type mismatch for append")
+        case (StringV (ov), StringV (nv)) => StringV(ov + nv)
+        case (ASTHashV (ov), ASTHashV (nv)) => ASTHashV((ov.toList ++ nv.toList).toMap)
+        case (ASTArrayV (ov), ASTArrayV (nv)) => ASTArrayV(ov ++ nv)
+        case _ => throw new Exception("Type mismatch for append")
       }
     }
     else {
 
-      if (PuppetScope.getvar (cur_scope, varfqname).isSuccess)
-        throw new Exception ("Cannot reassign variable \"%s\" in scope %s".format (varfqname, cur_scope))
+      if (PuppetScope.getvar(cur_scope, varname).isSuccess)
+        throw new Exception("Cannot reassign variable \"%s\" in scope \"%s\"".format(varname, cur_scope))
 
-      PuppetScope.setvar (cur_scope, varfqname, value)
+      PuppetScope.setvar (cur_scope, varname, value)
     }
   }
 
   def addScope (scoperef: PuppetScope.ScopeRef): ScopeChain = {
     new ScopeChain (scoperef :: scopes)
+  }
+
+  def printScope (scoperef: PuppetScope.ScopeRef) {
+    PuppetScope.printScope (scoperef)
+  }
+
+  def curScope (): PuppetScope.ScopeRef = {
+    scopes.head
   }
 }

@@ -19,17 +19,24 @@ object PuppetDriver {
         case Right (catalog) => catalog.toGraph
       }
 
-    val node_desc = new NodeDescriptor[Node] (typeId = "Resources") {
+    val resource_desc = new NodeDescriptor[Resource] (typeId = "Resources") {
       def id (node: Any): String = node match {
         case x: Resource  => "Resource[%s]".format (x.title)
-        case x: HostClass => "Class[%s]".format (x.title)
         case x: Stage     => "Stage[%s]".format (x.title)
       }
     }
 
+    val class_desc = new NodeDescriptor[HostClass] (typeId = "Classes") {
+      def id(node: Any): String = node match {
+        case x: HostClass => "Class[%s]".format (x.title)
+      }
+    }
+
     val quickJson = new Descriptor[Node] (
-      defaultNodeDescriptor = node_desc,
-      defaultEdgeDescriptor = Di.descriptor ()
+      defaultNodeDescriptor = resource_desc,
+      defaultEdgeDescriptor = Di.descriptor (),
+      namedNodeDescriptors = Seq(class_desc),
+      namedEdgeDescriptors = Seq(Di.descriptor())
     )
 
     println (g.toJson (quickJson))

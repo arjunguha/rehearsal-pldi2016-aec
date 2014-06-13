@@ -2,15 +2,16 @@ package puppet.core.eval
 
 import scala.util.matching.Regex
 
+// TODO : common 'value' parameter and its type
 sealed abstract trait Value {
 
   /* Puppets idiosyncracies on what can be (automatically) coerced
    * into what type
    */
-  def toBool: Boolean   = throw new Exception ("Incompatible type for conversion to bool")
-  def toInt: Int        = throw new Exception ("Incompatible type for conversion to Int")
-  def toDouble: Double  = throw new Exception ("Incompatible type for conversion to Double")
-  def toPString: String = throw new Exception ("Incompatible type for conversion to String")
+  def toBool: Boolean   = throw new Exception("Incompatible type for conversion to bool")
+  def toInt: Int        = throw new Exception("Incompatible type for conversion to Int")
+  def toDouble: Double  = throw new Exception("Incompatible type for conversion to Double")
+  def toPString: String = throw new Exception("Incompatible type for conversion to String")
   def isEqual (other: Value): Boolean = false
    
   type T <: Value
@@ -52,7 +53,6 @@ case class RegexV (value: Regex) extends Value {
 }
 
 object PuppetCompositeValueTypes {
-
   type ValueHashMap = Map[String, Value]
   type ValueArray   = Array[Value]
   type ValueRef     = Map[String, Value]
@@ -68,7 +68,7 @@ case class ASTHashV (value: Map[String, Value]) extends Value {
     other.isInstanceOf[ASTHashV] &&
     other.asInstanceOf[ASTHashV].value.size == value.size &&
     other.asInstanceOf[ASTHashV].value.forall ({ case (k, v) => 
-      (value contains k) && ((value (k)).isEqual (v))
+      (value contains k) && value(k).isEqual(v)
     })
 
   type T = ASTHashV
