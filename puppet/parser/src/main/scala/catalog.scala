@@ -23,6 +23,7 @@ class Catalog {
 
   type Params = List[(String, Value)]
   var classes = List[(String, Params)] ()
+  var defines = List[(String, Params)] ()
 
   private def resourceExists (res: Resource): Boolean = {
     resources.exists (_.title == res.title)
@@ -41,6 +42,11 @@ class Catalog {
   def addClass (name: String, params: Params) {
     // Add only if does not exist
     if (!(classes exists (_._1 == name))) classes = (name, params) :: classes
+  }
+
+  def addDefinition(name: String, params: Params) {
+    // A definition can be declared mutliple times
+    defines = (name, params) :: defines
   }
 
   def addOverride (filter: Filter, attrs: Attrs) {

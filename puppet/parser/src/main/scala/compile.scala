@@ -45,6 +45,17 @@ case class Stage (title: String) extends Node (title) {}
 
 object PuppetCompile {
 
+  private val knownResourceTypes = List ("Augeas", "Computer", "Cron", "Exec",
+    "File", "Filebucket", "Group", "Host", "Interface", "K5login",
+    "Macauthorization", "Mailalias", "Maillist", "Mcx", "Mount",
+    "Nagios_command", "Nagios_contact", "Nagios_contactgroup", "Nagios_host",
+    "Nagios_hostdependency", "Nagios_hostescalation", "Nagios_hostextinfo",
+    "Nagios_hostgroup", "Nagios_service", "Nagios_servicedependency",
+    "Nagios_serviceescalation", "Nagios_serviceextinfo", "Nagios_servicegroup",
+    "Nagios_timeperiod", "Notify", "Package", "Resources", "Router", "Schedule",
+    "Scheduled_task", "Setboolean", "Selmodule", "Service", "Ssh_authorized_key",
+    "Sshkey", "Stage", "Tidy", "User", "Vlan", "Yumrepo", "Zfs", "Zone", "Zpool")
+
   def evalResourceRef (ref: ResourceRefV)
                       (implicit resource: Resource): Boolean = ref.op match {
     case FEqOp    => resource.params get ref.lhs.toPString map(_ == ref.rhs) getOrElse false
@@ -108,7 +119,6 @@ object PuppetCompile {
   private def resourceASTToTitle (attrs: ASTHashV): String =
     attrs.value("type").toPString + ":" + attrs.value("title").toPString
 
-
   // TODO : More precise type than 'Value'
   private def eval(ast: ASTCore)
                   (implicit  env: ScopeChain, catalog: Catalog, parent: HostClass): Value = ast match {
@@ -122,9 +132,9 @@ object PuppetCompile {
     case ASTArrayC(arr) => ASTArrayV(arr.map(eval _).toArray) // TODO : Should have been toArray from beginning
 
     case HashOrArrayAccessC(variable, keys) =>
-      keys.foldLeft(eval(variable))({ case(ASTHashV(h), key) => h(key.asInstanceOf[StringV].value)
-                                      case(ASTArrayV(a), key) => a(key.asInstanceOf[StringV].value.toInt)
-                                      case(_, _) => throw new Exception("Array or Hash expected") })
+      keys.map(eval(_)).foldLeft(eval(variable))({ case(ASTHashV(h), key) => h(key.asInstanceOf[StringV].value)
+                                                   case(ASTArrayV(a), key) => a(key.asInstanceOf[StringV].value.toInt)
+                                                   case(_, _) => throw new Exception("Array or Hash expected") })
 
     case VariableC(value) => env.getvar(value) getOrElse UndefV
 
@@ -137,7 +147,7 @@ object PuppetCompile {
     }
 
     case IfElseC (test, true_br, false_br) =>
-      if (eval(test).toBool) eval(true_br) else eval(false_br)
+      eval(if(eval(test).toBool) true_br else false_br)
 
     case BinExprC (lhs, rhs, op) => evalOp(op, eval(lhs), eval(rhs))
     case NotExprC(oper) => BoolV(!eval(oper).toBool)
@@ -173,7 +183,7 @@ object PuppetCompile {
         catalog.addClass (name, params.value.toList)
         UndefV
       }
-      else {
+      else if (knownResourceTypes.contains (params.value("type").toPString)) {
         val resource = Resource (resourceASTToTitle (params), mutable.Map (params.value.toSeq:_*))
         val resourceref = resource.toResourceRefV
 
@@ -183,6 +193,12 @@ object PuppetCompile {
         catalog.addResource (resource, parent)
 
         resourceref
+      }
+      else { // Most likely its a defined type, treat it as such
+        val name = params.value ("type").toPString
+        val title = params.value ("title").toPString
+        catalog.addDefinition(name, ("name", StringV(title))::params.value.toList)
+        UndefV // TODO : May be return a resource ref
       }
     }
 
@@ -259,8 +275,8 @@ object PuppetCompile {
 
         evalNode (nodename, node.stmts.asInstanceOf[BlockStmtC], env, catalog, main_resource)
 
-        evalClasses (catalog, main_resource)
         evalDefinitions (catalog, main_resource)
+        evalClasses (catalog, main_resource)
         evalOverrides (catalog)
         (nodename, catalog)
       })))
@@ -273,8 +289,8 @@ object PuppetCompile {
       catalog.addHostClass (main_resource)
 
       val env = evalToplevel (ast, catalog, main_resource)
-      evalClasses (catalog, main_resource)
       evalDefinitions (catalog, main_resource)
+      evalClasses (catalog, main_resource)
       evalOverrides (catalog)
       Right (catalog)
     }
@@ -329,16 +345,14 @@ object PuppetCompile {
 
   // We don't have nested class support yet
   private def fillParamsInScope (env: ScopeChain,
-                                 // args are what a construct declares (defaults etc in argmetn lists)
+                                 // args are what a construct declares (defaults etc in argment lists)
                                  args: List[(String, Option[Value])],
                                  // Params are what is provided to a construct
                                  params: List[(String, Value)]) {
-
-    args.foreach ({ case (variable, defaultval) => 
-                      env.setvar (variable,
-                                  (((params find ({ case (v, ov) => v == variable })) map (_._2)) getOrElse
-                                   (defaultval getOrElse (throw new Exception ("No value available for variable")))))
-    })
+    val envVars = args.unzip._1.toSet union params.unzip._1.toSet
+    envVars.foreach((arg) => env.setvar(arg, ((params.toMap) get arg) getOrElse
+                                             (((args.toMap) apply arg) getOrElse 
+                                              (throw new Exception("No value available for variable '%s'".format(arg))))))
   }
 
   private def evalClass (catalog: Catalog,
@@ -354,7 +368,7 @@ object PuppetCompile {
       val parent = hostclass.parent.get
       val parentclass = (TypeCollection.getClass (parent)) getOrElse (throw new Exception ("Parent class not found"))
 
-      // Arguments are strictly now allowed for parent class 
+      // Arguments are strictly not allowed for parent class 
       if (parentclass.args.length > 0)
         throw new Exception ("Parent class is not supposed to have arguments")
 
@@ -378,7 +392,8 @@ object PuppetCompile {
     catalog.classes.foreach({ case klass => 
       evalClass (catalog,
                  TypeCollection.getClass (klass._1) getOrElse 
-                   (throw new Exception("\"%s\" class not found in catalog".format(klass._1))), klass._2, parent) 
+                   (throw new Exception("\"%s\" class not found in catalog".format(klass._1))),
+                 klass._2, parent) 
     })
     catalog
   }
@@ -388,10 +403,24 @@ object PuppetCompile {
                               params: List[(String, Value)],
                               dparent: HostClass): Catalog = {
 
+    var env = (new ScopeChain()).addScope("") // Add toplevel scope
+
+    val args = definition.args.map({ case(variable, oval) => (variable.value, oval.map(eval(_)(env, catalog, dparent))) })
+    val name = params.find(_._1 == "title").get._2.asInstanceOf[StringV].value
+    env = env.addScope(PuppetScope.createNamedScope(name))
+    fillParamsInScope(env, args, params)
+    definition.stmts.asInstanceOf[BlockStmtC].exprs.foreach(eval(_)(env, catalog, dparent))
     catalog
   }
 
+  // TODO : See parent
   def evalDefinitions (catalog: Catalog, parent: HostClass): Catalog = {
+    catalog.defines.foreach({ case define =>
+      evalDefinition (catalog, 
+                      TypeCollection.getDefinition (define._1) getOrElse
+                      (throw new Exception ("\"%s\" definition not found in catalog".format(define._1))),
+                      define._2, parent)
+    })
     catalog
   }
 }

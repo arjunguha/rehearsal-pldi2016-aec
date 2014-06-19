@@ -46,4 +46,5 @@ object TypeCollection {
   }
 
   def getClass (name: String): Option[HostclassC] = hostclasses get name
+  def getDefinition (name: String): Option[DefinitionC] = definitions get name.toLowerCase
 }

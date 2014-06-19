@@ -66,7 +66,7 @@ object PuppetScope {
   def createNamedScope (name: String): ScopeRef = {
 
     if (scope_exists (name))
-      throw new Exception ("Scope by this name already exists")
+      throw new Exception("Scope '%s' already exists".format(name))
 
     named_scopes += (name -> new Scope ())
     name
