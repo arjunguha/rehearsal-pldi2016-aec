@@ -21,18 +21,17 @@ object PuppetDriver {
 
     val resource_desc = new NodeDescriptor[Resource] (typeId = "Resources") {
       def id (node: Any): String = node match {
-        case x: Resource  => "Resource[%s]".format (x.title)
-        case x: Stage     => "Stage[%s]".format (x.title)
+        case x: Resource  => "Resource[%s]".format (x.name)
       }
     }
 
     val class_desc = new NodeDescriptor[HostClass] (typeId = "Classes") {
       def id(node: Any): String = node match {
-        case x: HostClass => "Class[%s]".format (x.title)
+        case x: HostClass => "Class[%s]".format (x.name)
       }
     }
 
-    val quickJson = new Descriptor[Node] (
+    val quickJson = new Descriptor[CatalogElement] (
       defaultNodeDescriptor = resource_desc,
       defaultEdgeDescriptor = Di.descriptor (),
       namedNodeDescriptors = Seq(class_desc),

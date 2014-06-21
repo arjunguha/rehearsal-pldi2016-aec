@@ -16,7 +16,7 @@ sealed abstract trait Value {
    
   type T <: Value
   type U <: Value
-  def append (other: T): U = throw new Exception ("Incompatible type for appending")
+  def append (other: T): U = throw new Exception("Incompatible type for appending")
 }
 
 case object UndefV extends Value {
@@ -61,9 +61,9 @@ object PuppetCompositeValueTypes {
 import PuppetCompositeValueTypes._
 
 case class ASTHashV (value: Map[String, Value]) extends Value {
-  override def toBool = true // Even empty hashes are coerced to true
+  override def toBool = true // Empty hashes are coerced to true as well
   override def toPString = 
-    value.foldLeft ("") ({ case (a, e) => a + e._1 + e._2.toPString })
+    value.foldLeft("")((acc, e) => acc + e._1 + e._2.toPString)
   override def isEqual (other: Value): Boolean =
     other.isInstanceOf[ASTHashV] &&
     other.asInstanceOf[ASTHashV].value.size == value.size &&

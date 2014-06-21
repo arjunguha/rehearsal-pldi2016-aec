@@ -278,7 +278,7 @@ class PuppetParser extends StdTokenParsers
     hasharrayaccess ~ ("=" ~> expr) ^^ { 
       case haa ~ e => Vardef (haa, e, false)
     }
-    // TODO : A variable from another namespace cannot be assigned, see puppet parser
+  // TODO : A variable from another namespace cannot be assigned, see puppet parser
   | variable ~ ("=" ~> expr) ^^ { 
       case vrbl ~ e => Vardef (vrbl, e, false)
     }
@@ -332,7 +332,6 @@ class PuppetParser extends StdTokenParsers
     /* TODO : Name production is deprecated and comes as a warning in original puppet parser
      *        It has to be a captitalized 
      */
-
     name ~ ("[" ~> expressions <~ "]") ^^ {
       case name ~ es => ResourceRef (name, es)
     }
