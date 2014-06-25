@@ -1,6 +1,9 @@
 package puppet.core.eval
 
 import puppet.core.eval._
+import puppet.core.eval.{Attributes => Attrs}
+import scala.collection.{mutable => mut}
+import scala.collection._
 
 /* Functions that are callable in puppet files */
 object Function {
@@ -27,14 +30,10 @@ object Function {
     override def apply(catalog: Catalog,
                        containedBy: ContainedBy,
                        arg: Value*): Value = { 
-                         /*
       arg.foreach(v => {
-        val name = v.asInstanceOf[StringV].value
-        catalog.addClass(name,
-                         List("type"->StringV("Class"),
-                              "title"->StringV(name)))
+        // TODO : Remove asInstanceOf
+        catalog.addResource(Attrs.resourceBasicAttributes("Class", v.asInstanceOf[StringV].value))
       })
-      */
       UndefV
     }
   }
@@ -43,16 +42,11 @@ object Function {
     override def apply(catalog: Catalog,
                        containedBy: ContainedBy,
                        arg: Value*): Value = {
-                         /*
       arg.foreach(v => {
-        val name = v.asInstanceOf[StringV].value
-        catalog.addClass(name,
-                         List("type"->StringV("Class"),
-                              "title"->StringV(name)))
-        catalog.addClassRelationship()
+        // TODO : Remove asInstanceOf
+        val ref = catalog.addResource(Attrs.resourceBasicAttributes("Class", v.asInstanceOf[StringV].value))
+        catalog.addRelationship(containedBy.get, ref)
       })
-      */
-
       UndefV
     }
   }
@@ -61,20 +55,14 @@ object Function {
     override def apply(catalog: Catalog,
                        containedBy: ContainedBy,
                        arg: Value*): Value = {
-                         /*
       arg.foreach(v => {
-        val name = v.asInstanceOf[StringV].value
-        catalog.addClass(name,
-                         List("type"->StringV("Class"),
-                              "title"->StringV(name)))
-        catalog.addClassRelationship()
+        // TODO : Remove asInstanceOf
+        catalog.addResource(Attrs.resourceBasicAttributes("Class", v.asInstanceOf[StringV].value),
+                            containedBy)
       })
-      */
       UndefV
     }
   }
-
-  import scala.collection._
 
   val fmap = Map("notice"  -> Notice,
                  "include" -> Include,

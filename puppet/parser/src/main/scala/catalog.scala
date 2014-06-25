@@ -20,13 +20,21 @@ object KnownResource {
     "Sshkey", "Stage", "Tidy", "User", "Vlan", "Yumrepo", "Zfs", "Zone", "Zpool")
 }
 
-object Params {
-  type t = mut.Map[String, Value]
+object Attributes {
+  type T = mut.Map[String, Value]
+
+  def resourceBasicAttributes(typ: String, name: String): T = {
+    mut.Map("type"->StringV(typ.capitalize),
+            "name"->StringV(name),
+            "namevar"->StringV(name))
+  }
 }
 
-sealed abstract class CatalogElement(val params: Params.t) {
-  val title = params("type").toPString + ":" + params("title").toPString
-  val name  = params("title").toPString
+sealed abstract class CatalogElement(val params: Attributes.T) {
+  val typ   = params("type").toPString
+  val name  = params("name").toPString
+  val title = typ + ":" + name
+  // XXX: Maybe stage should be deferred until later (override can give it a value at a later stage)
   val stage = params.get("stage").map(_.toPString) getOrElse 'main.toString
 
   val sources: List[ResourceRefV] = attrToResRefs("require"):::attrToResRefs("subscribe")
@@ -43,21 +51,25 @@ sealed abstract class CatalogElement(val params: Params.t) {
 
   def toResourceRefV: ResourceRefV =
     ResourceRefV (ResourceRefV(StringV("type"), params ("type"), FEqOp),
-                  ResourceRefV(StringV("title"), params ("title"), FEqOp), FAndOp)
+                  ResourceRefV(StringV("name"), params ("name"), FEqOp), FAndOp)
 
   def mergeAttr (name: String, value: Value, append: Boolean = false) {
     // TODO: Maybe sanitize on name as title, name, type, namevar may not be overridable
     if (append) throw new Exception ("Append not supported yet")
     params += (name -> value)
   }
+
+  override def toString = title
 }
 
-case class Resource(override val params: Params.t) extends CatalogElement(params)
-case class HostClass(override val params: Params.t) extends CatalogElement(params)
-case class Definition(override val params: Params.t) extends CatalogElement(params)
+case class Resource(override val params: Attributes.T) extends CatalogElement(params) {
+  override def toString = title
+}
+case class HostClass(override val params: Attributes.T) extends CatalogElement(params)
+case class Definition(override val params: Attributes.T) extends CatalogElement(params)
 
-object CatalogElementFactory {
-  def apply (params: Params.t): CatalogElement = {
+object CatalogElement {
+  def apply (params: Attributes.T): CatalogElement = {
     params("type").toPString match {
       case "Class" => HostClass(params)
       case x if KnownResource.types.contains(x) => Resource(params)
@@ -67,42 +79,49 @@ object CatalogElementFactory {
 }
 
 class Catalog {
-  type Node = eval.CatalogElement
   type Filter = ResourceRefV
-  type Override = (Filter, Params.t)
+  type Override = (Filter, Attributes.T)
 
-  var elements  = List[Node]()
+  var elements  = List[CatalogElement]()
   var klasses = List[HostClass]()
   var defines = List[Definition]()
   var overrides = List[Override]()
   var relationships = List[(ResourceRefV, ResourceRefV)]()
 
+  var containment = mut.Map[ResourceRefV, Set[ResourceRefV]]()
+
   private def isDuplicate(e: CatalogElement): Boolean =
     elements.exists(_.title == e.title)
 
-  def addResource(params: Params.t, containedBy: Option[ResourceRefV] = None): ResourceRefV = {
-    val elem = CatalogElementFactory(params)
+  def addResource(params: Attributes.T, containedBy: Option[ResourceRefV] = None): ResourceRefV = {
 
-    // TODO : Should ignore duplicate class
-    if (isDuplicate(elem)) throw new Exception("Resource %s already exists in catalog".format(elem.title))
-    elements = elem :: elements
-    elem match {
-      case r: Resource => ()
-      case h: HostClass => klasses = h :: klasses
-      case d: Definition => defines = d :: defines
+    val elem = CatalogElement(params)
+    val elemRef = elem.toResourceRefV
+
+    (elem, isDuplicate(elem)) match {
+      case (r: Resource, true) => throw new Exception("Resource %s already exists in catalog".format(elem.title))
+      case (r: Resource, false) => ()
+      case (h: HostClass, true) => ()
+      case (h: HostClass, false) => klasses = h :: klasses
+      case (d: Definition, true) => throw new Exception("Definition %s already exists in catalog".format(elem.title))
+      case (d: Definition, false) => defines = d :: defines
     }
 
-    containedBy.map(addRelationship(_, elem.toResourceRefV))
-    elem.sources.foreach(addRelationship(_, elem.toResourceRefV))
-    elem.targets.foreach(addRelationship(elem.toResourceRefV, _))
+    if (!containedBy.isEmpty) {
+      val refs = containment getOrElse(containedBy.get, Set[ResourceRefV]())
+      containment.put(containedBy.get, refs + elemRef)
+    }
 
-    elem.toResourceRefV
+    elem.sources.foreach(addRelationship(_, elemRef))
+    elem.targets.foreach(addRelationship(elemRef, _))
+
+    elements = elem :: elements
+
+    elemRef
   }
 
-  def addOverride (filter: Filter, attrs: Params.t) {
-    // Duplicates are ok as long as merge is idempotent, which it is not due to append, but again append is not supported yet
+  def addOverride (filter: Filter, attrs: Attributes.T) =
     overrides = (filter, attrs) :: overrides
-  }
 
   def addRelationship(src: ResourceRefV, dst: ResourceRefV, refresh: Boolean = false) {
     if (refresh)
@@ -110,32 +129,31 @@ class Catalog {
 
     relationships = (src, dst) :: relationships
   }
-  
-  def find(ref: ResourceRefV): List[Node] =
-    elements.filter(PuppetCompile.evalResourceRef(ref)(_))
 
-  // Grab a "class" node and form a cross product of incoming edges with outgoing edges for a flattened graph
-  private def flattenedGraph(g: Graph[Node, DiEdge]): Graph[Node, DiEdge] = {
-    val restypes = g.nodes.filter(x => x.value.isInstanceOf[Resource]).map(_.value)
-    var edges = g.edges.filter(e => e._1.isInstanceOf[Resource] && e._2.isInstanceOf[Resource]).map (e => e._1.value ~> e._2.value)
-    val _edges = g.nodes map ({ case cl:HostClass =>
-      for (from <- cl.inNeighbors;
-           to <- cl.outNeighbors) yield from.value ~> to.value
-    })
+  private def findFirst(ref: ResourceRefV): CatalogElement =
+    elements.filter(PuppetCompile.evalResourceRef(ref)(_)).head
 
-    edges = edges ++ _edges.flatten
-
-    Graph.from(restypes, edges)
+  private def containedResources(elem: CatalogElement): List[Resource] = elem match {
+    case r: Resource => List(r)
+    case _ => ((containment getOrElse (elem.toResourceRefV, Set[ResourceRefV]()))
+               .map(e => containedResources(findFirst(e)))).toList.flatten
   }
 
-  def toGraph (): Graph[Node, DiEdge] = {
+  def find(ref: ResourceRefV): List[CatalogElement] =
+    elements.filter(PuppetCompile.evalResourceRef(ref)(_))
+
+  // Produces a flattened graph consisting only of Resources
+  def toGraph (): Graph[Resource, DiEdge] = {
     val edges = relationships.map({ case(fltr1, fltr2) =>
-      for(source <- find(fltr1)/*.asInstanceOf[List[Node]]*/;
-          target <- find(fltr2)/*.asInstanceOf[List[Node]]*/)
+      for(source <- find(fltr1).map(containedResources(_)).flatten;
+          target <- find(fltr2).map(containedResources(_)).flatten)
         yield source ~> target
     })
 
-    Graph.from(elements, edges.flatten)
+    val resources = elements.collect({ case r: Resource => r})
+    println ("Resources: " + resources.length.toString)
+
+    Graph.from(resources, edges.flatten)
   }
 
   def getNextClass(): Option[HostClass] = klasses match {

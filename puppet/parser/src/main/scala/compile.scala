@@ -1,6 +1,7 @@
 package puppet.core.eval
 
 import puppet.core._
+import puppet.core.eval.{Attributes => Attrs}
 import puppet.syntax._
 import puppet.util._
 
@@ -8,8 +9,6 @@ import scala.collection._
 import scala.collection.{mutable => mut}
 import scala.util.matching.Regex
 import scala.util.Try
-
-// TODO : Add staging support
 
 object interpolate {
 
@@ -76,18 +75,14 @@ object PuppetCompile {
       str.stripPrefix(str(0).toString).stripSuffix(str(0).toString)
     else str
 
-  // TODO : Redundant with a function in Resource class
-  private def resourceASTToTitle (attrs: ASTHashV): String =
-    attrs.value("type").toPString + ":" + attrs.value("title").toPString
-
   // TODO : More precise type than 'Value'
   private def eval(ast: ASTCore)
                   (implicit  env: ScopeChain, catalog: Catalog, containedBy: Option[ResourceRefV]): Value = ast match {
     case UndefC     => UndefV
     case BoolC(b)   => BoolV(b)
     case StringC(s) => StringV(stripQuote(interpolate(s, env)))
-    case TypeC(t)   => StringV(t) // XXX: Not sure
-    case NameC(n)   => StringV(n) // XXX: Not sure
+    case TypeC(t)   => StringV(t)
+    case NameC(n)   => StringV(n)
     case RegexC(r)  => RegexV(new Regex(r))
     case ASTHashC(kvs) => ASTHashV(kvs.map({ case (k, v) => (eval(k).asInstanceOf[StringV].value, eval(v))}).toMap)
     case ASTArrayC(arr) => ASTArrayV(arr.map(eval _).toArray) // TODO : Should have been toArray from beginning
@@ -199,7 +194,8 @@ object PuppetCompile {
 
     /* TODO : Handle Staging in puppet */
 
-    TypeCollection.add (HostclassC ('main.toString, List (), None, ast))
+    TypeCollection.clear()
+    TypeCollection.add(HostclassC('main.toString, List (), None, ast))
 
     def process(s: ASTCore): Unit = s match {
       case hc:   HostclassC  => TypeCollection.add (hc); hc.stmts.asInstanceOf[BlockStmtC].exprs.foreach(process)
@@ -248,21 +244,28 @@ object PuppetCompile {
     {
       implicit val catalog = new Catalog ()
 
-      val mainClass = mut.Map("title" -> StringV('main.toString).asInstanceOf[Value],
-                              "type" -> StringV("Class").asInstanceOf[Value])
+      val mainClass = Attrs.resourceBasicAttributes("Class", 'main.toString)
       catalog.addResource(mainClass)
-      var klass  = catalog.getNextClass() // Consume immediately, not threadsafe
-      var define = catalog.getNextDefinition()
-      while (!klass.isEmpty && !define.isEmpty) {
-        klass.map(evalClass(_))
-        define.map(evalDefinition(_))
+
+      def converge(): Unit = {
+        val klass = catalog.getNextClass()
+        val define = catalog.getNextDefinition()
+        if (!klass.isEmpty || !define.isEmpty) {
+          klass.map(evalClass(_))
+          define.map(evalDefinition(_))
+          converge()
+        }
       }
-      // TODO: Collections
+
+      converge()
+
       evalOverrides (catalog)
+      // TODO: Collections
       Right (catalog)
     }
   }
 
+  // TODO : Test
   // TODO : Only new attributes can be assigned a value, already existing attributes have to be appended
   //        otherwise the manifest is not supposed to compile
   def evalOverrides (catalog: Catalog): Catalog = {
@@ -327,7 +330,8 @@ object PuppetCompile {
 
     val klassAST = TypeCollection.getClass(klass.name) getOrElse
                    (throw new Exception("Puppet class %s not found".format(klass.name)))
-    var env = (new ScopeChain ()).addScope ("") // Add toplevel scope
+    implicit var env = (new ScopeChain ()).addScope ("") // Add toplevel scope
+    implicit val container = Some(klass.toResourceRefV)
 
     // Eval parent if present
     if (!klassAST.parent.isEmpty) {
@@ -339,32 +343,32 @@ object PuppetCompile {
       if (parentclass.args.length > 0)
         throw new Exception ("Parent class is not supposed to have arguments")
 
-      // parent 
-      catalog.addResource(mut.Map("type"->StringV("Class"),
-                                  "title"->StringV(parent)))
+      catalog.addResource(Attrs.resourceBasicAttributes("Class", parent))
       // Immediately consume; Not thread safe
       evalClass(catalog.getNextClass().get)
       env = env.addScope(parent)
     }
 
-    val args = klassAST.args.map({case (variable, oVal) => (variable.value, oVal.map(eval (_)(env, catalog, Some(klass.toResourceRefV)))) })
-    env = env.addScope(PuppetScope.createNamedScope (klass.name))
+    val args = klassAST.args.map({case (variable, oVal) => (variable.value, oVal.map(eval(_))) })
+    // 'main class is a dummy class that bounds toplevel statement and needs to be handled as special case
+    if (klass.name != 'main.toString) env = env.addScope(PuppetScope.createNamedScope (klass.name))
     mergeParamAndArgs(args, klass.params.toList).foreach({case (k, v) => env.setvar(k, v)})
 
-    klassAST.stmts.asInstanceOf[BlockStmtC].exprs.foreach(eval(_)(env, catalog, Some(klass.toResourceRefV)))
+    klassAST.stmts.asInstanceOf[BlockStmtC].exprs.foreach(eval(_))
   }
 
   private def evalDefinition(define: Definition)
                             (implicit catalog: Catalog) {
 
-    var env = (new ScopeChain()).addScope("") // Add toplevel scope
-    val defineAST = TypeCollection.getDefinition(define.name) getOrElse
-                      (throw new Exception ("\"%s\" definition not found in catalog".format(define.name)))
+    implicit var env = (new ScopeChain()).addScope("") // Add toplevel scope
+    implicit val container = Some(define.toResourceRefV)
+    val defineAST = TypeCollection.getDefinition(define.typ) getOrElse
+                      (throw new Exception ("\"%s\" definition not found in catalog".format(define.typ)))
 
-    val args = defineAST.args.map({ case(variable, oval) => (variable.value, oval.map(eval(_)(env, catalog, Some(define.toResourceRefV)))) })
+    val args = defineAST.args.map({ case(variable, oval) => (variable.value, oval.map(eval(_))) })
     env = env.addScope(PuppetScope.createNamedScope(define.name))
     mergeParamAndArgs(args, define.params.toList).foreach({case (k, v) => env.setvar(k, v)})
 
-    defineAST.stmts.asInstanceOf[BlockStmtC].exprs.foreach(eval(_)(env, catalog, Some(define.toResourceRefV)))
+    defineAST.stmts.asInstanceOf[BlockStmtC].exprs.foreach(eval(_))
   }
 }

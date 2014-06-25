@@ -41,7 +41,7 @@ import puppet.syntax._
  * One more difference from the Sugar Language AST is that some key attributes
  * of a resource now occur explicitly as attributes, like -
  * - type of resource
- * - title of resource
+ * - name of resource
  * - virtual status of resource
  *
  * These are just attributes and I don't see any point why they should
@@ -53,7 +53,7 @@ import puppet.syntax._
  *
  *  ResourceDeclaration {
  *     type => 'File',
- *     title => '/tmp/file',
+ *     name => '/tmp/file',
  *     virtual => true,
  *     ensure => present
  *  }
@@ -64,12 +64,12 @@ import puppet.syntax._
  * 
  * Semantically, they are same as they try to refer to one or more
  * resources. The former references a single resource by its type and
- * title and the latter is a generic search over attributes of a particular
+ * name and the latter is a generic search over attributes of a particular
  * type of resource. We can treat 'ResourceReference' as a special case of
  * 'Collection' as a search on the title (which happens to be unique for a
  * type of resource across catalog/system). Since we have title of a resource
- * as another attribute due to one of the above desugaring, it blends nicely
- * with our core AST semantics.
+ * (derivable) as another attribute due to one of the above desugaring, it
+ * blends nicely with our core AST semantics.
  */
 
 /* RelationExpr
@@ -99,7 +99,7 @@ import puppet.syntax._
  * is desugared into
  *
  * ResourceOverride (type == 'file') { checksum => md5lite }
- * ResourceOverride (type == 'service' and title == 'apache') { ensure => stopped }
+ * ResourceOverride (type == 'service' and name == 'apache') { ensure => stopped }
  * ResourceOverride (type == 'exec' and tag == 'staticlink') { path => '/sbin/:/usr/sbin' }
  * 
  * respectively.
@@ -207,16 +207,17 @@ object DesugarPuppetAST {
        
     case Attribute (name, value, add) => AttributeC (desugarAST (name), desugarAST (value), add)
 
-    case ResourceInstance (title, params) => {
-      val titleattr = Attribute (Name ("title"), title, false /* no add */)
-      ResourceDeclC ((titleattr :: params).map (desugarAST (_)))
+    case ResourceInstance (name, params) => {
+      val nameattr = Attribute (Name ("name"), name, false /* no add */)
+      val namevarattr = Attribute (Name ("namevar"), name, false /* no add */)
+      ResourceDeclC ((nameattr :: (namevarattr :: params)).map (desugarAST (_)))
     }
 
     case Resource (typ, instances) => {
 
       // Desugar into a ResourceC while adding 'type' as another attribute
       val typeattr = Attribute (Name("type"), Type (typ.capitalize), false /*no add*/)
-      val insts_with_tattr = instances.map ((r) => ResourceInstance (r.title, typeattr :: r.params))
+      val insts_with_tattr = instances.map ((r) => ResourceInstance (r.name, typeattr :: r.params))
 
       BlockStmtC (insts_with_tattr.map (desugarAST (_)))
     }
@@ -230,12 +231,12 @@ object DesugarPuppetAST {
         case Vrtexported => Attribute (Name ("virtual"), ASTString ("exported"), false /* no add */)
       }
 
-      val insts_with_vattr = instances.map ((r) => ResourceInstance (r.title, virtattr :: r.params))
+      val insts_with_vattr = instances.map ((r) => ResourceInstance (r.name, virtattr :: r.params))
       desugarAST (Resource (res.name, insts_with_vattr))
     }
 
  
-    case ResourceRef (typ, titles) => {
+    case ResourceRef (typ, names) => {
       // A resource should have the attributes
       val restyp = typ match {
         // Name is effectively a type, see the corresponding production rule
@@ -244,7 +245,7 @@ object DesugarPuppetAST {
       }
 
       val typmatch = FilterExprC (NameC ("type"), desugarAST (restyp), FEqOp)
-      val filters = titles.map ((title) => (FilterExprC (FilterExprC (NameC ("title"), desugarAST (title), FEqOp),
+      val filters = names.map ((name) => (FilterExprC (FilterExprC (NameC ("name"), desugarAST (name), FEqOp),
                                                          typmatch, FAndOp)))
       val filter = filters.reduce(FilterExprC (_, _, FOrOp))
       filter

@@ -152,7 +152,7 @@ case class Attribute (name: AttributeNameType, value: Expr, is_append: Boolean)
   extends AST
 
 // Puppet Resource Decl Related nodes
-case class ResourceInstance (title: ResourceName, params: List[Attribute]) extends AST
+case class ResourceInstance (name: ResourceName, params: List[Attribute]) extends AST
 case class Resource (name: String,
                      instances: List[ResourceInstance]) extends AST 
                                                         with RelationExprOperand
@@ -163,7 +163,7 @@ case class ResourceDefaults (typ: Type,
                                                           with Statement
 
 case class ResourceRef (typ: ResourceRefType,
-                        titles: List[Expr]) extends AST with RValue with RelationExprOperand
+                        names: List[Expr]) extends AST with RValue with RelationExprOperand
 case class ResourceOverride (ref: ResourceRef,
                              params: List[Attribute]) extends AST
                                                       with Statement
