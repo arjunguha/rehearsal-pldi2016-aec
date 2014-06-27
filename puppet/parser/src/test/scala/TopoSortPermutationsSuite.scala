@@ -21,13 +21,15 @@ class TopoSortPermutationsSuite extends FunSuite {
     assert(!(isElementMissing contains false))
   }
 
-  test("Graph with '5' unconnected nodes should give 120 permutations") {
+  test("Graph with 5 unconnected nodes should give 120 permutations") {
+
     val g = Graph.from(1.to(5), Seq.empty[DiEdge[Int]])
     val perms = GraphTopoSortPermutations(g)
     assert(120 == perms.size)
   }
 
-  test("Graph wtih '5' linearly connected nodes should give 1 permuation") {
+  test("Graph wtih 5 linearly connected nodes should give 1 permuation") {
+
     val g: Graph[Int, DiEdge] = Graph.from(1.to(5), Seq(1~>2, 2~>3, 3~>4, 4~>5))
     val perms = GraphTopoSortPermutations(g)
     assert(1 == perms.size)
