@@ -142,6 +142,9 @@ class Catalog {
   def find(ref: ResourceRefV): List[CatalogElement] =
     elements.filter(PuppetCompile.evalResourceRef(ref)(_))
 
+  def resourceCount: Int = resources.length
+  def resources: List[Resource] = elements.collect({ case r: Resource => r})
+
   // Produces a flattened graph consisting only of Resources
   def toGraph (): Graph[Resource, DiEdge] = {
     val edges = relationships.map({ case(fltr1, fltr2) =>
@@ -150,9 +153,7 @@ class Catalog {
         yield source ~> target
     })
 
-    val resources = elements.collect({ case r: Resource => r})
-    println ("Resources: " + resources.length.toString)
-
+    // println ("#Resources: " + resourceCount.toString)
     Graph.from(resources, edges.flatten)
   }
 
