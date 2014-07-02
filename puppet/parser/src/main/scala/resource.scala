@@ -51,9 +51,9 @@ object Provider {
       ensure match {
         case Some("present") => Process("ls")
         case Some("absent") => Process("ls")
-        case Some("file") => Process ("ls")
-        case Some("directory") => Process ("ls")
-        case Some("link") => Process ("ls")
+        case Some("file") => Process("ls")
+        case Some("directory") => Process("ls")
+        case Some("link") => Process("ls")
         case _ => throw new Exception("ensure field not defined")
       }
     }
