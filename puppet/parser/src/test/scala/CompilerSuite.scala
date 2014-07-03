@@ -21,8 +21,9 @@ class CompilerSpec extends PropSpec with PropertyChecks with Matchers {
     val files = Table ("file", recursiveListFiles (new File (src)).filter (_.isFile).toSeq:_*)
 
     forAll (files) {(f: File) => {
+      // println (f.getName)
       val content = scala.io.Source.fromFile (f).getLines () mkString "\n"
-      PuppetDriver (content)
+      PuppetDriver.printGraph(PuppetDriver.compile (content))
     }}
   }
 }
