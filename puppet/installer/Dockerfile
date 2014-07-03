@@ -11,7 +11,7 @@ MAINTAINER Nimish Gupta, nimish@cs.umass.edu
 WORKDIR /
 
 # run the (java) server as the daemon user
-USER daemon
+# USER daemon
 
 # copy the locally built fat-jar to the image
 ADD target/scala-2.10/puppet-installer-assembly-0.1.jar /app/server.jar
@@ -19,5 +19,6 @@ ADD target/scala-2.10/puppet-installer-assembly-0.1.jar /app/server.jar
 # run the server when a container based on this image is being run
 ENTRYPOINT [ "java", "-jar", "/app/server.jar" ]
 
-# the server binds to 8080 - expose that port
-EXPOSE 8140
+# the server binds to 8140 - expose that port
+# EXPOSE 8140
+# EXPOSE 5001
