@@ -29,12 +29,11 @@ import ExecutionContext.Implicits.global
 
 object PuppetDriver {
 
-  // TODO : Create new exception
-
-  // TODO : Should come from configuration file
   private val url = "http://localhost:4243"
   private val containerName = "puppet-installer"
   private val containerPort = 8140
+  private val execActorPath = "/user/ExecActor"
+
 
   private def processInstallOrder(order: Seq[Resource]): Seq[Int] = {
     implicit val installTimeout = Timeout(600.seconds) // TODO : Need to make configurable
@@ -46,38 +45,32 @@ object PuppetDriver {
 
     val cfg: ContainerConfig = plasma.docker.container(containerName)
       .withCommand("bash", "-c", "date") // dummy command required for container to be created
-      .withPortMap(containerPort, "tcp")
-      .withPortMap(5001, "tcp")
+      .withNetwork(true)
 
     val docker = new Docker(url)
     
-
-    /* TODO : Not a very reliable port number
-     * Since this function is executed in parallel, the port may not be unique among threads
-     * The port may have been taken
-     * 
-     */
-    val hostPort = 64000 + Random.nextInt(1000)
-    val hostcfg = HostConfig.empty
-      .bindPort(hostPort, containerPort, "tcp")
-      .bindPort(5001, 5001, "tcp")
-
     val container = Await.result(docker.createContainer(cfg), Duration.Inf)
     val id = container.Id
-    Await.result(docker.startContainer(id, hostcfg), Duration.Inf)
-
+    Await.result(docker.startContainer(id), Duration.Inf)
     val inspectCfg = Await.result(docker.inspectContainer(id), Duration.Inf)
-    println (inspectCfg)
+    println(inspectCfg)
+    val containerIP = inspectCfg.NetworkSettings.IPAddress
+    val gateway = inspectCfg.NetworkSettings.Gateway
 
-    // TODO : Get ActorRef
-    val akkaConf = ConfigFactory.load.getConfig("agent")
+    // TODO: Container should coordinate handshake
+    Thread sleep 5000
+
+    val akkaConf = ConfigFactory.parseString("akka.remote.netty.tcp { hostname=\"" + gateway + "\"}")
+      .withFallback(ConfigFactory.load.getConfig("agent"))
+
     val system = ActorSystem("Client", akkaConf)
-    val remoteAddress = "akka.tcp://PuppetInstallerSystem@127.0.0.1:" + hostPort.toString + "/user/ExecActor"
+    val remoteAddress = "akka.tcp://PuppetInstallerSystem@" + containerIP + ":" + containerPort.toString + execActorPath
     val remoteRef = system.actorSelection(remoteAddress)
 
-
     val stss = for (pb <- order)
-       yield Await.result(ask(remoteRef, pb).mapTo[Int], Timeout(600.seconds).duration)
+       yield Await.result(ask(remoteRef, Provider(pb).realize).mapTo[Int], Timeout(600.seconds).duration)
+
+    system.shutdown()
 
     Await.result(docker.killContainer(id), Duration.Inf)
     Await.result(docker.deleteContainer(id), Duration.Inf)

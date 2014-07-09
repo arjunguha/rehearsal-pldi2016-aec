@@ -20,5 +20,5 @@ ADD target/scala-2.10/puppet-installer-assembly-0.1.jar /app/server.jar
 ENTRYPOINT [ "java", "-jar", "/app/server.jar" ]
 
 # the server binds to 8140 - expose that port
-# EXPOSE 8140
-# EXPOSE 5001
+#EXPOSE 8140
+#EXPOSE 5001
