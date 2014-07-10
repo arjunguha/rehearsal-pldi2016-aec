@@ -64,7 +64,20 @@ sealed abstract class CatalogElement(val params: Attributes.T) {
 
 case class Resource(override val params: Attributes.T) extends CatalogElement(params) {
   override def toString = title
+
+  /*
+   * Omits complex attributes and turns the other attributes to string
+   * If an attribute has a value of type Array, only the first element of 
+   * array is preserved
+   */
+  def toStringAttributes: Map[String, String] = {
+    params.filter({case (k, _) => !(k == "require" || k == "before" || k == "notify" || k == "subscribe") })
+          .collect({ case (k, v: BoolV) => (k, v.toPString)
+                     case (k, v: StringV) => (k, v.toPString)
+                   }).toMap
+  }
 }
+
 case class HostClass(override val params: Attributes.T) extends CatalogElement(params)
 case class Definition(override val params: Attributes.T) extends CatalogElement(params)
 

@@ -4,7 +4,8 @@ import puppet.parser._
 import puppet.core._
 import puppet.core.eval._
 
-import puppet.runtime.core._
+// import puppet.runtime.core._
+
 import puppet.runtime.toposortperm._
 
 import scala.util.Try
@@ -34,7 +35,6 @@ object PuppetDriver {
   private val containerPort = 8140
   private val execActorPath = "/user/ExecActor"
 
-
   private def processInstallOrder(order: Seq[Resource]): Seq[Int] = {
     implicit val installTimeout = Timeout(600.seconds) // TODO : Need to make configurable
     /*
@@ -53,11 +53,10 @@ object PuppetDriver {
     val id = container.Id
     Await.result(docker.startContainer(id), Duration.Inf)
     val inspectCfg = Await.result(docker.inspectContainer(id), Duration.Inf)
-    println(inspectCfg)
     val containerIP = inspectCfg.NetworkSettings.IPAddress
     val gateway = inspectCfg.NetworkSettings.Gateway
 
-    // TODO: Container should coordinate handshake
+    // TODO: Wait for container actor system to come up. Container should coordinate handshake
     Thread sleep 5000
 
     val akkaConf = ConfigFactory.parseString("akka.remote.netty.tcp { hostname=\"" + gateway + "\"}")
@@ -68,22 +67,37 @@ object PuppetDriver {
     val remoteRef = system.actorSelection(remoteAddress)
 
     val stss = for (pb <- order)
-       yield Await.result(ask(remoteRef, Provider(pb).realize).mapTo[Int], Timeout(600.seconds).duration)
+       yield Await.result(ask(remoteRef, pb.toStringAttributes).mapTo[Int], Timeout(600.seconds).duration)
 
     system.shutdown()
+
+    /*
+    val logs = Await.result(docker.logs(id, true), Duration.Inf)
+    val logstr = new String(logs)
+    println("----------------------- Start container logs ----------------------")
+    println(logstr)
+    println("----------------------- End   container logs ----------------------")
+    */
 
     Await.result(docker.killContainer(id), Duration.Inf)
     Await.result(docker.deleteContainer(id), Duration.Inf)
     stss
   }
 
+  /*
+  private def processInstallOrderLocal(order: Seq[Resource]): Seq[Int] = {
+    for (r <- order)
+      yield Provider(r.toStringAttributes).realize
+  }
+  */
+
   def compile(content: String): Graph[Resource, DiEdge] = {
     val ast = PuppetParser (content)
     val desugared_ast = DesugarPuppetAST.desugarAST (ast)
     val g = 
       PuppetCompile.compile(desugared_ast.asInstanceOf[BlockStmtC]) match {
-        case Left (l) => throw new Exception ("Not supported")
-        case Right (catalog) => catalog.toGraph
+        case Left(l) => throw new Exception ("Not supported")
+        case Right(catalog) => catalog.toGraph
       }
 
     if (g.isCyclic) {
@@ -94,8 +108,19 @@ object PuppetDriver {
   }
 
   def verify(g: Graph[Resource, DiEdge]) {
-    GraphTopoSortPermutations(g)/*.par*/.foreach(processInstallOrder _)
+    val permutations = GraphTopoSortPermutations(g)/*.par*/
+    for (p <- permutations) {
+      val stss = processInstallOrder(p)
+      if (stss.find(_ != 0).isDefined)
+        throw new Exception("Verification failed")
+    }
   }
+
+  /*
+  def verifyLocal(g: Graph[Resource, DiEdge]) {
+    GraphTopoSortPermutations(g).foreach(processInstallOrderLocal _)
+  }
+  */
 
   def printGraph(g: Graph[Resource, DiEdge]) {
     val resource_desc = new NodeDescriptor[Resource] (typeId = "Resources") {
@@ -109,6 +134,6 @@ object PuppetDriver {
       defaultEdgeDescriptor = Di.descriptor[Resource]()
     )
 
-    println (g.toJson (quickJson))
+    println(g.toJson(quickJson))
   }
 }
