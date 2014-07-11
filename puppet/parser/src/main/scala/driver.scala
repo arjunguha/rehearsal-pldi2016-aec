@@ -35,7 +35,7 @@ object PuppetDriver {
   private val containerPort = 8140
   private val execActorPath = "/user/ExecActor"
 
-  private def processInstallOrder(order: Seq[Resource]): Seq[Int] = {
+  private def processInstallOrder(order: Seq[Resource]): Seq[Boolean] = {
     implicit val installTimeout = Timeout(600.seconds) // TODO : Need to make configurable
     /*
      * Create a container
@@ -57,9 +57,9 @@ object PuppetDriver {
     val gateway = inspectCfg.NetworkSettings.Gateway
 
     // TODO: Wait for container actor system to come up. Container should coordinate handshake
-    Thread sleep 5000
+    Thread sleep 10000
 
-    val akkaConf = ConfigFactory.parseString("akka.remote.netty.tcp { hostname=\"" + gateway + "\"}")
+    val akkaConf = ConfigFactory.parseString("akka.remote.netty.tcp.hostname=\"" + gateway + "\"")
       .withFallback(ConfigFactory.load.getConfig("agent"))
 
     val system = ActorSystem("Client", akkaConf)
@@ -67,7 +67,7 @@ object PuppetDriver {
     val remoteRef = system.actorSelection(remoteAddress)
 
     val stss = for (pb <- order)
-       yield Await.result(ask(remoteRef, pb.toStringAttributes).mapTo[Int], Timeout(600.seconds).duration)
+       yield Await.result(ask(remoteRef, pb.toStringAttributes).mapTo[Boolean], Timeout(600.seconds).duration)
 
     system.shutdown()
 
@@ -111,7 +111,7 @@ object PuppetDriver {
     val permutations = GraphTopoSortPermutations(g)/*.par*/
     for (p <- permutations) {
       val stss = processInstallOrder(p)
-      if (stss.find(_ != 0).isDefined)
+      if (stss.exists(_ == false))
         throw new Exception("Verification failed")
     }
   }

@@ -15,7 +15,7 @@ object Provider {
 
   sealed abstract class Provider (val r: Resource) {
     val name = r("name")
-    def realize: Int
+    def realize()
 
     protected def validVal[T](property: String, options: Map[String, T]): Option[T] = {
       r.get(property).map(options.get(_)).flatten
@@ -42,7 +42,7 @@ object Provider {
     val target = r.get("target")
     val content = r.get("content")
 
-    import java.nio.file.{Files, LinkOption, Paths}
+    import java.nio.file.{Files, LinkOption, Paths, Path}
     import java.io.FileWriter
 
     private def ignore(path:String): String = path
@@ -53,7 +53,13 @@ object Provider {
     private def createlink(target: String)(path: String): String = { Files.createSymbolicLink(Paths.get(path), Paths.get(target)); path }
     private def createdir(path: String): String = { Files.createDirectory(Paths.get(path)); path }
     private def deletedir(path: String): String = {
-      throw new Exception("NYI")
+      def recurdeletedir(p: Path) {
+        if(Files.isDirectory(p, LinkOption.NOFOLLOW_LINKS))
+          p.toFile.listFiles.foreach((f: java.io.File) => recurdeletedir(f.toPath))
+        Files.deleteIfExists(p)
+      }
+
+      recurdeletedir(Paths.get(path))
       path
     }
 
@@ -81,7 +87,7 @@ object Provider {
 
     // TODO: Ignoring ownershp and permissions for now
     // TODO : Ignoring source attribute
-    def realize: Int = {
+    def realize() {
 
       if (content.isDefined && (source.isDefined || target.isDefined))
         throw new Exception("content is mutually exclusive with source and target")
@@ -104,7 +110,7 @@ object Provider {
         /*
          * Cases 
          * If already absent then don't do anything
-         *  Directory: if force is set then remove action otherwise ignore
+         *  Directory: if force is set then remove otherwise ignore
          *  File: remove if present
          *  Symlink: Remove link (but not the target)
          */
@@ -146,16 +152,15 @@ object Provider {
          
         case _ => throw new Exception("One or more required attribute missing")
       }
-
-      0
     }
   }
 
   case class PuppetPackage(res: Resource) extends Provider(res) {
-    def realize: Int = 0
+
+    def realize() {}
   }
 
   case class User(res: Resource)  extends Provider(res) {
-    def realize: Int = 0
+    def realize() {}
   }
 }
