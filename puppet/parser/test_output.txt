@@ -1,0 +1,133 @@
+> test
+[info] TopoSortPermutationsSuite:
+[info] - Nodes should not be missing from permuations
+[info] - Graph with 5 unconnected nodes should give 120 permutations
+[info] - Graph wtih 5 linearly connected nodes should give 1 permuation
+[info] ParserInlineSpec:
+[info] When parsing append operator
+[info] - should not raise syntax errors
+[info] - should raise syntax errors on incomplete syntax
+[info] - should create ast::VarDef with append=true
+[info] - should work with arrays too
+[info] when parsing selector
+[info] - should support hash access on the left hand side
+[info] parsing 'unless'
+[info] - should create the correct ast objects
+[info] - should not raise an error with empty statements
+[info] - should not override 'unless' as a parameter inside resources
+[info] when parsing parameter names
+[info] - should allow inherits as a keyword
+[info] - should allow default as a keyword
+[info] - should allow in as a keyword
+[info] - should allow if as a keyword
+[info] - should allow undef as a keyword
+[info] - should allow class as a keyword
+[info] - should allow and as a keyword
+[info] - should allow or as a keyword
+[info] - should allow elsif as a keyword
+[info] - should allow else as a keyword
+[info] - should allow import as a keyword
+[info] - should allow node as a keyword
+[info] - should allow case as a keyword
+[info] - should allow unless as a keyword
+[info] - should allow define as a keyword
+[info] when parsing 'if'
+[info] - not, it should create the correct ast objects
+[info] - boolean operation, it should create the correct ast objects
+[info] - comparison operation, it should create the correct ast objects
+[info] when parsing if complex expressions
+[info] - should create a correct ast tree
+[info] - should raise an error on incorrect expression
+[info] when parsing resource references
+[info] - should not raise syntax errors
+[info] - should not raise syntax errors with multiple references
+[info] when parsing resource overrides
+[info] - should not raise syntax errors
+[info] - should not raise syntax errors with multiple overrides
+[info] - should create an ast::ResourceOverride
+[info] when parsing if statements
+[info] - should not raise errors with empty if
+[info] - should not raise errors with empty else
+[info] - should not raise errors with empty if and else
+[info] - should build a chain of 'ifs' if there's an 'elsif'
+[info] when parsing function calls
+[info] - should not raise errors with no arguments
+[info] - should not raise errors with rvalue function with no args
+[info] - should not raise errors with arguments
+[info] - should not raise errors with multiple arguments
+[info] - should not raise errors with multiple arguments and a trailing comma
+[info] - should signal an error parsing function applications with two args and no commas
+[info] - should parse a function application without parentheses
+[info] - should parse two function applications without parentheses
+[info] when parsing arrays
+[info] - should parse an array
+[info] - should not raise errors with a trailing comma
+[info] - should accept an empty array
+[info] when parsing classes
+[info] - should not create new classes
+[info] - should correctly set the parent class when one is provided
+[info] - should correctly set the parent class for multiple classes at a time
+[info] - should define the code when some is provided
+[info] when parsing resources
+[info] - should be able to parse class resources
+[info] - should correctly mark exported resources as exported
+[info] - should correctly mark virtual resources as virtual
+[info] when parsing nodes
+[info] - should be able to parse a node with a single name
+[info] - should be able to parse a node with three names
+[info] when parsing collections
+[info] - should parse basic collections
+[info] - should parse fully qualified collections
+[info] - should parse assignment of undef
+{"nodes":[{}]}
+{"nodes":[{}]}
+{"nodes":[{}]}
+{"nodes":[{}]}
+{"nodes":[{}]}
+{"nodes":[{}]}
+{"nodes":[{}],"edges":[{"n1":"Resource[User:abc]","n2":"Resource[File:/home/abc/file1]"},{"n1":"Resource[File:/etc/apache2/httpd.conf]","n2":"Resource[Service:apache2]"},{"n1":"Resource[File:/etc/nginx/nginx.conf]","n2":"Resource[Service:nginx]"},{"n1":"Resource[File:/tmp/dir]","n2":"Resource[File:/tmp/dir/file1]"}]}
+{"nodes":[{}]}
+{"nodes":[{}],"edges":[{"n1":"Resource[File:ntp.conf]","n2":"Resource[Service:]"},{"n1":"Resource[Package:ntp]","n2":"Resource[File:ntp.conf]"}]}
+{"nodes":[{}]}
+/var/${servicex}
+/var/${servicex}
+/var/${servicex}
+-----
+${homex}/logs
+${homey}/logs
+${homez}/logs
+===========
+/var/${servicex}
+/var/${servicex}
+/var/${servicex}
+-----
+${homex}/logs
+${homey}/logs
+${homez}/logs
+===========
+{}
+Warning: Ignoring notification. Notifications not supported (yet)
+Warning: Ignoring notification. Notifications not supported (yet)
+{"nodes":[{}],"edges":[{"n1":"Resource[File:/tmp/dir]","n2":"Resource[File:/tmp/dir/file1]"},{"n1":"Resource[File:/etc/apache2/httpd.conf]","n2":"Resource[Service:apache2]"},{"n1":"Resource[User:abc]","n2":"Resource[File:/home/abc/file1]"},{"n1":"Resource[File:/etc/nginx/nginx.conf]","n2":"Resource[Service:nginx]"}]}
+{"nodes":[{}],"edges":[{"n1":"Resource[File:/tmp/testing_component_requires2]","n2":"Resource[File:/tmp/testing_component_requires1]"}]}
+{}
+{"nodes":[{}]}
+toplevel
+parent class
+child class
+some toplevel var
+some parent var
+some child var
+{}
+{"nodes":[{}]}
+[info] CompilerSpec:
+[info] - Compiler should not throw exceptions
+[info] ParserSpec:
+[info] - Parse -> Pretty -> Parse should be identity
+[info] ScalaTest
+[info] Run completed in 2 minutes, 40 seconds.
+[info] Total number of tests run: 65
+[info] Suites: completed 4, aborted 0
+[info] Tests: succeeded 65, failed 0, canceled 0, ignored 0, pending 0
+[info] All tests passed.
+[info] Passed: Total 65, Failed 0, Errors 0, Passed 65
