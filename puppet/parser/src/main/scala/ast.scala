@@ -54,10 +54,11 @@ sealed trait AST extends Positional
 
 sealed trait StmtOrDecl extends AST
 
+/** These can appear in the body of a class */
+sealed trait ClassBody extends StmtOrDecl
+
 sealed trait TopLevelConstruct extends StmtOrDecl
-sealed trait Statement extends StmtOrDecl
-
-
+sealed trait Statement extends StmtOrDecl with TopLevelConstruct
 sealed trait CollectionExprOperand extends AST
 sealed trait Expr extends CollectionExprOperand
 sealed trait RValue extends Expr
@@ -73,11 +74,11 @@ sealed trait SelectLHS extends AttributeNameType
 
 sealed trait Hostname extends AST
 
+case class TopLevel(items: List[TopLevelConstruct]) extends AST
 
+case class ASTBool (value: Boolean) extends RValue with SelectLHS with AttributeNameType
 
-case class ASTBool (value: Boolean) extends AST with RValue with SelectLHS with AttributeNameType
-case class ASTString (value: String) extends AST 
-                                     with RValue
+case class ASTString (value: String) extends RValue
                                      with HashKey
                                      with ResourceName
                                      with SelectLHS
@@ -85,15 +86,14 @@ case class ASTString (value: String) extends AST
                                      with AttributeNameType
                                      with Hostname
 
-case object Default extends AST with SelectLHS with Hostname
-case class Type (value: String) extends AST
-                                with RValue
+case object Default extends SelectLHS with Hostname
+
+case class Type (value: String) extends RValue
                                 with ResourceName
                                 with ResourceRefType
                                 with SelectLHS
 
-case class Name (value: String)  extends AST
-                                 with RValue 
+case class Name (value: String)  extends RValue
                                  with HashKey
                                  with ResourceName
                                  with ResourceRefType
@@ -101,45 +101,44 @@ case class Name (value: String)  extends AST
                                  with AttributeNameType
                                  with Hostname
 
-case object Undef extends AST with RValue with SelectLHS
-case class Variable (value: String) extends AST
-                                    with RValue
+case object Undef extends RValue with SelectLHS
+
+case class Variable (value: String) extends RValue
                                     with VardefLHS
                                     with ResourceName
                                     with SelectLHS
                                     with RelationExprOperand
 
-case class HashOrArrayAccess (variable: Variable, 
-                              key: List[Expr]) extends AST 
-                                               with RValue
+case class HashOrArrayAccess (variable: Variable,
+                              key: List[Expr]) extends RValue
                                                with VardefLHS
                                                with ResourceName
                                                with SelectLHS
                                                with RelationExprOperand
 
-case class ASTRegex (value: String) extends AST with Expr with SelectLHS with Hostname
+case class ASTRegex (value: String) extends Expr with SelectLHS with Hostname
 
-case class ASTHash (kvs: List[(HashKey, Expr)]) extends AST with Expr
-case class ASTArray (arr: List[Expr]) extends AST with RValue with ResourceName
+case class ASTHash (kvs: List[(HashKey, Expr)]) extends Expr
+case class ASTArray (arr: List[Expr]) extends RValue with ResourceName
 
 case class BlockStmtDecls (stmts_decls: List[StmtOrDecl]) extends AST
 
 // Expressions involving operators
-case class BinExpr    (lhs: Expr, rhs: Expr, op: BinOp) extends AST with Expr
-case class NotExpr    (oper: Expr) extends AST with Expr
-case class UMinusExpr (oper: Expr) extends AST with Expr
+case class BinExpr    (lhs: Expr, rhs: Expr, op: BinOp) extends Expr
+case class NotExpr    (oper: Expr) extends Expr
+case class UMinusExpr (oper: Expr) extends Expr
 
-
+/**
+ * {@code File['foo'] ~> File['bar']}, etc.
+ */
 case class RelationExpr (lhs: RelationExprOperand,
                          rhs: RelationExprOperand,
-                          op: RelationOp) extends AST
-                                          with RelationExprOperand
+                          op: RelationOp) extends RelationExprOperand
                                           with Statement
 
 case class Vardef (variable: VardefLHS,
                    value: Expr,
-                   append: Boolean) extends AST with Statement 
-
+                   append: Boolean) extends Statement
 
 /**
  * <b>Examples</b>
@@ -153,76 +152,71 @@ case class Attribute (name: AttributeNameType, value: Expr, is_append: Boolean)
 
 // Puppet Resource Decl Related nodes
 case class ResourceInstance (name: ResourceName, params: List[Attribute]) extends AST
+
 case class Resource (name: String,
-                     instances: List[ResourceInstance]) extends AST 
-                                                        with RelationExprOperand
+                     instances: List[ResourceInstance]) extends RelationExprOperand
                                                         with Statement
-case class ResourceDefaults (typ: Type, 
-                             params: List[Attribute]) extends AST
-                                                          with RelationExprOperand
+case class ResourceDefaults (typ: Type,
+                             params: List[Attribute]) extends RelationExprOperand
                                                           with Statement
 
 case class ResourceRef (typ: ResourceRefType,
-                        names: List[Expr]) extends AST with RValue with RelationExprOperand
+                        names: List[Expr]) extends RValue with RelationExprOperand
 case class ResourceOverride (ref: ResourceRef,
-                             params: List[Attribute]) extends AST
-                                                      with Statement
+                             params: List[Attribute]) extends Statement
 
 case class VirtualResource (res: Resource,
-                            tvirt: VirtualResType) extends AST
-                                                   with Statement
+                            tvirt: VirtualResType) extends Statement
 
 case class CollectionExpr (lhs: CollectionExprOperand,
                            rhs: CollectionExprOperand,
-                            op: CollectionOp) extends AST with CollectionExprOperand
+                            op: CollectionOp) extends CollectionExprOperand
 
 case class Collection (typ: Type,
                        collexpr: Option[CollectionExpr],
                        tvirt: VirtualResType,
-                       params: List[Attribute]) extends AST 
-                                                with RelationExprOperand
+                       params: List[Attribute]) extends RelationExprOperand
                                                 with Statement
 
 // Conditional Statements
 case class IfExpr (test: Expr,
                    true_exprs: List[Statement],
-                   false_exprs: List[Statement]) extends AST
-                                            with Statement
+                   false_exprs: List[Statement]) extends Statement
 
 case class CaseOpt (values: List[SelectLHS], exprs: List[Statement]) extends AST
 
-case class CaseExpr (test: Expr, caseopts: List[CaseOpt]) extends AST
-                                                          with RelationExprOperand
+case class CaseExpr (test: Expr, caseopts: List[CaseOpt]) extends RelationExprOperand
                                                           with Statement
 
 case class Selector (param: SelectLHS,
-                     values: List[Attribute]) extends AST
-                                              with RValue
+                     values: List[Attribute]) extends RValue
                                               with ResourceName
                                               with RelationExprOperand
 
 case class Node (hostnames: List[Hostname],
                  parent: Option[Hostname],
-                 stmts: List[Statement]) extends AST with TopLevelConstruct
+                 stmts: List[Statement])
+  extends TopLevelConstruct
 
 // TODO : Should classname be string? or a 'Name' node or a 'Type' node?
 case class Hostclass (classname: String,
                       args: List[(Variable, Option[Expr])],
                       parent: Option[String],
-                      stmts: BlockStmtDecls) extends AST with TopLevelConstruct
+                      stmts: BlockStmtDecls)
+  extends TopLevelConstruct with ClassBody
 
 
 // TODO : Should classname be string? or a 'Name' node or a 'Type' node?
 case class Definition (classname: String,
                        args: List[(Variable, Option[Expr])],
-                       stmts: List[Statement]) extends AST with TopLevelConstruct
+                       stmts: List[Statement])
+  extends TopLevelConstruct with ClassBody
 
 // This is a function application rather than function declaration
 case class Function (name: Name,
                      args: List[Expr],
-                     ftype: Functype) extends AST 
-                                      with RValue
+                     ftype: Functype) extends RValue
                                       with SelectLHS
                                       with Statement
 
-case class Import (imports: List[String]) extends AST with Statement
+case class Import (imports: List[String]) extends Statement

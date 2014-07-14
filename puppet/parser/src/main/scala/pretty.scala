@@ -113,8 +113,8 @@ object PrettyPrintAST {
     }
 
     case LShift | RShift => context match {
-      case NOT | UMINUS | IN_MATCH_NOMATCH (_) | 
-           DIV_MULT_MOD (_) | PLUS_MINUS (_) | 
+      case NOT | UMINUS | IN_MATCH_NOMATCH (_) |
+           DIV_MULT_MOD (_) | PLUS_MINUS (_) |
            LSHIFT_RSHIFT (RIGHT) => true
       case _ => false
     }
@@ -173,7 +173,7 @@ object PrettyPrintAST {
       case LShift | RShift      => printer (printBinExprWithCtx (lhs, rhs, op, LSHIFT_RSHIFT (LEFT), LSHIFT_RSHIFT (RIGHT)))
       case NotEqual | Equal     => printer (printBinExprWithCtx (lhs, rhs, op, NOTEQUAL_EQUAL (LEFT), NOTEQUAL_EQUAL (RIGHT)))
 
-      case GreaterThan | GreaterEq | 
+      case GreaterThan | GreaterEq |
            LessThan | LessEq    => printer (printBinExprWithCtx (lhs, rhs, op, RELATIONAL (LEFT), RELATIONAL (RIGHT)))
 
       case And => printer (printBinExprWithCtx (lhs, rhs, op, AND (LEFT), AND (RIGHT)))
@@ -189,14 +189,14 @@ object PrettyPrintAST {
 
     case _ => printAST (a)
   }
-    
+
 
   private def printList[T] (lst: List[T], f: T => String, sep: String): String = {
-    (lst map f) mkString sep 
+    (lst map f) mkString sep
   }
 
   def printAST (ast: AST): String = ast match {
-
+    case TopLevel(items) => printList(items, printAST, "\n")
     case ASTBool (true)            => "true"
     case ASTBool (false)           => "false"
     case ASTString (s)             => s
@@ -209,8 +209,8 @@ object PrettyPrintAST {
     case ASTRegex (v)              => v
     case ASTHash (kvs)             => "{%s}".format (printList[(AST, AST)] (kvs, {case (k, v) => "%s => %s".format (printAST (k), printAST (v))}, ", "))
 
-    case BlockStmtDecls (es) => printList (es, printAST, "\n") 
-    
+    case BlockStmtDecls (es) => printList (es, printAST, "\n")
+
     case BinExpr (_, _, _) => printExpr (ast, TOPLEVEL)
     case RelationExpr (lhs, rhs, op) => "%s %s %s".format (printAST (lhs), RelationOpStr (op), printAST (rhs))
     case NotExpr (_)    => printExpr (ast, TOPLEVEL)
@@ -237,10 +237,10 @@ object PrettyPrintAST {
 
     case Collection (typ, filterexpr, restype, attribs) => {
       restype match {
-        case Vrtvirtual => "%s <| %s |> %s".format (printAST (typ), 
+        case Vrtvirtual => "%s <| %s |> %s".format (printAST (typ),
                                                     (filterexpr match { case None => ""; case Some (expr) => printAST (expr) }),
                                                     (if (attribs.length > 0) "{\n%s\n}".format (printList (attribs, printAST, ",\n")) else ""))
-        case Vrtexported => "%s <<| %s |>> %s".format (printAST (typ), 
+        case Vrtexported => "%s <<| %s |>> %s".format (printAST (typ),
                                                     (filterexpr match { case None => ""; case Some (expr) => printAST (expr) }),
                                                     (if (attribs.length > 0) "{\n%s\n}".format (printList (attribs, printAST, ",\n")) else ""))
       }
@@ -251,9 +251,9 @@ object PrettyPrintAST {
                                                                                                                                    case (v, Some (e)) => "%s = %s".format (printAST (v), printAST(e))
                                                                                                                                }, ","), printAST (stmts))
     case Hostclass (clnm, Nil, Some (parent), stmts) => "class %s inherits %s {\n%s\n}".format (clnm, parent, printAST (stmts))
-    case Hostclass (clnm, args, Some (parent), stmts) => 
-      "class %s (%s) inherits %s {\n%s\n}".format (clnm, 
-                                                   printList[(Variable, Option[Expr])] (args, { 
+    case Hostclass (clnm, args, Some (parent), stmts) =>
+      "class %s (%s) inherits %s {\n%s\n}".format (clnm,
+                                                   printList[(Variable, Option[Expr])] (args, {
                                                      case (v, None) => printAST (v)
                                                      case (v, Some (e)) =>"%s = %s".format (printAST (v), printAST(e))
                                                    }, ","),

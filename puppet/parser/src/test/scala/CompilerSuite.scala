@@ -1,5 +1,3 @@
-package test.puppet
-
 import puppet.driver._
 import org.scalatest._
 import org.scalatest.prop._
