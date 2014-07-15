@@ -195,7 +195,7 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
 
   lazy val expressions: P[List[Expr]] = repsep (expr, ("," | "=>"))
 
-  lazy val rvalue: P[RValue] = (
+  lazy val rvalue: P[Expr] = (
     selector |  array | hasharrayaccesses | resourceref | funcrvalue |
     undef | variable | quotedtext | boolean | name | asttype
   )
@@ -413,9 +413,9 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
 
   lazy val expr: P[Expr] = (binary (minPrec) | term)
 
-  lazy val case_stmt: P[CaseExpr] =
+  lazy val case_stmt: P[CaseStmt] =
     "case" ~> expr ~ ("{" ~> caseopts <~ "}") ^^ {
-      case e ~ csopts => CaseExpr (e, csopts)
+      case e ~ csopts => CaseStmt (e, csopts)
     }
 
   lazy val caseopts: P[List[CaseOpt]] = (

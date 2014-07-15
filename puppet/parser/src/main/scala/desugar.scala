@@ -307,7 +307,7 @@ object DesugarPuppetAST {
 
     case CaseOpt (values, exprs) => throw new Exception ("CaseOpt should have been Unreachable")
 
-    case CaseExpr (test, caseopts) => {
+    case CaseStmt (test, caseopts) => {
 
       // extract 'default' case expression
       def is_default (co: CaseOpt) = co.values match {
