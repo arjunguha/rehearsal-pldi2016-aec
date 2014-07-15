@@ -31,7 +31,7 @@ object PuppetCompile {
   }
 
   /*
-   * All integer related operations have to follow ruby semantics and its 
+   * All integer related operations have to follow ruby semantics and its
    * flexibilities and limitations.
    *
    * Being ruby compliant, when we ask for left shift by a negative
@@ -143,7 +143,7 @@ object PuppetCompile {
       catalog.addOverride (refv.asInstanceOf[ResourceRefV], mut.Map(params.value.toSeq: _*))
       UndefV // XXX: return value, dont know what to return
     }
- 
+
     // TODO : Partial function
     case _ => UndefV
   }
@@ -163,13 +163,13 @@ object PuppetCompile {
     val env = (new ScopeChain ()).addScope(toplevel)
 
     val facter_env = Cmd.exec("facter").get
- 
+
     facter_env.lines.foreach({ case line => {
         val kv = line.split ("=>").map (_.trim)
         if (kv.length > 1 // TODO : Hack to get past the failing smoke test for now
 ) env.setvar (kv(0), StringV (kv(1)))       }
     })
-    
+
     block.asInstanceOf[BlockStmtC].exprs.foreach(eval(_)(env, catalog, containedBy))
     env
   }
@@ -182,7 +182,7 @@ object PuppetCompile {
     val env = (new ScopeChain ()).addScope(toplevel)
 
     val facter_env = Cmd.exec("facter").get
- 
+
     facter_env.lines.foreach({ case line => {
         val kv = line.split ("=>").map (_.trim)
         if (kv.length > 1 // TODO : Hack to get past the failing smoke test for now
@@ -224,7 +224,7 @@ object PuppetCompile {
         val nodename = (eval(node.hostname)(env, catalog, 'main.toString)).toPString
 
         evalNode (nodename, node.stmts.asInstanceOf[BlockStmtC], env, catalog, 'main.toString)
-        
+
         var classes = List[(String, List[(String, Value)], String)]()
         var defines = List[(String, List[(String, Value)], String)]()
         var klass  = catalog.getNextClass()
@@ -269,7 +269,7 @@ object PuppetCompile {
   // TODO : Only new attributes can be assigned a value, already existing attributes have to be appended
   //        otherwise the manifest is not supposed to compile
   def evalOverrides (catalog: Catalog): Catalog = {
-    catalog.overrides.foreach ({ case (ref, attrs) => 
+    catalog.overrides.foreach ({ case (ref, attrs) =>
       catalog.find(ref).foreach ({ case res =>
         attrs.foreach ({ case (k, v) => res.mergeAttr (k, v) })
       })
@@ -292,11 +292,11 @@ object PuppetCompile {
    *
    * Node scope esp. for classes is something caught in between transitioning
    * from dynamic scoping in puppet < 2.7 to lexical scoping in puppet >= 2.7.
-   * 
+   *
    * $toplevel_variable = "toplevel"
    * class foo { notice ("$node_variable") }
    *
-   * node bar.baz.com { 
+   * node bar.baz.com {
    *   $node_variable = "this is bar.baz.com"
    *
    * case $::os {
@@ -305,7 +305,7 @@ object PuppetCompile {
    *   'ubuntu': { $local = "this is ubuntu running on node $node_variable"
    *               include foo }
    * }
-   * 
+   *
    * In the above example, due to mixing lexical and dynamic scoping, the variable
    * "$node_variable" is available to class but "$local" variable is not
    *
@@ -322,7 +322,7 @@ object PuppetCompile {
                                 params: List[(String, Value)]): List[(String, Value)] =
     (args.unzip._1 ++ params.unzip._1).distinct
     .map((arg) => (arg, ((params.toMap) get arg) getOrElse
-                        (((args.toMap) apply arg) getOrElse 
+                        (((args.toMap) apply arg) getOrElse
                         (throw new Exception("No value available for variable '%s'".format(arg))))))
 
   private def evalClass(klass: HostClass)
@@ -336,10 +336,10 @@ object PuppetCompile {
     // Eval parent if present
     if (!klassAST.parent.isEmpty) {
       val parent = klassAST.parent.get
-      val parentclass = (TypeCollection.getClass(parent)) getOrElse 
+      val parentclass = (TypeCollection.getClass(parent)) getOrElse
                         (throw new Exception ("Parent class not found"))
 
-      // Arguments are strictly not allowed for parent class 
+      // Arguments are strictly not allowed for parent class
       if (parentclass.args.length > 0)
         throw new Exception ("Parent class is not supposed to have arguments")
 

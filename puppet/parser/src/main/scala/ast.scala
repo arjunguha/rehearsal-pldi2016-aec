@@ -168,6 +168,11 @@ case class Resource (name: String,
 case class ResourceDefaults (typ: Type, params: List[Attribute])
   extends Statement
 
+/**
+ * <b>Examples</b>
+ *
+ * {@code File['/root/foo']}, {@code Package['vim']}
+ */
 case class ResourceRef (typ: ResourceRefType,
                         names: List[Expr]) extends RValue with RelationExprOperand
 case class ResourceOverride (ref: ResourceRef,
@@ -187,7 +192,7 @@ case class Collection (typ: Type,
                                                 with Statement
 
 // Conditional Statements
-case class IfExpr (test: Expr,
+case class IfStmt (test: Expr,
                    true_exprs: List[Statement],
                    false_exprs: List[Statement]) extends Statement
 

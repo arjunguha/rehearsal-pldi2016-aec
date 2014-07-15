@@ -159,8 +159,9 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
   lazy val decl: P[ClassBody] = definition | hostclass
 
   lazy val stmt: P[Statement] = (
-    (resource ||| resource_defaults ||| relationship ||| resourceoverride ) | virtualresource |
-    collection | assignment | case_stmt | ifstmt_begin | unless_stmt |
+    (resource ||| resource_defaults ||| relationship ||| resourceoverride ) |
+    virtualresource |
+    collection | assignment | case_stmt | ifstmt | unless_stmt |
     import_stmt | fstmt | append
   )
 
@@ -337,23 +338,28 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
     }
   )
 
-  lazy val unless_stmt: P[IfExpr] =
+  // NOTE: Parser parses unless to IfStmt
+  lazy val unless_stmt: P[IfStmt] =
     "unless" ~> expr ~ ("{" ~> stmt.* <~ "}") ^^ {
-      case e ~ ss => IfExpr (NotExpr (e), ss, List ())
+      case e ~ ss => IfStmt (NotExpr (e), ss, List ())
     }
 
-  lazy val ifstmt_begin: P[IfExpr] = "if" ~> ifstmt
+  lazy val ifstmt : P[IfStmt] = {
 
-  lazy val ifstmt: P[IfExpr] =
-    expr ~ ("{" ~> stmt.* <~ "}") ~ elsestmt.? ^^ {
-      case e ~ ss ~ None      => IfExpr (e, ss, List ())
-      case e ~ ss ~ Some (es) => IfExpr (e, ss, es)
-    }
+    lazy val ifstmt_cont: P[IfStmt] =
+      expr ~ ("{" ~> stmt.* <~ "}") ~ elsestmt.? ^^ {
+        case e ~ ss ~ None      => IfStmt (e, ss, List ())
+        case e ~ ss ~ Some (es) => IfStmt (e, ss, es)
+      }
 
-  lazy val elsestmt: P[List[Statement]] = (
-    "elsif" ~> ifstmt ^^ { case ifexp => List (ifexp) }
-  | "else" ~> "{" ~> stmt.* <~ "}"
-  )
+    lazy val elsestmt: P[List[Statement]] = (
+      "elsif" ~> ifstmt_cont ^^ { case ifexp => List (ifexp) }
+    | "else" ~> "{" ~> stmt.* <~ "}"
+    )
+
+    "if" ~> ifstmt_cont
+  }
+
 
   private lazy val parens: P[Expr] = "(" ~> expr <~ ")"
   private lazy val uminus: P[Expr] = "-" ~> term ^^ (UMinusExpr (_))

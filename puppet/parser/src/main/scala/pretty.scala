@@ -227,7 +227,7 @@ object PrettyPrintAST {
     case ResourceOverride (obj, prms) => "%s {\n%s\n}".format (printAST (obj), printList (prms, printAST, ",\n"))
 
     case VirtualResource (res, tvirt) => "%s%s".format (VirtualResTypeStr (tvirt), printAST (res))
-    case IfExpr (test, true_es, false_es) => "if %s { %s } else { %s }".format (printAST (test), printList (true_es, printAST, "\n"), printList (false_es, printAST, "\n"))
+    case IfStmt (test, true_es, false_es) => "if %s { %s } else { %s }".format (printAST (test), printList (true_es, printAST, "\n"), printList (false_es, printAST, "\n"))
     case CaseOpt (v, stmts) => "%s : {\n %s \n}".format (printList (v, printAST, ", "), printList (stmts, printAST, "\n"))
 
     case CaseExpr (test, caseopts) => "case %s {\n%s\n}".format (printAST (test), printList (caseopts, printAST, " "))

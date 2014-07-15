@@ -45,7 +45,7 @@ class ParserOfficialTests extends FunSpec with Matchers {
   describe ("parsing 'unless'") {
     it ("should create the correct ast objects") {
       PuppetParser ("unless false { $var = 1 }") match {
-        case TopLevel (List (IfExpr (NotExpr (x), _, _))) => x shouldBe a [ASTBool]
+        case TopLevel (List (IfStmt (NotExpr (x), _, _))) => x shouldBe a [ASTBool]
         case _ => fail ("Expected NotExpr")
       }
     }
@@ -75,14 +75,14 @@ class ParserOfficialTests extends FunSpec with Matchers {
   describe ("when parsing 'if'") {
     it ("not, it should create the correct ast objects") {
       PuppetParser ("if ! true { $var = 1 }") match {
-        case TopLevel (List (IfExpr (NotExpr (x), _, _))) => x shouldBe a [ASTBool]
+        case TopLevel (List (IfStmt (NotExpr (x), _, _))) => x shouldBe a [ASTBool]
         case _ => fail ("Expected NotExpr")
       }
     }
 
     it ("boolean operation, it should create the correct ast objects") {
       PuppetParser ("if true or true { $var = 1 }") match {
-        case TopLevel (List (IfExpr (BinExpr (lhs, rhs, op), _, _))) => {
+        case TopLevel (List (IfStmt (BinExpr (lhs, rhs, op), _, _))) => {
           lhs shouldBe a [ASTBool]
           rhs shouldBe a [ASTBool]
           op should be (Or)
@@ -93,7 +93,7 @@ class ParserOfficialTests extends FunSpec with Matchers {
 
     it ("comparison operation, it should create the correct ast objects") {
       PuppetParser ("if 1 < 2 { $var = 1 }") match {
-        case TopLevel (List (IfExpr (BinExpr (lhs, rhs, op), _, _))) =>
+        case TopLevel (List (IfStmt (BinExpr (lhs, rhs, op), _, _))) =>
           lhs shouldBe a [Name]
           rhs shouldBe a [Name]
           op should be (LessThan)
@@ -106,7 +106,7 @@ class ParserOfficialTests extends FunSpec with Matchers {
 
     it ("should create a correct ast tree") {
       PuppetParser ("if (1 > 2) and (1 == 2) { $var = 1 }") match {
-        case TopLevel (List (IfExpr (BinExpr (lhs, rhs, op), _, _))) =>
+        case TopLevel (List (IfStmt (BinExpr (lhs, rhs, op), _, _))) =>
           op should be (And)
           lhs match {
             case BinExpr (lhs, rhs, op) =>
