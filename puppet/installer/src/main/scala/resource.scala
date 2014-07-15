@@ -1,6 +1,6 @@
 package puppet.runtime.core
 
-import scala.sys.process._
+import puppet.util._
 
 object Provider {
 
@@ -139,6 +139,7 @@ object Provider {
                                          ignore,
                                          deletefile _ andThen createdir _,
                                          deletelink _ andThen createdir _)
+
         /*
          * Missing: create sym link with target
          * directory: if(force) removedir andThen createlink else ignore
@@ -157,10 +158,36 @@ object Provider {
 
   case class PuppetPackage(res: Resource) extends Provider(res) {
 
-    def realize() {}
+    private val validEnsureVals = List("present", "installed", "absent", "purged", "held", "latest")
+
+    val ensure = validVal("ensure", validEnsureVals)
+
+    def latest: String = {
+
+      import scala.collection.JavaConversions
+      import scala.util.matching.Regex._
+
+      val pattern = """Candidate:\s+(\S+)\s""".r
+      val output = Cmd.exec("apt-cache policy %s".format(name)).get
+      // Parse output for a version and return
+      pattern.findAllIn(output).matchData.map(_.group(1)).toList.head
+    }
+
+    def realize() {
+      val cmd = ensure match {
+        case Some("present") | Some("installed") => "apt-get -y -q install %s".format(name)
+        case Some("absent") => "apt-get -y -q remove %s".format(name)
+        case Some("purged") => "apt-get -y -q remove --purge %s".format(name)
+        case Some("held")   => throw new Exception("NYI held")
+        case Some("latest") => "apt-get -y -q install %s=%s".format(name, latest)
+        case _ => throw new Exception("One or more required attribute is missing")
+      }
+
+      Cmd.exec(cmd).get
+    }
   }
 
-  case class User(res: Resource)  extends Provider(res) {
+  case class User(res: Resource) extends Provider(res) {
     def realize() {}
   }
 }
