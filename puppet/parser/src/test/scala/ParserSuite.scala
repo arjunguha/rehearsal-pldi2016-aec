@@ -1,25 +1,25 @@
-import org.scalatest.PropSpec
-import org.scalatest.prop.PropertyChecks
-import org.scalatest.Matchers
 import puppet.syntax._
 import puppet.parser._
+import org.scalatest.FunSuite
 
 import java.io.File
 
-class ParserSpec extends PropSpec with PropertyChecks with Matchers {
+class ParserSpec extends FunSuite {
 
   private def recursiveListFiles (f: File): Array[File] = {
     val these = f.listFiles
     these ++ these.filter (_.isDirectory).flatMap (recursiveListFiles)
   }
 
-  property ("Parse -> Pretty -> Parse should be identity") {
+  for (f <- recursiveListFiles(new File ("./example/good/")).filter(_.isFile)) {
 
-  val files = Table ("file", recursiveListFiles (new File ("./example/good/")).filter (_.isFile).toSeq: _*)
+    test(s"$f: Parse -> Pretty -> Parse should be identity") {
 
-  forAll (files) {(f: File) => {
-    val content = scala.io.Source.fromFile (f).getLines () mkString "\n"
-    val ast = PuppetParser (content)
-    PuppetParser (PrettyPrintAST.printAST (ast)) should equal (ast)
-  }}}
+      val content = scala.io.Source.fromFile (f).getLines () mkString "\n"
+      val ast = PuppetParser (content)
+      assert(PuppetParser (PrettyPrintAST.printAST (ast)) == ast)
+
+    }
+
+  }
 }

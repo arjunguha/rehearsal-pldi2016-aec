@@ -154,15 +154,14 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
 
   lazy val program: P[TopLevel] = topLevel.* ^^ (TopLevel(_))
 
-  lazy val stmts_and_decls: P[BlockStmtDecls] = stmt_or_decl.* ^^ (BlockStmtDecls (_))
-
-  lazy val stmt_or_decl: P[StmtOrDecl] = (stmt | decl)
+  lazy val stmts_and_decls: P[BlockStmtDecls] = (stmt | decl).* ^^ (BlockStmtDecls (_))
 
   lazy val decl: P[ClassBody] = definition | hostclass
 
   lazy val stmt: P[Statement] = (
-    (resource ||| relationship ||| resourceoverride ) | virtualresource |
-    collection | assignment | case_stmt | ifstmt_begin | unless_stmt |
+    (resource ||| resource_defaults ||| relationship ||| resourceoverride ) |
+    virtualresource |
+    collection | assignment | case_stmt | ifstmt | unless_stmt |
     import_stmt | fstmt | append
   )
 
@@ -177,7 +176,7 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
       }
 
   lazy val relationship_side: P[RelationExprOperand] = (
-    resource ||| resourceref ||| collection ||| variable ||| quotedtext ||| selector |||
+    resource ||| resourceref ||| collection ||| variable ||| selector |||
     case_stmt ||| hasharrayaccesses
   )
 
@@ -196,19 +195,17 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
 
   lazy val expressions: P[List[Expr]] = repsep (expr, ("," | "=>"))
 
-  lazy val rvalue: P[RValue] = (
+  lazy val rvalue: P[Expr] = (
     selector |  array | hasharrayaccesses | resourceref | funcrvalue |
     undef | variable | quotedtext | boolean | name | asttype
   )
 
-  lazy val resource = ( resource_from_instance | resource_from_defaults )
-
-  lazy val resource_from_instance: P[Resource] =
+  lazy val resource: P[Resource] =
     classname ~ ("{" ~> resourceinstances <~ ";".? <~ "}") ^^ {
       case cn ~ ris => Resource (cn, ris)
     }
 
-  lazy val resource_from_defaults: P[ResourceDefaults] =
+  lazy val resource_defaults: P[ResourceDefaults] =
     asttype ~ ("{" ~> params.? <~ ",".? <~ "}") ^^ {
       case t ~ None => ResourceDefaults (t, List ())
       case t ~ Some (params) => ResourceDefaults (t, params)
@@ -220,8 +217,8 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
     }
 
   lazy val virtualresource: P[VirtualResource] = (
-    "@" ~> resource_from_instance ^^ (VirtualResource (_, Vrtvirtual))
-  | "@@" ~> resource_from_instance ^^ (VirtualResource (_, Vrtexported))
+    "@" ~> resource ^^ (VirtualResource (_, Vrtvirtual))
+  | "@@" ~> resource ^^ (VirtualResource (_, Vrtexported))
   )
 
   lazy val collection: P[Collection] = (
@@ -341,23 +338,28 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
     }
   )
 
-  lazy val unless_stmt: P[IfExpr] =
+  // NOTE: Parser parses unless to IfStmt
+  lazy val unless_stmt: P[IfStmt] =
     "unless" ~> expr ~ ("{" ~> stmt.* <~ "}") ^^ {
-      case e ~ ss => IfExpr (NotExpr (e), ss, List ())
+      case e ~ ss => IfStmt (NotExpr (e), ss, List ())
     }
 
-  lazy val ifstmt_begin: P[IfExpr] = "if" ~> ifstmt
+  lazy val ifstmt : P[IfStmt] = {
 
-  lazy val ifstmt: P[IfExpr] =
-    expr ~ ("{" ~> stmt.* <~ "}") ~ elsestmt.? ^^ {
-      case e ~ ss ~ None      => IfExpr (e, ss, List ())
-      case e ~ ss ~ Some (es) => IfExpr (e, ss, es)
-    }
+    lazy val ifstmt_cont: P[IfStmt] =
+      expr ~ ("{" ~> stmt.* <~ "}") ~ elsestmt.? ^^ {
+        case e ~ ss ~ None      => IfStmt (e, ss, List ())
+        case e ~ ss ~ Some (es) => IfStmt (e, ss, es)
+      }
 
-  lazy val elsestmt: P[List[Statement]] = (
-    "elsif" ~> ifstmt ^^ { case ifexp => List (ifexp) }
-  | "else" ~> "{" ~> stmt.* <~ "}"
-  )
+    lazy val elsestmt: P[List[Statement]] = (
+      "elsif" ~> ifstmt_cont ^^ { case ifexp => List (ifexp) }
+    | "else" ~> "{" ~> stmt.* <~ "}"
+    )
+
+    "if" ~> ifstmt_cont
+  }
+
 
   private lazy val parens: P[Expr] = "(" ~> expr <~ ")"
   private lazy val uminus: P[Expr] = "-" ~> term ^^ (UMinusExpr (_))
@@ -411,9 +413,9 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
 
   lazy val expr: P[Expr] = (binary (minPrec) | term)
 
-  lazy val case_stmt: P[CaseExpr] =
+  lazy val case_stmt: P[CaseStmt] =
     "case" ~> expr ~ ("{" ~> caseopts <~ "}") ^^ {
-      case e ~ csopts => CaseExpr (e, csopts)
+      case e ~ csopts => CaseStmt (e, csopts)
     }
 
   lazy val caseopts: P[List[CaseOpt]] = (

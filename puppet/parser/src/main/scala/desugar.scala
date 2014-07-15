@@ -302,12 +302,12 @@ object DesugarPuppetAST {
       ResourceOverrideC (filter, params.map (desugarAST (_)))
     }
 
-    case IfExpr (test, true_exprs, false_exprs) =>
+    case IfStmt (test, true_exprs, false_exprs) =>
       IfElseC (desugarAST (test), BlockStmtC (true_exprs.map (desugarAST (_))), BlockStmtC (false_exprs.map (desugarAST (_))))
 
     case CaseOpt (values, exprs) => throw new Exception ("CaseOpt should have been Unreachable")
 
-    case CaseExpr (test, caseopts) => {
+    case CaseStmt (test, caseopts) => {
 
       // extract 'default' case expression
       def is_default (co: CaseOpt) = co.values match {
