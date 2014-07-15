@@ -95,13 +95,17 @@ class Catalog {
   type Filter = ResourceRefV
   type Override = (Filter, Attributes.T)
 
-  var elements  = List[CatalogElement]()
+  var resources = List[Resource]()
   var klasses = List[HostClass]()
   var defines = List[Definition]()
   var overrides = List[Override]()
   var relationships = List[(ResourceRefV, ResourceRefV)]()
 
   var containment = mut.Map[ResourceRefV, Set[ResourceRefV]]()
+  private def getContainedElements(containedBy: ResourceRefV): Set[ResourceRefV] =
+    containment getOrElse(containedBy, Set())
+    
+  private def elements = (resources ::: klasses ::: defines)
 
   private def isDuplicate(e: CatalogElement): Boolean =
     elements.exists(_.title == e.title)
@@ -113,22 +117,17 @@ class Catalog {
 
     (elem, isDuplicate(elem)) match {
       case (r: Resource, true) => throw new Exception("Resource %s already exists in catalog".format(elem.title))
-      case (r: Resource, false) => ()
-      case (h: HostClass, true) => ()
+      case (r: Resource, false) => resources = r :: resources
+      case (h: HostClass, true) => () // Ignore duplicate class instantiation
       case (h: HostClass, false) => klasses = h :: klasses
       case (d: Definition, true) => throw new Exception("Definition %s already exists in catalog".format(elem.title))
       case (d: Definition, false) => defines = d :: defines
     }
 
     if (!containedBy.isEmpty) {
-      val refs = containment getOrElse(containedBy.get, Set[ResourceRefV]())
-      containment.put(containedBy.get, refs + elemRef)
+      containment.put(containedBy.get,
+                      getContainedElements(containedBy.get) + elemRef)
     }
-
-    elem.sources.foreach(addRelationship(_, elemRef))
-    elem.targets.foreach(addRelationship(elemRef, _))
-
-    elements = elem :: elements
 
     elemRef
   }
@@ -146,23 +145,24 @@ class Catalog {
   private def findFirst(ref: ResourceRefV): CatalogElement =
     elements.filter(PuppetCompile.evalResourceRef(ref)(_)).head
 
-  private def containedResources(elem: CatalogElement): List[Resource] = elem match {
+  private def getContainedResources(container: CatalogElement): List[Resource] = container match {
     case r: Resource => List(r)
-    case _ => ((containment getOrElse (elem.toResourceRefV, Set[ResourceRefV]()))
-               .map(e => containedResources(findFirst(e)))).toList.flatten
+    case _ => getContainedElements(container.toResourceRefV)
+               .map(c => getContainedResources(findFirst(c))).toList.flatten
   }
 
   def find(ref: ResourceRefV): List[CatalogElement] =
     elements.filter(PuppetCompile.evalResourceRef(ref)(_))
+    
+  private def findResources(ref: ResourceRefV): List[Resource] =
+    find(ref).map(getContainedResources(_)).flatten
 
   def resourceCount: Int = resources.length
-  def resources: List[Resource] = elements.collect({ case r: Resource => r})
 
-  // Produces a flattened graph consisting only of Resources
   def toGraph (): Graph[Resource, DiEdge] = {
     val edges = relationships.map({ case(fltr1, fltr2) =>
-      for(source <- find(fltr1).map(containedResources(_)).flatten;
-          target <- find(fltr2).map(containedResources(_)).flatten)
+      for(source <- findResources(fltr1);
+          target <- findResources(fltr2))
         yield source ~> target
     })
 

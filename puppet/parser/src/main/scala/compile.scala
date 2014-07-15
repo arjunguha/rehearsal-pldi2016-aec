@@ -236,6 +236,11 @@ object PuppetCompile {
 
         // TODO: Collections
         evalOverrides (catalog)
+
+        // Process relationships, all we have left are resources after converging
+        catalog.resources.foreach ({(r) => r.sources.foreach(catalog.addRelationship(_, r.toResourceRefV));
+                                           r.targets.foreach(catalog.addRelationship(r.toResourceRefV, _)) })
+
         (nodename, catalog)
       })))
     }
@@ -259,8 +264,13 @@ object PuppetCompile {
 
       converge()
 
-      evalOverrides (catalog)
+      evalOverrides(catalog)
       // TODO: Collections
+
+      // Process relationships, all we have left are resources after converging
+      catalog.resources.foreach ({(r) => r.sources.foreach(catalog.addRelationship(_, r.toResourceRefV));
+                                         r.targets.foreach(catalog.addRelationship(r.toResourceRefV, _))})
+
       Right (catalog)
     }
   }
@@ -268,11 +278,9 @@ object PuppetCompile {
   // TODO : Test
   // TODO : Only new attributes can be assigned a value, already existing attributes have to be appended
   //        otherwise the manifest is not supposed to compile
-  def evalOverrides (catalog: Catalog): Catalog = {
-    catalog.overrides.foreach ({ case (ref, attrs) => 
-      catalog.find(ref).foreach ({ case res =>
-        attrs.foreach ({ case (k, v) => res.mergeAttr (k, v) })
-      })
+  def evalOverrides(catalog: Catalog): Catalog = {
+    catalog.overrides.foreach({ case (ref, attrs) =>
+      catalog.find(ref).foreach((res) => attrs.foreach({ case (k, v) => res.mergeAttr(k, v) }))
     })
     catalog
   }
