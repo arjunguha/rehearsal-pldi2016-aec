@@ -1,12 +1,9 @@
 import puppet.driver._
-import org.scalatest._
-import org.scalatest.prop._
-
+import org.scalatest.FunSuite
 import java.io.File
 
-class CompilerSpec extends PropSpec with PropertyChecks with Matchers {
+class CompilerSuite extends FunSuite {
 
-  // val src = "./example/compiler"
   val src = "./example/compiler/"
 
   private def recursiveListFiles (f: File): Array[File] = {
@@ -14,14 +11,13 @@ class CompilerSpec extends PropSpec with PropertyChecks with Matchers {
     these ++ these.filter (_.isDirectory).flatMap (recursiveListFiles)
   }
 
-  property ("Compiler should not throw exceptions") {
+  for (f <- recursiveListFiles (new File (src)).filter(_.isFile)) {
 
-    val files = Table ("file", recursiveListFiles (new File (src)).filter (_.isFile).toSeq:_*)
-
-    forAll (files) {(f: File) => {
-      // println (f.getName)
+    test(s"compiling $f") {
       val content = scala.io.Source.fromFile (f).getLines () mkString "\n"
       PuppetDriver.printGraph(PuppetDriver.compile (content))
-    }}
+    }
+
   }
+
 }
