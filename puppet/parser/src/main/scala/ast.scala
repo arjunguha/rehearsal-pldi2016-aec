@@ -78,11 +78,14 @@ case class TopLevel(items: List[TopLevelConstruct]) extends AST
 
 case class ASTBool (value: Boolean) extends RValue with SelectLHS with AttributeNameType
 
+/** <b>Examples:</b>
+ *
+ * {@code 'hello'}, {@code 'hello${2 + 3}'}
+ */
 case class ASTString (value: String) extends RValue
                                      with HashKey
                                      with ResourceName
                                      with SelectLHS
-                                     with RelationExprOperand
                                      with AttributeNameType
                                      with Hostname
 
@@ -156,9 +159,14 @@ case class ResourceInstance (name: ResourceName, params: List[Attribute]) extend
 case class Resource (name: String,
                      instances: List[ResourceInstance]) extends RelationExprOperand
                                                         with Statement
-case class ResourceDefaults (typ: Type,
-                             params: List[Attribute]) extends RelationExprOperand
-                                                          with Statement
+
+/**
+ * <b>Examples</b>
+ *
+ * {@code File{ owner => nimish }}
+ */
+case class ResourceDefaults (typ: Type, params: List[Attribute])
+  extends Statement
 
 case class ResourceRef (typ: ResourceRefType,
                         names: List[Expr]) extends RValue with RelationExprOperand

@@ -154,14 +154,12 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
 
   lazy val program: P[TopLevel] = topLevel.* ^^ (TopLevel(_))
 
-  lazy val stmts_and_decls: P[BlockStmtDecls] = stmt_or_decl.* ^^ (BlockStmtDecls (_))
-
-  lazy val stmt_or_decl: P[StmtOrDecl] = (stmt | decl)
+  lazy val stmts_and_decls: P[BlockStmtDecls] = (stmt | decl).* ^^ (BlockStmtDecls (_))
 
   lazy val decl: P[ClassBody] = definition | hostclass
 
   lazy val stmt: P[Statement] = (
-    (resource ||| relationship ||| resourceoverride ) | virtualresource |
+    (resource ||| resource_defaults ||| relationship ||| resourceoverride ) | virtualresource |
     collection | assignment | case_stmt | ifstmt_begin | unless_stmt |
     import_stmt | fstmt | append
   )
@@ -177,7 +175,7 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
       }
 
   lazy val relationship_side: P[RelationExprOperand] = (
-    resource ||| resourceref ||| collection ||| variable ||| quotedtext ||| selector |||
+    resource ||| resourceref ||| collection ||| variable ||| selector |||
     case_stmt ||| hasharrayaccesses
   )
 
@@ -201,14 +199,12 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
     undef | variable | quotedtext | boolean | name | asttype
   )
 
-  lazy val resource = ( resource_from_instance | resource_from_defaults )
-
-  lazy val resource_from_instance: P[Resource] =
+  lazy val resource: P[Resource] =
     classname ~ ("{" ~> resourceinstances <~ ";".? <~ "}") ^^ {
       case cn ~ ris => Resource (cn, ris)
     }
 
-  lazy val resource_from_defaults: P[ResourceDefaults] =
+  lazy val resource_defaults: P[ResourceDefaults] =
     asttype ~ ("{" ~> params.? <~ ",".? <~ "}") ^^ {
       case t ~ None => ResourceDefaults (t, List ())
       case t ~ Some (params) => ResourceDefaults (t, params)
@@ -220,8 +216,8 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
     }
 
   lazy val virtualresource: P[VirtualResource] = (
-    "@" ~> resource_from_instance ^^ (VirtualResource (_, Vrtvirtual))
-  | "@@" ~> resource_from_instance ^^ (VirtualResource (_, Vrtexported))
+    "@" ~> resource ^^ (VirtualResource (_, Vrtvirtual))
+  | "@@" ~> resource ^^ (VirtualResource (_, Vrtexported))
   )
 
   lazy val collection: P[Collection] = (
