@@ -188,6 +188,62 @@ object Provider {
   }
 
   case class User(res: Resource) extends Provider(res) {
-    def realize() {}
+
+    private val validEnsureVals = List("present", "absent", "role")
+    private val validBoolVals = Map("true"->true, "false"->false,
+                                    "yes"->true, "no"->false)
+
+    import java.nio.file.{Files, LinkOption, Paths, Path}
+
+    val ensure = validVal("ensure", validEnsureVals)
+    val gid = r.get("gid")
+    // Sanity check => if multiple then they should be comma separated without spaces, multiple groups should be specified as an array
+    val groups = r.get("groups")
+
+    val shell = r.get("shell")
+    val uid = r.get("uid").map(_.toInt)
+    // Directory must be created separately and is not checked for existence
+    val home = r.get("home")
+
+    val comment = r.get("comment")
+    val expiry = r.get("expiry")
+
+    val allowdupe = validVal("allowdupe", validBoolVals) getOrElse false
+    val managehome = validVal("managehome", validBoolVals) getOrElse false
+    val system = validVal("system", validBoolVals) getOrElse false
+
+    def realize() {
+
+      // Hackish but puppet port, make sure shell binary exists and its executable
+      if (shell.isDefined) {
+        val p = shell.get
+        if (!Files.exists(Paths.get(p)) || Files.isExecutable(Paths.get(p))) {
+          throw new Exception("Invalid shell for user")
+        }
+      }
+
+      val cmd = ensure match {
+        case Some("present") => List("useradd",
+                                     gid.map("-g %s".format(_)) getOrElse "",
+                                     groups.map("-G %s".format(_)) getOrElse "",
+                                     shell.map("-s %s".format(_)) getOrElse "",
+                                     uid.map((u) => "-u %s".format(u.toString)) getOrElse "",
+                                     home.map("-d %s".format(_)) getOrElse "",
+                                     if (allowdupe) "-o" else "",
+                                     if (managehome) "-m" else "",
+                                     if (system) "-r" else "",
+                                     name)
+
+        case Some("absent") => List("userdel",
+                                    if (managehome) "-r" else "",
+                                    name)
+
+        case Some("role") => throw new Exception("role management in user not yet supported")
+
+        case _ => throw new Exception("Unknown 'ensure' value for user")
+      }
+
+      Cmd.exec(cmd mkString " ").get
+    }
   }
 }
