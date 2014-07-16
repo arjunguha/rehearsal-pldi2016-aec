@@ -31,7 +31,7 @@ import ExecutionContext.Implicits.global
 object PuppetDriver {
 
   private val url = "http://localhost:4243"
-  private val containerName = "puppet-installer"
+  private val containerName = "plasma/puppet-installer"
   private val containerPort = 8140
   private val execActorPath = "/user/ExecActor"
 
