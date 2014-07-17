@@ -91,10 +91,38 @@ object PuppetDriver {
   }
   */
 
+  import java.nio.file.{Files, Paths, Path}
+  import java.io.File
+
+  private def recursiveListFiles(f: File): Array[File] = {
+    val these = f.listFiles
+    these ++ these.filter(_.isDirectory).flatMap(recursiveListFiles)
+  }
+
+  private def manifestsInDirectory(dir: Path): List[Path] = {
+    recursiveListFiles(dir.toFile)
+      .filter((f) => f.isFile && f.toString.toLowerCase.endsWith(".pp"))
+      .map(_.toPath)
+      .toList
+  }
+
+  // TODO : Can be converted to Iterator[String]
+  private def loadManifest(path: Path): List[String] = scala.io.Source.fromFile(path.toString).getLines.toList
+
+  def prepareContent(mainFile: String, modulePath: Option[String] = None): String = {
+    if(Files.isRegularFile(Paths.get(mainFile))) {
+      val modulePathList = modulePath.map(_.split(':').map(Paths.get(_)).toList) getOrElse List()
+      val moduleManifests = modulePathList.map(manifestsInDirectory(_)).flatten.map(loadManifest(_)).flatten
+      (loadManifest(Paths.get(mainFile)) ::: moduleManifests) mkString "\n"
+    }
+    else
+      throw new Exception("Invalid manifest file")
+  }
+
   def compile(content: String): Graph[Resource, DiEdge] = {
     val ast = PuppetParser (content)
     val desugared_ast = DesugarPuppetAST.desugarAST (ast)
-    val g = 
+    val g =
       PuppetCompile.compile(desugared_ast.asInstanceOf[BlockStmtC]) match {
         case Left(l) => throw new Exception ("Not supported")
         case Right(catalog) => catalog.toGraph
