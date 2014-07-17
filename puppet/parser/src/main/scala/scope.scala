@@ -21,17 +21,17 @@ import scala.util.Random
  * Top scope is a named scope
  *
  * Node scope and local scopes created by defined resources and anonymous and cannot
- * be directly refrenced
+ * be directly referenced
  *
  * REFERENCING OUT OF SCOPE VARIABLES
  * Variables declared in named scopes can be referenced directly from anywhere 
- * (Including scopes hat otherwise would not have access to them) by using their
+ * (Including scopes that otherwise would not have access to them) by using their
  * global qualified name.
  * Out of scope variables are available in other scopes subject to their declaration
  * (Parse order dependence)
  *
- * Variables declared in anonymous scopes can only be accessed normally and do not
- * have global qualified names.
+ * Variables declared in anonymous scopes can only be accessed locally(no scope resolution)
+ * and do not have global qualified names.
  *
  * Parent scope is only assigned by class inheritance (using the inherits keyword)
  * Any derived class receives the contents of its base class in addition to the 
@@ -41,25 +41,27 @@ import scala.util.Random
  * apply to them as well.
  *
  * Appending to any variable referenced from outside the local scope would be
- * treated as a new variable definition in current scope 
+ * treated as a new variable definition in current scope.
  */
 
 
 // TODO : Make it a class
 object PuppetScope {
 
+  import scala.collection.{mutable => mut}
+
   type ScopeRef = String
 
   private class Scope {
 
-    private val env = scala.collection.mutable.Map[String, Value] ()
+    private val env = mut.Map[String, Value]()
 
     def setvar (varname: String, value: Value) = env += (varname -> value)
     def getvar (varname: String): Value = env(varname)
     def print() { println (env.mkString("{", "\n", "}")) }
   }
 
-  private val named_scopes = scala.collection.mutable.Map[ScopeRef, Scope] ()
+  private val named_scopes = mut.Map[ScopeRef, Scope]()
 
   def scope_exists (name: String): Boolean = named_scopes contains name
 
@@ -70,18 +72,6 @@ object PuppetScope {
 
     named_scopes += (name -> new Scope ())
     name
-  }
-
-  // XXX: Need not mix ephemeral scopes with named scopes
-  def createEphemeralScope (): ScopeRef = {
-
-    // alphanumeric random string
-    val name = Random.alphanumeric.take(8).mkString
-    if (scope_exists (name)) createEphemeralScope()
-    else {
-      named_scopes += (name -> new Scope ())
-      name
-    }
   }
 
   private def getScopeByName (name: String): Try[Scope] = Try (named_scopes (name))
@@ -103,9 +93,7 @@ object PuppetScope {
   }
 
   // TODO: Should go away when we have made this object a class
-  def clear () = {
-    named_scopes.clear ()
-  }
+  def clear () = named_scopes.clear
 
   def printScope (ref: ScopeRef) {
     val scope = getScopeByName (ref)
@@ -127,11 +115,8 @@ class ScopeChain (val scopes: List[PuppetScope.ScopeRef] = List[PuppetScope.Scop
       val scoperefs = tokens.slice (0, tokens.length - 1)
       val varname = tokens (tokens.length - 1)
 
-      if (!scoperefs.forall (PuppetScope.scope_exists))
-        throw new Exception ("Invalid scope chain")
-
-      // the last one is variable name, all others are scope names
-      PuppetScope.getvar (scoperefs (scoperefs.length - 1), varname)
+      // the last one is variable name, preceding that forms scope name
+      PuppetScope.getvar (scoperefs mkString "::", varname)
     }
     else {
 

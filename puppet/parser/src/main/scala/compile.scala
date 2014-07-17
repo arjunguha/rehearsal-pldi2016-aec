@@ -95,20 +95,15 @@ object PuppetCompile {
     // XXX: getvar should be wrapeed in Try instead of having try in scopechain class
     case VariableC(value) => env.getvar(value) getOrElse UndefV
 
-    case BlockStmtC(exprs) => {
-      val scope = PuppetScope.createEphemeralScope()
-      val new_env = env.addScope(scope)
-      // Return the last evaluated value
-      exprs.map (eval(_)(new_env, catalog, containedBy)).head
-      // XXX: Maybe destroy newly created ephemeral scope
-    }
+    // XXX: should we return head or the last element?
+    case BlockStmtC(exprs) => exprs.map(eval(_)).head
 
     case IfElseC(test, true_br, false_br) =>
       eval(if(eval(test).toBool) true_br else false_br)
 
     case BinExprC(lhs, rhs, op) => evalOp(op, eval(lhs), eval(rhs))
     case NotExprC(oper) => BoolV(!eval(oper).toBool)
-    case FuncAppC(name, args) => Function(eval(name).toPString, catalog, containedBy, args.map(eval _).toSeq:_*)
+    case FuncAppC(name, args) => Function(eval(name).toPString, catalog, containedBy, args.map((a) => (eval(a), a)).toSeq:_*)
 
     // TODO : I dont think that Import should have reached this far, it should have been eliminated earlier
     case ImportC(imports) => throw new Exception("Feature not supported yet")
