@@ -128,6 +128,7 @@ sealed abstract trait ASTCore
 case object UndefC extends ASTCore  // Special value for unassigned variables
 case class BoolC (value: Boolean) extends ASTCore
 case class StringC (value: String) extends ASTCore
+case class ConcatC (pre: ASTCore, mid: ASTCore, post: ASTCore) extends ASTCore
 case class TypeC (value: String) extends ASTCore
 case class NameC (value: String) extends ASTCore
 case class RegexC (value: String) extends ASTCore
@@ -178,6 +179,7 @@ object DesugarPuppetAST {
 
     case ASTBool (b) => BoolC (b)
     case ASTString (s) => StringC (s)
+    case Concat(pre, mid, post) => ConcatC(desugarAST(pre), desugarAST(mid), desugarAST(post))
     case Default => throw new Exception ("Default should have been Unreachable")
     case Type (t) => TypeC (t)
     case Name (name) => NameC (name)

@@ -73,20 +73,24 @@ sealed trait SelectLHS extends AttributeNameType
 
 sealed trait Hostname extends AST
 
+sealed trait QuotedText extends Expr with ResourceName with SelectLHS with HashKey
+
 case class TopLevel(items: List[TopLevelConstruct]) extends AST
 
 case class ASTBool (value: Boolean) extends Expr with SelectLHS with AttributeNameType
 
 /** <b>Examples:</b>
  *
- * {@code 'hello'}, {@code 'hello${2 + 3}'}
+ * {@code 'hello'}
  */
-case class ASTString (value: String) extends Expr
-                                     with HashKey
-                                     with ResourceName
-                                     with SelectLHS
-                                     with AttributeNameType
+case class ASTString (value: String) extends QuotedText
                                      with Hostname
+
+/** <b>Examples:</b>
+ *
+ * {@code 'hello ${name}, welcome to puppet'}
+ */
+case class Concat(pre: ASTString, mid: Expr, post: QuotedText) extends QuotedText
 
 case object Default extends SelectLHS with Hostname
 
@@ -95,13 +99,13 @@ case class Type (value: String) extends Expr
                                 with ResourceRefType
                                 with SelectLHS
 
-case class Name (value: String)  extends Expr
-                                 with HashKey
-                                 with ResourceName
-                                 with ResourceRefType
-                                 with SelectLHS
-                                 with AttributeNameType
-                                 with Hostname
+case class Name (value: String) extends Expr
+                                with HashKey
+                                with ResourceName
+                                with ResourceRefType
+                                with SelectLHS
+                                with AttributeNameType
+                                with Hostname
 
 case object Undef extends Expr with SelectLHS
 
@@ -215,15 +219,12 @@ case class Node (hostnames: List[Hostname],
                  stmts: List[Statement])
   extends TopLevelConstruct
 
-// TODO : Should classname be string? or a 'Name' node or a 'Type' node?
 case class Hostclass (classname: String,
                       args: List[(Variable, Option[Expr])],
                       parent: Option[String],
                       stmts: BlockStmtDecls)
   extends TopLevelConstruct with ClassBody
 
-
-// TODO : Should classname be string? or a 'Name' node or a 'Type' node?
 case class Definition (classname: String,
                        args: List[(Variable, Option[Expr])],
                        stmts: List[Statement])

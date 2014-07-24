@@ -7,6 +7,8 @@ import scala.util.parsing.combinator.syntactical._
 import scala.util.parsing.combinator.lexical._
 import scala.util.parsing.combinator.token._
 import scala.util.parsing.input.CharArrayReader.EofCh
+import scala.util.parsing.input.Reader
+import scala.util.parsing.input.Position
 import collection.mutable.HashSet
 
 private trait PuppetTokens extends StdTokens {
@@ -16,31 +18,37 @@ private trait PuppetTokens extends StdTokens {
   }
 
   case class PuppetName (chars: String) extends Token {
-    override def toString = chars
+    override def toString = s"PuppetName: $chars"
   }
 
   case class PuppetClassRef (chars: String) extends Token {
-    override def toString = chars
+    override def toString = s"PuppetClassRef: $chars"
   }
 
   case class PuppetRegex (chars: String) extends Token {
-    override def toString = chars
+    override def toString = s"PuppetRegex: $chars"
   }
 
   case class PuppetVariable (chars: String) extends Token {
-    override def toString = chars
+    override def toString = s"PuppetVariable: $chars"
   }
 
-  case class PuppetInterpolation (chars: String) extends Token {
-    override def toString = chars
+  case class PuppetInterpolation (parts: List[String]) extends Token {
+    override def toString = s"PuppetInterpolation: $chars"
+    override def chars = "\"%s\"".format(parts mkString "")
   }
 }
 
-private class PuppetLexical extends StdLexical
-                    with RegexParsers
-                    with PuppetTokens {
+private trait PuppetLexical extends Scanners with PuppetTokens {
+  def tokenize(s: String): Reader[Token]
+}
 
+private class ProgramLexer extends StdLexical
+                           with RegexParsers
+                           with PuppetLexical {
   override type Elem = Char
+
+  def tokenize(s: String): Reader[Token] = new Scanner(s)
 
   override val delimiters =
     HashSet("<-", "->", "<~", "~>",
@@ -56,45 +64,59 @@ private class PuppetLexical extends StdLexical
             "node" , "or" , "undef" , "unless")
 
   var ctx : Token = EOF
+
+  /* Regex can only appear after these keywords in grammar, otherwise
+   * regex containing symbols '/.../' are treated as mathematical divide
+   */
   val regexCtx = List(Keyword("node"), Keyword("{"), Keyword("}"),
                       Keyword("=~"), Keyword("!~"), Keyword(","))
 
   private def matchCtx(ctx: Token, tests: List[Token]): Boolean =
     tests.exists(_ == ctx)
 
-  override def token(): Parser[Token] =
-    (  NAMETOK ^^ (processName (_))
-     | CLASSREF ^^ (PuppetClassRef (_))
-     // Regex can only appear in certain contexts
-     | '/' ~ regexTok(ctx) ~ '/' ^^ { case '/' ~ reg ~ '/' => PuppetRegex ("/%s/".format (reg)) }
-     | VARIABLETOK ^^ { v => PuppetVariable (v.stripPrefix ("$")) }
-     | '\'' ~> stringLit ('\'') <~ '\'' ^^ { str => StringLit("\'" + str + "\'") }
-     | '\"' ~> interpolation <~ '\"' ^^ { str => PuppetInterpolation("\"" + str + "\"") }
-     | '\"' ~> stringLit ('\"') <~ '\"' ^^ { str => StringLit("\"" + str + "\"") }
-     | '\'' ~> failure("unclosed string literal")
-     | '\"' ~> failure("unclosed string literal")
-     | delim
-     | failure("illegal character")) map { res => ctx = res; res }
+  override def token(): Parser[Token] = (
+      NAMETOK ^^ (processName (_))
+    | CLASSREF ^^ (PuppetClassRef (_))
+      // Regex can only appear in certain contexts
+    | '/' ~ regexTok(ctx) ~ '/' ^^ { case '/' ~ reg ~ '/' => PuppetRegex ("/%s/".format (reg)) }
+    | '$' ~> VARIABLETOK ^^ (PuppetVariable(_))
+    | '\'' ~> stringLit ('\'') <~ '\'' ^^ { str => StringLit("\'" + str + "\'") }
+    | '\"' ~> interpolation <~ '\"' ^^ { parts => PuppetInterpolation(parts) }
+    | '\"' ~> stringLit ('\"') <~ '\"' ^^ { str => StringLit("\"" + str + "\"") }
+    | '\'' ~> failure("unclosed string literal")
+    | '\"' ~> failure("unclosed string literal")
+    | delim
+    | failure("illegal character")) map {res => ctx = res; res}
 
-  private def interpolation: Parser[String] =
+  private def interpolation: Parser[List[String]] =
     (partInterpolation).+ ~ postInterpolation ^^ {
-      case pl ~ postInterp => pl.foldLeft ("") ({ case (acc, elem) => acc + elem }) + postInterp
+      case pl ~ postInterp => {
+        val pinterp = (("\"" + pl.head._1), pl.head._2) :: pl.tail
+        ((postInterp + "\"") :: (pinterp.foldLeft(List[String]()) ({ case(acc, elem) => elem._2 :: (elem._1) :: acc}))).reverse
+      }
     }
 
-  private def partInterpolation: Parser[String] =
-    preInterpolation ~ inInterpolation ^^ { case x ~ y => x + "${" + y + "}" }
+  private def partInterpolation: Parser[(String, String)] = (
+    preInterpolationBraces ~ inInterpolation ^^ { case str ~ e => (str, "${" + e + "}") }
+  | preInterpolationNoBraces ~ VARIABLETOK ^^ { case str ~ v => (str, "${" + v + "}") } // equivalent
+  )
 
-  private def preInterpolation: Parser[String] = (
-    rep (chrExcept ('\\', '\"')) ~ escapeSeq ~ preInterpolation ^^ { case chars ~ es ~ interpstr => (chars mkString "") + es + interpstr }
-  | rep (chrExcept ('\"', '$', EofCh)) <~ '$' <~ '{' ^^ (_ mkString "")
+  private def preInterpolationBraces: Parser[String] = (
+    rep(chrExcept('\\', '\"', '$')) ~ escapeSeq ~ preInterpolationBraces ^^ { case chars ~ es ~ interpstr => (chars mkString "") + es + interpstr }
+  | rep(chrExcept('\"', '$', EofCh)) <~ '$' <~ '{' ^^ (_ mkString "")
+  )
+
+  private def preInterpolationNoBraces: Parser[String] = (
+    rep (chrExcept ('\\', '\"', '$')) ~ escapeSeq ~ preInterpolationNoBraces ^^ { case chars ~ es ~ interpstr => (chars mkString "") + es + interpstr }
+  | rep (chrExcept ('\"', '$', EofCh)) <~ '$' ^^ (_ mkString "")
   )
 
   private def inInterpolation: Parser[String] =
-    rep (chrExcept ('}', EofCh)) <~ '}' ^^ (_ mkString "")
+    rep(chrExcept('}', EofCh)) <~ '}' ^^ (_ mkString "")
 
-  private def postInterpolation: Parser[String] = stringLit ('\"')
+  private def postInterpolation: Parser[String] = stringLit('\"')
 
-  private def stringLit (quote_char: Char): Parser[String] = (
+  protected def stringLit(quote_char: Char): Parser[String] = (
     rep (chrExcept ('\\', quote_char))  ~ escapeSeq ~ stringLit (quote_char) ^^ { case chars ~ es ~ strlit => (chars mkString "") + es + strlit }
   | rep (chrExcept (quote_char, EofCh)) ^^ (_ mkString "")
   )
@@ -104,9 +126,9 @@ private class PuppetLexical extends StdLexical
   private def regexTok (ctx: Token): Parser[String] =
     if (matchCtx(ctx, regexCtx))
       (
-        rep (chrExcept ('\\', '/', EofCh, '\n')) ~ '\\' ~ '/' ~ regexTok(ctx) ^^ { case chars ~ '\\' ~ '/' ~ reg => (chars mkString "") + "\\/" + reg }
-      | rep (chrExcept ('\\', '/', EofCh, '\n')) ~ '\\' ~ regexTok(ctx) ^^ { case chars ~ '\\' ~ reg => (chars mkString "") + "\\" + reg }
-      | rep (chrExcept ('\\', '/', EofCh, '\n')) ^^ (_ mkString "")
+        rep(chrExcept('\\', '/', EofCh, '\n')) ~ '\\' ~ '/' ~ regexTok(ctx) ^^ { case chars ~ '\\' ~ '/' ~ reg => (chars mkString "") + "\\/" + reg }
+      | rep(chrExcept('\\', '/', EofCh, '\n')) ~ '\\' ~ regexTok(ctx) ^^ { case chars ~ '\\' ~ reg => (chars mkString "") + "\\" + reg }
+      | rep(chrExcept('\\', '/', EofCh, '\n')) ^^ (_ mkString "")
       )
    else failure("context not matching")
 
@@ -123,29 +145,113 @@ private class PuppetLexical extends StdLexical
   )
 
   override def comment: Parser[Any] = (
-      rep (chrExcept (EofCh, '*')) ~ '*' ~ '/' ^^ { _ => ' ' }
-    | rep (chrExcept (EofCh, '*')) ~ '*' ~ comment ^^ { _ => ' ' }
+      rep(chrExcept(EofCh, '*')) ~ '*' ~ '/' ^^ { _ => ' ' }
+    | rep(chrExcept(EofCh, '*')) ~ '*' ~ comment ^^ { _ => ' ' }
   )
 
-  private def BOOLEAN: Parser[String] = ("true" | "false")
+  protected def BOOLEAN: Parser[String] = ("true" | "false")
 
-  private def NAMETOK: Parser[String] = ("""((::)?[a-z0-9][-\w]*)(::[a-z0-9][-\w]*)*""".r
+  protected def NAMETOK: Parser[String] = ("""((::)?[a-z0-9][-\w]*)(::[a-z0-9][-\w]*)*""".r
                            ||| NUMBER)
 
-  private def NUMBER:Parser[String] = """\b(?:0[xX][0-9A-Fa-f]+|0?\d+(?:\.\d+)?(?:[eE]-?\d+)?)\b""".r
+  protected def NUMBER:Parser[String] = """\b(?:0[xX][0-9A-Fa-f]+|0?\d+(?:\.\d+)?(?:[eE]-?\d+)?)\b""".r
 
-  private def CLASSREF: Parser[String] = """((::){0,1}[A-Z][-\w]*)+""".r
+  protected def CLASSREF: Parser[String] = """((::){0,1}[A-Z][-\w]*)+""".r
 
-  private def VARIABLETOK: Parser[String] = (
-    """\$(?:::)?(?:[-\w]+::)*[-\w]+""".r // DOLLAR_VAR_WITH_DASH
-  | """\$(::)?(\w+::)*\w+""".r           // DOLLAR_VAR
+  protected def VARIABLETOK: Parser[String] = (
+    """(?:::)?(?:[-\w]+::)*[-\w]+""".r // VAR_WITH_DASH
+  | """(::)?(\w+::)*\w+""".r           // Simple VAR
   )
 }
 
-private class PuppetParser extends StdTokenParsers with PackratParsers {
+
+
+/* When interpolating the following rules are observed by original puppet parser
+ *
+ * - Variables can occur with and without '$' prefix when interpolating
+ *
+ * - A complex expression can occur inside interpolation
+ *
+ * - The first and *ONLY* first token inside interpolation is parsed as a
+ *   variable, irrespective of whether its a boolean, a reserved keyword or
+ *   a number
+ *   The only exception to this rule is quoted string.
+ * - If parsing it as variable fails then a syntax error is raised
+ *
+ *  Ex: $y = 1
+ *      notice("${y + '1'}") gives '2', y is interpolated as variable
+ *      notice("${'1' + y}") gives error, as y is not interpolated as a variable
+ *
+ *  Ex: $x = 1
+ *      $y = 2
+ *      notice("${ x + y }")
+ *  The above code fragment raises an error that y is not a number, becuase 'x'
+ *  is parsed as a variable while y is not
+ *
+ *  Ex: notice("${1.2 + 3}") raises error as 1.2 cannot be parsed as a variable
+ *
+ *  Ex: $one = "particular"
+ *      $another = "particular"
+ *      notice("${one == another}") gives 'false' because while 'one' is
+ *      interpolated as a variable, 'another' is not.
+ *      notice("${one == 'particular'}") gives 'true'
+ */
+ // Currently only lexing on the first token
+private class VariableLexer extends ProgramLexer {
+  override def token: Parser[Token] = (VARIABLETOK | '$'~>VARIABLETOK) ^^ (PuppetVariable(_))
+}
+
+
+/*
+private class InterpolateLexer extends PuppetLexical {
+
+  override def token: Parser[Token] = failure("token method not valid")
+  override def whitespace = failure("whitespace not valid")
+
+  class InterpolateScanner(in: List[(Token, Position)])
+                          (implicit val lastpos: Position) extends Reader[Token] {
+    override def first = in.head._1
+    override def rest = if(atEnd) this else (new InterpolateScanner(in.tail))
+    override def pos = if(atEnd) lastpos else in.head._2
+    override def atEnd = in.isEmpty
+    // override def source = throw new Exception("I thought source method is not required")
+    // override def offset = throw new Exception("I thought offset method is not required")
+  }
+
+  // expected to be a small string, we can tokenize before hand
+  override def tokenize(s: String): Reader[Token] = {
+    // val varlexer = new VariableLexer
+    val proglexer = new ProgramLexer
+
+    var progscanner = proglexer.tokenize(s)
+    // val varscanner = varlexer.tokenize(s)
+    var toklist: List[(Token, Position)] = List() // List((varscanner.first.asInstanceOf[this.Token], varscanner.pos))
+    // val rest = varscanner.rest
+    //val restOfInput = rest.source.subSequence(rest.offset, s.length).toString
+    //println ("Rest: " + restOfInput)
+    // var progscanner = proglexer.tokenize(" " + restOfInput)
+    while (!progscanner.atEnd) {
+      toklist = (progscanner.first.asInstanceOf[Token], progscanner.pos) :: toklist
+      progscanner = progscanner.rest
+    }
+
+    toklist.reverse.foreach(println(_))
+    val lastpos = toklist.head._2
+
+    println("IsKeyword: " + toklist(0)._1.isInstanceOf[Keyword])
+    println("Length of keyword: " + toklist(0)._1.chars.length)
+    println("Keyword chars: " + toklist(0)._1.chars)
+    println("Keyword tostr: " + toklist(0)._1.toString)
+
+    new InterpolateScanner(toklist.reverse)(lastpos)
+  }
+}
+*/
+
+private class PuppetParser(lexer: PuppetLexical) extends StdTokenParsers with PackratParsers {
 
   type Tokens = PuppetTokens
-  override val lexical = new PuppetLexical
+  override val lexical = lexer
 
   type P[+T] = PackratParser[T]
 
@@ -270,7 +376,7 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
   lazy val asttype: P[Type] = CLASSREF ^^ (Type (_))
 
   lazy val resourcename: P[ResourceName] =
-    quotedtext ||| name ||| asttype ||| selector ||| variable ||| array ||| hasharrayaccesses
+    selector | array | hasharrayaccesses | variable | quotedtext | name | asttype
 
   lazy val assignment: P[Vardef] = (
     hasharrayaccess ~ ("=" ~> expr) ^^ {
@@ -315,9 +421,19 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
       case name ~ None      => Function (name, List[Expr] (), Ftrval)
     }
 
-  lazy val quotedtext: P[ASTString] = (
+  private def makeQuotedText(parts: List[String]): QuotedText = parts match {
+    case part :: Nil => ASTString(part)
+    case pre :: mid :: post => Concat(ASTString(pre),
+                                      PuppetParser.interpExpr(mid.stripPrefix("${").stripSuffix("}")),
+                                      makeQuotedText(post))
+    case _ => throw new Exception("Error: invalid number of elements parsed while interpolating")
+  }
+    
+
+  lazy val quotedtext: P[QuotedText] = (
     STRING ^^ (ASTString (_))
-  | INTERPOLATION ^^ (ASTString (_))
+   | INTERPOLATION ^^ (makeQuotedText(_))
+  // | INTERPOLATION ^^ {parts => ASTString(parts mkString "")}
   )
 
   lazy val boolean: P[ASTBool] =
@@ -360,7 +476,6 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
     "if" ~> ifstmt_cont
   }
 
-
   private lazy val parens: P[Expr] = "(" ~> expr <~ ")"
   private lazy val uminus: P[Expr] = "-" ~> term ^^ (UMinusExpr (_))
   private lazy val not:    P[Expr] = "!" ~> term ^^ (NotExpr (_))
@@ -368,39 +483,39 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
 
   private def binaryOp (level: Int): Parser[((Expr, Expr) => Expr)] = {
     level match {
-      case 1 => "or"  ^^^ { (e1, e2) => BinExpr (e1, e2, Or)  }
+      case 1 => "or"  ^^^ { (e1, e2) => BinExpr(e1, e2, Or)  }
 
-      case 2 => "and" ^^^ { (e1, e2) => BinExpr (e1, e2, And) }
+      case 2 => "and" ^^^ { (e1, e2) => BinExpr(e1, e2, And) }
 
       case 3 =>
-        ">"   ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, GreaterThan) } |
-        ">="  ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, GreaterEq)   } |
-        "<"   ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, LessThan)    } |
-        "<="  ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, LessEq)      }
+        ">"   ^^^ { (e1: Expr, e2: Expr) => BinExpr(e1, e2, GreaterThan) } |
+        ">="  ^^^ { (e1: Expr, e2: Expr) => BinExpr(e1, e2, GreaterEq)   } |
+        "<"   ^^^ { (e1: Expr, e2: Expr) => BinExpr(e1, e2, LessThan)    } |
+        "<="  ^^^ { (e1: Expr, e2: Expr) => BinExpr(e1, e2, LessEq)      }
 
       case 4 =>
-        "!=" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, NotEqual) } |
-        "==" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, Equal)    }
+        "!=" ^^^ { (e1: Expr, e2: Expr) => BinExpr(e1, e2, NotEqual) } |
+        "==" ^^^ { (e1: Expr, e2: Expr) => BinExpr(e1, e2, Equal)    }
 
       case 5 =>
-        "<<" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, LShift) } |
-        ">>" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, RShift) }
+        "<<" ^^^ { (e1: Expr, e2: Expr) => BinExpr(e1, e2, LShift) } |
+        ">>" ^^^ { (e1: Expr, e2: Expr) => BinExpr(e1, e2, RShift) }
 
       case 6 =>
-        "-" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, Minus) } |
-        "+" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, Plus)  }
+        "-" ^^^ { (e1: Expr, e2: Expr) => BinExpr(e1, e2, Minus) } |
+        "+" ^^^ { (e1: Expr, e2: Expr) => BinExpr(e1, e2, Plus)  }
 
       case 7 =>
-        "*" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, Mult) } |
-        "/" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, Div)  } |
-        "%" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, Mod)  }
+        "*" ^^^ { (e1: Expr, e2: Expr) => BinExpr(e1, e2, Mult) } |
+        "/" ^^^ { (e1: Expr, e2: Expr) => BinExpr(e1, e2, Div)  } |
+        "%" ^^^ { (e1: Expr, e2: Expr) => BinExpr(e1, e2, Mod)  }
 
       case 8 =>
-        "in" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, In)      } |
-        "=~" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, Match)   } |
-        "!~" ^^^ { (e1: Expr, e2: Expr) => BinExpr (e1, e2, NoMatch) }
+        "in" ^^^ { (e1: Expr, e2: Expr) => BinExpr(e1, e2, In)      } |
+        "=~" ^^^ { (e1: Expr, e2: Expr) => BinExpr(e1, e2, Match)   } |
+        "!~" ^^^ { (e1: Expr, e2: Expr) => BinExpr(e1, e2, NoMatch) }
 
-      case _ => throw new RuntimeException ("bad precedence level " + level)
+      case _ => throw new RuntimeException("bad precedence level " + level)
     }
   }
 
@@ -409,9 +524,9 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
 
   private def binary (level: Int): Parser[Expr] =
     if (level > maxPrec) term
-    else binary (level + 1) * binaryOp (level)
+    else binary(level+1) * binaryOp(level)
 
-  lazy val expr: P[Expr] = (binary (minPrec) | term)
+  lazy val expr: P[Expr] = (binary(minPrec) | term)
 
   lazy val case_stmt: P[CaseStmt] =
     "case" ~> expr ~ ("{" ~> caseopts <~ "}") ^^ {
@@ -440,11 +555,11 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
     (selectval ^^ (List (_))
   | "{" ~> sintvalues <~ ",".? <~ "}")
 
-  lazy val sintvalues: P[List[Attribute]] = repsep (selectval, ("," | "=>"))
+  lazy val sintvalues: P[List[Attribute]] = repsep(selectval, ("," | "=>"))
 
   lazy val selectval: P[Attribute] =
     selectlhand ~ ("=>" ~> rvalue) ^^ {
-      case slcthnd ~ rval => Attribute (slcthnd, rval, false)
+      case slcthnd ~ rval => Attribute(slcthnd, rval, false)
     }
 
   lazy val selectlhand: P[SelectLHS] = (
@@ -454,25 +569,24 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
 
   lazy val string: P[String] = STRING
 
-  lazy val strings: P[List[String]] = repsep (string, ",")
+  lazy val strings: P[List[String]] = repsep(string, ",")
 
   lazy val import_stmt: P[Import] =
     // TODO : Deprecated in puppet, Should show as warning
-    // Consider saving quotes
     "import" ~> strings ^^ (Import (_))
 
   lazy val definition: P[Definition] =
     "define" ~> classname ~ argumentlist.? ~ ("{" ~> stmt.* <~ "}") ^^ {
-      case cnm ~ None        ~ ss => Definition (cnm, List (), ss)
-      case cnm ~ Some (args) ~ ss => Definition (cnm, args, ss)
+      case cnm ~ None        ~ ss => Definition(cnm, List (), ss)
+      case cnm ~ Some (args) ~ ss => Definition(cnm, args, ss)
     }
 
   lazy val hostclass: P[Hostclass] =
     "class" ~> classname ~ argumentlist.? ~ classparent.? ~ ("{" ~> stmts_and_decls.? <~ "}") ^^ {
-      case cnm ~ None        ~ clp ~ None      => Hostclass (cnm, List (), clp, BlockStmtDecls (List ()))
-      case cnm ~ None        ~ clp ~ Some (ss) => Hostclass (cnm, List (), clp, ss)
-      case cnm ~ Some (args) ~ clp ~ None      => Hostclass (cnm, args, clp, BlockStmtDecls (List ()))
-      case cnm ~ Some (args) ~ clp ~ Some (ss) => Hostclass (cnm, args, clp, ss)
+      case cnm ~ None        ~ clp ~ None      => Hostclass(cnm, List(), clp, BlockStmtDecls(List()))
+      case cnm ~ None        ~ clp ~ Some (ss) => Hostclass(cnm, List(), clp, ss)
+      case cnm ~ Some (args) ~ clp ~ None      => Hostclass(cnm, args, clp, BlockStmtDecls(List()))
+      case cnm ~ Some (args) ~ clp ~ Some (ss) => Hostclass(cnm, args, clp, ss)
     }
 
   lazy val nodedef: P[Node] = (
@@ -485,12 +599,12 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
 
   lazy val hostnames: P[List[Hostname]] = repsep (hostname, ",")
 
-  lazy val hostname: P[Hostname] = ("default" ^^ (Name (_))) | name | quotedtext | regex
+  lazy val hostname: P[Hostname] = ("default" ^^ (Name(_))) | name | STRING ^^ (ASTString(_)) | regex
 
   lazy val argumentlist: P[List[(Variable, Option[Expr])]] = (
     "(" ~> arguments.? <~ ")" ^^ {
-      case None => List ()
-      case Some (ss) => ss
+      case None => List()
+      case Some(ss) => ss
     }
   | "(" ~> arguments <~ ",".? <~ ")"
   )
@@ -563,27 +677,71 @@ private class PuppetParser extends StdTokenParsers with PackratParsers {
     elem ("regex", _.isInstanceOf[PuppetRegex]) ^^ (_.chars)
 
   def VARIABLETOK: Parser[String] =
-    elem ("classref", _.isInstanceOf[PuppetVariable]) ^^ (_.chars)
+    elem ("variable", _.isInstanceOf[PuppetVariable]) ^^ (_.chars)
 
-  def INTERPOLATION: Parser[String] =
-    elem ("interpolation", _.isInstanceOf[PuppetInterpolation]) ^^ (_.chars)
+  def INTERPOLATION: Parser[List[String]] =
+    elem ("interpolation", _.isInstanceOf[PuppetInterpolation]) ^^ (_.asInstanceOf[PuppetInterpolation].parts)
 
-  def parseAll (s: String) = {
-    val tokens = new lexical.Scanner (s)
+  private def parseExpr(s: String) = {
+    val tokens = lexical.tokenize(s)
+    
+    /*
+    println("----------")
+    val tok = tokens.first
+    println("IsKeyword: " + tok.isInstanceOf[lexical.Keyword])
+    println("Length of keyword: " + tok.chars.length)
+    println("Keyword chars: " + tok.chars)
+    println("Keyword tostr: " + tok.toString)
+    println("Test ---------------")
+    println("Equality1: " + (lexical.Keyword("!") == tok))
+    val res = tok.equals(lexical.Keyword("!"))
+    println("Info tok: " +  tok.getClass.getName)
+    println("Info keyword: " +  lexical.Keyword("!").getClass.getName)
+    println("Equality4: " + (lexical.Keyword("!") == lexical.Keyword("!")))
+    */
+
+    phrase(expr)(tokens)
+    // phrase(log(accept(lexical.Keyword("!")))("! parser") ^^ ((k) => ASTString(k.chars)))(tokens)
+  }
+
+  def parseAll(s: String) = {
+    val tokens = lexical.tokenize(s)
     // Parses up to EOF, otherwise fails.
     phrase(program)(tokens)
   }
 }
 
-case class PuppetParserException (msg: String) extends Exception(msg)
+case class PuppetParserException(msg: String) extends Exception(msg)
 
 object PuppetParser {
 
-  private val parser = new PuppetParser()
-  import parser._
+  private val programParser = new PuppetParser(new ProgramLexer)
+  private val interpParser = new PuppetParser(new VariableLexer)
+  private val proginterpParser = new PuppetParser(new ProgramLexer)
 
-  def apply (in: String) : TopLevel = parseAll (in) match {
-    case Success (ast, _) => ast
-    case NoSuccess (msg, next) => throw PuppetParserException ("Parsing failed: %s\n Rest of Input: %s".format (msg, next))
+  def apply(in: String) : TopLevel = programParser.parseAll(in) match {
+    case programParser.Success(ast, _) => ast
+    case programParser.NoSuccess(msg, nxt) => throw PuppetParserException("Parsing failed: %s\n Rest of Input: %s".format(msg, nxt))
+  }
+
+  // If first token passes the interpolated variable test then make 'expr' parser see the first token as PuppetVariable
+  /*private*/ def interpExpr(in: String): Expr = interpParser.parseExpr(in) match {
+    case interpParser.Success(ast, _) => ast
+    case interpParser.NoSuccess(msg, nxt) => throw PuppetParserException("Parsing failed: %s\n Rest of Input: %s".format(msg, nxt))
+  }
+
+  /*private*/ def interpExprPrg(in: String): Expr = proginterpParser.parseExpr(in) match {
+    case proginterpParser.Success(ast, _) => ast
+    case proginterpParser.NoSuccess(msg, nxt) => throw PuppetParserException("Parsing failed: %s\n Rest of Input: %s".format(msg, in))
+  }
+
+  def example(in: String) = {
+    val lexer = new ProgramLexer
+    var tokens = new lexer.Scanner(in)
+    while (!tokens.atEnd) {
+      println (tokens.first)
+      println(tokens.pos)
+      tokens = tokens.rest
+    }
   }
 }

@@ -200,6 +200,7 @@ object PrettyPrintAST {
     case ASTBool (true)            => "true"
     case ASTBool (false)           => "false"
     case ASTString (s)             => s
+    case Concat(pre, mid, post)    => "%s${%s}%s".format(printAST(pre), printAST(mid), printAST(post))
     case Default                   => "default"
     case Type (v)                  => v
     case Name (v)                  => v

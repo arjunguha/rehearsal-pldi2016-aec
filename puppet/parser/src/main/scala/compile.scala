@@ -10,13 +10,6 @@ import scala.collection.{mutable => mut}
 import scala.util.matching.Regex
 import scala.util.Try
 
-object interpolate {
-
-  def apply(str: String, env: ScopeChain): String = {
-    str
-  }
-}
-
 object PuppetCompile {
 
   // TODO : CatalogElement should not be exposed directory but should be a trait
@@ -80,7 +73,10 @@ object PuppetCompile {
                   (implicit  env: ScopeChain, catalog: Catalog, containedBy: Option[ResourceRefV]): Value = ast match {
     case UndefC     => UndefV
     case BoolC(b)   => BoolV(b)
-    case StringC(s) => StringV(stripQuote(interpolate(s, env)))
+    case StringC(s) => StringV(stripQuote(s))
+    case ConcatC(pre, mid, post) => StringV(eval(pre).asInstanceOf[StringV].toPString +
+                                            eval(mid).toPString +
+                                            eval(post).asInstanceOf[StringV].toPString)
     case TypeC(t)   => StringV(t)
     case NameC(n)   => StringV(n)
     case RegexC(r)  => RegexV(new Regex(r))
@@ -249,6 +245,7 @@ object PuppetCompile {
 
       def converge(): Unit = {
         val klass = catalog.getNextClass()
+        // TODO: Collections
         val define = catalog.getNextDefinition()
         if (!klass.isEmpty || !define.isEmpty) {
           klass.map(evalClass(_))
@@ -260,7 +257,6 @@ object PuppetCompile {
       converge()
 
       evalOverrides(catalog)
-      // TODO: Collections
 
       // Process relationships, all we have left are resources after converging
       catalog.resources.foreach ({(r) => r.sources.foreach(catalog.addRelationship(_, r.toResourceRefV));
@@ -318,14 +314,13 @@ object PuppetCompile {
    * node level variables again are warned by puppet-lint tool.
    */
 
-  // We don't have nested class support yet
   private def mergeParamAndArgs(// args are what a construct declares (defaults etc in argment lists)
                                 args:List[(String, Option[Value])],
                                 // Params are what is provided to a construct
                                 params: List[(String, Value)]): List[(String, Value)] =
     (args.unzip._1 ++ params.unzip._1).distinct
-    .map((arg) => (arg, ((params.toMap) get arg) getOrElse
-                        (((args.toMap) apply arg) getOrElse
+    .map((arg) => (arg, ((params.toMap) get arg) getOrElse // Choose provided value over defaults
+                        (((args.toMap) apply arg) getOrElse  // Look for default in case no value is provided
                         (throw new Exception("No value available for variable '%s'".format(arg))))))
 
   private def evalClass(klass: HostClass)
@@ -334,7 +329,7 @@ object PuppetCompile {
     val klassAST = TypeCollection.getClass(klass.name) getOrElse
                    (throw new Exception("Puppet class %s not found".format(klass.name)))
     implicit var env = (new ScopeChain ()).addScope ("") // Add toplevel scope
-    implicit val container = Some(klass.toResourceRefV)
+    implicit val container = Some(klass.toResourceRefV) // resources withing this class are contained by it
 
     // Eval parent if present
     if (!klassAST.parent.isEmpty) {
@@ -364,7 +359,7 @@ object PuppetCompile {
                             (implicit catalog: Catalog) {
 
     implicit var env = (new ScopeChain()).addScope("") // Add toplevel scope
-    implicit val container = Some(define.toResourceRefV)
+    implicit val container = Some(define.toResourceRefV) // resources within this definition are contained by it
     val defineAST = TypeCollection.getDefinition(define.typ) getOrElse
                       (throw new Exception ("\"%s\" definition not found in catalog".format(define.typ)))
 
