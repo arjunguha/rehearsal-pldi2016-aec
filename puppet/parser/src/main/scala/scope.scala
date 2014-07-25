@@ -81,7 +81,7 @@ object PuppetScope {
     var scope = getScopeByName (ref)
 
     if (scope.isSuccess) scope.map (_.setvar (varname, value))
-    else throw new Exception ("Invalid Scope")
+    else throw new Exception(s"Invalid Scope: $ref")
   }
 
   def getvar(ref: ScopeRef, varname: String): Try[Value] = {
@@ -89,7 +89,7 @@ object PuppetScope {
     var scope = getScopeByName (ref)
 
     if (scope.isSuccess) scope.map (_.getvar (varname))
-    else throw new Exception ("Invalid Scope")
+    else throw new Exception(s"Invalid Scope: $ref")
   }
 
   // TODO: Should go away when we have made this object a class
@@ -98,7 +98,7 @@ object PuppetScope {
   def printScope (ref: ScopeRef) {
     val scope = getScopeByName (ref)
     if (scope.isSuccess) scope.get.print()
-    else throw new Exception ("Invalid Scope")
+    else throw new Exception(s"Invalid Scope: $ref")
   }
 }
 
@@ -115,8 +115,13 @@ class ScopeChain (val scopes: List[PuppetScope.ScopeRef] = List[PuppetScope.Scop
       val scoperefs = tokens.slice (0, tokens.length - 1)
       val varname = tokens (tokens.length - 1)
 
-      // the last one is variable name, preceding that forms scope name
-      PuppetScope.getvar (scoperefs mkString "::", varname)
+      /* The last one is variable name, preceding that forms scope name
+       * A prefix of "::" is superfluous once we know that the variable
+       * name is qualified and needs to be removed. Some classes that 
+       * fall under scope of module will not match if prefixed with ::
+       */
+      val scopename = (scoperefs mkString "::").stripPrefix("::")
+      PuppetScope.getvar(scopename, varname)
     }
     else {
 
@@ -125,7 +130,7 @@ class ScopeChain (val scopes: List[PuppetScope.ScopeRef] = List[PuppetScope.Scop
       if (!foundscope.isEmpty)
          PuppetScope.getvar (foundscope.get, varfqname)
       else
-         Try(throw new Exception("Variable \"%s\" not found in any scope".format(varfqname)))
+         Try(throw new Exception(s"Variable $varfqname not found in any scope"))
     }
   }
 
@@ -155,7 +160,7 @@ class ScopeChain (val scopes: List[PuppetScope.ScopeRef] = List[PuppetScope.Scop
     else {
 
       if (PuppetScope.getvar(cur_scope, varname).isSuccess)
-        throw new Exception("Cannot reassign variable \"%s\" in scope \"%s\"".format(varname, cur_scope))
+        throw new Exception(s"Cannot reassign variable $varname in scope $cur_scope")
 
       PuppetScope.setvar (cur_scope, varname, value)
     }

@@ -64,7 +64,7 @@ object PuppetCompile {
   }
 
   private def stripQuote(str: String) =
-    if (str(0) == '\'' || str(0) == '\"')
+    if (str.length >= 2 && (str(0) == '\'' || str(0) == '\"'))
       str.stripPrefix(str(0).toString).stripSuffix(str(0).toString)
     else str
 
@@ -333,23 +333,31 @@ object PuppetCompile {
 
     // Eval parent if present
     if (!klassAST.parent.isEmpty) {
-      val parent = klassAST.parent.get
+      // We need to strip prefix because
+      val parent = klassAST.parent.get.stripPrefix("::")
       val parentclass = (TypeCollection.getClass(parent)) getOrElse
-                        (throw new Exception ("Parent class not found"))
+                        (throw new Exception(s"class $parent not found"))
 
       // Arguments are strictly not allowed for parent class
       if (parentclass.args.length > 0)
         throw new Exception ("Parent class is not supposed to have arguments")
 
-      catalog.addResource(Attrs.resourceBasicAttributes("Class", parent))
-      // Immediately consume; Not thread safe
-      evalClass(catalog.getNextClass().get)
+      /* Check if scope by the classname already exists, if it does then the parent class has already
+       * been evaluated. Skip evaluation and merge in the scope.
+       */
+       if(!PuppetScope.scope_exists(parent)) {
+
+         catalog.addResource(Attrs.resourceBasicAttributes("Class", parent))
+         // Immediately consume; Not thread safe
+         evalClass(catalog.getNextClass().get)
+       }
+
       env = env.addScope(parent)
     }
 
     val args = klassAST.args.map({case (variable, oVal) => (variable.value, oVal.map(eval(_))) })
     // 'main class is a dummy class that bounds toplevel statement and needs to be handled as special case
-    if (klass.name != 'main.toString) env = env.addScope(PuppetScope.createNamedScope (klass.name))
+    if (klass.name != 'main.toString) env = env.addScope(PuppetScope.createNamedScope(klass.name))
     mergeParamAndArgs(args, klass.params.toList).foreach({case (k, v) => env.setvar(k, v)})
 
     klassAST.stmts.asInstanceOf[BlockStmtC].exprs.foreach(eval(_))

@@ -120,11 +120,11 @@ object PuppetDriver {
   }
 
   def compile(content: String): Graph[Resource, DiEdge] = {
-    val ast = PuppetParser (content)
-    val desugared_ast = DesugarPuppetAST.desugarAST (ast)
+    val ast = PuppetParser(content)
+    val desugared_ast = DesugarPuppetAST.desugarAST(ast)
     val g =
       PuppetCompile.compile(desugared_ast.asInstanceOf[BlockStmtC]) match {
-        case Left(l) => throw new Exception ("Not supported")
+        case Left(l) => throw new Exception("Not supported")
         case Right(catalog) => catalog.toGraph
       }
 

@@ -32,7 +32,7 @@ object Attributes {
 
 sealed abstract class CatalogElement(val params: Attributes.T) {
   val typ   = params("type").toPString
-  val name  = params("name").toPString
+  val name  = params("name").toPString.stripPrefix("::")
   val title = typ + ":" + name
   // XXX: Maybe stage should be deferred until later (override can give it a value at a later stage)
   val stage = params.get("stage").map(_.toPString) getOrElse 'main.toString

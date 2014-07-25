@@ -10,6 +10,7 @@ object Provider {
     case "File" => File(r)
     case "Package" => PuppetPackage(r)
     case "User" => User(r)
+    case "Notify" => Notify(r)
     case _ => throw new Exception("Resource type \"%s\" not supported yet".format(r("type")))
   }
 
@@ -244,6 +245,15 @@ object Provider {
       }
 
       Cmd.exec(cmd mkString " ").get
+    }
+  }
+
+  case class Notify(res: Resource) extends Provider(res) {
+
+    val msg = r.get("message") getOrElse name
+
+    def realize() {
+      println(msg)
     }
   }
 }
