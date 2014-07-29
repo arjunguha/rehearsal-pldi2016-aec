@@ -2,6 +2,9 @@ package puppet.runtime.core
 
 import puppet.util._
 
+import java.nio.file.{Files, LinkOption, Paths, Path}
+import java.io.FileWriter
+
 object Provider {
 
   type Resource = Map[String, String]
@@ -11,6 +14,9 @@ object Provider {
     case "Package" => PuppetPackage(r)
     case "User" => User(r)
     case "Notify" => Notify(r)
+    case "Service" => Service(r)
+    case "Group" => Group(r)
+    case "Exec" => Exec(r)
     case _ => throw new Exception("Resource type \"%s\" not supported yet".format(r("type")))
   }
 
@@ -42,9 +48,6 @@ object Provider {
     val source = r.get("source")
     val target = r.get("target")
     val content = r.get("content")
-
-    import java.nio.file.{Files, LinkOption, Paths, Path}
-    import java.io.FileWriter
 
     private def ignore(path:String): String = path
     private def createfile(path: String): String = { Files.createFile(Paths.get(path)); path }
@@ -86,12 +89,12 @@ object Provider {
     val action = fileaction(path) _
                        
 
-    // TODO: Ignoring ownershp and permissions for now
+    // TODO: Ignoring ownership and permissions for now
     // TODO : Ignoring source attribute
     def realize() {
 
       if (content.isDefined && (source.isDefined || target.isDefined))
-        throw new Exception("content is mutually exclusive with source and target")
+        throw new Exception("content is mutually exclusive with source and target attributes")
 
       val createfilewithcontent: Action = content.map((c) => createfile _ andThen (writefile(c) _)) getOrElse createfile
 
@@ -179,7 +182,7 @@ object Provider {
         case Some("present") | Some("installed") => "apt-get -y -q install %s".format(name)
         case Some("absent") => "apt-get -y -q remove %s".format(name)
         case Some("purged") => "apt-get -y -q remove --purge %s".format(name)
-        case Some("held")   => throw new Exception("NYI held")
+        case Some("held")   => throw new Exception("NYI package held")
         case Some("latest") => "apt-get -y -q install %s=%s".format(name, latest)
         case _ => throw new Exception("One or more required attribute is missing")
       }
@@ -219,7 +222,7 @@ object Provider {
       if (shell.isDefined) {
         val p = shell.get
         if (!Files.exists(Paths.get(p)) || Files.isExecutable(Paths.get(p))) {
-          throw new Exception("Invalid shell for user")
+          throw new Exception(s"Invalid shell $p for user")
         }
       }
 
@@ -230,13 +233,13 @@ object Provider {
                                      shell.map("-s %s".format(_)) getOrElse "",
                                      uid.map((u) => "-u %s".format(u.toString)) getOrElse "",
                                      home.map("-d %s".format(_)) getOrElse "",
-                                     if (allowdupe) "-o" else "",
-                                     if (managehome) "-m" else "",
-                                     if (system) "-r" else "",
+                                     if(allowdupe) "-o" else "",
+                                     if(managehome) "-m" else "",
+                                     if(system) "-r" else "",
                                      name)
 
         case Some("absent") => List("userdel",
-                                    if (managehome) "-r" else "",
+                                    if(managehome) "-r" else "",
                                     name)
 
         case Some("role") => throw new Exception("role management in user not yet supported")
@@ -250,10 +253,143 @@ object Provider {
 
   case class Notify(res: Resource) extends Provider(res) {
 
-    val msg = r.get("message") getOrElse name
+    private val msg = r.get("message") getOrElse name
 
     def realize() {
       println(msg)
+    }
+  }
+
+  case class Service(res: Resource) extends Provider(res) {
+    private val validEnsureVals = Map("stopped"->"stopped", "false"->"stopped",
+                                      "running"->"running", "true"->"running",
+                                      ""-> "undef")
+    private val validBoolVal = Map("true"->true, "false"->false)
+    private val validEnableVals = validBoolVal
+    private val validHasRestartVals = validBoolVal
+    private val validHasStatusVals = validBoolVal
+     
+    val ensure = validVal("ensure", validEnsureVals) getOrElse (throw new Exception(s"Service $name ensure attribute missing"))
+    val binary = r.get("binary") getOrElse name
+    val enable = validVal("enable", validEnableVals) getOrElse false // Whether a service should be enabled at boot time.
+    val flags  = r.get("flags") getOrElse ""
+    val hasrestart = validVal("hasrestart", validHasRestartVals) getOrElse false
+    // if a service's init script has a functional status command,
+    val hasstatus = validVal("hasstatus", validHasStatusVals) getOrElse true
+    val path = r.get("path")
+    /* pattern to search for in process table, used for stopping services that do not support init scripts
+     * Also used for determining service status on those service whose init scripts do not include a status command
+     */
+    val pattern = r.get("pattern") getOrElse binary
+    val restart = r.get("restart") // If not provided then service will be first stopped and then started
+    val start = r.get("start") getOrElse "start"
+    val stop = r.get("stop") getOrElse "stop"
+    val status = r.get("status")
+
+    // TODO : handle Refresh
+    def realize() {
+
+      // XXX: Since we are not supporting notifications, we do not need to deal with restart related stuff
+
+      // Make sure binary exists after adding path variable to environment
+
+      /* TODO : Mark service to start on 
+       * if(enable) // TODO : Mark service to 
+       */
+
+      val cmd = ensure match {
+        case "stopped" => Some(List("service", binary, flags, "stop"))
+        case "running" => Some(List("service", binary, flags, "start"))
+        case "undef" => None
+        case _ => throw new Exception(s"Invalid value $ensure for a service provider")
+      }
+
+      cmd.map((c) => Cmd.exec(c mkString " ").get)
+    }
+  }
+
+  case class Group(res: Resource) extends Provider(res) {
+
+    def realize() {
+      throw new Exception("Not yet Implemented")
+    }
+  }
+
+  case class Exec(res: Resource) extends Provider(res) {
+
+    val command = r.get("command") getOrElse name
+    val path = r.get("path")
+    val cwd = r.get("cwd")
+    // TODO: This should have been an array
+    val environment = r.get("environment")
+    val creates = r.get("creates")
+    val onlyif = r.get("onlyif")
+    val unless = r.get("unless")
+    val refresh = r.get("refresh")
+    val refreshonly = r.get("refreshonly")
+    // TODO : Sanity checks on integers to check if they are above 0
+    val returns = r.get("returns").map(_.toInt) getOrElse 0 // Error is returned if executed command has any other return code
+    val timeout = r.get("timeout").map(_.toInt) getOrElse 300 // This is in seconds, default value is from puppet code
+    val tries = r.get("tries").map(_.toInt) getOrElse 1
+    val try_sleep = r.get("try_sleep").map(_.toInt) getOrElse 0 // The number of seconds to sleep between command execution upon retry
+    val group = r.get("group")
+    val umask = r.get("umask")
+    val user = r.get("user") // $HOME environment variable is not set when user attribute is specified
+
+    // envvar is of the form var=value
+    private def toEnvVar(envvar: String): (String, String) = {
+      val arr = envvar split '='
+      if (arr.length == 2) (arr(0), arr(1))
+      else throw new Exception(s"Invalid environment variable: $envvar")
+    }
+
+    private def fileExists(file: String): Boolean = {
+      val p = Paths.get(file)
+      if (p.isAbsolute) Files.exists(p)
+      else Files.exists(Paths.get((cwd getOrElse "") + "/" + file))
+    }
+
+    private def setPath(paths: String) =
+      (paths split ':') foreach (ENV_PATH.append _)
+
+    // TODO : Handle refresh
+    def realize() {
+
+      if (cwd.isDefined && !Files.isDirectory(Paths.get(cwd.get)))
+        throw new Exception(s"cwd: ${cwd.get} is not a directory")
+
+      // Set Environment path variable
+      path.map(setPath _)
+
+      // Get Command to Execute
+      val cmd = command 
+
+      // TODO : when environment is an array, call this function on each element
+      val execenv = environment.map((e) => Seq((toEnvVar(e)))) getOrElse Seq()
+
+      // determine if execute or not
+      val should_exec = 
+        (creates.isDefined && !this.fileExists(creates.get)) ||
+        (onlyif.isDefined && Cmd.exec(onlyif.get).get == 0) ||
+        (unless.isDefined && Cmd.exec(unless.get).get != 0) ||
+        (!creates.isDefined && !onlyif.isDefined && !unless.isDefined)
+
+      // for 'tries' execute and then sleep for time out if failed
+      def trycommand(tries_left: Int = tries,
+                     cmd: String = cmd,
+                     ocwd: Option[String] = cwd,
+                     retval: Int = returns,
+                     interval: Int = try_sleep*1000,
+                     env: Seq[(String, String)] = execenv): Option[Int] = (tries_left, ocwd) match {
+        case (0, _) => None // num tries got over, return
+        case (_, Some(cwd)) if (Cmd.exec(cmd, cwd, env:_*).map(_ == returns) getOrElse false) => Some(0)
+        case (_, None)      if (Cmd.exec(cmd, env:_*)     .map(_ == returns) getOrElse false) => Some(0)
+        case (_, _) => Thread sleep interval; trycommand(tries_left-1)
+      }
+
+      if (should_exec) {
+        trycommand(tries) getOrElse (throw new Exception("exec failed"))
+      }
     }
   }
 }

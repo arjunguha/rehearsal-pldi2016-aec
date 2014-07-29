@@ -1,12 +1,11 @@
 package puppet.util
 
 
-import java.io.File
-import java.io.FileOutputStream
 import scala.sys.process._
-import java.nio.file._
 import scala.util.Try
 
+import java.io.{File, FileOutputStream}
+import java.nio.file._
 
 case class CmdException (status: Int, outlog: String) extends Exception (outlog)
 
@@ -17,25 +16,29 @@ object Cmd {
 
   type Prop = (String, String)
 
-  def exec (cmd: String, extraEnv: Prop*): Try[String] = {
+  def exec (cmd: String, cwd: String, extraEnv: Prop*): Try[String] = {
 
     // Create a temporary file
     try {
       val file = File.createTempFile ("cookpre", ".tmp")
-      file.setExecutable (true)
+      file.setExecutable(true)
 
       // Write out our cmd
-      val out = new FileOutputStream (file)
-      out.getChannel ().force (true)
-      out.write (cmd.getBytes)
-      out.close ()
+      val out = new FileOutputStream(file)
+      out.getChannel().force(true)
+      out.write(cmd.getBytes)
+      out.close()
 
       var outlog, errlog = ""
 
-      var logger = ProcessLogger ((s) => outlog += (s + newline),
-                                  (s) => errlog += (s + newline))
+      var logger = ProcessLogger((s) => outlog += (s + newline),
+                                 (s) => errlog += (s + newline))
 
-      val status = Process (file.getCanonicalPath (), Some (pwd.toFile ()), extraEnv:_*) ! logger
+      
+      if (!Files.isDirectory(Paths.get(cwd)))
+        throw new CmdException(-1, "Invalid cwd")
+
+      val status = Process(file.getCanonicalPath(), Some(new File(cwd)), extraEnv:_*) ! logger
 
       // Done with file. Delete
       file.delete ()
@@ -45,6 +48,9 @@ object Cmd {
       case _: java.io.IOException => throw new CmdException (-1, "Java IO Error")
     }
   }
+
+  def exec(cmd: String, extraEnv: Prop*): Try[String] =
+    exec(cmd, pwd.toString, extraEnv:_*)
 }
 
 
