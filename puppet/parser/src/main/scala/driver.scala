@@ -109,14 +109,22 @@ object PuppetDriver {
   // TODO : Can be converted to Iterator[String]
   private def loadManifest(path: Path): List[String] = scala.io.Source.fromFile(path.toString).getLines.toList
 
+  private def validateDir(p: Path): Boolean = Files.exists(p) && Files.isDirectory(p)
+  private def modulePathValid(path: String): Boolean = 
+    !(path split ':').map((p) => validateDir(Paths.get(p))).exists(_ == false)
+
   def prepareContent(mainFile: String, modulePath: Option[String] = None): String = {
     if(Files.isRegularFile(Paths.get(mainFile))) {
+
+      if (modulePath.isDefined && !modulePathValid(modulePath.get))
+        throw new Exception(s"Invalid module path: ${modulePath.get}")
+
       val modulePathList = modulePath.map(_.split(':').map(Paths.get(_)).toList) getOrElse List()
       val moduleManifests = modulePathList.map(manifestsInDirectory(_)).flatten.map(loadManifest(_)).flatten
       (loadManifest(Paths.get(mainFile)) ::: moduleManifests) mkString "\n"
     }
     else
-      throw new Exception("Invalid manifest file")
+      throw new Exception(s"Invalid manifest file $mainFile")
   }
 
   def compile(content: String): Graph[Resource, DiEdge] = {
