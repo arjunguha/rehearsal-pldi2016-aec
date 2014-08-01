@@ -1,7 +1,6 @@
 package puppet.core.eval
 
 import puppet.core._
-import puppet.core.eval.{Attributes => Attrs}
 import puppet.syntax._
 import puppet.util._
 
@@ -13,6 +12,9 @@ import scala.util.Try
 object PuppetCompile {
 
   // TODO : CatalogElement should not be exposed directory but should be a trait
+  // TODO: Bug in resource ref, for matching arrays if only one value inside array
+  //       matches that of attribute being searched for then its a match. Currently
+  //       we are looking for exact match on the array i.e. the whole of array should match
   def evalResourceRef (ref: ResourceRefV)
                       (implicit resource: CatalogElement): Boolean = ref.op match {
     case FEqOp    => resource.params get ref.lhs.toPString map(_ == ref.rhs) getOrElse false
@@ -68,9 +70,25 @@ object PuppetCompile {
       str.stripPrefix(str(0).toString).stripSuffix(str(0).toString)
     else str
 
+  private def evalAttribute(a: AttributeC)
+                           (implicit env: ScopeChain,
+                                     catalog: Catalog,
+                                     containedBy: Option[ResourceRefV]): Attribute =
+    Attribute(eval(a.name).asInstanceOf[StringV].toPString, eval(a.value))
+
+  private def evalAttributeOverride(av: AttributeOverrideC)
+                                   (implicit env: ScopeChain,
+                                             catalog: Catalog,
+                                             containedBY: Option[ResourceRefV]): AttributeOverride = av match {
+    case AppendAttributeC(name, value) => AppendAttribute(eval(name).asInstanceOf[StringV].toPString, eval(value))
+    case ReplaceAttributeC(name, value) => ReplaceAttribute(eval(name).asInstanceOf[StringV].toPString, eval(value))
+  }
+    
   // TODO : More precise type than 'Value'
   private def eval(ast: ASTCore)
-                  (implicit  env: ScopeChain, catalog: Catalog, containedBy: Option[ResourceRefV]): Value = ast match {
+                  (implicit  env: ScopeChain,
+                             catalog: Catalog,
+                             containedBy: Option[ResourceRefV]): Value = ast match {
     case UndefC     => UndefV
     case BoolC(b)   => BoolV(b)
     case StringC(s) => StringV(stripQuote(s))
@@ -110,28 +128,21 @@ object PuppetCompile {
       puppet_value
     }
 
-    case OrderResourceC (source, target, refresh) => {
+    case OrderResourceC(source, target, refresh) => {
       val lhs = eval(source).asInstanceOf[ResourceRefV]
       val rhs = eval(target).asInstanceOf[ResourceRefV]
       catalog.addRelationship (lhs, rhs, refresh)
       rhs
     }
 
-    case AttributeC(name, value, is_append) =>
-      if (is_append) throw new Exception ("Appending of attributes is not supported yet") // TODO
-      else  ASTHashV(immutable.Map(eval(name).asInstanceOf[StringV].toPString -> eval(value)))
-
-    case ResourceDeclC(attrs) => {
-      val params = attrs.map(eval(_)).map(_.asInstanceOf[ASTHashV]).reduce(_.append(_))
-      catalog.addResource(mut.Map(params.value.toSeq: _*), containedBy)
-    }
+    case ResourceDeclC(attrs) => catalog.addResource(attrs.map(evalAttribute(_)), containedBy)
 
     case FilterExprC(lhs, rhs, op) => ResourceRefV(eval(lhs), eval(rhs), op)
 
-    case ResourceOverrideC (ref, attrs) => {
+    case ResourceOverrideC (ref, attrs, kind) => {
       val refv = eval(ref)
-      val params = (attrs map (eval(_)) map(_.asInstanceOf[ASTHashV]) reduce(_.append (_)))
-      catalog.addOverride (refv.asInstanceOf[ResourceRefV], mut.Map(params.value.toSeq: _*))
+      val params = attrs map (evalAttributeOverride(_))
+      catalog.addOverride(Override(refv.asInstanceOf[ResourceRefV], params, kind))
       UndefV // XXX: return value, dont know what to return
     }
 
@@ -240,7 +251,7 @@ object PuppetCompile {
     {
       implicit val catalog = new Catalog ()
 
-      val mainClass = Attrs.resourceBasicAttributes("Class", 'main.toString)
+      val mainClass = Attribute.resourceBasicAttributes("Class", 'main.toString)
       catalog.addResource(mainClass)
 
       def converge(): Unit = {
@@ -254,9 +265,13 @@ object PuppetCompile {
         }
       }
 
+      // Before evaluating any definitions we must merge in the definition overrides
+      evalCollectionDefaultOverrides(catalog)
       converge()
 
-      evalOverrides(catalog)
+      evalCollectionOverrides(catalog)
+      evalReferenceOverrides(catalog)
+      evalDefaultsOverrides(catalog)
 
       // Process relationships, all we have left are resources after converging
       catalog.resources.foreach ({(r) => r.sources.foreach(catalog.addRelationship(_, r.toResourceRefV));
@@ -266,13 +281,47 @@ object PuppetCompile {
     }
   }
 
-  // TODO : Test
-  // TODO : Only new attributes can be assigned a value, already existing attributes have to be appended
-  //        otherwise the manifest is not supposed to compile
-  def evalOverrides(catalog: Catalog): Catalog = {
-    catalog.overrides.foreach({ case (ref, attrs) =>
-      catalog.find(ref).foreach((res) => attrs.foreach({ case (k, v) => res.mergeAttr(k, v) }))
+  /*
+   * Semantics of collection overrides
+   *  - Collection overrides are not scoped
+   *  - It can always override already specified attributes (replace existing attributes)
+   *  - There cannot be a collection override for a class but there could be one for define
+   */
+  def evalCollectionDefaultOverrides(catalog: Catalog): Catalog = {
+    catalog
+  }
+
+  def evalCollectionOverrides(catalog: Catalog): Catalog = {
+    val overrides = catalog.overrides
+
+    // foreach override, collect by type, get a list of resources it refers to and overwrite or append attributes depending on its type
+    overrides.foreach({case ovrd: CollectionOverride => {
+      val resources = catalog.find(ovrd.filter)
+      resources.foreach((r) => ovrd.attrs.foreach({case a: AppendAttribute => r.appendAttribute(a.name, a.value)
+                                                   case a: ReplaceAttribute => r.overwriteAttribute(a.name, a.value)}))
+      }
     })
+
+    // TODO : update list of overrides
+    catalog
+  }
+
+  /*
+   * Semantics of reference overrides
+   *  - scope sensitive
+   *  - no class parameters overriding possible
+   *  - no define parameters overriding possible
+   *  - can replace specified attributes in case of inherited resources
+   */
+  def evalReferenceOverrides(catalog: Catalog): Catalog = {
+    catalog
+  }
+
+  /*
+   * Area of effect: dynamic scope
+   * is skipped if the attribute already exists
+   */
+  def evalDefaultsOverrides(catalog: Catalog): Catalog = {
     catalog
   }
 
@@ -347,7 +396,7 @@ object PuppetCompile {
        */
        if(!PuppetScope.scope_exists(parent)) {
 
-         catalog.addResource(Attrs.resourceBasicAttributes("Class", parent))
+         catalog.addResource(Attribute.resourceBasicAttributes("Class", parent))
          // Immediately consume; Not thread safe
          evalClass(catalog.getNextClass().get)
        }

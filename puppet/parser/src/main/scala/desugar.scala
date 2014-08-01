@@ -122,9 +122,20 @@ case object FNotEqOp extends FilterOp
 case object FAndOp   extends FilterOp
 case object FOrOp    extends FilterOp
 
+case class AttributeC(name: ASTCore, value: ASTCore)
+
+sealed abstract class AttributeOverrideC(name: ASTCore, value: ASTCore)
+case class AppendAttributeC(name: ASTCore, value: ASTCore) extends AttributeOverrideC(name, value)
+case class ReplaceAttributeC(name: ASTCore, value: ASTCore) extends AttributeOverrideC(name, value)
+
+sealed abstract trait Override
+case object ReferenceOverride extends Override
+case object DefaultsOverride extends Override
+case object CollectionOverride extends Override
+
 sealed abstract trait ASTCore
 
-// TODO : Use scala type system for precise types
+// TODO : more precise types please
 case object UndefC extends ASTCore  // Special value for unassigned variables
 case class BoolC (value: Boolean) extends ASTCore
 case class StringC (value: String) extends ASTCore
@@ -144,12 +155,11 @@ case class FuncAppC (name: ASTCore, args: List[ASTCore]) extends ASTCore
 case class ImportC (imports: List[String]) extends ASTCore
 case class VardefC (variable: ASTCore, value : ASTCore , append: Boolean) extends ASTCore
 case class OrderResourceC (source: ASTCore, target: ASTCore, refresh: Boolean) extends ASTCore
-case class AttributeC (name: ASTCore, value: ASTCore, is_append: Boolean) extends ASTCore
-case class ResourceDeclC (attrs: List[ASTCore]) extends ASTCore
+case class ResourceDeclC (attrs: List[AttributeC]) extends ASTCore
 // case class ResourceRefC (filter: ASTCore) extends ASTCore
 case class FilterExprC (lhs: ASTCore, rhs: ASTCore, op: FilterOp) extends ASTCore
 
-case class ResourceOverrideC (ref : ASTCore, attrs : List[ASTCore]) extends ASTCore
+case class ResourceOverrideC (ref : ASTCore, attrs : List[AttributeOverrideC], kind: Override) extends ASTCore
 case class NodeC (hostname: ASTCore, parent: Option[ASTCore], stmts: ASTCore /* BlockStmtC */) extends ASTCore
 
 /*
@@ -173,6 +183,12 @@ object DesugarPuppetAST {
       case b : BlockStmtC => b.exprs
       case _ => List (ast)
     }}).flatten)
+  }
+
+  private def desugarAttribute(a: Attribute): AttributeC = AttributeC(desugarAST(a.name), desugarAST(a.value))
+  private def desugarAttributeOverride(av: AttributeOverride): AttributeOverrideC = av match {
+    case AppendAttribute(name, value) => AppendAttributeC(desugarAST(name), desugarAST(value))
+    case ReplaceAttribute(name, value) => ReplaceAttributeC(desugarAST(name), desugarAST(value))
   }
 
   def desugarAST (ast: AST): ASTCore = ast match {
@@ -208,18 +224,16 @@ object DesugarPuppetAST {
       }
     }
 
-    case Attribute (name, value, add) => AttributeC (desugarAST (name), desugarAST (value), add)
-
     case ResourceInstance (name, params) => {
-      val nameattr = Attribute (Name ("name"), name, false /* no add */)
-      val namevarattr = Attribute (Name ("namevar"), name, false /* no add */)
-      ResourceDeclC ((nameattr :: (namevarattr :: params)).map (desugarAST (_)))
+      val nameattr = Attribute(Name("name"), name)
+      val namevarattr = Attribute(Name("namevar"), name)
+      ResourceDeclC((nameattr :: (namevarattr :: params)).map(desugarAttribute(_)))
     }
 
     case Resource (typ, instances) => {
 
       // Desugar into a ResourceC while adding 'type' as another attribute
-      val typeattr = Attribute (Name("type"), Type (typ.capitalize), false /*no add*/)
+      val typeattr = Attribute (Name("type"), Type (typ.capitalize))
       val insts_with_tattr = instances.map ((r) => ResourceInstance (r.name, typeattr :: r.params))
 
       BlockStmtC (insts_with_tattr.map (desugarAST (_)))
@@ -230,11 +244,11 @@ object DesugarPuppetAST {
       val instances = res.instances
 
       val virtattr = tvirt match {
-        case Vrtvirtual  => Attribute (Name ("virtual"), ASTString ("virtual"), false /* no add */)
-        case Vrtexported => Attribute (Name ("virtual"), ASTString ("exported"), false /* no add */)
+        case Vrtvirtual  => Attribute(Name("virtual"), ASTString ("virtual"))
+        case Vrtexported => Attribute(Name("virtual"), ASTString ("exported"))
       }
 
-      val insts_with_vattr = instances.map ((r) => ResourceInstance (r.name, virtattr :: r.params))
+      val insts_with_vattr = instances.map ((r) => ResourceInstance(r.name, virtattr :: r.params))
       desugarAST (Resource (res.name, insts_with_vattr))
     }
 
@@ -294,14 +308,14 @@ object DesugarPuppetAST {
           case None => typmatchexpr
         })
 
-        ResourceOverrideC (filter, params.map (desugarAST (_)))
+        ResourceOverrideC (filter, params.map(desugarAttributeOverride (_)), CollectionOverride)
       }
     }
 
-    case ResourceOverride (ref, params) => ResourceOverrideC (desugarAST (ref), params.map (desugarAST (_)))
+    case ResourceOverride (ref, params) => ResourceOverrideC(desugarAST (ref), params.map(desugarAttributeOverride(_)), ReferenceOverride)
     case ResourceDefaults (typ, params) => {
       val filter = FilterExprC (NameC ("type"), TypeC (typ.value.capitalize), FEqOp)
-      ResourceOverrideC (filter, params.map (desugarAST (_)))
+      ResourceOverrideC (filter, params.map(desugarAttributeOverride(_)), DefaultsOverride)
     }
 
     case IfStmt (test, true_exprs, false_exprs) =>

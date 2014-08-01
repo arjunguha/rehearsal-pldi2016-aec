@@ -314,7 +314,7 @@ private class PuppetParser(lexer: PuppetLexical) extends StdTokenParsers with Pa
   lazy val resource_defaults: P[ResourceDefaults] =
     asttype ~ ("{" ~> params.? <~ ",".? <~ "}") ^^ {
       case t ~ None => ResourceDefaults (t, List ())
-      case t ~ Some (params) => ResourceDefaults (t, params)
+      case t ~ Some(params) => ResourceDefaults (t, params.map((p) => ReplaceAttribute(p.name, p.value)))
     }
 
   lazy val resourceoverride: P[ResourceOverride] =
@@ -332,7 +332,7 @@ private class PuppetParser(lexer: PuppetLexical) extends StdTokenParsers with Pa
       case t ~ collrhand ~ anyparams => Collection (t, collrhand._1, collrhand._2, anyparams)
     }
   | asttype ~ collectrhand ^^ {
-      case t ~ collrhand => Collection (t, collrhand._1, collrhand._2, List[Attribute] ())
+      case t ~ collrhand => Collection (t, collrhand._1, collrhand._2, List[AttributeOverride] ())
     }
   )
 
@@ -405,15 +405,16 @@ private class PuppetParser(lexer: PuppetLexical) extends StdTokenParsers with Pa
 
   lazy val param: P[Attribute] =
     param_name ~ ("=>" ~> expr) ^^ {
-      case pn ~ e => Attribute (pn, e, false)
+      case pn ~ e => Attribute (pn, e)
     }
 
-  lazy val addparam: P[Attribute] =
+  lazy val addparam: P[AttributeOverride] =
     name ~ ("+>" ~> expr) ^^ {
-      case name ~ e => Attribute (name, e, true)
+      case name ~ e => AppendAttribute(name, e)
     }
 
-  lazy val anyparams: P[List[Attribute]] = repsep ((param | addparam), ",")
+  lazy val anyparams: P[List[AttributeOverride]] =
+    repsep((param ^^ {case Attribute(n, e) => ReplaceAttribute(n,e)} | addparam), ",")
 
   lazy val funcrvalue: P[Function] =
       name ~ ("(" ~> (expressions.?) <~ ")") ^^ {
@@ -559,7 +560,7 @@ private class PuppetParser(lexer: PuppetLexical) extends StdTokenParsers with Pa
 
   lazy val selectval: P[Attribute] =
     selectlhand ~ ("=>" ~> rvalue) ^^ {
-      case slcthnd ~ rval => Attribute(slcthnd, rval, false)
+      case slcthnd ~ rval => Attribute(slcthnd, rval)
     }
 
   lazy val selectlhand: P[SelectLHS] = (

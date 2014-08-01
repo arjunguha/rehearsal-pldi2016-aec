@@ -195,6 +195,13 @@ object PrettyPrintAST {
     (lst map f) mkString sep
   }
 
+  private def printAttribute(a: Attribute): String = s"${printAST(a.name)} => ${printAST(a.value)}"
+
+  private def printAttributeOverride(av: AttributeOverride): String = av match {
+    case AppendAttribute(name, value) => s"${printAST(name)} +> ${printAST(value)}"
+    case ReplaceAttribute(name, value) => s"${printAST(name)} => ${printAST(value)}"
+  }
+
   def printAST (ast: AST): String = ast match {
     case TopLevel(items) => printList(items, printAST, "\n")
     case ASTBool (true)            => "true"
@@ -219,13 +226,11 @@ object PrettyPrintAST {
     case Vardef (nm, v, true)  => "%s += %s".format (printAST (nm), printAST (v))
     case Vardef (nm, v, false) => "%s = %s".format (printAST (nm), printAST (v))
     case ASTArray (arr) => "[%s]".format (printList (arr, printAST, ","))
-    case Attribute (name, value, true)  => "%s +> %s".format (printAST (name), printAST (value))
-    case Attribute (name, value, false) => "%s => %s".format (printAST (name), printAST (value))
-    case ResourceInstance (t, prms) => "%s: %s".format (printAST (t), printList (prms, printAST, ",\n"))
+    case ResourceInstance (t, prms) => "%s: %s".format (printAST (t), printList(prms, printAttribute, ",\n"))
     case Resource (typ, insts) => "%s { %s }".format (typ, printList (insts, printAST, ";\n"))
-    case ResourceDefaults (typ, prms) => "%s {\n%s\n}".format (printAST (typ), printList (prms, printAST, ", "))
+    case ResourceDefaults (typ, prms) => "%s {\n%s\n}".format (printAST (typ), printList(prms, printAttributeOverride, ",\n"))
     case ResourceRef (typ, es) => "%s [%s]".format (printAST (typ), printList (es, printAST, ", "))
-    case ResourceOverride (obj, prms) => "%s {\n%s\n}".format (printAST (obj), printList (prms, printAST, ",\n"))
+    case ResourceOverride (obj, prms) => "%s {\n%s\n}".format (printAST (obj), printList (prms, printAttributeOverride, ",\n"))
 
     case VirtualResource (res, tvirt) => "%s%s".format (VirtualResTypeStr (tvirt), printAST (res))
     case IfStmt (test, true_es, false_es) => "if %s { %s } else { %s }".format (printAST (test), printList (true_es, printAST, "\n"), printList (false_es, printAST, "\n"))
@@ -233,17 +238,17 @@ object PrettyPrintAST {
 
     case CaseStmt (test, caseopts) => "case %s {\n%s\n}".format (printAST (test), printList (caseopts, printAST, " "))
 
-    case Selector (prm, vs) => "%s ? {\n%s\n}".format (printAST (prm), printList (vs, printAST, ",\n"))
+    case Selector (prm, vs) => "%s ? {\n%s\n}".format (printAST (prm), printList (vs, printAttribute, ",\n"))
     case CollectionExpr (lhs, rhs, op) => "%s %s %s".format (printAST (lhs), CollectionOpStr (op), printAST (rhs))
 
     case Collection (typ, filterexpr, restype, attribs) => {
       restype match {
         case Vrtvirtual => "%s <| %s |> %s".format (printAST (typ),
                                                     (filterexpr match { case None => ""; case Some (expr) => printAST (expr) }),
-                                                    (if (attribs.length > 0) "{\n%s\n}".format (printList (attribs, printAST, ",\n")) else ""))
+                                                    (if (attribs.length > 0) "{\n%s\n}".format (printList (attribs, printAttributeOverride, ",\n")) else ""))
         case Vrtexported => "%s <<| %s |>> %s".format (printAST (typ),
                                                     (filterexpr match { case None => ""; case Some (expr) => printAST (expr) }),
-                                                    (if (attribs.length > 0) "{\n%s\n}".format (printList (attribs, printAST, ",\n")) else ""))
+                                                    (if (attribs.length > 0) "{\n%s\n}".format (printList (attribs, printAttributeOverride, ",\n")) else ""))
       }
     }
 

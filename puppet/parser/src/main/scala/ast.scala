@@ -146,17 +146,24 @@ case class Vardef (variable: VardefLHS,
                    value: Expr,
                    append: Boolean) extends Statement
 
-/**
- * <b>Examples</b>
- *
- * {@code name => value} has {@code is_append} set to {@code false}.
- *
- * {@code name +> value} has {@code is_append} set to {@code true}.
- */
-case class Attribute (name: AttributeNameType, value: Expr, is_append: Boolean)
-  extends AST
 
-// Puppet Resource Decl Related nodes
+
+/**
+ * {@code name => value}
+ */
+case class Attribute(name: AttributeNameType, value: Expr)
+
+sealed abstract class AttributeOverride(name: AttributeNameType, value: Expr)
+/**
+ * {@code name +> value}
+ */
+case class AppendAttribute(name: AttributeNameType, value: Expr) extends AttributeOverride(name, value)
+/**
+ * {@code name => value}
+ */
+case class ReplaceAttribute(name: AttributeNameType, value: Expr) extends AttributeOverride(name, value)
+
+
 case class ResourceInstance (name: ResourceName, params: List[Attribute]) extends AST
 
 case class Resource (name: String,
@@ -168,8 +175,11 @@ case class Resource (name: String,
  *
  * {@code File{ owner => nimish }}
  */
-case class ResourceDefaults (typ: Type, params: List[Attribute])
-  extends Statement
+/* XXX: Append type of overrides cannot occur in resource defaults by virtue of grammar.
+ *      In semantics section (cook), ResourceDefaults are treated as overrides, hence we keep the
+ *      type as AttributeOverride here
+ */
+ case class ResourceDefaults (typ: Type, params: List[AttributeOverride]) extends Statement
 
 /**
  * <b>Examples</b>
@@ -179,7 +189,7 @@ case class ResourceDefaults (typ: Type, params: List[Attribute])
 case class ResourceRef (typ: ResourceRefType,
                         names: List[Expr]) extends Expr with RelationExprOperand
 case class ResourceOverride (ref: ResourceRef,
-                             params: List[Attribute]) extends Statement
+                             params: List[AttributeOverride]) extends Statement
 
 case class VirtualResource (res: Resource,
                             tvirt: VirtualResType) extends Statement
@@ -191,8 +201,8 @@ case class CollectionExpr (lhs: CollectionExprOperand,
 case class Collection (typ: Type,
                        collexpr: Option[CollectionExpr],
                        tvirt: VirtualResType,
-                       params: List[Attribute]) extends RelationExprOperand
-                                                with Statement
+                       params: List[AttributeOverride]) extends RelationExprOperand
+                                                        with Statement
 
 /**
  *

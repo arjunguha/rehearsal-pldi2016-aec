@@ -2,7 +2,7 @@ package puppet.core.eval
 
 import puppet.core._
 import puppet.core.eval._
-import puppet.core.eval.{Attributes => Attrs}
+import puppet.core.eval.{Attribute => Attr}
 import scala.collection.{mutable => mut}
 import scala.collection._
 
@@ -36,7 +36,7 @@ object Function {
                        arg: Argument*): Value = { 
       arg.foreach(a => {
         // TODO : Remove asInstanceOf
-        catalog.addResource(Attrs.resourceBasicAttributes("Class", Value(a).asInstanceOf[StringV].value))
+        catalog.addResource(Attr.resourceBasicAttributes("Class", Value(a).asInstanceOf[StringV].value))
       })
       UndefV
     }
@@ -48,7 +48,7 @@ object Function {
                        arg: Argument*): Value = {
       arg.foreach(a => {
         // TODO : Remove asInstanceOf
-        val ref = catalog.addResource(Attrs.resourceBasicAttributes("Class", Value(a).asInstanceOf[StringV].value))
+        val ref = catalog.addResource(Attr.resourceBasicAttributes("Class", Value(a).asInstanceOf[StringV].value))
         catalog.addRelationship(containedBy.get, ref)
       })
       UndefV
@@ -61,7 +61,7 @@ object Function {
                        arg: Argument*): Value = {
       arg.foreach(a => {
         // TODO : Remove asInstanceOf
-        catalog.addResource(Attrs.resourceBasicAttributes("Class", Value(a).asInstanceOf[StringV].value),
+        catalog.addResource(Attr.resourceBasicAttributes("Class", Value(a).asInstanceOf[StringV].value),
                             containedBy)
       })
       UndefV

@@ -1,6 +1,7 @@
 package puppet.core.eval
 
 import puppet.core._
+import puppet.{core => core}
 import scalax.collection.Graph
 import scalax.collection.GraphEdge._
 import scalax.collection.GraphPredef._
@@ -20,22 +21,29 @@ object KnownResource {
     "Sshkey", "Stage", "Tidy", "User", "Vlan", "Yumrepo", "Zfs", "Zone", "Zpool")
 }
 
-object Attributes {
-  type T = mut.Map[String, Value]
+case class Attribute(name: String, value: Value)
 
-  def resourceBasicAttributes(typ: String, name: String): T = {
-    mut.Map("type"->StringV(typ.capitalize),
-            "name"->StringV(name),
-            "namevar"->StringV(name))
+object Attribute {
+
+  private def nameAttribute(value: Value): Attribute = Attribute("name", value)
+  private def namevarAttribute(value: Value): Attribute = Attribute("namevar", value)
+  private def typeAttribute(value: Value): Attribute = Attribute("type", value)
+
+  def resourceBasicAttributes(typ: String, name: String): List[Attribute] = {
+    List(nameAttribute(StringV(name)),
+         namevarAttribute(StringV(name)),
+         typeAttribute(StringV(typ.capitalize)))
   }
 }
 
-sealed abstract class CatalogElement(val params: Attributes.T) {
+sealed abstract class CatalogElement(attrs: List[Attribute]) {
+  val params = mut.Map(attrs.map((a) => (a.name, a.value)).toSeq:_*)
   val typ   = params("type").toPString
   val name  = params("name").toPString.stripPrefix("::")
   val title = typ + ":" + name
   // XXX: Maybe stage should be deferred until later (override can give it a value at a later stage)
-  val stage = params.get("stage").map(_.toPString) getOrElse 'main.toString
+  //      Default stage value should rather be employed by catalog/compiler and not here.
+  // val stage = params.get("stage").map(_.toPString) getOrElse 'main.toString
 
   val sources: List[ResourceRefV] = attrToResRefs("require"):::attrToResRefs("subscribe")
   val targets: List[ResourceRefV] = attrToResRefs("before"):::attrToResRefs ("notify")
@@ -53,20 +61,40 @@ sealed abstract class CatalogElement(val params: Attributes.T) {
     ResourceRefV (ResourceRefV(StringV("type"), params ("type"), FEqOp),
                   ResourceRefV(StringV("name"), params ("name"), FEqOp), FAndOp)
 
-  def mergeAttr (name: String, value: Value, append: Boolean = false) {
-    // TODO: Maybe sanitize on name as title, name, type, namevar may not be overridable
-    if (append) throw new Exception ("Append not supported yet")
+  def overwriteAttribute (name: String, value: Value) {
     params += (name -> value)
+  }
+
+  def appendAttribute (name: String, value: Value) {
+    val oval = params.get(name)
+    if (oval.isDefined) {
+      // TODO: Append based on type
+      (oval.get, value) match {
+        case (UndefV, _) => params += (name -> value)
+        case (x: BoolV, y: BoolV) => params += (name -> ASTArrayV(Array(x, y)))
+        case (x: BoolV, y: StringV) => params += (name -> ASTArrayV(Array(x, y)))
+        case (x: StringV, y: BoolV) => params += (name -> ASTArrayV(Array(x, y)))
+        case (x: StringV, y: StringV) => params += (name -> ASTArrayV(Array(x, y)))
+        case (x: ASTArrayV, y: ASTArrayV) => params += (name -> x.append(y))
+        case (x: ASTArrayV, y: BoolV) => params += (name -> x.append(ASTArrayV(Array(y))))
+        case (x: ASTArrayV, y: StringV) => params += (name -> x.append(ASTArrayV(Array(y))))
+        case (x: BoolV, y: ASTArrayV) => params += (name -> ASTArrayV(Array(x)).append(y))
+        case (x: StringV, y: ASTArrayV) => params += (name -> ASTArrayV(Array(x)).append(y))
+        case _ => throw new Exception("Didn't anticipate append of this type of attributes")
+      }
+    }
+    else
+      params += (name -> value)
   }
 
   override def toString = title
 }
 
-case class Resource(override val params: Attributes.T) extends CatalogElement(params) {
+case class Resource(as: List[Attribute]) extends CatalogElement(as) {
   override def toString = title
 
   /*
-   * Omits complex attributes and turns the other attributes to string
+   * Omits complex attributes and turns other attributes to string
    * If an attribute has a value of type Array, only the first element of 
    * array is preserved
    */
@@ -78,12 +106,17 @@ case class Resource(override val params: Attributes.T) extends CatalogElement(pa
   }
 }
 
-case class HostClass(override val params: Attributes.T) extends CatalogElement(params)
-case class Definition(override val params: Attributes.T) extends CatalogElement(params)
+case class HostClass(as: List[Attribute]) extends CatalogElement(as)
+case class Definition(as: List[Attribute]) extends CatalogElement(as)
+
+sealed abstract class AttributeOverride(name: String, value: Value)
+case class AppendAttribute(name: String, value: Value) extends AttributeOverride(name: String, value: Value)
+case class ReplaceAttribute(name: String, value: Value) extends AttributeOverride(name: String, value: Value)
+
 
 object CatalogElement {
-  def apply (params: Attributes.T): CatalogElement = {
-    params("type").toPString match {
+  def apply (params: List[Attribute]): CatalogElement = {
+    params.find(_.name == "type").get.value.toPString match {
       case "Class" => HostClass(params)
       case x if KnownResource.types.contains(x) => Resource(params)
       case _ => Definition(params)
@@ -91,9 +124,32 @@ object CatalogElement {
   }
 }
 
+sealed abstract class Override(filter: ResourceRefV, attrs: List[AttributeOverride])
+
+case class ReferenceOverride(filter: ResourceRefV,
+                             attrs: List[AttributeOverride],
+                             scope: Array[String]) extends Override(filter, attrs) {
+}
+
+case class CollectionOverride(filter: ResourceRefV,
+                              attrs: List[AttributeOverride]) extends Override(filter, attrs) {
+}
+
+case class DefaultsOverride(filter: ResourceRefV,
+                            attrs: List[AttributeOverride],
+                            scope: Array[String]) extends Override(filter, attrs) {
+}
+
+object Override {
+  def apply(filter: ResourceRefV, attrs: List[AttributeOverride], kind: core.Override): Override = kind match {
+    case core.ReferenceOverride => ReferenceOverride(filter, attrs, Array[String]())
+    case core.CollectionOverride => CollectionOverride(filter, attrs)
+    case core.DefaultsOverride => DefaultsOverride(filter, attrs, Array[String]())
+  }
+}
+
 class Catalog {
   type Filter = ResourceRefV
-  type Override = (Filter, Attributes.T)
 
   var resources = List[Resource]()
   var klasses = List[HostClass]()
@@ -110,7 +166,7 @@ class Catalog {
   private def isDuplicate(e: CatalogElement): Boolean =
     elements.exists(_.title == e.title)
 
-  def addResource(params: Attributes.T, containedBy: Option[ResourceRefV] = None): ResourceRefV = {
+  def addResource(params: List[Attribute], containedBy: Option[ResourceRefV] = None): ResourceRefV = {
 
     val elem = CatalogElement(params)
     val elemRef = elem.toResourceRefV
@@ -132,8 +188,7 @@ class Catalog {
     elemRef
   }
 
-  def addOverride (filter: Filter, attrs: Attributes.T) =
-    overrides = (filter, attrs) :: overrides
+  def addOverride(ovrd: Override) = overrides = ovrd :: overrides
 
   def addRelationship(src: ResourceRefV, dst: ResourceRefV, refresh: Boolean = false) {
     if (refresh)
