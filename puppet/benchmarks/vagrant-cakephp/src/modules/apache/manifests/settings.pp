@@ -1,5 +1,6 @@
 class apache::settings {
-  $config = '/etc/apache2/sites-available/default'
+#  $config = '/etc/apache2/sites-available/default'
+  $config = '/etc/apache2/sites-available/000-default.conf'
     
   exec { "servername":
     subscribe => Package["apache2"],
