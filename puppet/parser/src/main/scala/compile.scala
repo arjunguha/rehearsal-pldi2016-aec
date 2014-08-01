@@ -73,10 +73,17 @@ object PuppetCompile {
     })
   }
 
-  private def stripQuote(str: String) =
-    if (str.length >= 2 && (str(0) == '\'' || str(0) == '\"'))
-      str.stripPrefix(str(0).toString).stripSuffix(str(0).toString)
-    else str
+  private def stripQuote(str: String): String = {
+    var newstr = str
+
+    if(str.length > 0 && (str(0) == '\'' || str(0) == '\"'))
+      newstr = newstr.stripPrefix(str(0).toString)
+
+    if(str.length > 1 && (str(str.length-1) == '\'' || str(str.length-1) == '\"'))
+      newstr = newstr.stripSuffix(str(str.length-1).toString)
+
+    newstr
+  }
 
   private def evalAttribute(a: AttributeC)
                            (implicit env: ScopeChain,
@@ -118,7 +125,7 @@ object PuppetCompile {
     case VariableC(value) => env.getvar(value) getOrElse UndefV
 
     // XXX: should we return head or the last element?
-    case BlockStmtC(exprs) => exprs.map(eval(_)).head
+    case BlockStmtC(exprs) => if (exprs.length > 0) exprs.map(eval(_)).head else UndefV
 
     case IfElseC(test, true_br, false_br) =>
       eval(if(eval(test).toBool) true_br else false_br)
@@ -298,6 +305,30 @@ object PuppetCompile {
     catalog
   }
 
+
+  /* Override semantics
+   *
+   * Replace attribute
+   ∘   - only allowed in inherited classes
+   • Append in attributes
+   ∘   - only applicable in case of overrides
+   • Resource (byname) Overrides
+   ∘   - Scope sensitive, resources not available outside their scope cannot be overridden
+   ‣   - attributes can be rewritten in inherited class
+   ∘   - Overriding class parameters Not possible
+   ∘   - Overriding define parameters Not possible
+   • Collection overrides
+   ∘   - Override every resource in catalog, parse order independent
+   ∘   - classes cannot be collected
+   • Resource Defaults (scoping has a role to play)
+   ‣   - apparently dynamic scoping is used
+   ∘   - It is possible to provide resource defaults for class and defines
+   ∘   - Attributes are overridden by specific resources (i.e defaults sets the value only for missing attributes)
+   ∘   - Defaults are applied after collection
+   ‣   - implies that defaults cannot be queried
+   ∘   - Possible to make multiple such defaults but they may not address the same attribute
+   */
+
   /*
    * Semantics of collection overrides
    *  - Collection overrides are not scoped
@@ -309,7 +340,8 @@ object PuppetCompile {
     // foreach override, collect by type, get a list of resources it refers to and overwrite or append attributes depending on its type
     overrides.collect({case ovrd: CollectionOverride => ovrd}).foreach((ovrd) => {
       val resources = catalog.find(ovrd.query)
-      resources.foreach((r) => ovrd.attrs.foreach({case a: AppendAttribute => r.appendAttribute(a.name, a.value)
+      resources.filter((r) => r.typ != StringV("Class"))
+               .foreach((r) => ovrd.attrs.foreach({case a: AppendAttribute => r.appendAttribute(a.name, a.value)
                                                    case a: ReplaceAttribute => r.overwriteAttribute(a.name, a.value)}))
     })
 
@@ -329,7 +361,8 @@ object PuppetCompile {
     // foreach override, collect by type, get a list of resources it refers to and overwrite or append attributes depending on its type
     overrides.collect({case ovrd: ReferenceOverride => ovrd}).foreach((ovrd) => {
       val resources = catalog.find(ovrd.query)
-      resources.foreach((r) => ovrd.attrs.foreach({case a: AppendAttribute => r.appendAttribute(a.name, a.value)
+      resources.filter((r) => KnownResource.types.contains(r.typ)) // Not applicable to Class and Define types
+               .foreach((r) => ovrd.attrs.foreach({case a: AppendAttribute => r.appendAttribute(a.name, a.value)
                                                    case a: ReplaceAttribute => r.overwriteAttribute(a.name, a.value)}))
     })
 

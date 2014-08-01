@@ -137,21 +137,21 @@ sealed abstract class Override(val filter: ResourceRefV, val attrs: List[Attribu
   def query: ResourceRefV = filter
 }
 
-case class ReferenceOverride(filter: ResourceRefV,
-                             attrs: List[AttributeOverride],
-                             scope: String) extends Override(filter, attrs) {
+case class ReferenceOverride(f: ResourceRefV,
+                             as: List[AttributeOverride],
+                             scope: String) extends Override(f, as) {
   override def query: ResourceRefV =  {
     val scopefilter = ResourceRefV(StringV("scopetag"), StringV(scope), FEqOp)
     ResourceRefV(scopefilter, filter, FAndOp)
   }
 }
 
-case class CollectionOverride(filter: ResourceRefV,
-                              attrs: List[AttributeOverride]) extends Override(filter, attrs)
+case class CollectionOverride(f: ResourceRefV,
+                              as: List[AttributeOverride]) extends Override(f, as)
 
-case class DefaultsOverride(filter: ResourceRefV,
-                            attrs: List[AttributeOverride],
-                            scope: String) extends Override(filter, attrs) {
+case class DefaultsOverride(f: ResourceRefV,
+                            as: List[AttributeOverride],
+                            scope: String) extends Override(f, as) {
   override def query: ResourceRefV = {
     val scopefilter = ResourceRefV(StringV("scopetag"), StringV(scope), FEqOp)
     ResourceRefV(scopefilter, filter, FAndOp)
