@@ -11,14 +11,22 @@ import scala.util.Try
 
 object PuppetCompile {
 
+  private def value_matches(lhs: Value, rhs: Value): Boolean = lhs match {
+    case UndefV => lhs == rhs
+    case _: BoolV => lhs == rhs
+    case _: StringV => lhs == rhs
+    case _: ASTArrayV if rhs.isInstanceOf[ASTArrayV] => lhs == rhs // XXX: Maybe this is too strict, its enough for rhs to be a subset of lhs
+    case v: ASTArrayV => v.value.exists(_ == rhs)
+    case _: ASTHashV if rhs.isInstanceOf[ASTHashV] => lhs == rhs // XXX: Again too strict, its enough if rhs is a subset of lhs
+    case v: ASTHashV => v.value.keys.exists(_ == rhs)
+    case _ => throw new Exception("Invalid value to match")
+  }
+
   // TODO : CatalogElement should not be exposed directory but should be a trait
-  // TODO: Bug in resource ref, for matching arrays if only one value inside array
-  //       matches that of attribute being searched for then its a match. Currently
-  //       we are looking for exact match on the array i.e. the whole of array should match
   def evalResourceRef (ref: ResourceRefV)
                       (implicit resource: CatalogElement): Boolean = ref.op match {
-    case FEqOp    => resource.params get ref.lhs.toPString map(_ == ref.rhs) getOrElse false
-    case FNotEqOp => resource.params get ref.lhs.toPString map(_ != ref.rhs) getOrElse false
+    case FEqOp    => resource.params get ref.lhs.toPString map(value_matches(_, ref.rhs)) getOrElse false
+    case FNotEqOp => resource.params get ref.lhs.toPString map(!value_matches(_, ref.rhs)) getOrElse false
     case FAndOp   => evalResourceRef(ref.lhs.asInstanceOf[ResourceRefV]) &&
                      evalResourceRef(ref.rhs.asInstanceOf[ResourceRefV])
     case FOrOp    => evalResourceRef(ref.lhs.asInstanceOf[ResourceRefV]) ||
@@ -135,14 +143,14 @@ object PuppetCompile {
       rhs
     }
 
-    case ResourceDeclC(attrs) => catalog.addResource(attrs.map(evalAttribute(_)), containedBy)
+    case ResourceDeclC(attrs) => catalog.addResource(attrs.map(evalAttribute(_)), containedBy, Some(env.curScope))
 
     case FilterExprC(lhs, rhs, op) => ResourceRefV(eval(lhs), eval(rhs), op)
 
     case ResourceOverrideC (ref, attrs, kind) => {
       val refv = eval(ref)
       val params = attrs map (evalAttributeOverride(_))
-      catalog.addOverride(Override(refv.asInstanceOf[ResourceRefV], params, kind))
+      catalog.addOverride(Override(refv.asInstanceOf[ResourceRefV], params, kind, env.curScope))
       UndefV // XXX: return value, dont know what to return
     }
 
@@ -260,18 +268,20 @@ object PuppetCompile {
         val define = catalog.getNextDefinition()
         if (!klass.isEmpty || !define.isEmpty) {
           klass.map(evalClass(_))
+
+          // evalCollectionDefaultOverride(catalog)
           define.map(evalDefinition(_))
           converge()
         }
       }
-
-      // Before evaluating any definitions we must merge in the definition overrides
-      evalCollectionDefaultOverrides(catalog)
+        
+      // TODO : Before evaluating any definitions we must merge in the definition overrides
+      // evalCollectionDefaultOverrides(catalog)
       converge()
 
       evalCollectionOverrides(catalog)
       evalReferenceOverrides(catalog)
-      evalDefaultsOverrides(catalog)
+      evalDefaultOverrides(catalog)
 
       // Process relationships, all we have left are resources after converging
       catalog.resources.foreach ({(r) => r.sources.foreach(catalog.addRelationship(_, r.toResourceRefV));
@@ -281,26 +291,27 @@ object PuppetCompile {
     }
   }
 
+  private def evalOverride(ovrd: Override, catalog: Catalog): Catalog = {
+    val resources = catalog.find(ovrd.query)
+    resources.foreach((r) => ovrd.attrs.foreach({case a: AppendAttribute => r.appendAttribute(a.name, a.value)
+                                                 case a: ReplaceAttribute => r.overwriteAttribute(a.name, a.value)}))
+    catalog
+  }
+
   /*
    * Semantics of collection overrides
    *  - Collection overrides are not scoped
    *  - It can always override already specified attributes (replace existing attributes)
    *  - There cannot be a collection override for a class but there could be one for define
    */
-  def evalCollectionDefaultOverrides(catalog: Catalog): Catalog = {
-    catalog
-  }
-
   def evalCollectionOverrides(catalog: Catalog): Catalog = {
     val overrides = catalog.overrides
-
     // foreach override, collect by type, get a list of resources it refers to and overwrite or append attributes depending on its type
-    overrides.collect({case ovrd: CollectionOverride => ovrd})
-             .foreach((ovrd) => {
-      val resources = catalog.find(ovrd.filter)
+    overrides.collect({case ovrd: CollectionOverride => ovrd}).foreach((ovrd) => {
+      val resources = catalog.find(ovrd.query)
       resources.foreach((r) => ovrd.attrs.foreach({case a: AppendAttribute => r.appendAttribute(a.name, a.value)
                                                    case a: ReplaceAttribute => r.overwriteAttribute(a.name, a.value)}))
-      })
+    })
 
     // TODO : update list of overrides
     catalog
@@ -314,16 +325,38 @@ object PuppetCompile {
    *  - can replace specified attributes in case of inherited resources
    */
   def evalReferenceOverrides(catalog: Catalog): Catalog = {
+    val overrides = catalog.overrides
+    // foreach override, collect by type, get a list of resources it refers to and overwrite or append attributes depending on its type
+    overrides.collect({case ovrd: ReferenceOverride => ovrd}).foreach((ovrd) => {
+      val resources = catalog.find(ovrd.query)
+      resources.foreach((r) => ovrd.attrs.foreach({case a: AppendAttribute => r.appendAttribute(a.name, a.value)
+                                                   case a: ReplaceAttribute => r.overwriteAttribute(a.name, a.value)}))
+    })
+
+    // TODO : update list of overrides
     catalog
   }
 
+
+
   /*
+   * Semantics of default overrides
    * Area of effect: dynamic scope
    * is skipped if the attribute already exists
    */
-  def evalDefaultsOverrides(catalog: Catalog): Catalog = {
+  def evalDefaultOverrides(catalog: Catalog): Catalog = {
+    val overrides = catalog.overrides
+    // foreach override, collect by type, get a list of resources it refers to and overwrite or append attributes depending on its type
+    overrides.collect({case ovrd: DefaultsOverride => ovrd}).foreach((ovrd) => {
+      val resources = catalog.find(ovrd.query)
+      resources.foreach((r) => ovrd.attrs.foreach({case a: AppendAttribute => throw new Exception("Not allowed by construction")
+                                                   case a: ReplaceAttribute => Try(r.addAttribute(a.name, a.value))}))
+    })
+
+    // TODO : update list of overrides
     catalog
   }
+
 
   /*
    * This is a simplified class evaluator
@@ -373,7 +406,7 @@ object PuppetCompile {
                         (throw new Exception("No value available for variable '%s'".format(arg))))))
 
   private def evalClass(klass: HostClass)
-                       (implicit catalog: Catalog) {
+                       (implicit catalog: Catalog): ScopeChain = {
 
     val klassAST = TypeCollection.getClass(klass.name) getOrElse
                    (throw new Exception("Puppet class %s not found".format(klass.name)))
@@ -398,10 +431,15 @@ object PuppetCompile {
 
          catalog.addResource(Attribute.resourceBasicAttributes("Class", parent))
          // Immediately consume; Not thread safe
-         evalClass(catalog.getNextClass().get)
+         env = evalClass(catalog.getNextClass().get)
        }
 
       env = env.addScope(parent)
+
+      // Tag resource in parent scope with resources in current scope
+      val scopefilter = ResourceRefV(StringV("scopetag"), StringV(parent), FEqOp)
+      val resources = catalog.find(scopefilter)
+      resources.foreach((r) => r.appendAttribute("scopetag", StringV(klass.name)))
     }
 
     val args = klassAST.args.map({case (variable, oVal) => (variable.value, oVal.map(eval(_))) })
@@ -410,6 +448,7 @@ object PuppetCompile {
     mergeParamAndArgs(args, klass.params.toList).foreach({case (k, v) => env.setvar(k, v)})
 
     klassAST.stmts.asInstanceOf[BlockStmtC].exprs.foreach(eval(_))
+    env
   }
 
   private def evalDefinition(define: Definition)

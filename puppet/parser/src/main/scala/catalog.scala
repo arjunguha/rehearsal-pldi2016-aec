@@ -65,10 +65,16 @@ sealed abstract class CatalogElement(attrs: List[Attribute]) {
     params += (name -> value)
   }
 
+  def addAttribute (name: String, value: Value) {
+    if (params.get(name).isDefined)
+      throw new Exception(s"Attribute $name already defined for element: $title")
+    else 
+      params += (name -> value)
+  }
+
   def appendAttribute (name: String, value: Value) {
     val oval = params.get(name)
     if (oval.isDefined) {
-      // TODO: Append based on type
       (oval.get, value) match {
         case (UndefV, _) => params += (name -> value)
         case (x: BoolV, y: BoolV) => params += (name -> ASTArrayV(Array(x, y)))
@@ -86,6 +92,9 @@ sealed abstract class CatalogElement(attrs: List[Attribute]) {
     else
       params += (name -> value)
   }
+
+  def attributeExists(name: String): Boolean =
+    params.get(name).isDefined
 
   override def toString = title
 }
@@ -124,27 +133,39 @@ object CatalogElement {
   }
 }
 
-sealed abstract class Override(filter: ResourceRefV, attrs: List[AttributeOverride])
+sealed abstract class Override(val filter: ResourceRefV, val attrs: List[AttributeOverride]) {
+  def query: ResourceRefV = filter
+}
 
 case class ReferenceOverride(filter: ResourceRefV,
                              attrs: List[AttributeOverride],
-                             scope: Array[String]) extends Override(filter, attrs) {
+                             scope: String) extends Override(filter, attrs) {
+  override def query: ResourceRefV =  {
+    val scopefilter = ResourceRefV(StringV("scopetag"), StringV(scope), FEqOp)
+    ResourceRefV(scopefilter, filter, FAndOp)
+  }
 }
 
 case class CollectionOverride(filter: ResourceRefV,
-                              attrs: List[AttributeOverride]) extends Override(filter, attrs) {
-}
+                              attrs: List[AttributeOverride]) extends Override(filter, attrs)
 
 case class DefaultsOverride(filter: ResourceRefV,
                             attrs: List[AttributeOverride],
-                            scope: Array[String]) extends Override(filter, attrs) {
+                            scope: String) extends Override(filter, attrs) {
+  override def query: ResourceRefV = {
+    val scopefilter = ResourceRefV(StringV("scopetag"), StringV(scope), FEqOp)
+    ResourceRefV(scopefilter, filter, FAndOp)
+  }
 }
 
 object Override {
-  def apply(filter: ResourceRefV, attrs: List[AttributeOverride], kind: core.Override): Override = kind match {
-    case core.ReferenceOverride => ReferenceOverride(filter, attrs, Array[String]())
+  def apply(filter: ResourceRefV,
+            attrs: List[AttributeOverride],
+            kind: core.Override,
+            scope: String): Override = kind match {
+    case core.ReferenceOverride => ReferenceOverride(filter, attrs, scope)
     case core.CollectionOverride => CollectionOverride(filter, attrs)
-    case core.DefaultsOverride => DefaultsOverride(filter, attrs, Array[String]())
+    case core.DefaultsOverride => DefaultsOverride(filter, attrs, scope)
   }
 }
 
@@ -166,7 +187,9 @@ class Catalog {
   private def isDuplicate(e: CatalogElement): Boolean =
     elements.exists(_.title == e.title)
 
-  def addResource(params: List[Attribute], containedBy: Option[ResourceRefV] = None): ResourceRefV = {
+  def addResource(params: List[Attribute],
+                  containedBy: Option[ResourceRefV] = None,
+                  scope: Option[String] = None): ResourceRefV = {
 
     val elem = CatalogElement(params)
     val elemRef = elem.toResourceRefV
@@ -180,7 +203,11 @@ class Catalog {
       case (d: Definition, false) => defines = d :: defines
     }
 
-    if (!containedBy.isEmpty) {
+    if (elem.isInstanceOf[Resource] && scope.isDefined) {
+      elem.addAttribute("scopetag", StringV(scope.get))
+    }
+
+    if (containedBy.isDefined) {
       containment.put(containedBy.get,
                       getContainedElements(containedBy.get) + elemRef)
     }
