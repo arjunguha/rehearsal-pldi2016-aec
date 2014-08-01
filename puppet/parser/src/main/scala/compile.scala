@@ -295,12 +295,12 @@ object PuppetCompile {
     val overrides = catalog.overrides
 
     // foreach override, collect by type, get a list of resources it refers to and overwrite or append attributes depending on its type
-    overrides.foreach({case ovrd: CollectionOverride => {
+    overrides.collect({case ovrd: CollectionOverride => ovrd})
+             .foreach((ovrd) => {
       val resources = catalog.find(ovrd.filter)
       resources.foreach((r) => ovrd.attrs.foreach({case a: AppendAttribute => r.appendAttribute(a.name, a.value)
                                                    case a: ReplaceAttribute => r.overwriteAttribute(a.name, a.value)}))
-      }
-    })
+      })
 
     // TODO : update list of overrides
     catalog

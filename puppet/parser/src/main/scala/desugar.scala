@@ -104,6 +104,10 @@ import puppet.syntax._
  * ResourceOverride (type == 'exec' and tag == 'staticlink') { path => '/sbin/:/usr/sbin' }
  *
  * respectively.
+ *
+ * Some subtle differences occur in the order these overrides are evaluated, their area
+ * of effect and their overriding precedence. Resource Overrides are tagged to help
+ * distinguish their lineage at evaluation time.
  */
 
 /* Node construct that specifies multiple node declaration sharing common code
