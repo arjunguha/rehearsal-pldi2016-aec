@@ -30,4 +30,20 @@ class BenchmarkSuite extends FunSuite {
       // driver.verify(graph)
     }
   }
+
+  val dockerBenchmarks = List("puppet-git"/*, "puppet-mosh", "puppet-bind"*/)
+
+  dockerBenchmarks foreach ((name) => {
+    val b = benchmarks(name)
+
+    import puppet.driver.{PuppetDriver => driver}
+
+    test (s"running benchmark: $name") {
+      val mainFilePath = s"${benchmarkroot}/${name}/${b.mainFile}"
+      val modulePath = b.modulePath.map((p) => s"${benchmarkroot}/${name}/${p}")
+      val content = driver.prepareContent(mainFilePath, modulePath)
+      val graph = driver.compile(content)
+      driver.verify(graph)
+    }
+  })
 }
