@@ -126,7 +126,7 @@ object Provider {
         /* missing: Create a file with content if content present
          * directory: if force is set then remove directory createFile and set content if present else ignore
          * file: if content set then set content else ignore
-         * link: removelink, createfile and set content if preseet
+         * link: removelink, createfile and set content if present
          */
         case Some("file") => action(createfilewithcontent,
                                     (if(force) deletedir _ else ignore _) andThen createfilewithcontent,
@@ -255,9 +255,7 @@ object Provider {
 
     private val msg = r.get("message") getOrElse name
 
-    def realize() {
-      println(msg)
-    }
+    def realize() { println(msg) }
   }
 
   case class Service(res: Resource) extends Provider(res) {
@@ -269,7 +267,7 @@ object Provider {
     private val validHasRestartVals = validBoolVal
     private val validHasStatusVals = validBoolVal
      
-    val ensure = validVal("ensure", validEnsureVals) getOrElse (throw new Exception(s"Service $name ensure attribute missing"))
+    val ensure = validVal("ensure", validEnsureVals) getOrElse (throw new Exception(s"Service $name 'ensure' attribute missing"))
     val binary = r.get("binary") getOrElse name
     val enable = validVal("enable", validEnableVals) getOrElse false // Whether a service should be enabled at boot time.
     val flags  = r.get("flags") getOrElse ""
@@ -309,9 +307,35 @@ object Provider {
   }
 
   case class Group(res: Resource) extends Provider(res) {
+    private val validEnsureVals = List("present", "absent")
+    private val validBoolVals = Map("true" -> true, "false" -> false, "yes" -> true, "no" -> false)
+    private val validAllowDupeVals = validBoolVals
+    private val validAttributeMembershipVals = List("inclusive","minimum")
+    private val validSystemVals = validBoolVals
+
+
+    val ensure = validVal("ensure", validEnsureVals) getOrElse (throw new Exception(s"Group $name 'ensure' attribute missing"))
+    val allowdupe = validVal("allowdupe", validAllowDupeVals) getOrElse false
+    val attribute_membership = validVal("attribute_membership", validAttributeMembershipVals)
+    val gid = r.get("gid").map(_.toInt)
+    private val isgidvalid = if(!gid.isDefined || gid.get >= 0) true else false
+    val system = validVal("system", validSystemVals) getOrElse false
 
     def realize() {
-      throw new Exception("Not yet Implemented")
+
+      if (!isgidvalid)
+        throw new Exception(s"Invalid gid: ${gid}")
+
+      val cmd = ensure match {
+        case "present" => List("groupadd",
+                               gid.map("-g %s".format(_)),
+                               if(allowdupe == true) "-o" else "",
+                               name)
+        case "absent" => List("groupdel", name)
+        case _ => throw new Exception(s"Invalid ensure value: $ensure")
+      }
+
+      Cmd.exec(cmd mkString " ").get
     }
   }
 
@@ -374,7 +398,7 @@ object Provider {
         (unless.isDefined && Cmd.exec(unless.get).get != 0) ||
         (!creates.isDefined && !onlyif.isDefined && !unless.isDefined)
 
-      // for 'tries' execute and then sleep for time out if failed
+      // for 'tries' execute and then sleep for time-out if failed
       def trycommand(tries_left: Int = tries,
                      cmd: String = cmd,
                      ocwd: Option[String] = cwd,
