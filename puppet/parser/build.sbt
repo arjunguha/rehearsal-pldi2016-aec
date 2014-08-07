@@ -24,7 +24,7 @@ libraryDependencies ++= {
     "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
     "com.assembla.scala-incubator" %% "graph-core" % "1.8.1",
     "com.assembla.scala-incubator" %% "graph-json" % "1.8.0",
-    "edu.umass.cs" %% "docker" % "0.2-SNAPSHOT",
+    "edu.umass.cs" %% "docker" % "0.2",
     "com.typesafe.akka" %% "akka-actor"  % akkaV,
     "com.typesafe.akka" %% "akka-kernel" % akkaV,
     "com.typesafe.akka" %% "akka-remote" % akkaV
