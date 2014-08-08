@@ -1,6 +1,6 @@
-import puppet.driver._
 import org.scalatest.FunSuite
 
+import puppet.driver.{PuppetDriver => driver}
 
 class BenchmarkSuite extends FunSuite {
 
@@ -20,23 +20,19 @@ class BenchmarkSuite extends FunSuite {
                        )
 
   for ((name, b) <- benchmarks) {
-    import puppet.driver.{PuppetDriver => driver}
 
     test (s"compiling benchmark: $name") {
       val mainFilePath = s"${benchmarkroot}/${name}/${b.mainFile}"
       val modulePath = b.modulePath.map((p) => s"${benchmarkroot}/${name}/${p}")
       val content = driver.prepareContent(mainFilePath, modulePath)
       val graph = driver.compile(content)
-      // driver.verify(graph)
     }
   }
 
-  val dockerBenchmarks = List("puppet-git"/*, "puppet-mosh", "puppet-bind"*/)
+  val dockerBenchmarks = List("puppet-git", "puppet-mosh", "puppet-bind")
 
   dockerBenchmarks foreach ((name) => {
     val b = benchmarks(name)
-
-    import puppet.driver.{PuppetDriver => driver}
 
     test (s"running benchmark: $name") {
       val mainFilePath = s"${benchmarkroot}/${name}/${b.mainFile}"
