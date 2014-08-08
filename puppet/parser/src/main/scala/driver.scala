@@ -40,7 +40,7 @@ object PuppetDriver {
     /*
      * Create a container
      * Get reference to actor running on container
-     * For each resoruce in order, get its provider and send over to container for install
+     * For each resource in order, get its provider and send over to container for install
      */
 
     val cfg: ContainerConfig = plasma.docker.container(containerName)
@@ -85,9 +85,9 @@ object PuppetDriver {
   }
 
   /*
-  private def processInstallOrderLocal(order: Seq[Resource]): Seq[Int] = {
+  private def processInstallOrderLocal(order: Seq[Resource]) {
     for (r <- order)
-      yield Provider(r.toStringAttributes).realize
+      Provider(r.toStringAttributes).realize
   }
   */
 
@@ -144,7 +144,9 @@ object PuppetDriver {
   }
 
   def verify(g: Graph[Resource, DiEdge]) {
+    println("Number of resources in graph: " + g.nodes.size)
     val permutations = GraphTopoSortPermutations(g)/*.par*/
+    println("Number of permutations: " + permutations.size)
     for (p <- permutations) {
       val stss = processInstallOrder(p)
       if (stss.exists(_ == false))
@@ -154,7 +156,12 @@ object PuppetDriver {
 
   /*
   def verifyLocal(g: Graph[Resource, DiEdge]) {
-    GraphTopoSortPermutations(g).foreach(processInstallOrderLocal _)
+    println("Number of resources in graph: " + g.nodes.size)
+    val permutations = GraphTopoSortPermutations(g)
+    println("Number of permutations: " + permutations.size)
+    for (p <- permutations) {
+      processInstallOrderLocal(p)
+    }
   }
   */
 
