@@ -198,7 +198,9 @@ object PuppetCompile {
     val toplevel = PuppetScope.createNamedScope("")
     val env = (new ScopeChain ()).addScope(toplevel)
 
-    val facter_env = Cmd.exec("facter").get
+    val (res, facter_env, err) = Cmd.exec("facter")
+
+    if(0 != res) throw new Exception(s"facter failed: $err")
 
     facter_env.lines.foreach({ case line => {
         val kv = line.split ("=>").map (_.trim)
@@ -290,9 +292,16 @@ object PuppetCompile {
       evalReferenceOverrides(catalog)
       evalDefaultOverrides(catalog)
 
+      /*
       // Process relationships, all we have left are resources after converging
       catalog.resources.foreach ({(r) => r.sources.foreach(catalog.addRelationship(_, r.toResourceRefV));
                                          r.targets.foreach(catalog.addRelationship(r.toResourceRefV, _))})
+      */
+
+      // Process relationships, all we have left are resources after converging
+      catalog.elements.foreach ({(e) => e.sources.foreach(catalog.addRelationship(_, e.toResourceRefV));
+                                        e.targets.foreach(catalog.addRelationship(e.toResourceRefV, _))})
+
 
       Right (catalog)
     }
@@ -469,7 +478,9 @@ object PuppetCompile {
 
       env = env.addScope(parent)
 
-      // Tag resource in parent scope with resources in current scope
+      /* Resources in parent scope are now also availabe in child scope.
+       * Tag resources tagged with parent scope with current scopetag
+       */
       val scopefilter = ResourceRefV(StringV("scopetag"), StringV(parent), FEqOp)
       val resources = catalog.find(scopefilter)
       resources.foreach((r) => r.appendAttribute("scopetag", StringV(klass.name)))
@@ -477,8 +488,9 @@ object PuppetCompile {
 
     val args = klassAST.args.map({case (variable, oVal) => (variable.value, oVal.map(eval(_))) })
     // 'main class is a dummy class that bounds toplevel statement and needs to be handled as special case
-    if (klass.name != 'main.toString) env = env.addScope(PuppetScope.createNamedScope(klass.name))
-    mergeParamAndArgs(args, klass.params.toList).foreach({case (k, v) => env.setvar(k, v)})
+    if(klass.name != 'main.toString) env = env.addScope(PuppetScope.createNamedScope(klass.name))
+    mergeParamAndArgs(args, klass.params.toList).foreach({case (k, v) if k != "type" => env.setvar(k, v)
+                                                          case _ => () })
 
     klassAST.stmts.asInstanceOf[BlockStmtC].exprs.foreach(eval(_))
     env
@@ -494,7 +506,8 @@ object PuppetCompile {
 
     val args = defineAST.args.map({ case(variable, oval) => (variable.value, oval.map(eval(_))) })
     env = env.addScope(PuppetScope.createNamedScope(define.name))
-    mergeParamAndArgs(args, define.params.toList).foreach({case (k, v) => env.setvar(k, v)})
+    mergeParamAndArgs(args, define.params.toList).foreach({case (k, v) if k != "type" => env.setvar(k, v)
+                                                           case _ => () })
 
     defineAST.stmts.asInstanceOf[BlockStmtC].exprs.foreach(eval(_))
   }

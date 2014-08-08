@@ -177,12 +177,13 @@ class Catalog {
   var defines = List[Definition]()
   var overrides = List[Override]()
   var relationships = List[(ResourceRefV, ResourceRefV)]()
+  var elements = List[CatalogElement]()
 
   var containment = mut.Map[ResourceRefV, Set[ResourceRefV]]()
   private def getContainedElements(containedBy: ResourceRefV): Set[ResourceRefV] =
     containment getOrElse(containedBy, Set())
     
-  private def elements = (resources ::: klasses ::: defines)
+  // private def elements = (resources ::: klasses ::: defines)
 
   private def isDuplicate(e: CatalogElement): Boolean =
     elements.exists(_.title == e.title)
@@ -202,6 +203,8 @@ class Catalog {
       case (d: Definition, true) => throw new Exception("Definition %s already exists in catalog".format(elem.title))
       case (d: Definition, false) => defines = d :: defines
     }
+
+    elements = elem :: elements
 
     if (elem.isInstanceOf[Resource] && scope.isDefined) {
       elem.addAttribute("scopetag", StringV(scope.get))
