@@ -172,9 +172,15 @@ object Provider {
       import scala.util.matching.Regex._
 
       val pattern = """Candidate:\s+(\S+)\s""".r
-      val output = Cmd.exec("apt-cache policy %s".format(name)).get
-      // Parse output for a version and return
-      pattern.findAllIn(output).matchData.map(_.group(1)).toList.head
+      val cmd = "apt-cache policy %s".format(name)
+      val (sts, out, err) = Cmd.exec(cmd)
+      if (0 == sts) {
+        // Parse output for a version and return
+        pattern.findAllIn(out).matchData.map(_.group(1)).toList.head
+      }
+      else {
+        throw new Exception(s"$cmd failed: $err")
+      }
     }
 
     def realize() {
@@ -187,7 +193,8 @@ object Provider {
         case _ => throw new Exception("One or more required attribute is missing")
       }
 
-      Cmd.exec(cmd).get
+      val (sts, _, err) = Cmd.exec(cmd)
+      if(sts != 0) throw new Exception(err)
     }
   }
 
@@ -247,7 +254,9 @@ object Provider {
         case _ => throw new Exception("Unknown 'ensure' value for user")
       }
 
-      Cmd.exec(cmd mkString " ").get
+      val (sts, _, err) = Cmd.exec(cmd mkString " ")
+      if(sts != 0) throw new Exception(err)
+
     }
   }
 
@@ -296,13 +305,16 @@ object Provider {
        */
 
       val cmd = ensure match {
-        case "stopped" => Some(List("service", binary, flags, "stop"))
-        case "running" => Some(List("service", binary, flags, "start"))
+        case "stopped" => Some(List("start", flags, binary))
+        case "running" => Some(List("stop", flags, binary))
         case "undef" => None
         case _ => throw new Exception(s"Invalid value $ensure for a service provider")
       }
 
-      cmd.map((c) => Cmd.exec(c mkString " ").get)
+      if(cmd.isDefined) {
+        val (sts, _, err) = Cmd.exec(cmd.get mkString " ")
+        if (sts != 0 ) throw new Exception(err)
+      }
     }
   }
 
@@ -335,7 +347,8 @@ object Provider {
         case _ => throw new Exception(s"Invalid ensure value: $ensure")
       }
 
-      Cmd.exec(cmd mkString " ").get
+      val (sts, _, err) = Cmd.exec(cmd mkString " ")
+      if(sts != 0) throw new Exception(err)
     }
   }
 
@@ -394,8 +407,8 @@ object Provider {
       // determine if execute or not
       val should_exec = 
         (creates.isDefined && !this.fileExists(creates.get)) ||
-        (onlyif.isDefined && Cmd.exec(onlyif.get).get == 0) ||
-        (unless.isDefined && Cmd.exec(unless.get).get != 0) ||
+        (onlyif.isDefined && Cmd.exec(onlyif.get)._1 == 0) ||
+        (unless.isDefined && Cmd.exec(unless.get)._1 != 0) ||
         (!creates.isDefined && !onlyif.isDefined && !unless.isDefined)
 
       // for 'tries' execute and then sleep for time-out if failed
@@ -406,13 +419,13 @@ object Provider {
                      interval: Int = try_sleep*1000,
                      env: Seq[(String, String)] = execenv): Option[Int] = (tries_left, ocwd) match {
         case (0, _) => None // num tries got over, return
-        case (_, Some(cwd)) if (Cmd.exec(cmd, cwd, env:_*).map(_ == returns) getOrElse false) => Some(0)
-        case (_, None)      if (Cmd.exec(cmd, env:_*)     .map(_ == returns) getOrElse false) => Some(0)
+        case (_, Some(cwd)) if (Cmd.exec(cmd, cwd, env:_*)._1 == retval) => Some(0)
+        case (_, None)      if (Cmd.exec(cmd, env:_*)     ._1 == retval) => Some(0)
         case (_, _) => Thread sleep interval; trycommand(tries_left-1)
       }
 
       if (should_exec) {
-        trycommand(tries) getOrElse (throw new Exception("exec failed"))
+        trycommand(tries) getOrElse (throw new Exception(s"$cmd exec failed"))
       }
     }
   }
