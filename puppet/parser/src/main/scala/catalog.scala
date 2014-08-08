@@ -18,7 +18,8 @@ object KnownResource {
     "Nagios_serviceescalation", "Nagios_serviceextinfo", "Nagios_servicegroup",
     "Nagios_timeperiod", "Notify", "Package", "Resources", "Router", "Schedule",
     "Scheduled_task", "Setboolean", "Selmodule", "Service", "Ssh_authorized_key",
-    "Sshkey", "Stage", "Tidy", "User", "Vlan", "Yumrepo", "Zfs", "Zone", "Zpool")
+    "Sshkey", "Stage", // XXX: Stage kind of resource is handled differently than a normal resource
+    "Tidy", "User", "Vlan", "Yumrepo", "Zfs", "Zone", "Zpool")
 }
 
 case class Attribute(name: String, value: Value)
@@ -41,9 +42,6 @@ sealed abstract class CatalogElement(attrs: List[Attribute]) {
   val typ   = params("type").toPString
   val name  = params("name").toPString.stripPrefix("::")
   val title = typ + ":" + name
-  // XXX: Maybe stage should be deferred until later (override can give it a value at a later stage)
-  //      Default stage value should rather be employed by catalog/compiler and not here.
-  // val stage = params.get("stage").map(_.toPString) getOrElse 'main.toString
 
   val sources: List[ResourceRefV] = attrToResRefs("require"):::attrToResRefs("subscribe")
   val targets: List[ResourceRefV] = attrToResRefs("before"):::attrToResRefs ("notify")
@@ -115,18 +113,30 @@ case class Resource(as: List[Attribute]) extends CatalogElement(as) {
   }
 }
 
-case class HostClass(as: List[Attribute]) extends CatalogElement(as)
+case class HostClass(as: List[Attribute]) extends CatalogElement(as) {
+  /* 
+   * Reasons for being lazy val
+   *
+   * This is not accessed until graph generation (assumption that cannot be
+   * verified by compiler), sometime before that point overrides are supposed
+   * to have kicked in and if there was a overriding value of stage in any class
+   * then it was put into params otherwise we give a default stage value
+   */
+  lazy val stage = params.get("stage").map(_.toPString) getOrElse 'main.toString
+}
+
 case class Definition(as: List[Attribute]) extends CatalogElement(as)
+case class Stage(as: List[Attribute]) extends CatalogElement(as)
 
 sealed abstract class AttributeOverride(name: String, value: Value)
 case class AppendAttribute(name: String, value: Value) extends AttributeOverride(name: String, value: Value)
 case class ReplaceAttribute(name: String, value: Value) extends AttributeOverride(name: String, value: Value)
 
-
 object CatalogElement {
   def apply (params: List[Attribute]): CatalogElement = {
     params.find(_.name == "type").get.value.toPString match {
       case "Class" => HostClass(params)
+      case "Stage" => Stage(params)
       case x if KnownResource.types.contains(x) => Resource(params)
       case _ => Definition(params)
     }
@@ -196,12 +206,14 @@ class Catalog {
     val elemRef = elem.toResourceRefV
 
     (elem, isDuplicate(elem)) match {
-      case (r: Resource, true) => throw new Exception("Resource %s already exists in catalog".format(elem.title))
+      case (_: Resource, true) => throw new Exception("Resource %s already exists in catalog".format(elem.title))
       case (r: Resource, false) => resources = r :: resources
-      case (h: HostClass, true) => () // Ignore duplicate class instantiation
+      case (_: HostClass, true) => () // Ignore duplicate class instantiation
       case (h: HostClass, false) => klasses = h :: klasses
-      case (d: Definition, true) => throw new Exception("Definition %s already exists in catalog".format(elem.title))
+      case (_: Definition, true) => throw new Exception("Definition %s already exists in catalog".format(elem.title))
       case (d: Definition, false) => defines = d :: defines
+      case (_: Stage, true) => throw new Exception("Resource %s already exists in catalog".format(elem.title))
+      case (_: Stage, false) => () // No special action for stage resource
     }
 
     elements = elem :: elements
@@ -232,8 +244,17 @@ class Catalog {
 
   private def getContainedResources(container: CatalogElement): List[Resource] = container match {
     case r: Resource => List(r)
+
+    /* We want all resources that are to be executed in a particular stage.
+     * We look for class(es) that belong to this stage and then look for all
+     * resources contained by each class in this stage.
+     */
+    case s: Stage => elements.collect({case c: HostClass => c})
+                             .filter(_.stage == s.name)
+                             .map(getContainedResources(_)).flatten
+
     case _ => getContainedElements(container.toResourceRefV)
-               .map(c => getContainedResources(findFirst(c))).toList.flatten
+               .map(e => getContainedResources(findFirst(e))).toList.flatten
   }
 
   def find(ref: ResourceRefV): List[CatalogElement] =
