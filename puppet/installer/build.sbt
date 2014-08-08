@@ -10,8 +10,6 @@ resolvers ++= Seq(
   "Typesafe Repository" at "http://repo.akka.io/snapshots/"
 )
 
-mainClass := Some("puppet.installer.Main")
-
 libraryDependencies ++= {
   val akkaV = "2.2.3"
   Seq(
