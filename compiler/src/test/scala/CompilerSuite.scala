@@ -15,7 +15,7 @@ class CompilerSuite extends FunSuite {
 
     test(s"compiling $f") {
       val content = scala.io.Source.fromFile (f).getLines () mkString "\n"
-      PuppetDriver.printGraph(PuppetDriver.compile (content))
+      PuppetDriver.printDOTGraph(PuppetDriver.compile (content))
     }
 
   }

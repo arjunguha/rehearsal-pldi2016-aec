@@ -167,7 +167,7 @@ object PuppetDriver {
   }
   */
 
-  def printGraph(g: Graph[Resource, DiEdge]) {
+  def printJSONGraph(g: Graph[Resource, DiEdge]) {
     val resource_desc = new NodeDescriptor[Resource] (typeId = "Resources") {
       def id (node: Any): String = node match {
         case x: Resource  => "Resource[%s]".format(x.title)
@@ -180,5 +180,33 @@ object PuppetDriver {
     )
 
     println(g.toJson(quickJson))
+  }
+
+  def printDOTGraph(g: Graph[Resource, DiEdge]) {
+    import scalax.collection.io.dot._
+    import scala.language.existentials
+
+    val root = DotRootGraph(
+      directed = true,
+      id = Some("Resource_Graph"),
+      kvList = Seq[DotAttr]())
+
+    def edgeTransformer(innerEdge: Graph[Resource, DiEdge]#EdgeT):
+      Option[(DotGraph, DotEdgeStmt)] = {
+      val edge = innerEdge.edge
+      Some(root, DotEdgeStmt(edge.from.toString,
+                             edge.to.toString,
+                             Nil))
+    }
+
+    def iNodeTransformer(isolatedNode: Graph[Resource, DiEdge]#NodeT):
+      Option[(DotGraph, DotNodeStmt)] = {
+      Some(root, DotNodeStmt(isolatedNode.toString, Nil))
+    }
+
+    val dot = g.toDot(root, edgeTransformer,
+      None, None, Some(iNodeTransformer))
+
+    println(dot)
   }
 }
