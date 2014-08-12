@@ -139,6 +139,7 @@ object PuppetDriver {
       }
 
     if (g.isCyclic) {
+      printDOTGraph(g)
       throw new Exception("Compiled graph contains a cycle")
     }
 
