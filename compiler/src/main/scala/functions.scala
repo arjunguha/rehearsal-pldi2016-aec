@@ -9,7 +9,7 @@ import scala.collection._
 /* Functions that are callable in puppet files */
 object Function {
 
-  type ContainedBy = Option[ResourceRefV]
+  type ContainedBy = Option[CatalogElement]
   type Argument = (Value, ASTCore)
 
   trait FunctionApp {
@@ -49,7 +49,7 @@ object Function {
       arg.foreach(a => {
         // TODO : Remove asInstanceOf
         val ref = catalog.addResource(Attr.resourceBasicAttributes("Class", Value(a).asInstanceOf[StringV].value))
-        catalog.addRelationship(containedBy.get, ref)
+        catalog.addRelationship(containedBy.get.toResourceRefV, ref)
       })
       UndefV
     }

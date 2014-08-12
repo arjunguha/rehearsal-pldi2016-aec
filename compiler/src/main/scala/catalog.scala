@@ -56,8 +56,8 @@ sealed abstract class CatalogElement(attrs: List[Attribute]) {
     (params.get(key) map depsToResRefs) getOrElse List ()
 
   def toResourceRefV: ResourceRefV =
-    ResourceRefV (ResourceRefV(StringV("type"), params ("type"), FEqOp),
-                  ResourceRefV(StringV("name"), params ("name"), FEqOp), FAndOp)
+    ResourceRefV (ResourceRefV(StringV("type"), params("type"), FEqOp),
+                  ResourceRefV(StringV("name"), params("name"), FEqOp), FAndOp)
 
   def overwriteAttribute (name: String, value: Value) {
     params += (name -> value)
@@ -122,7 +122,7 @@ case class HostClass(as: List[Attribute]) extends CatalogElement(as) {
    * to have kicked in and if there was a overriding value of stage in any class
    * then it was put into params otherwise we give a default stage value
    */
-  lazy val stage = params.get("stage").map(_.toPString) getOrElse 'main.toString
+  lazy val stage = params.get("stage").map(_.toPString) getOrElse 'main.name
 }
 
 case class Definition(as: List[Attribute]) extends CatalogElement(as)
@@ -187,10 +187,15 @@ class Catalog {
   var defines = List[Definition]()
   var overrides = List[Override]()
   var relationships = List[(ResourceRefV, ResourceRefV)]()
+  var stages = List[Stage]()
   var elements = List[CatalogElement]()
 
-  var containment = mut.Map[ResourceRefV, Set[ResourceRefV]]()
-  private def getContainedElements(containedBy: ResourceRefV): Set[ResourceRefV] =
+  /* Resources may be contained by class or defines, 
+   * Classes may be contained by other classes or defines
+   * Defines may be contained by toher classes or defines
+   */
+  var containment = mut.Map[CatalogElement, Set[CatalogElement]]()
+  def getContainedElements(containedBy: CatalogElement): Set[CatalogElement] =
     containment getOrElse(containedBy, Set())
     
   // private def elements = (resources ::: klasses ::: defines)
@@ -199,7 +204,7 @@ class Catalog {
     elements.exists(_.title == e.title)
 
   def addResource(params: List[Attribute],
-                  containedBy: Option[ResourceRefV] = None,
+                  containedBy: Option[CatalogElement] = None,
                   scope: Option[String] = None): ResourceRefV = {
 
     val elem = CatalogElement(params)
@@ -213,7 +218,7 @@ class Catalog {
       case (_: Definition, true) => throw new Exception("Definition %s already exists in catalog".format(elem.title))
       case (d: Definition, false) => defines = d :: defines
       case (_: Stage, true) => throw new Exception("Resource %s already exists in catalog".format(elem.title))
-      case (_: Stage, false) => () // No special action for stage resource
+      case (s: Stage, false) => stages = s :: stages
     }
 
     elements = elem :: elements
@@ -224,7 +229,7 @@ class Catalog {
 
     if (containedBy.isDefined) {
       containment.put(containedBy.get,
-                      getContainedElements(containedBy.get) + elemRef)
+                      getContainedElements(containedBy.get) + elem)
     }
 
     elemRef
@@ -239,9 +244,6 @@ class Catalog {
     relationships = (src, dst) :: relationships
   }
 
-  private def findFirst(ref: ResourceRefV): CatalogElement =
-    elements.filter(PuppetCompile.evalResourceRef(ref)(_)).head
-
   private def getContainedResources(container: CatalogElement): List[Resource] = container match {
     case r: Resource => List(r)
 
@@ -253,15 +255,16 @@ class Catalog {
                              .filter(_.stage == s.name)
                              .map(getContainedResources(_)).flatten
 
-    case _ => getContainedElements(container.toResourceRefV)
-               .map(e => getContainedResources(findFirst(e))).toList.flatten
+    case _ => getContainedElements(container)
+              .toList
+              .map(getContainedResources(_)).flatten
   }
 
   def find(ref: ResourceRefV): List[CatalogElement] =
     elements.filter(PuppetCompile.evalResourceRef(ref)(_))
     
   private def findResources(ref: ResourceRefV): List[Resource] =
-    find(ref).map(getContainedResources(_)).flatten
+    find(ref).map(getContainedResources(_)).flatten.distinct
 
   def resourceCount: Int = resources.length
 

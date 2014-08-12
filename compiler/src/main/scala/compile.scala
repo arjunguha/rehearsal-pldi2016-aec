@@ -11,6 +11,9 @@ import scala.util.Try
 
 object PuppetCompile {
 
+  // TODO : Not all CatalogElement are types, make it more strict
+  type Container = CatalogElement
+
   private def value_matches(lhs: Value, rhs: Value): Boolean = lhs match {
     case UndefV => lhs == rhs
     case _: BoolV => lhs == rhs
@@ -88,13 +91,13 @@ object PuppetCompile {
   private def evalAttribute(a: AttributeC)
                            (implicit env: ScopeChain,
                                      catalog: Catalog,
-                                     containedBy: Option[ResourceRefV]): Attribute =
+                                     containedBy: Option[Container]): Attribute =
     Attribute(eval(a.name).asInstanceOf[StringV].toPString, eval(a.value))
 
   private def evalAttributeOverride(av: AttributeOverrideC)
                                    (implicit env: ScopeChain,
                                              catalog: Catalog,
-                                             containedBY: Option[ResourceRefV]): AttributeOverride = av match {
+                                             containedBY: Option[Container]): AttributeOverride = av match {
     case AppendAttributeC(name, value) => AppendAttribute(eval(name).asInstanceOf[StringV].toPString, eval(value))
     case ReplaceAttributeC(name, value) => ReplaceAttribute(eval(name).asInstanceOf[StringV].toPString, eval(value))
   }
@@ -103,7 +106,7 @@ object PuppetCompile {
   private def eval(ast: ASTCore)
                   (implicit  env: ScopeChain,
                              catalog: Catalog,
-                             containedBy: Option[ResourceRefV]): Value = ast match {
+                             containedBy: Option[Container]): Value = ast match {
     case UndefC     => UndefV
     case BoolC(b)   => BoolV(b)
     case StringC(s) => StringV(stripQuote(s))
@@ -268,6 +271,9 @@ object PuppetCompile {
     {
       implicit val catalog = new Catalog ()
 
+      val mainStage = Attribute.resourceBasicAttributes("Stage", 'main.name)
+      catalog.addResource(mainStage)
+
       val mainClass = Attribute.resourceBasicAttributes("Class", 'main.toString)
       catalog.addResource(mainClass)
 
@@ -292,19 +298,35 @@ object PuppetCompile {
       evalReferenceOverrides(catalog)
       evalDefaultOverrides(catalog)
 
-      /*
-      // Process relationships, all we have left are resources after converging
-      catalog.resources.foreach ({(r) => r.sources.foreach(catalog.addRelationship(_, r.toResourceRefV));
-                                         r.targets.foreach(catalog.addRelationship(r.toResourceRefV, _))})
-      */
+      processStages(catalog)
 
-      // Process relationships, all we have left are resources after converging
       catalog.elements.foreach ({(e) => e.sources.foreach(catalog.addRelationship(_, e.toResourceRefV));
                                         e.targets.foreach(catalog.addRelationship(e.toResourceRefV, _))})
 
 
       Right (catalog)
     }
+  }
+
+  /* "stage" attribute is transitive, all classes contained by the class
+   * with given stage inherits the stage attribute */
+  private def processStages(catalog: Catalog): Catalog = {
+
+    val (mainstage, otherStages) = catalog.stages.partition(_.name == 'main.name)
+    val stagedKlassGroups = catalog.elements.collect({case c: HostClass => c}) // Only HostClass can be staged
+                                   .filter(_.attributeExists("stage")) // Not all host classes have stage attribute
+                                   .groupBy(_.params("stage").toPString)
+
+    otherStages.foreach((s) => {
+      val oKlasses = stagedKlassGroups.get(s.name)
+      if(oKlasses.isDefined) {
+        oKlasses.get.foreach((k) => catalog.getContainedElements(k)
+                                           .collect({case c: HostClass => c})
+                                           .foreach(_.addAttribute("stage", StringV(s.name))))
+      }
+    })
+
+    catalog
   }
 
   private def evalOverride(ovrd: Override, catalog: Catalog): Catalog = {
@@ -453,7 +475,7 @@ object PuppetCompile {
     val klassAST = TypeCollection.getClass(klass.name) getOrElse
                    (throw new Exception("Puppet class %s not found".format(klass.name)))
     implicit var env = (new ScopeChain ()).addScope ("") // Add toplevel scope
-    implicit val container = Some(klass.toResourceRefV) // resources withing this class are contained by it
+    implicit val container = if(klass.name == 'main.toString) None else Some(klass) // resources withing this class are contained by it
 
     // Eval parent if present
     if (!klassAST.parent.isEmpty) {
@@ -500,7 +522,7 @@ object PuppetCompile {
                             (implicit catalog: Catalog) {
 
     implicit var env = (new ScopeChain()).addScope("") // Add toplevel scope
-    implicit val container = Some(define.toResourceRefV) // resources within this definition are contained by it
+    implicit val container = Some(define) // resources within this definition are contained by it
     val defineAST = TypeCollection.getDefinition(define.typ) getOrElse
                       (throw new Exception ("\"%s\" definition not found in catalog".format(define.typ)))
 
