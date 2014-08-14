@@ -1,4 +1,4 @@
-name := "puppet-parser"
+name := "compiler"
 
 version := "0.1"
 
