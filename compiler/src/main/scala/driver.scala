@@ -13,9 +13,6 @@ import plasma.docker._
 
 import scalax.collection.Graph
 import scalax.collection.GraphEdge._
-import scalax.collection.GraphEdge._
-import scalax.collection.io.json._
-import scalax.collection.io.json.descriptor.predefined._
 
 import scala.concurrent._
 import scala.concurrent.duration._
@@ -186,21 +183,6 @@ object PuppetDriver {
     }
   }
   */
-
-  def printJSONGraph(g: Graph[Resource, DiEdge]) {
-    val resource_desc = new NodeDescriptor[Resource] (typeId = "Resources") {
-      def id (node: Any): String = node match {
-        case x: Resource  => "Resource[%s]".format(x.title)
-      }
-    }
-
-    val quickJson = new Descriptor[Resource](
-      defaultNodeDescriptor = resource_desc,
-      defaultEdgeDescriptor = Di.descriptor[Resource]()
-    )
-
-    println(g.toJson(quickJson))
-  }
 
   def printDOTGraph(g: Graph[Resource, DiEdge]) {
     import scalax.collection.io.dot._
