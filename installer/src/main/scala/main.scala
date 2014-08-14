@@ -18,6 +18,7 @@ class Exec extends Actor {
   def receive = {
     case attrs: Map[String, String] => sender ! (Try(Provider(attrs).realize).map(_ => true) getOrElse false)
     case "ping" => sender ! "pong"
+    case "shutdown" => context.system.shutdown()
     case _ => println("Unknown message received")
   }
 }
