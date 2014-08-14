@@ -26,7 +26,7 @@ libraryDependencies ++= {
     "com.assembla.scala-incubator" %% "graph-core" % s"${graphMajorV}.0",
     "com.assembla.scala-incubator" %% "graph-json" % s"${graphMajorV}.2",
     "com.assembla.scala-incubator" %% "graph-dot"  % s"${graphMajorV}.0",
-    "edu.umass.cs" %% "docker" % "0.2",
+    "edu.umass.cs" %% "docker" % "0.3-SNAPSHOT",
     "com.typesafe.akka" %% "akka-actor"  % akkaV,
     "com.typesafe.akka" %% "akka-kernel" % akkaV,
     "com.typesafe.akka" %% "akka-remote" % akkaV
