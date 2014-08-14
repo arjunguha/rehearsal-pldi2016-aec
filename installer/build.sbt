@@ -4,7 +4,7 @@ name := "puppet-installer"
 
 version := "0.1"
 
-scalaVersion := "2.11.1"
+scalaVersion := "2.10.3"
 
 resolvers ++= Seq(
   "Typesafe Repository" at "http://repo.akka.io/snapshots/"
