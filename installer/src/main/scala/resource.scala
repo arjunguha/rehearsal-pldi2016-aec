@@ -193,6 +193,7 @@ object Provider {
         case _ => throw new Exception("One or more required attribute is missing")
       }
 
+      println(s"Executing: $cmd")
       val (sts, _, err) = Cmd.exec(cmd)
       if(sts != 0) throw new Exception(err)
     }
@@ -223,40 +224,69 @@ object Provider {
     val managehome = validVal("managehome", validBoolVals) getOrElse false
     val system = validVal("system", validBoolVals) getOrElse false
 
+    private def userExists(user: String): Boolean = {
+      val (sts, _, _) = Cmd.exec(s"id -u $user")
+      (sts == 0)
+    }
+
+    private def gidExists(gid: String): Boolean = {
+      val (sts, _, _) = Cmd.exec(s"getent group $gid")
+      (sts == 0)
+    }
+
     def realize() {
 
       // Hackish but puppet port, make sure shell binary exists and its executable
       if (shell.isDefined) {
         val p = shell.get
         if (!Files.exists(Paths.get(p)) || Files.isExecutable(Paths.get(p))) {
-          throw new Exception(s"Invalid shell $p for user")
+          throw new Exception(s"Invalid shell $p for user $name")
         }
       }
 
-      val cmd = ensure match {
-        case Some("present") => List("useradd",
-                                     gid.map("-g %s".format(_)) getOrElse "",
-                                     groups.map("-G %s".format(_)) getOrElse "",
-                                     shell.map("-s %s".format(_)) getOrElse "",
-                                     uid.map((u) => "-u %s".format(u.toString)) getOrElse "",
-                                     home.map("-d %s".format(_)) getOrElse "",
-                                     if(allowdupe) "-o" else "",
-                                     if(managehome) "-m" else "",
-                                     if(system) "-r" else "",
-                                     name)
-
-        case Some("absent") => List("userdel",
-                                    if(managehome) "-r" else "",
-                                    name)
-
-        case Some("role") => throw new Exception("role management in user not yet supported")
-
-        case _ => throw new Exception("Unknown 'ensure' value for user")
+      if(gid.isDefined && !gidExists(gid.get)) {
+        throw new Exception(s"Invalid gid $gid for user $name")
       }
 
-      val (sts, _, err) = Cmd.exec(cmd mkString " ")
-      if(sts != 0) throw new Exception(err)
+      /* Linux add user to the same group as its username unless gid
+       * attribute is specified
+       * If no gid is specifed to useradd and a group by the name of
+       * user exists then useradd returns error
+       */
+      val isDuplicate = userExists(name)
+      val _gid = if(gid.isDefined) gid // If gid explicitly specified in manifest then 
+                 else if(gidExists(name)) Some(name)
+                 else None
 
+      val cmd = (ensure, isDuplicate) match {
+        case (Some("present"), true)  => None // TODO: Should we check all other params if they match
+        case (Some("present"), false) => Some(List("useradd",
+                                           _gid.map("-g %s".format(_)) getOrElse "",
+                                           groups.map("-G %s".format(_)) getOrElse "",
+                                           shell.map("-s %s".format(_)) getOrElse "",
+                                           uid.map((u) => "-u %s".format(u.toString)) getOrElse "",
+                                           home.map("-d %s".format(_)) getOrElse "",
+                                           if(allowdupe) "-o" else "",
+                                           if(managehome) "-m" else "",
+                                           if(system) "-r" else "",
+                                           name))
+
+        // See if userdel is idempotent when user by the given name does not exist
+        case (Some("absent"), true) => Some(List("userdel",
+                                         if(managehome) "-r" else "",
+                                         name))
+        case (Some("absent"), false) => None
+
+        case (Some("role"), _) => throw new Exception("role management in user not yet supported")
+
+        case (_, _) => throw new Exception("Unknown 'ensure' value for user")
+      }
+
+      if(cmd.isDefined) {
+        println(s"Executing: ${cmd.get mkString " "}")
+        val (sts, _, err) = Cmd.exec(cmd.get mkString " ")
+        if(sts != 0) { throw new Exception(err) }
+      }
     }
   }
 
@@ -300,18 +330,17 @@ object Provider {
 
       // Make sure binary exists after adding path variable to environment
 
-      /* TODO : Mark service to start on 
-       * if(enable) // TODO : Mark service to 
-       */
-
-      val cmd = ensure match {
-        case "stopped" => Some(List("start", flags, binary))
-        case "running" => Some(List("stop", flags, binary))
-        case "undef" => None
+      /* TODO : Mark service to start on reboot if enable */
+      val (cmd, mode) = ensure match {
+        case "stopped" => (Some(List("start", flags, binary)), "start")
+        case "running" => (Some(List("stop", flags, binary)), "stop")
+        case "undef" => (None, "") // TODO: should check if service running or not
         case _ => throw new Exception(s"Invalid value $ensure for a service provider")
       }
 
       if(cmd.isDefined) {
+        puppet.installer.Services.enlist(binary, path getOrElse "", flags, mode)
+        println(s"Executing: ${cmd.get mkString " "}")
         val (sts, _, err) = Cmd.exec(cmd.get mkString " ")
         if (sts != 0 ) throw new Exception(err)
       }
@@ -324,7 +353,6 @@ object Provider {
     private val validAllowDupeVals = validBoolVals
     private val validAttributeMembershipVals = List("inclusive","minimum")
     private val validSystemVals = validBoolVals
-
 
     val ensure = validVal("ensure", validEnsureVals) getOrElse (throw new Exception(s"Group $name 'ensure' attribute missing"))
     val allowdupe = validVal("allowdupe", validAllowDupeVals) getOrElse false
@@ -340,13 +368,15 @@ object Provider {
 
       val cmd = ensure match {
         case "present" => List("groupadd",
-                               gid.map("-g %s".format(_)),
+                               "-f", // return success code even if group is already present
+                               gid.map("-g %s".format(_)) getOrElse "",
                                if(allowdupe == true) "-o" else "",
                                name)
         case "absent" => List("groupdel", name)
         case _ => throw new Exception(s"Invalid ensure value: $ensure")
       }
 
+      println(s"Executing: ${cmd mkString " "}")
       val (sts, _, err) = Cmd.exec(cmd mkString " ")
       if(sts != 0) throw new Exception(err)
     }
@@ -425,7 +455,14 @@ object Provider {
       }
 
       if (should_exec) {
-        trycommand(tries) getOrElse (throw new Exception(s"$cmd exec failed"))
+        println(s"Executing: $cmd")
+        // trycommand(tries) getOrElse (throw new Exception(s"$cmd exec failed"))
+        val (sts, out, err) = Cmd.exec(cmd)
+        println(out)
+        if (sts != 0) {
+          System.err.println(err)
+          throw new Exception(s"$cmd exec failed")
+        }
       }
     }
   }

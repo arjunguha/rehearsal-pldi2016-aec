@@ -23,9 +23,13 @@ class Exec extends Actor {
   }
 }
 
+
 object Main extends App {
 
+  Services.restore()
+
   val _ = new PuppetInstaller
+
 
   class PuppetInstaller extends Bootable {
 
