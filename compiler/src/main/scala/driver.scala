@@ -131,15 +131,25 @@ object PuppetDriver {
     val containerIP = inspectCfg.NetworkSettings.IPAddress
 
     // TODO: Wait for container actor system to come up. Container should coordinate handshake
-    Thread sleep 10000
+    Thread sleep 20000
 
     val remoteAddress = s"akka.tcp://PuppetInstallerSystem@${containerIP}:${containerPort}/${execActorPath}"
     val remoteRef = system.actorSelection(remoteAddress)
 
+    println("trying resource")
     val result = Await.result(ask(remoteRef, res).mapTo[Boolean], Timeout(600.seconds).duration)
+    println("shutting down remote")
     remoteRef ! "shutdown"
     if(false == result) {
-      throw new Exception("Processing of resource failed")
+      val title = res("type")+":"+res("name")
+      val logs = Await.result(docker.logs(id, true), Duration.Inf)
+      println("*************** LOGS ********************")
+      val l = new String(logs)
+      println(l)
+      println("-----------------------------------------")
+      Await.result(docker.killContainer(id), Duration.Inf)
+      Await.result(docker.deleteContainer(container.Id), Duration.Inf)
+      throw new Exception(s"Processing of resource failed $title")
     }
 
     val imageId = Await.result(docker.commitContainer(container.Id), Duration.Inf)
