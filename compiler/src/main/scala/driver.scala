@@ -142,11 +142,16 @@ object PuppetDriver {
     remoteRef ! "shutdown"
     if(false == result) {
       val title = res("type")+":"+res("name")
-      val logs = Await.result(docker.logs(id, true), Duration.Inf)
-      println("*************** LOGS ********************")
-      val l = new String(logs)
-      println(l)
+      val out = Await.result(docker.logs(id, false), Duration.Inf)
+      val err = Await.result(docker.logs(id, true), Duration.Inf)
+      println("*************** STDOUT ********************")
+      println(new String(out))
       println("-----------------------------------------")
+      
+      println("*************** STDERR ********************")
+      println(new String(err))
+      println("-----------------------------------------")
+
       Await.result(docker.killContainer(id), Duration.Inf)
       Await.result(docker.deleteContainer(container.Id), Duration.Inf)
       throw new Exception(s"Processing of resource failed $title")
