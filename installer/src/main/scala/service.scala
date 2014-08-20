@@ -9,6 +9,8 @@ object Services {
   def restore() {
     import java.nio.file.{Files, Paths}
 
+    System.err.println("inside restore")
+
     if(Files.exists(Paths.get(file))) {
       for(line <- io.Source.fromFile(file).getLines) {
         val components = line.split(":::")
@@ -16,12 +18,19 @@ object Services {
         val path = components(1)
         val flags = components(2)
         val mode = components(3)
+        System.err.println(line)
 
-        ENV_PATH.append(path)
-        val cmd = List(mode, binary, flags)
-        Cmd.exec(cmd mkString " ")
+        if(path.length > 0) ENV_PATH.append(path)
+        val cmd = List(path + binary, flags, mode)
+        val (sts, out, err) = Cmd.exec(cmd mkString " ")
+        println(out)
+        if(0 != sts) {
+          System.err.println(err)
+        }
       }
     }
+
+    System.err.println("exiting restore")
   }
 
   def enlist(binary: String, path: String, flags: String, mode: String) {

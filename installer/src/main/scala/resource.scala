@@ -207,7 +207,7 @@ object Provider {
 
     import java.nio.file.{Files, LinkOption, Paths, Path}
 
-    val ensure = validVal("ensure", validEnsureVals)
+    val ensure = validVal("ensure", validEnsureVals) getOrElse "present"
     val gid = r.get("gid")
     // Sanity check => if multiple then they should be comma separated without spaces, multiple groups should be specified as an array
     val groups = r.get("groups")
@@ -259,33 +259,35 @@ object Provider {
                  else None
 
       val cmd = (ensure, isDuplicate) match {
-        case (Some("present"), true)  => None // TODO: Should we check all other params if they match
-        case (Some("present"), false) => Some(List("useradd",
-                                           _gid.map("-g %s".format(_)) getOrElse "",
-                                           groups.map("-G %s".format(_)) getOrElse "",
-                                           shell.map("-s %s".format(_)) getOrElse "",
-                                           uid.map((u) => "-u %s".format(u.toString)) getOrElse "",
-                                           home.map("-d %s".format(_)) getOrElse "",
-                                           if(allowdupe) "-o" else "",
-                                           if(managehome) "-m" else "",
-                                           if(system) "-r" else "",
-                                           name))
+        case ("present", true)  => None // TODO: Should we check all other params if they match
+        case ("present", false) => Some(List("useradd",
+                                    _gid.map("-g %s".format(_)) getOrElse "",
+                                    groups.map("-G %s".format(_)) getOrElse "",
+                                    shell.map("-s %s".format(_)) getOrElse "",
+                                    uid.map((u) => "-u %s".format(u.toString)) getOrElse "",
+                                    home.map("-d %s".format(_)) getOrElse "",
+                                    if(allowdupe) "-o" else "",
+                                    if(managehome) "-m" else "",
+                                    if(system) "-r" else "",
+                                    name))
 
         // See if userdel is idempotent when user by the given name does not exist
-        case (Some("absent"), true) => Some(List("userdel",
-                                         if(managehome) "-r" else "",
-                                         name))
-        case (Some("absent"), false) => None
+        case ("absent", true) => Some(List("userdel",
+                                   if(managehome) "-r" else "",
+                                   name))
+        case ("absent", false) => None
 
-        case (Some("role"), _) => throw new Exception("role management in user not yet supported")
+        case ("role", _) => throw new Exception("role management in user not yet supported")
 
         case (_, _) => throw new Exception("Unknown 'ensure' value for user")
       }
 
       if(cmd.isDefined) {
-        println(s"Executing: ${cmd.get mkString " "}")
+        System.err.println(s"Executing: ${cmd.get mkString " "}")
         val (sts, _, err) = Cmd.exec(cmd.get mkString " ")
-        if(sts != 0) { throw new Exception(err) }
+        if(sts != 0) {
+          System.err.println(err)
+          throw new Exception(err) }
       }
     }
   }
@@ -313,7 +315,7 @@ object Provider {
     val hasrestart = validVal("hasrestart", validHasRestartVals) getOrElse false
     // if a service's init script has a functional status command,
     val hasstatus = validVal("hasstatus", validHasStatusVals) getOrElse true
-    val path = r.get("path")
+    val path = r.get("path") getOrElse "/etc/init.d/"
     /* pattern to search for in process table, used for stopping services that do not support init scripts
      * Also used for determining service status on those service whose init scripts do not include a status command
      */
@@ -332,14 +334,14 @@ object Provider {
 
       /* TODO : Mark service to start on reboot if enable */
       val (cmd, mode) = ensure match {
-        case "stopped" => (Some(List("start", flags, binary)), "start")
-        case "running" => (Some(List("stop", flags, binary)), "stop")
+        case "stopped" => (Some(List(path + binary, flags, "stop")), "stop")
+        case "running" => (Some(List(path + binary, flags, "start")), "start")
         case "undef" => (None, "") // TODO: should check if service running or not
         case _ => throw new Exception(s"Invalid value $ensure for a service provider")
       }
 
       if(cmd.isDefined) {
-        puppet.installer.Services.enlist(binary, path getOrElse "", flags, mode)
+        puppet.installer.Services.enlist(binary, path, flags, mode)
         println(s"Executing: ${cmd.get mkString " "}")
         val (sts, _, err) = Cmd.exec(cmd.get mkString " ")
         if (sts != 0 ) throw new Exception(err)
