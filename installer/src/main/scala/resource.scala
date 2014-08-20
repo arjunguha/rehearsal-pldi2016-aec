@@ -239,7 +239,7 @@ object Provider {
       // Hackish but puppet port, make sure shell binary exists and its executable
       if (shell.isDefined) {
         val p = shell.get
-        if (!Files.exists(Paths.get(p)) || Files.isExecutable(Paths.get(p))) {
+        if(!Files.exists(Paths.get(p)) || !Files.isExecutable(Paths.get(p))) {
           throw new Exception(s"Invalid shell $p for user $name")
         }
       }
@@ -328,23 +328,33 @@ object Provider {
     // TODO : handle Refresh
     def realize() {
 
+      import puppet.installer.Services
+
       // XXX: Since we are not supporting notifications, we do not need to deal with restart related stuff
 
       // Make sure binary exists after adding path variable to environment
-
-      /* TODO : Mark service to start on reboot if enable */
-      val (cmd, mode) = ensure match {
-        case "stopped" => (Some(List(path + binary, flags, "stop")), "stop")
-        case "running" => (Some(List(path + binary, flags, "start")), "start")
-        case "undef" => (None, "") // TODO: should check if service running or not
-        case _ => throw new Exception(s"Invalid value $ensure for a service provider")
+      val p = Paths.get(s"${path}/${binary}")
+      if(!Files.exists(p) || !Files.isExecutable(p)) {
+        throw new Exception(s"Invalid shell $p for user $name")
       }
 
-      if(cmd.isDefined) {
-        puppet.installer.Services.enlist(binary, path, flags, mode)
-        println(s"Executing: ${cmd.get mkString " "}")
-        val (sts, _, err) = Cmd.exec(cmd.get mkString " ")
-        if (sts != 0 ) throw new Exception(err)
+      val isRunning = Services.isRunning(path, binary)
+
+      /* TODO : Mark service to start on reboot if enable */
+      val mode = ensure match {
+        case "stopped" => "stop"
+        case "running" => "start"
+        case "undef" => if(isRunning) "start" else "stop"
+        case _ => throw new Exception(s"Invalid value $ensure for a service provider for $name")
+      }
+
+      Services.enlist(binary, path, flags, mode)
+
+      (mode, isRunning) match {
+        case ("start", true) | ("stop", false) => ()
+        case ("start", false) => Services.start(path, binary, Some(flags))
+        case ("stop", true)  => Services.stop(path, binary)
+        case _ => throw new Exception(s"Invalid value $mode for service $name")
       }
     }
   }

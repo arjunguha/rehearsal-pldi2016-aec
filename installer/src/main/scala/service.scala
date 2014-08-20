@@ -6,6 +6,19 @@ object Services {
 
   import puppet.util._
 
+  def isRunning(path: String, binary: String): Boolean =
+    0 == Cmd.exec(s"ps -ax | grep $binary | grep -v grep")._1
+
+  def start(path: String, binary: String, flags: Option[String] = None): Boolean = {
+    val cmd = List(s"${path}/${binary}",
+                   "start",
+                   flags getOrElse "")
+    0 == Cmd.exec(cmd mkString " ")._1
+  }
+
+  def stop(path: String, binary: String): Boolean =
+    0 == Cmd.exec(s"${path}/${binary} stop")._1
+
   def restore() {
     import java.nio.file.{Files, Paths}
 
