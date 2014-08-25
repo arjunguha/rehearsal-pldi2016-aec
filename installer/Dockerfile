@@ -16,4 +16,4 @@ USER root
 ADD target/scala-2.10/puppet-installer-assembly-0.1.jar /app/puppet-installer.jar
 
 # run the application when a container based on this image is being run
-ENTRYPOINT [ "java", "-jar", "/app/puppet-installer.jar" ]
+# ENTRYPOINT [ "java", "-jar", "/app/puppet-installer.jar" ]

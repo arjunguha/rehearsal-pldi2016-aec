@@ -6,27 +6,10 @@ import puppet.core.eval._
 
 // import puppet.runtime.core._
 
-import puppet.runtime.toposortperm._
-
-import scala.util.Try
-import plasma.docker._
-
 import scalax.collection.Graph
 import scalax.collection.GraphEdge._
 
-import scala.concurrent._
-import scala.concurrent.duration._
-import scala.util.Random
-
-import akka.actor.{Actor, ActorSystem, ActorRef}
-import akka.pattern.ask
-import akka.util.Timeout
-import com.typesafe.config.ConfigFactory
-
-import ExecutionContext.Implicits.global
-
 object PuppetDriver {
-
 
   import java.nio.file.{Files, Paths, Path}
   import java.io.File
@@ -81,49 +64,19 @@ object PuppetDriver {
     g
   }
 
-
-  private val dockerhost = "localhost"
-  private val dockerport = 2375
-  private val url = s"http://$dockerhost:$dockerport"
-  private val containerName = "plasma/puppet-installer"
-  private val containerPort = 8140
-  private val execActorPath = "user/ExecActor"
-  private val nwIfc = "docker0"
-
-  import java.net.NetworkInterface
-  import java.net.Inet4Address
-  import scala.collection.JavaConversions._
-
-  private val gatewayIp = NetworkInterface.getByName(nwIfc)
-    .getInetAddresses
-    .toList // a list containing both ipv6 and ipv4 address
-    .collect({ case ip: Inet4Address => ip.getHostAddress })
-    .head
-
-  private def createActorSystem(): ActorSystem = {
-    val akkaConf = ConfigFactory.parseString("akka.remote.netty.tcp.hostname=\"" + gatewayIp + "\"")
-      .withFallback(ConfigFactory.load.getConfig("agent"))
-
-    ActorSystem("Client", akkaConf)
-  }
-
+  /*
   private def processResourceOnParentImage(res: Map[String, String],
                                            system: ActorSystem,
                                            containerName: String): String = {
 
+    val title = res("type")+":"+res("name")
+
     implicit val installTimeout = Timeout(600.seconds) // TODO : Need to make configurable
-    /*
-     * Create a container
-     * Get reference to actor running on container
-     * For each resource in order, get its provider and send over to container for install
-     */
 
     val cfg: ContainerConfig = plasma.docker.container(containerName)
       .withCommand("bash", "-c", "date") // dummy command required for container to be created
       .withNetwork(true)
 
-    val docker = new Docker(url)
-    
     val container = Await.result(docker.createContainer(cfg), Duration.Inf)
     val id = container.Id
     Await.result(docker.startContainer(id), Duration.Inf)
@@ -131,17 +84,16 @@ object PuppetDriver {
     val containerIP = inspectCfg.NetworkSettings.IPAddress
 
     // TODO: Wait for container actor system to come up. Container should coordinate handshake
-    Thread sleep 20000
+    Thread sleep 5000
 
     val remoteAddress = s"akka.tcp://PuppetInstallerSystem@${containerIP}:${containerPort}/${execActorPath}"
     val remoteRef = system.actorSelection(remoteAddress)
 
-    println("trying resource")
+    println(s"trying resource $title")
     val result = Await.result(ask(remoteRef, res).mapTo[Boolean], Timeout(600.seconds).duration)
     println("shutting down remote")
     remoteRef ! "shutdown"
     if(false == result) {
-      val title = res("type")+":"+res("name")
       val out = Await.result(docker.logs(id, false), Duration.Inf)
       val err = Await.result(docker.logs(id, true), Duration.Inf)
       println("*************** STDOUT ********************")
@@ -163,7 +115,6 @@ object PuppetDriver {
     imageId
   }
 
-  import scala.collection.immutable.Stream
   private def processPermutationTree(tree: Tree[Resource],
                                      onImage: String = "plasma/puppet-installer")
                                     (implicit system: ActorSystem) {
@@ -175,17 +126,26 @@ object PuppetDriver {
     val imageId = result.get
     children.foreach((c) => processPermutationTree(c, imageId))
     // After all subtrees are processed, the image is not required anymore
-    val docker = new Docker(url)
     docker.removeImage(imageId)
   }
-
+  */
 
   def verify(g: Graph[Resource, DiEdge]) {
-    val permutationTrees = TopoSortPermutationTree(g)
 
-    val system = createActorSystem()
-    permutationTrees.foreach(processPermutationTree(_)(system))
-    system.shutdown()
+    import puppet.runtime.toposortperm._
+    import puppet.verification._
+    import scala.concurrent._
+    import scala.concurrent.duration._
+    import scala.concurrent.Future
+    import scala.concurrent.ExecutionContext.Implicits.global
+
+    val permutationTrees = TopoSortPermutationTree(g)
+    val lst = permutationTrees.map((t) => Verify(t))
+    val finalVal = Future.reduce(lst)(_ && _)
+    finalVal onSuccess { case true => println("Verification Completed")
+                         case false => println("Verification failed") }
+    finalVal onFailure { case e => println("Verification failed: " + e) }
+    Await.result(finalVal, Duration.Inf)
   }
 
   /*
