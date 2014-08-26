@@ -7,7 +7,7 @@ FROM dockerfile/java
 MAINTAINER Nimish Gupta, nimish@cs.umass.edu
 
 # we need this because the workdir is modified in dockerfile/java
-WORKDIR /
+#WORKDIR /
 
 # run the (java) server as the root user
 USER root
