@@ -19,8 +19,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class Exec(remote: ActorRef) extends Actor {
 
   def receive = {
-    case "start" => remote ! "ping"
+    case "start" => println("Sending ping!"); remote ! "ping"
     case attrs: Map[String, String] => {
+      println ("trying resource")
       val client = sender()
       future { 
         Try(Provider(attrs).realize).map(_ => "success") getOrElse "failure"
@@ -42,8 +43,10 @@ object Main {
 
   def main(args: Array[String]) {
 
+    println("Inside main")
+
     if (args.length != 4) {
-      println("remote address expected")
+      System.err.println("remote address expected")
       return
     }
 
@@ -52,7 +55,9 @@ object Main {
     val remotePort = args(2)
     val actorName = args(3)
 
-    val remoteAddress = s"akka.tcp://${remoteSystem}@${remoteIP}:${remotePort}/user/${actorName}"
+    val remoteAddress = s"akka.tcp://${remoteSystem}@${remoteIP}:${remotePort}/user/$$${actorName}"
+    //val remoteAddress = "akka.tcp://PuppetVerifier@172.17.42.1:55789/user/$a"
+    println(s"Remote address: $remoteAddress")
 
     Services.restore()
 

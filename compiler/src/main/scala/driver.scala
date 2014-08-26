@@ -64,73 +64,7 @@ object PuppetDriver {
     g
   }
 
-  /*
-  private def processResourceOnParentImage(res: Map[String, String],
-                                           system: ActorSystem,
-                                           containerName: String): String = {
-
-    val title = res("type")+":"+res("name")
-
-    implicit val installTimeout = Timeout(600.seconds) // TODO : Need to make configurable
-
-    val cfg: ContainerConfig = plasma.docker.container(containerName)
-      .withCommand("bash", "-c", "date") // dummy command required for container to be created
-      .withNetwork(true)
-
-    val container = Await.result(docker.createContainer(cfg), Duration.Inf)
-    val id = container.Id
-    Await.result(docker.startContainer(id), Duration.Inf)
-    val inspectCfg = Await.result(docker.inspectContainer(id), Duration.Inf)
-    val containerIP = inspectCfg.NetworkSettings.IPAddress
-
-    // TODO: Wait for container actor system to come up. Container should coordinate handshake
-    Thread sleep 5000
-
-    val remoteAddress = s"akka.tcp://PuppetInstallerSystem@${containerIP}:${containerPort}/${execActorPath}"
-    val remoteRef = system.actorSelection(remoteAddress)
-
-    println(s"trying resource $title")
-    val result = Await.result(ask(remoteRef, res).mapTo[Boolean], Timeout(600.seconds).duration)
-    println("shutting down remote")
-    remoteRef ! "shutdown"
-    if(false == result) {
-      val out = Await.result(docker.logs(id, false), Duration.Inf)
-      val err = Await.result(docker.logs(id, true), Duration.Inf)
-      println("*************** STDOUT ********************")
-      println(new String(out))
-      println("-----------------------------------------")
-      
-      println("*************** STDERR ********************")
-      println(new String(err))
-      println("-----------------------------------------")
-
-      Await.result(docker.killContainer(id), Duration.Inf)
-      Await.result(docker.deleteContainer(container.Id), Duration.Inf)
-      throw new Exception(s"Processing of resource failed $title")
-    }
-
-    val imageId = Await.result(docker.commitContainer(container.Id), Duration.Inf)
-    Await.result(docker.killContainer(id), Duration.Inf)
-    Await.result(docker.deleteContainer(container.Id), Duration.Inf)
-    imageId
-  }
-
-  private def processPermutationTree(tree: Tree[Resource],
-                                     onImage: String = "plasma/puppet-installer")
-                                    (implicit system: ActorSystem) {
-
-    val root = tree.root
-    val children = tree.children
-
-    val result = Try(processResourceOnParentImage(root.toStringAttributes, system, onImage))
-    val imageId = result.get
-    children.foreach((c) => processPermutationTree(c, imageId))
-    // After all subtrees are processed, the image is not required anymore
-    docker.removeImage(imageId)
-  }
-  */
-
-  def verify(g: Graph[Resource, DiEdge]) {
+  def verify(g: Graph[Resource, DiEdge]): Boolean = {
 
     import puppet.runtime.toposortperm._
     import puppet.verification._
@@ -139,13 +73,18 @@ object PuppetDriver {
     import scala.concurrent.Future
     import scala.concurrent.ExecutionContext.Implicits.global
 
+    import scala.util.{Try, Success, Failure}
+
     val permutationTrees = TopoSortPermutationTree(g)
-    val lst = permutationTrees.map((t) => Verify(t))
-    val finalVal = Future.reduce(lst)(_ && _)
-    finalVal onSuccess { case true => println("Verification Completed")
-                         case false => println("Verification failed") }
-    finalVal onFailure { case e => println("Verification failed: " + e) }
-    Await.result(finalVal, Duration.Inf)
+    val lstOfFuts = permutationTrees.toList.map((t) => Verify(t))
+    val lstOfFutsTry = lstOfFuts.map(f => f.map(Success(_)).recover { case e => Failure(e) })
+    val futOfLst = Future.sequence(lstOfFutsTry)
+    val finalVal = Promise[Boolean]()
+    futOfLst onSuccess { case lstTryB => finalVal.success(lstTryB.map(_ getOrElse false).foldLeft(true)(_ && _)) }
+    futOfLst onFailure { case e => finalVal.success(false) }
+    val res = Await.result(finalVal.future, Duration.Inf)
+    // PuppetActorSystem.system.shutdown()
+    res
   }
 
   /*
