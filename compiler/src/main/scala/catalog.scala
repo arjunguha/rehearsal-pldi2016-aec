@@ -253,11 +253,11 @@ class Catalog {
      */
     case s: Stage => elements.collect({case c: HostClass => c})
                              .filter(_.stage == s.name)
-                             .map(getContainedResources(_)).flatten
+                             .flatMap(getContainedResources(_))
 
     case _ => getContainedElements(container)
               .toList
-              .map(getContainedResources(_)).flatten
+              .flatMap(getContainedResources(_))
   }
 
   def find(ref: ResourceRefV): List[CatalogElement] =
