@@ -19,10 +19,8 @@ object Services {
   def stop(path: String, binary: String): Boolean =
     0 == Cmd.exec(s"${path}/${binary} stop")._1
 
-  def restore() {
+  def restore(): Boolean = {
     import java.nio.file.{Files, Paths}
-
-    System.err.println("inside restore")
 
     if(Files.exists(Paths.get(file))) {
       for(line <- io.Source.fromFile(file).getLines) {
@@ -31,19 +29,21 @@ object Services {
         val path = components(1)
         val flags = components(2)
         val mode = components(3)
-        System.err.println(line)
+        println(line)
 
-        if(path.length > 0) ENV_PATH.append(path)
+        // TODO :Be more intelligent. see exprected mode, current mode and then only take action
         val cmd = List(path + binary, flags, mode)
         val (sts, out, err) = Cmd.exec(cmd mkString " ")
         println(out)
-        if(0 != sts) {
+        if(0 != sts) { 
+          System.err.println(s"Service $binary failed")
           System.err.println(err)
+          return false
         }
       }
+      true
     }
-
-    System.err.println("exiting restore")
+    else { true }
   }
 
   def enlist(binary: String, path: String, flags: String, mode: String) {
@@ -54,9 +54,3 @@ object Services {
     fw.close
   }
 }
-
-
-
-
-
-

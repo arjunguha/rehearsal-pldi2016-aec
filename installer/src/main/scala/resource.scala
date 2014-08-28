@@ -188,14 +188,18 @@ object Provider {
         case Some("present") | Some("installed") => "apt-get -y -q install %s".format(name)
         case Some("absent") => "apt-get -y -q remove %s".format(name)
         case Some("purged") => "apt-get -y -q remove --purge %s".format(name)
-        case Some("held")   => throw new Exception("NYI package held")
+        case Some("held")   => throw new Exception("NYI package held") // TODO
         case Some("latest") => "apt-get -y -q install %s=%s".format(name, latest)
         case _ => throw new Exception("One or more required attribute is missing")
       }
 
       println(s"Executing: $cmd")
-      val (sts, _, err) = Cmd.exec(cmd)
-      if(sts != 0) throw new Exception(err)
+      val (sts, out, err) = Cmd.exec(cmd)
+      println(out)
+      if(sts != 0) {
+        System.err.println(err)
+        throw new Exception(err)
+      }
     }
   }
 
@@ -259,7 +263,7 @@ object Provider {
                  else None
 
       val cmd = (ensure, isDuplicate) match {
-        case ("present", true)  => None // TODO: Should we check all other params if they match
+        case ("present", true)  => None // TODO: Should we check all other params if they match the desired state
         case ("present", false) => Some(List("useradd",
                                     _gid.map("-g %s".format(_)) getOrElse "",
                                     groups.map("-G %s".format(_)) getOrElse "",
@@ -284,7 +288,8 @@ object Provider {
 
       if(cmd.isDefined) {
         System.err.println(s"Executing: ${cmd.get mkString " "}")
-        val (sts, _, err) = Cmd.exec(cmd.get mkString " ")
+        val (sts, out, err) = Cmd.exec(cmd.get mkString " ")
+        println(out)
         if(sts != 0) {
           System.err.println(err)
           throw new Exception(err) }
@@ -352,8 +357,16 @@ object Provider {
 
       (mode, isRunning) match {
         case ("start", true) | ("stop", false) => ()
-        case ("start", false) => Services.start(path, binary, Some(flags))
-        case ("stop", true)  => Services.stop(path, binary)
+        case ("start", false) => if (!Services.start(path, binary, Some(flags))) {
+          val msg = s"Failed to start service: $name"
+          System.err.println(msg)
+          throw new Exception(msg)
+        }
+        case ("stop", true)  => if (!Services.stop(path, binary)) {
+          val msg = s"Failed to stop service: $name"
+          System.err.println(msg)
+          throw new Exception(msg)
+        }
         case _ => throw new Exception(s"Invalid value $mode for service $name")
       }
     }
@@ -389,8 +402,12 @@ object Provider {
       }
 
       println(s"Executing: ${cmd mkString " "}")
-      val (sts, _, err) = Cmd.exec(cmd mkString " ")
-      if(sts != 0) throw new Exception(err)
+      val (sts, out, err) = Cmd.exec(cmd mkString " ")
+      println(out)
+      if(sts != 0) {
+        System.err.println(err)
+        throw new Exception(err)
+      }
     }
   }
 
@@ -453,6 +470,7 @@ object Provider {
         (unless.isDefined && Cmd.exec(unless.get)._1 != 0) ||
         (!creates.isDefined && !onlyif.isDefined && !unless.isDefined)
 
+      // TODO : Eric meijer retry method?
       // for 'tries' execute and then sleep for time-out if failed
       def trycommand(tries_left: Int = tries,
                      cmd: String = cmd,
