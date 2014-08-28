@@ -3,7 +3,7 @@ package puppet.installer
 import puppet.runtime.core._
 
 import akka.kernel.Bootable
-import akka.actor.{Props, Actor, ActorSystem, ActorRef}
+import akka.actor.{Props, Actor, ActorSystem, ActorRef, ActorSelection}
 import akka.pattern.pipe
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
@@ -15,18 +15,16 @@ import scala.sys.process._
 import scala.util.Try
 import scala.concurrent.ExecutionContext.Implicits.global
 
-
-class Exec(remote: ActorRef) extends Actor {
+class Exec(remote: ActorSelection) extends Actor {
 
   def receive = {
-    case "start" => println("Sending ping!"); remote ! "ping"
-    case attrs: Map[String, String] => {
-      println ("trying resource")
+    case "start" => remote ! "ping"
+    case attrs: Map[String, String] =>
       val client = sender()
       future { 
-        Try(Provider(attrs).realize).map(_ => "success") getOrElse "failure"
+        Try(Provider(attrs).realize()).map(_ => "success") getOrElse "failure"
       } pipeTo client
-    }
+    
     case "ping" => sender ! "pong"
     case "shutdown" => context.system.shutdown()
     case _ => println("Unknown message received")
@@ -34,10 +32,30 @@ class Exec(remote: ActorRef) extends Actor {
 }
 
 object Exec {
-
-  def props(remote: ActorRef): Props = Props(new Exec(remote))
+  def props(remote: ActorSelection): Props = Props(new Exec(remote))
 }
 
+object Eth0 {
+
+  private val ifc = "eth0"
+
+  import java.net.NetworkInterface
+  import java.net.Inet4Address
+  import scala.collection.JavaConversions._
+
+  val ip = NetworkInterface.getByName(ifc)
+    .getInetAddresses
+    .toList // a list containing both ipv6 and ipv4 address
+    .collect({ case ip: Inet4Address => ip.getHostAddress })
+    .head
+}
+
+object PuppetActorSystem {
+  private val akkaConf = ConfigFactory.parseString("akka.remote.netty.tcp.hostname=\"" + Eth0.ip + "\"")
+    .withFallback(ConfigFactory.load.getConfig("agent"))
+
+  lazy val system = ActorSystem("PuppetInstallerSystem", akkaConf)
+}
 
 object Main {
 
@@ -56,36 +74,15 @@ object Main {
     val actorName = args(3)
 
     val remoteAddress = s"akka.tcp://${remoteSystem}@${remoteIP}:${remotePort}/user/$$${actorName}"
-    //val remoteAddress = "akka.tcp://PuppetVerifier@172.17.42.1:55789/user/$a"
     println(s"Remote address: $remoteAddress")
 
+    // TODO: See error code and generate message
     Services.restore()
 
-    val _ = new PuppetInstaller(remoteAddress)
-  }
-
-  class PuppetInstaller(remoteAddress: String) extends Bootable {
-
-    private val ifc = "eth0"
-
-    import java.net.NetworkInterface
-    import java.net.Inet4Address
-    import scala.collection.JavaConversions._
-
-    val ip = NetworkInterface.getByName(ifc)
-      .getInetAddresses
-      .toList // a list containing both ipv6 and ipv4 address
-      .collect({ case ip: Inet4Address => ip.getHostAddress })
-      .head
-
-    val config = ConfigFactory.parseString("akka.remote.netty.tcp.hostname=\"" + ip + "\"")
-                 .withFallback(ConfigFactory.load.getConfig("agent"))
-    implicit val system = ActorSystem("PuppetInstallerSystem", config)
-    val remote = Await.result(system.actorSelection(remoteAddress).resolveOne(new FiniteDuration(60, SECONDS)), Duration.Inf)
-    val execActor = system.actorOf(Exec.props(remote), "ExecActor")
-    execActor ! "start"
-
-    override def startup  = ()
-    override def shutdown = system.shutdown()
+    // val _ = new PuppetInstaller(remoteAddress)
+    val remote = PuppetActorSystem.system.actorSelection(remoteAddress)
+    val actor = PuppetActorSystem.system.actorOf(Exec.props(remote))
+    actor ! "start"
+    println("Exiting main")
   }
 }
