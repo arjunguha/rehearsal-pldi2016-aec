@@ -17,9 +17,7 @@ import scala.util.{Try, Success, Failure}
 
 import ExecutionContext.Implicits.global
 
-
 import plasma.docker._
-
 
 // Messages (Producer)
 case object StartProducer
@@ -82,146 +80,15 @@ object PuppetActorSystem {
   lazy val system = ActorSystem(name, akkaConf)
 }
 
-/*
-object Verify {
-
-
-
-*/
-
-
-  /* Actor that co-ordinates remote execution of resource realization
-   * and reports back the results
-   */
-/*
-  class VerifyResult(val res: Resource) extends Actor {
-
-    private val p = Promise[Unit]()
-    private val title = res.title
-
-    p.future onFailure { case _ => println(s"Resource failed: $title") }
-
-    // Inactivity period
-    context.setReceiveTimeout(5.minutes)
-
-
-    private def result(client: ActorRef) = p.future pipeTo client
-
-    // FSM
-    def receive = handshake
-
-    private def handshake: Receive = {
-      case "ping" => sender ! res.toStringAttributes; context become response
-      case "result" => result(sender)
-      case ReceiveTimeout => p.failure(TimeoutException); context become dead
-    }
-
-    private def response: Receive = {
-      case "success" => p.success(()); context become dead
-      case "failure" => p.failure(InstallationFailed); context become dead
-      case "result" => result(sender)
-      case ReceiveTimeout => p.failure(TimeoutException); context become dead
-    }
-
-    private def dead: Receive = {
-      case "result" => result(sender)
-      // If someone doesn't reap me
-      case ReceiveTimeout => context stop self
-      case _ => println("Not going to process any message")
-    }
-  }
-*/
-
-  /*
-   * The Props constructor accepts a by-name argument but since we loose the
-   * reference of enclosing scope, it is advised to have a companion object
-   * to create an actor with arguments.
-   */
-/*
-  object VerifyResult { def props(res: Resource): Props = Props(new VerifyResult(res)) }
-
-  private def printStdout(containerId: String, title: String) {
-    val strm = Await.result(Docker.system.logs(containerId, false), Duration.Inf)
-    
-    println(s"******************* STDOUT for $title ******************")
-    println(new String(strm))
-    println("========================================================")
-  }
-
-  private def printStderr(containerId: String, title: String) = {
-    val strm = Await.result(Docker.system.logs(containerId, true), Duration.Inf)
-
-    println(s"******************* STDERR for $title ******************")
-    println(new String(strm))
-    println("========================================================")
-  }
-*/
-
-  /*
-  private def cleanupContainer(containerId: String) {
-    Docker.system.killContainer(containerId) andThen { case _ =>
-      Docker.system.deleteContainer(containerId)
-    }
-  }
-  */
-/*
-  private def cleanupContainer(containerId: String) {
-    Try(Await.result(Docker.system.killContainer(containerId), Duration.Inf))
-    Try(Await.result(Docker.system.deleteContainer(containerId), Duration.Inf))
-  }
-
-  def apply(t: Tree[Resource],
-            containerName: String = puppetContainerName): Future[Boolean] = {
-
-    val root = t.root
-    val children = t.children
-    val actorRef = PuppetActorSystem.system.actorOf(VerifyResult.props(root)) // This creates and starts actor
-
-    val actorName = actorRef.path.name.toString.stripPrefix("$")
-    val system = PuppetActorSystem.name
-    val ip = PuppetActorSystem.ip
-    val port = PuppetActorSystem.port
-
-    // launch container
-    val cfg = plasma.docker.container(containerName)
-      .withCommand("java", "-jar", "/app/puppet-installer.jar",
-                   system, ip, port.toString, actorName)
-      .withNetwork(true)
-
-    val imageId = Docker.system.createContainer(cfg).flatMap { container =>
-
-      implicit val timeout = Timeout(5.minutes)
-      
-      val img: Future[String] = for {
-        _ <- Docker.system.startContainer(container.Id)
-        _ <- (actorRef ? "result") andThen {case _ => actorRef ! PoisonPill}
-        img <- Docker.system.commitContainer(container.Id) 
-      } yield img
-
-      // Make sure we cleanup after we are done
-      img andThen { case Failure(_) => printStdout(container.Id, root.title)
-                                       printStderr(container.Id, root.title)
-                                       cleanupContainer(container.Id)
-                    case _ => cleanupContainer(container.Id) }
-    }
-
-    // Image processing
-    imageId flatMap { id =>
-      val lstOfFuts = children map((c) => Verify(c, id))
-      
-      val lstOfFutsTry = lstOfFuts.map(f => f.map(v => Success(v)).recover { case e => Failure(e) })
-      val futOfLst = Future.sequence(lstOfFutsTry)
-      val res = futOfLst.map { lstTryB => lstTryB.map(_ getOrElse false).foldLeft(true)(_ && _) }
-
-      // Make sure we cleanup after we are done
-      res andThen { case _ => Try(Await.result(Docker.system.removeImage(id), Duration.Inf)) }
-    }
+// TODO: Should go in util
+object BashCompatibleString {
+  def apply(str: String): String = {
+    // all dollar signs have to be escape otherwise they are interpreted by bash
+    str.replace("$", "\\$")
   }
 }
-*/
 
-
-class Producer(tree: Tree[Resource]) extends Actor {
+class Producer(trees: Tree[Resource]*) extends Actor {
 
   import scala.collection.mutable.{MutableList, Queue, Map}
 
@@ -275,10 +142,11 @@ class Producer(tree: Tree[Resource]) extends Actor {
   }
 
   private def failed(worker: ActorRef) {
+
     // drain all work
     work.clear()
 
-    // Find element in processing and add children to work queue
+    // We are done processing element, remove it from processing queue
     val tree = processing.get(worker)
     if (tree.isDefined) {
       processing -= worker
@@ -294,7 +162,7 @@ class Producer(tree: Tree[Resource]) extends Actor {
 
   def receive: Receive = {
 
-    case StartProducer => work.enqueue((tree, image))
+    case StartProducer => trees.foreach((tree) => work.enqueue((tree, image)))
 
     case Token(actor) => tokens.enqueue(actor)
 
@@ -302,25 +170,23 @@ class Producer(tree: Tree[Resource]) extends Actor {
 
     case DispatchWork =>
       if (work.isEmpty && processing.isEmpty) {
-        images foreach((img) => Await.result(Docker.system.removeImage(img), Duration.Inf))
+        images foreach((img) => Try(Await.result(Docker.system.removeImage(img), Duration.Inf)))
         images.clear()
         println("We are done here")
-        done.success(())
+        if (!done.isCompleted) done.success(())
       }
       else {
         while(!tokens.isEmpty && !work.isEmpty)
-          dispatch(tokens.dequeue(), work.dequeue)
+          dispatch(tokens.dequeue(), work.dequeue())
       }
 
     case ResourceFailed(msg, out, err) => failed(sender())
     case Result => result(sender())
     case _ => println("Producer received an unknown message")
   }
-
-  // TODO : Reap images somewhere
 }
 
-// TODO : can be made generic
+// TODO : Can be made genetic by accepting worker ActorRefs
 class Throttler(val nTokens: Int, val producer: ActorRef) extends Actor {
 
   private def startWorkers() {
@@ -330,10 +196,21 @@ class Throttler(val nTokens: Int, val producer: ActorRef) extends Actor {
     }
   }
 
-  def receive: Receive = {
-    case StartConsumer => startWorkers(); context.children foreach ((c) => producer ! Token(c))
+  def receive: Receive = init
+
+  private def init: Receive = {
+    case StartConsumer => {
+      startWorkers()
+      context become running
+      context.children foreach ((c) => producer ! Token(c))
+    }
+    case ShutdownConsumer => context stop self
+    case _ => println("Throttler received an unknown message")
+  }
+
+  private def running: Receive = {
     case Available => producer ! Token(sender())
-    case ShutdownConsumer => // TODO : Do Something
+    case ShutdownConsumer => context stop self
     case _ => println("Throttler received an unknown message")
   }
 }
@@ -346,20 +223,14 @@ class DockerContainer(val docker: Docker) extends Actor {
   var client: ActorRef = context.system.deadLetters
 
   private def createInstaller(res: Resource) {
-    installer = context.actorOf(Installer.props(res), name = "installer")
+    installer = context.actorOf(Installer.props(res))
   }
 
   private def createContainer(image: String) = {
-    //val actorName = installer.path.name.toString.stripPrefix("$")
-    val actorName = installer.path.address.toString
-    println(s"$actorName")
-    val system = PuppetActorSystem.name
-    val ip = PuppetActorSystem.ip
-    val port = PuppetActorSystem.port
-
+    val path = akka.serialization.Serialization.serializedActorPath(installer)
+    
     val cfg = plasma.docker.container(image)
-      .withCommand("java", "-jar", "/app/puppet-installer.jar",
-                   system, ip, port.toString, actorName)
+      .withCommand("java", "-jar", "/app/puppet-installer.jar", path)
       .withNetwork(true)
 
     // Returns some future
@@ -413,6 +284,17 @@ class DockerContainer(val docker: Docker) extends Actor {
     }
 
     case InstallFailed => {
+      if (containerId.isDefined) {
+        val out = Await.result(docker.logs(containerId.get, false), Duration.Inf)
+        val err = Await.result(docker.logs(containerId.get, true), Duration.Inf)
+        println("*************** STDOUT ***************")
+        println(new String(out))
+        println("=======================================================")
+        println("*************** STDERR ***************")
+        println(new String(err))
+        println("=======================================================")
+      }
+      
       installer ! PoisonPill
       client ! ResourceFailed
       reset()
@@ -426,6 +308,17 @@ class DockerContainer(val docker: Docker) extends Actor {
     case InstallSuccess => self ! Commit
 
     case InstallFailed => {
+      if (containerId.isDefined) {
+        val out = Await.result(docker.logs(containerId.get, false), Duration.Inf)
+        val err = Await.result(docker.logs(containerId.get, true), Duration.Inf)
+        println("*************** STDOUT ***************")
+        println(new String(out))
+        println("=======================================================")
+        println("*************** STDERR ***************")
+        println(new String(err))
+        println("=======================================================")
+      }
+
       client ! ResourceFailed
       context.become(stop)
       self ! StopContainer
@@ -435,7 +328,7 @@ class DockerContainer(val docker: Docker) extends Actor {
       context.become(stop)
       docker.commitContainer(containerId.get) onComplete {
         case Success(img) => client ! ResourceSuccess(img); self ! StopContainer
-        case Failure(img) => client ! ResourceFailed; self ! StopContainer
+        case Failure(r) => client ! ResourceFailed; self ! StopContainer
       }
     }
 
@@ -477,10 +370,12 @@ class Installer(val res: Resource) extends Actor {
   private case object PingTimeoutException extends Throwable
   private case object ResponseTimeoutException extends Throwable
 
-  p.future onFailure {
-    case InstallationFailed => println(s"Resource failed: $title, Installation Failed")
-    case PingTimeoutException => println(s"Resource failed: $title, no activity from remote")
-    case ResponseTimeoutException => println(s"Resource failed: $title, no response from remote")
+  p.future onComplete {
+    case Success(_) => println(s"Resource successfull: $title")
+    case Failure(InstallationFailed) => println(s"Resource failed: $title, Installation Failed")
+    case Failure(PingTimeoutException) => println(s"Resource failed: $title, no activity from remote")
+    case Failure(ResponseTimeoutException) => println(s"Resource failed: $title, no response from remote")
+    case Failure(_) => println(s"Resource failed: $title, Unknown Reason")
   }
 
   // Inactivity period
@@ -495,12 +390,24 @@ class Installer(val res: Resource) extends Actor {
   def receive = handshake
 
   private def handshake: Receive = {
-    case "ping" => sender ! res.toStringAttributes; context become response
+    case "ping" => {
+      sender ! res.toStringAttributes
+      context become response
+
+      // Allow 20 minutes for resource installation
+      context.setReceiveTimeout(20.minutes)
+    }
+
     case "result" => result(sender)
+
     case ReceiveTimeout => {
+      // ping message timed out
+
       p.failure(PingTimeoutException)
       context become dead
       context.parent ! InstallFailed
+      // Turn out timer
+      context.setReceiveTimeout(Duration.Inf)
     }
   }
 
@@ -509,26 +416,31 @@ class Installer(val res: Resource) extends Actor {
       p.success(())
       context become dead
       context.parent ! InstallSuccess
+      // Turn out timer
+      context.setReceiveTimeout(Duration.Inf)
     }
 
     case "failure" => {
       p.failure(InstallationFailed)
       context become dead
       context.parent ! InstallFailed
+      // Turn out timer
+      context.setReceiveTimeout(Duration.Inf)
     }
 
     case "result" => result(sender)
+
     case ReceiveTimeout => {
       p.failure(ResponseTimeoutException)
       context become dead
       context.parent ! InstallFailed
+      // Turn out timer
+      context.setReceiveTimeout(Duration.Inf)
     }
   }
 
   private def dead: Receive = {
     case "result" => result(sender)
-    // If someone doesn't reap me
-    case ReceiveTimeout => () // context stop self
     case _ => println("Not going to process any message")
   }
 }
@@ -544,12 +456,12 @@ object Installer { def props(res: Resource): Props = Props(new Installer(res)) }
 object Verify {
 
   // XXX: Can be made configurable from command line
-  private val maxWorkers = 100
+  private val maxWorkers = 25
   // private val maxWorkers = 1
 
-  def apply(tree: Tree[Resource]): Future[Boolean] = {
+  def apply(trees: Tree[Resource]*): Future[Boolean] = {
 
-    val producer = PuppetActorSystem.system.actorOf(Props(new Producer(tree)))
+    val producer = PuppetActorSystem.system.actorOf(Props(new Producer(trees:_*)))
     val consumerCoord = PuppetActorSystem.system.actorOf(Props(new Throttler(maxWorkers, producer)))
 
     consumerCoord ! StartConsumer
@@ -558,12 +470,12 @@ object Verify {
     // Timer interrupt for scheduling tasks
     PuppetActorSystem.system.scheduler.schedule(200.milliseconds, 200.milliseconds, producer, DispatchWork)
 
-  
-    implicit val timeout = Timeout(30.minutes)
-    val fut = (producer ? Result).mapTo[Unit]
+    implicit val timeout = Timeout(120.minutes)
+    val fut = (producer ? Result)
+    Await.result(fut, timeout.duration)
+    println("Done with verification")
 
     // TODO :Wait for result
     future { true } 
   }
 }
-

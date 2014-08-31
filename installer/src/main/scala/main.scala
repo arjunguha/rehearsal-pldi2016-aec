@@ -63,23 +63,17 @@ object Main {
 
     println("Inside main")
 
-    if (args.length != 4) {
+    if (args.length != 1) {
       System.err.println("remote address expected")
       return
     }
 
-    val remoteSystem = args(0)
-    val remoteIP = args(1)
-    val remotePort = args(2)
-    val actorName = args(3)
-
-    val remoteAddress = s"akka.tcp://${remoteSystem}@${remoteIP}:${remotePort}/user/$$${actorName}"
+    val remoteAddress = args(0)
     println(s"Remote address: $remoteAddress")
 
     // TODO: See error code and generate message
     Services.restore()
 
-    // val _ = new PuppetInstaller(remoteAddress)
     val remote = PuppetActorSystem.system.actorSelection(remoteAddress)
     val actor = PuppetActorSystem.system.actorOf(Exec.props(remote))
     actor ! "start"

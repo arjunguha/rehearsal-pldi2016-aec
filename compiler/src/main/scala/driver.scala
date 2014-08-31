@@ -76,6 +76,9 @@ object PuppetDriver {
     import scala.util.{Try, Success, Failure}
 
     val permutationTrees = TopoSortPermutationTree(g)
+    val resFut = Verify(permutationTrees.toSeq:_*)
+
+    /*
     val lstOfFuts = permutationTrees.toList.map((t) => Verify(t))
     val lstOfFutsTry = lstOfFuts.map(f => f.map(Success(_)).recover { case e => Failure(e) })
     val futOfLst = Future.sequence(lstOfFutsTry)
@@ -85,6 +88,8 @@ object PuppetDriver {
     val res = Await.result(finalVal.future, Duration.Inf)
     // PuppetActorSystem.system.shutdown()
     res
+    */
+    Await.result(resFut, Duration.Inf)
   }
 
   /*
