@@ -15,18 +15,25 @@ import scala.sys.process._
 import scala.util.Try
 import scala.concurrent.ExecutionContext.Implicits.global
 
+case object Start
+
 class Exec(remote: ActorSelection) extends Actor {
 
   def receive = {
-    case "start" => remote ! "ping"
+
+    case Start => println("Sending ping"); remote ! "ping"
+
     case attrs: Map[String, String] =>
+      println("Resource received for installation")
       val client = sender()
       future { 
         Try(Provider(attrs).realize()).map(_ => "success") getOrElse "failure"
       } pipeTo client
     
-    case "ping" => sender ! "pong"
-    case "shutdown" => context.system.shutdown()
+    case "ping" => println("Ping received"); sender ! "pong"
+
+    case "shutdown" => println("Shutting down"); context.system.shutdown()
+
     case _ => println("Unknown message received")
   }
 }
@@ -76,7 +83,7 @@ object Main {
 
     val remote = PuppetActorSystem.system.actorSelection(remoteAddress)
     val actor = PuppetActorSystem.system.actorOf(Exec.props(remote))
-    actor ! "start"
+    actor ! Start
     println("Exiting main")
   }
 }
