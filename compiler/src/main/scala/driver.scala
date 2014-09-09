@@ -64,6 +64,7 @@ object PuppetDriver {
     g
   }
 
+  /*
   def verify(g: Graph[Resource, DiEdge]): Boolean = {
 
     import puppet.runtime.toposortperm._
@@ -77,6 +78,7 @@ object PuppetDriver {
 
     val permutationTrees = TopoSortPermutationTree(g)
     val resFut = Verify(permutationTrees.toSeq:_*)
+    */
 
     /*
     val lstOfFuts = permutationTrees.toList.map((t) => Verify(t))
@@ -89,8 +91,10 @@ object PuppetDriver {
     // PuppetActorSystem.system.shutdown()
     res
     */
+    /*
     Await.result(resFut, Duration.Inf)
   }
+  */
 
   /*
   def verifyLocal(g: Graph[Resource, DiEdge]) {

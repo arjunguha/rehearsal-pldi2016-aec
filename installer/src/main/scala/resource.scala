@@ -1,6 +1,6 @@
 package puppet.runtime.core
 
-import puppet.util._
+import puppet.common.util._
 
 import java.nio.file.{Files, LinkOption, Paths, Path}
 import java.io.FileWriter

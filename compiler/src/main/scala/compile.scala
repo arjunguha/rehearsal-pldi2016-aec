@@ -1,8 +1,8 @@
 package puppet.core.eval
 
+import puppet.common.util._
 import puppet.core._
 import puppet.syntax._
-import puppet.util._
 
 import scala.collection._
 import scala.collection.{mutable => mut}
@@ -74,18 +74,6 @@ object PuppetCompile {
       case ASTHashV (v) => v contains x.asInstanceOf[StringV].value
       case _ => throw new Exception("\"In\" Operator not supported for types other than String, Array or Hash")
     })
-  }
-
-  private def stripQuote(str: String): String = {
-    var newstr = str
-
-    if(str.length > 0 && (str(0) == '\'' || str(0) == '\"'))
-      newstr = newstr.stripPrefix(str(0).toString)
-
-    if(str.length > 1 && (str(str.length-1) == '\'' || str(str.length-1) == '\"'))
-      newstr = newstr.stripSuffix(str(str.length-1).toString)
-
-    newstr
   }
 
   private def evalAttribute(a: AttributeC)

@@ -1,4 +1,4 @@
-package puppet.util
+package puppet.common.util
 
 import scala.sys.process._
 import scala.util.Try

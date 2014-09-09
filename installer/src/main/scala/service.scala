@@ -4,7 +4,7 @@ object Services {
 
   private val file = "/root/.services.lst"
 
-  import puppet.util._
+  import puppet.common.util._
 
   def isRunning(path: String, binary: String): Boolean =
     0 == Cmd.exec(s"ps -ax | grep $binary | grep -v grep")._1
