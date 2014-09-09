@@ -4,6 +4,7 @@ import akka.actor.{Actor, ActorSystem, ActorRef, Terminated}
 import akka.util.Timeout
 import plasma.docker._
 import puppet.verification.common._
+import puppet.common.resource._
 
 import scala.async.Async.{async, await}
 import scala.concurrent._
@@ -15,6 +16,8 @@ import scala.util.{Try, Success, Failure}
 import ExecutionContext.Implicits.global
 
 class Dispatcher extends Actor {
+
+  import puppet.common._
 
   case object DispatchWork
 

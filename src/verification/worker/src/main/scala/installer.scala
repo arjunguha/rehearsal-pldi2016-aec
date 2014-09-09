@@ -1,5 +1,8 @@
 package puppet.verification.worker.installer
 
+import puppet.common.resource._
+import puppet.verification.common._
+
 import akka.actor.{Actor, ActorRef, ReceiveTimeout, Props}
 
 import scala.async.Async.{async, await}
@@ -32,7 +35,6 @@ class Installer(val res: Resource) extends Actor {
   // Inactivity period
   context.setReceiveTimeout(5.minutes)
 
-  // TODO : Its going to common, pull out
   import akka.pattern.pipe
 
   private def result(client: ActorRef) = p.future pipeTo client
@@ -42,7 +44,7 @@ class Installer(val res: Resource) extends Actor {
 
   private def handshake: Receive = {
     case "ping" => {
-      sender ! res.toStringAttributes
+      sender ! res
       context become response
 
       // Allow 20 minutes for resource installation
