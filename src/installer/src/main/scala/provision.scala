@@ -7,9 +7,11 @@ import java.io.FileWriter
 
 object Provider {
 
-  type Resource = Map[String, String]
+  import puppet.common.resource._
+  import puppet.common.resource.Extractor._
+  import scala.collection.immutable.{Map, List}
 
-  def apply(r: Resource): Provider = r("type") match {
+  def apply(r: Resource): Provider = r.typ match {
     case "File" => File(r)
     case "Package" => PuppetPackage(r)
     case "User" => User(r)
@@ -17,37 +19,42 @@ object Provider {
     case "Service" => Service(r)
     case "Group" => Group(r)
     case "Exec" => Exec(r)
-    case _ => throw new Exception("Resource type \"%s\" not supported yet".format(r("type")))
+    case _ => throw new Exception("Resource type \"%s\" not supported yet".format(r.typ))
   }
 
   sealed abstract class Provider (val r: Resource) {
-    val name = r("name")
+    val name = r.name
+
+    protected val validBoolVals = List ((BoolV(true): Value, true),
+                                        (BoolV(false): Value, false),
+                                        (StringV("yes"): Value, true),
+                                        (StringV("no"): Value, false)).toMap
+
     def realize()
 
-    protected def validVal[T](property: String, options: Map[String, T]): Option[T] = {
-      r.get(property).map(options.get(_)).flatten
+    protected def validVal[T](property: String, options: Map[Value, T]): Option[T] = {
+      r.getRawVal(property).map(options.get(_)).flatten
     }
 
     protected def validVal(property: String, options: List[String]): Option[String] = {
-      validVal(property, options.zip(options).toMap)
+      val m = options.map((o) => (StringV(o): Value, o)).toMap
+      validVal(property, m)
     }
   }
 
-  case class File(res: Map[String, String]) extends Provider(res) {
+  case class File(res: Resource) extends Provider(res) {
     private val validEnsureVals = List("present", "absent", "file", "directory", "link")
     private val validChksmVals = List("md5", "md5lite", "sha256", "sha256lite", "mtime", "ctime", "none")
-    private val validBoolVals = Map("true"->true, "false"->false,
-                                    "yes"->true, "no"->false)
 
-    val path = r.get("path") getOrElse name
+    val path = r.get[String]("path") getOrElse name
     val ensure = validVal("ensure", validEnsureVals)
     // val checksum = validVal("checksum", validChksmVals) getOrElse "md5"
     val force = validVal("force", validBoolVals) getOrElse false
     val purge = validVal("purge", validBoolVals) getOrElse false
     // val replace = validVal("replace", validBoolVals) getOrElse false
-    val source = r.get("source")
-    val target = r.get("target")
-    val content = r.get("content")
+    val source = r.get[String]("source")
+    val target = r.get[String]("target")
+    val content = r.get[String]("content")
 
     private def ignore(path:String): String = path
     private def createfile(path: String): String = { Files.createFile(Paths.get(path)); path }
@@ -66,7 +73,6 @@ object Provider {
       recurdeletedir(Paths.get(path))
       path
     }
-
 
     type Action = String=>String
 
@@ -87,7 +93,6 @@ object Provider {
     }
 
     val action = fileaction(path) _
-                       
 
     // TODO: Ignoring ownership and permissions for now
     // TODO : Ignoring source attribute
@@ -206,23 +211,22 @@ object Provider {
   case class User(res: Resource) extends Provider(res) {
 
     private val validEnsureVals = List("present", "absent", "role")
-    private val validBoolVals = Map("true"->true, "false"->false,
-                                    "yes"->true, "no"->false)
 
     import java.nio.file.{Files, LinkOption, Paths, Path}
 
     val ensure = validVal("ensure", validEnsureVals) getOrElse "present"
-    val gid = r.get("gid")
-    // Sanity check => if multiple then they should be comma separated without spaces, multiple groups should be specified as an array
-    val groups = r.get("groups")
+    val gid = r.get[String]("gid")
+    val groups = r.get[Array[Value]]("groups") getOrElse 
+                 { r.get[String]("groups").map((g) => Array((StringV(g): Value))) getOrElse
+                 Array((UndefV: Value)) }
 
-    val shell = r.get("shell")
-    val uid = r.get("uid").map(_.toInt)
+    val shell = r.get[String]("shell")
+    val uid = r.get[String]("uid").map(_.toInt)
     // Directory must be created separately and is not checked for existence
-    val home = r.get("home")
+    val home = r.get[String]("home")
 
-    val comment = r.get("comment")
-    val expiry = r.get("expiry")
+    val comment = r.get[String]("comment")
+    val expiry = r.get[String]("expiry")
 
     val allowdupe = validVal("allowdupe", validBoolVals) getOrElse false
     val managehome = validVal("managehome", validBoolVals) getOrElse false
@@ -252,6 +256,12 @@ object Provider {
         throw new Exception(s"Invalid gid $gid for user $name")
       }
 
+      // Sanity check => if multiple then they should be comma separated without spaces, multiple groups should be specified as an array
+      // Array[Value] => Array[Option[String]]
+      val tmp = groups.map((g) => stringExtractor.extract(g))
+      val groupsStr = if(tmp.exists(_ == None)) None
+                      else Some(tmp.map(_.get) mkString ",")
+
       /* Linux add user to the same group as its username unless gid
        * attribute is specified
        * If no gid is specifed to useradd and a group by the name of
@@ -266,7 +276,7 @@ object Provider {
         case ("present", true)  => None // TODO: Should we check all other params if they match the desired state
         case ("present", false) => Some(List("useradd",
                                     _gid.map("-g %s".format(_)) getOrElse "",
-                                    groups.map("-G %s".format(_)) getOrElse "",
+                                    groupsStr.map("-G %s".format(_)) getOrElse "",
                                     shell.map("-s %s".format(_)) getOrElse "",
                                     uid.map((u) => "-u %s".format(u.toString)) getOrElse "",
                                     home.map("-d %s".format(_)) getOrElse "",
@@ -299,36 +309,39 @@ object Provider {
 
   case class Notify(res: Resource) extends Provider(res) {
 
-    private val msg = r.get("message") getOrElse name
+    private val msg = r.get[String]("message") getOrElse name
 
     def realize() { println(msg) }
   }
 
   case class Service(res: Resource) extends Provider(res) {
-    private val validEnsureVals = Map("stopped"->"stopped", "false"->"stopped",
-                                      "running"->"running", "true"->"running",
-                                      ""-> "undef")
-    private val validBoolVal = Map("true"->true, "false"->false)
+    private val validEnsureVals = List((StringV("stopped"): Value, "stopped"),
+                                       (BoolV(false): Value, "stopped"),
+                                       (StringV("running"): Value, "running"),
+                                       (BoolV(true): Value, "running"),
+                                       (UndefV: Value, "undef")).toMap
+    private val validBoolVal = List((StringV("true"): Value, true),
+                                    (StringV("false"): Value, false)).toMap
     private val validEnableVals = validBoolVal
     private val validHasRestartVals = validBoolVal
     private val validHasStatusVals = validBoolVal
      
     val ensure = validVal("ensure", validEnsureVals) getOrElse (throw new Exception(s"Service $name 'ensure' attribute missing"))
-    val binary = r.get("binary") getOrElse name
+    val binary = r.get[String]("binary") getOrElse name
     val enable = validVal("enable", validEnableVals) getOrElse false // Whether a service should be enabled at boot time.
-    val flags  = r.get("flags") getOrElse ""
+    val flags  = r.get[String]("flags") getOrElse ""
     val hasrestart = validVal("hasrestart", validHasRestartVals) getOrElse false
     // if a service's init script has a functional status command,
     val hasstatus = validVal("hasstatus", validHasStatusVals) getOrElse true
-    val path = r.get("path") getOrElse "/etc/init.d/"
+    val path = r.get[String]("path") getOrElse "/etc/init.d/"
     /* pattern to search for in process table, used for stopping services that do not support init scripts
      * Also used for determining service status on those service whose init scripts do not include a status command
      */
-    val pattern = r.get("pattern") getOrElse binary
-    val restart = r.get("restart") // If not provided then service will be first stopped and then started
-    val start = r.get("start") getOrElse "start"
-    val stop = r.get("stop") getOrElse "stop"
-    val status = r.get("status")
+    val pattern = r.get[String]("pattern") getOrElse binary
+    val restart = r.get[String]("restart") // If not provided then service will be first stopped and then started
+    val start = r.get[String]("start") getOrElse "start"
+    val stop = r.get[String]("stop") getOrElse "stop"
+    val status = r.get[String]("status")
 
     // TODO : handle Refresh
     def realize() {
@@ -374,7 +387,6 @@ object Provider {
 
   case class Group(res: Resource) extends Provider(res) {
     private val validEnsureVals = List("present", "absent")
-    private val validBoolVals = Map("true" -> true, "false" -> false, "yes" -> true, "no" -> false)
     private val validAllowDupeVals = validBoolVals
     private val validAttributeMembershipVals = List("inclusive","minimum")
     private val validSystemVals = validBoolVals
@@ -382,7 +394,7 @@ object Provider {
     val ensure = validVal("ensure", validEnsureVals) getOrElse (throw new Exception(s"Group $name 'ensure' attribute missing"))
     val allowdupe = validVal("allowdupe", validAllowDupeVals) getOrElse false
     val attribute_membership = validVal("attribute_membership", validAttributeMembershipVals)
-    val gid = r.get("gid").map(_.toInt)
+    val gid = r.get[String]("gid").map(_.toInt)
     private val isgidvalid = if(!gid.isDefined || gid.get >= 0) true else false
     val system = validVal("system", validSystemVals) getOrElse false
 
@@ -413,24 +425,24 @@ object Provider {
 
   case class Exec(res: Resource) extends Provider(res) {
 
-    val command = r.get("command") getOrElse name
-    val path = r.get("path")
-    val cwd = r.get("cwd")
+    val command = r.get[String]("command") getOrElse name
+    val path = r.get[String]("path")
+    val cwd = r.get[String]("cwd")
     // TODO: This should have been an array
-    val environment = r.get("environment")
-    val creates = r.get("creates")
-    val onlyif = r.get("onlyif")
-    val unless = r.get("unless")
-    val refresh = r.get("refresh")
-    val refreshonly = r.get("refreshonly")
+    val environment = r.get[String]("environment")
+    val creates = r.get[String]("creates")
+    val onlyif = r.get[String]("onlyif")
+    val unless = r.get[String]("unless")
+    val refresh = r.get[String]("refresh")
+    val refreshonly = r.get[String]("refreshonly")
     // TODO : Sanity checks on integers to check if they are above 0
-    val returns = r.get("returns").map(_.toInt) getOrElse 0 // Error is returned if executed command has any other return code
-    val timeout = r.get("timeout").map(_.toInt) getOrElse 300 // This is in seconds, default value is from puppet code
-    val tries = r.get("tries").map(_.toInt) getOrElse 1
-    val try_sleep = r.get("try_sleep").map(_.toInt) getOrElse 0 // The number of seconds to sleep between command execution upon retry
-    val group = r.get("group")
-    val umask = r.get("umask")
-    val user = r.get("user") // $HOME environment variable is not set when user attribute is specified
+    val returns = r.get[String]("returns").map(_.toInt) getOrElse 0 // Error is returned if executed command has any other return code
+    val timeout = r.get[String]("timeout").map(_.toInt) getOrElse 300 // This is in seconds, default value is from puppet code
+    val tries = r.get[String]("tries").map(_.toInt) getOrElse 1
+    val try_sleep = r.get[String]("try_sleep").map(_.toInt) getOrElse 0 // The number of seconds to sleep between command execution upon retry
+    val group = r.get[String]("group")
+    val umask = r.get[String]("umask")
+    val user = r.get[String]("user") // $HOME environment variable is not set when user attribute is specified
 
     // envvar is of the form var=value
     private def toEnvVar(envvar: String): (String, String) = {

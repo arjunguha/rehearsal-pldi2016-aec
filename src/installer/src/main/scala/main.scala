@@ -1,6 +1,7 @@
 package puppet.installer
 
 import puppet.runtime.core._
+import puppet.common.resource._
 
 import akka.kernel.Bootable
 import akka.actor.{Props, Actor, ActorSystem, ActorRef, ActorSelection}
@@ -23,11 +24,11 @@ class Exec(remote: ActorSelection) extends Actor {
 
     case Start => println("Sending ping"); remote ! "ping"
 
-    case attrs: Map[String, String] =>
+    case resource: Resource =>
       println("Resource received for installation")
       val client = sender()
       future { 
-        Try(Provider(attrs).realize()).map(_ => "success") getOrElse "failure"
+        Try(Provider(resource).realize()).map(_ => "success") getOrElse "failure"
       } pipeTo client
     
     case "ping" => println("Ping received"); sender ! "pong"
