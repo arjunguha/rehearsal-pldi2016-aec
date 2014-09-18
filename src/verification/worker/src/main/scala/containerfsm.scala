@@ -3,6 +3,7 @@ package puppet.verification.worker.containerfsm
 import akka.actor.{Actor, ActorRef, PoisonPill}
 
 import plasma.docker._
+import puppet.common._
 import puppet.common.resource._
 import puppet.verification.common._
 import puppet.verification.worker.installer._

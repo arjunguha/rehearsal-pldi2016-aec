@@ -1,5 +1,7 @@
 package puppet.verification.worker.main
 
+import puppet.common._
+
 import akka.kernel.Bootable
 
 // TODO: Should go into Util
