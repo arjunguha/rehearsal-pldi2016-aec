@@ -58,3 +58,35 @@ object ExprWellFormed {
     case ShellExec(_) => true
   }
 }
+
+object PrettyPrint {
+
+  def printPath(p: Path): String = p.toAbsolutePath.toString
+
+  def printPred(pr: Predicate): String = pr match {
+    case True => "true"
+    case False => "false"
+    case Exists(p) => "exists(%s)".format(printPath(p))
+    case IsDir(p) => "isdir(%s)".format(printPath(p))
+    case IsLink(p) => "islink(%s)".format(printPath(p))
+    case IsRegularFile(p) => "isregularfile(%s)".format(printPath(p))
+    case And(lhs, rhs) => printPred(lhs) + " && " + printPred(rhs)
+    case Or(lhs, rhs) => printPred(lhs) + " || " + printPred(rhs)
+    case Not(oper) => "! " + printPred(oper)
+    case IsEqual(lhs, rhs) => printPred(lhs) + " == " + printPred(rhs)
+  }
+
+  def apply(e: Expr): String = e match {
+    case Block(exprs @ _*) => " { " + 
+                              exprs.map((e) => PrettyPrint(e)).mkString("; ") +
+                               " } " + "\n"
+    case If(cond, e1, e2) => "if (" + printPred(cond) + ")" + PrettyPrint(e1) + " else " + PrettyPrint(e2)
+    case CreateFile(p, c) => s"create(${printPath(p)}, c)"
+    case DeleteFile(p) => s"delete(${printPath(p)})"
+    case MkDir(p) => s"mkdir(${printPath(p)})"
+    case RmDir(p) => s"rmdir(${printPath(p)})"
+    case Link(p, t) => s"link(${printPath(p)}, ${printPath(t)})"
+    case Unlink(p) => s"unlink(${printPath(p)})"
+    case ShellExec(cmd) => s"exec($cmd)"
+  }
+}

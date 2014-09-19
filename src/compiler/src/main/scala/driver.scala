@@ -8,6 +8,9 @@ import puppet.core.eval._
 
 import scalax.collection.Graph
 import scalax.collection.GraphEdge._
+import scalax.collection.GraphPredef._
+
+import puppet.common.{resource => resrc}
 
 object PuppetDriver {
 
@@ -106,6 +109,70 @@ object PuppetDriver {
     }
   }
   */
+
+
+  def toCoreValue(v: Value): resrc.Value = v match {
+    case UndefV => resrc.UndefV
+    case StringV(s) => resrc.StringV(s)
+    case BoolV(b) => resrc.BoolV(b)
+    case RegexV(_) => resrc.UndefV
+    case ASTHashV(_) => resrc.UndefV
+    case ASTArrayV(arr) => resrc.ArrayV(arr.map(toCoreValue(_))) 
+    case ResourceRefV(_, _, _) => resrc.UndefV
+  }
+
+  def toCoreResource(res: Resource): resrc.Resource = {
+    // Rules to convert to core resource
+    val attrs = res.as.filter((a) => a.value match {
+      case UndefV | StringV(_) | BoolV(_) | ASTArrayV(_) => true
+      case _ => false
+    })
+    .map((a) => (a.name, toCoreValue(a.value))).toMap
+
+    resrc.Resource(attrs)
+  }
+
+  // TODO : make this common as this code is shared among other modules as well
+  object Eth0 {
+
+    private val ifc = "eth0"
+
+    import java.net.NetworkInterface
+    import java.net.Inet4Address
+    import scala.collection.JavaConversions._
+
+    val ip = NetworkInterface.getByName(ifc)
+      .getInetAddresses
+      .toList // a list containing both ipv6 and ipv4 address
+      .collect({ case ip: Inet4Address => ip.getHostAddress })
+      .head
+  }
+
+  object PuppetActorSystem {
+
+    import com.typesafe.config.ConfigFactory
+    import akka.actor.{ActorSystem}
+
+    private val akkaConf = ConfigFactory.parseString("akka.remote.netty.tcp.hostname=\"" + Eth0.ip + "\"")
+      .withFallback(ConfigFactory.load.getConfig("agent"))
+
+    lazy val masterAddress = ConfigFactory.load.getString("master")
+
+    lazy val system = ActorSystem("PuppetInstallerSystem", akkaConf)
+  }
+
+  def verify(g: Graph[Resource, DiEdge]): Boolean = {
+    // Convert to serializable Graph
+    val nodes = g.nodes map ((n) => toCoreResource(n.value))
+    val edges = g.edges map ((e) => toCoreResource(e.source.value) ~> toCoreResource(e.target.value))
+    val gprime = Graph.from(nodes, edges)
+
+    import puppet.common._
+
+    val master = PuppetActorSystem.system.actorSelection(PuppetActorSystem.masterAddress)
+    master ! Work(gprime)
+    true
+  }
 
   def printDOTGraph(g: Graph[Resource, DiEdge]) {
     import scalax.collection.io.dot._
