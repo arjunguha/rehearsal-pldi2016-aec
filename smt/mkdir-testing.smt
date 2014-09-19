@@ -39,8 +39,10 @@
 (assert (mkdir fs1 fs4 bar))
 (assert (mkdir fs4 fs5 foo))
 
+(echo "Any silly contradictions? (sat expected)")
 (check-sat)
-`
+
+(echo "Unsat expected:")
 (assert (not (= fs3 fs5)))
 
 (check-sat)
