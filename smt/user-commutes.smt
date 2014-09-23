@@ -1,38 +1,37 @@
 (set-option :timeout 2000)
-(set-option :smt.macro-finder true)
+; (set-option :smt.macro-finder true)
 
 ; Types
 (declare-sort String)
-
+(declare-sort Path)
 (declare-sort FS)
 (declare-sort Content)
 
-(declare-sort Path)
-
+; Function declaration
 (declare-fun mkdir (FS FS Path) Bool)
-(declare-fun pexists (FS Path) Bool)
+;(declare-fun pexists (FS Path) Bool)
 (declare-fun create (FS FS Path Content) Bool)
-
 
 (declare-const rootPath Path)
 
+; dirname /etc/apache2 /etc = true
+; dirname /etc /etc/apache2 = false
 (declare-fun dirname (Path Path) Bool)
 
 ; / does not have a parent
 (assert (forall ((p Path)) (= (dirname rootPath p) false)))
 
-(assert (forall ((p Path))
-          (=> (not (= p rootPath))
-              (exists ((parent Path))
-                       (dirname p parent)))))
-
+; Every path other than root has a parent
+;(assert (forall ((p Path))
+;          (=> (not (= p rootPath))
+;              (exists ((parent Path))
+;                       (dirname p parent)))))
 
 (declare-fun issubpath (Path Path) Bool)
 
 ; (is-ancestor "/" "/bin") is true
 ; (is-ancestor "/bin" "/") is false
 (declare-fun is-ancestor (Path Path) Bool)
-
 
 
 (assert (forall ((dir Path) (parent Path))
@@ -50,16 +49,20 @@
 
 
 ; every path is its own subpath
-(assert (forall ((p Path)) (issubpath p p)))
+;(assert (forall ((p Path)) (issubpath p p)))
 
 ; issubpath is the reflexive closure of the is-ancestor relation
-(assert (forall ((dir Path) (parent Path))
-          (=> (is-ancestor parent dir)
-              (issubpath parent dir))))
+;(assert (forall ((dir Path) (parent Path))
+;          (=> (is-ancestor parent dir)
+;              (issubpath parent dir))))
+
+(assert (forall ((p1 Path) (p2 Path))
+           (=> (issubpath p1 p2)
+               (or (= p1 p2) (is-ancestor p1 p2)))))
 
 
-
-
+(push)
+;---------------------------------------------------
 (declare-const p1 Path)
 (declare-const p2 Path)
 
@@ -76,6 +79,8 @@
 (check-sat)
 (get-model)
 (exit)
+;----------------------------------------------------
+(pop)
 
 ; ; issubpath is anti-symmetric
 ; (assert (forall ((p1 Path) (p2 Path))
