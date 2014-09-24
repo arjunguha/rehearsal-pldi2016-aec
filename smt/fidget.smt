@@ -35,18 +35,7 @@
 ; (is-ancestor "/bin" "/") is false
 (declare-fun is-ancestor (Path Path) Bool)
 
-; A => B        === A or (not B)
-; dirname p is an ancestor
-; (assert (forall ((dir Path) (parent Path))
-;          (=> (dirname dir parent) (is-ancestor parent dir))))
-
-; is-ancestor is transitive
-; (assert
-;    (forall ((p1 Path) (p2 Path) (p3 Path))
-;       (=> (and (is-ancestor p1 p2) (is-ancestor p2 p3))
-;           (is-ancestor p1 p3))))
-
-
+; is-ancestor is the transitive closure of dirname
 (assert
    (forall ((p1 Path) (p2 Path) (p3 Path))
       (= (or (and (is-ancestor p1 p2) (is-ancestor p2 p3))
@@ -54,10 +43,15 @@
            (is-ancestor p1 p3))))
 
 
-; no cycles in in-an
+; no cycles in in-ancestor
 (assert (forall ((p1 Path) (p2 Path))
            (not (and (is-ancestor p1 p2) (is-ancestor p2 p1)))))
 
+
+; mkdir is injective
+(assert (forall ((fs1 FS) (fs2 FS) (fs3 FS) (p Path))
+          (=> (and (mkdir fs1 fs2 p) (mkdir fs1 fs3 p))
+              (= fs2 fs3))))
 
 ;mkdir commutes on distinct files when parent not equal
 (assert (forall ((fs1 FS) (fs2 FS) (fs3 FS) (fs4 FS) (fs5 FS) (p1 Path) (p2 Path))
@@ -89,7 +83,6 @@
 
 (echo "Expected unsat below:")
 (check-sat)
-(get-model)
 (pop)
 
 (declare-const fs1 FS)
@@ -103,12 +96,10 @@
 (assert (mkdir fs1 fs2 a))
 (assert (mkdir fs2 fs3 b))
 (assert (mkdir fs3 fs4 c))
-(assert (mkdir fs1 fs5 c))
-(assert (mkdir fs5 fs6 b))
-(assert (mkdir fs6 fs7 a))
+(assert (mkdir fs1 fs5 b))
+(assert (mkdir fs5 fs6 a))
+(assert (mkdir fs6 fs7 c))
 
 (assert (not (= fs4 fs7)))
 (echo "Expected unsat below:")
 (check-sat)
-(get-model)
-(exit)
