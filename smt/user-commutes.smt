@@ -66,19 +66,18 @@
 (declare-const p1 Path)
 (declare-const p2 Path)
 
-(assert (forall ((x Path))
-          (or (= x rootPath) (= x p1) (= x p2))))
-
+;(assert (forall ((x Path))
+;          (or (= x rootPath) (= x p1) (= x p2))))
+(assert (not (= p1 rootPath)))
+(assert (not (= p2 rootPath)))
 
 (assert (issubpath p1 p2))
 (assert (issubpath p2 p1))
-(echo "Please say SAT")
+(echo "Silly constraints check ... Please say SAT")
 (check-sat)
-(echo "Please say UNSAT")
+(echo "Path equality test ... Please say UNSAT")
 (assert (not (= p1 p2)))
 (check-sat)
-(get-model)
-(exit)
 ;----------------------------------------------------
 (pop)
 
@@ -120,8 +119,8 @@
 ;                (= fs3 fs5))))
 
 ; mkdir is idempotent
-;(assert (forall ((fs1 FS) (fs2 FS) (fs3 FS) (p Path))
-;           (=> (and (mkdir fs1 fs2 p) (mkdir fs2 fs3 p)) (= fs2 fs3))))
+(assert (forall ((fs1 FS) (fs2 FS) (fs3 FS) (p Path))
+           (=> (and (mkdir fs1 fs2 p) (mkdir fs1 fs3 p)) (= fs2 fs3))))
 
 ; mkdir is injective
 ;(assert (forall ((fs1 FS) (fs2 FS) (fs3 FS) (p1 Path) (p2 Path))
@@ -129,12 +128,12 @@
 ;              (not (= fs2 fs3)))))
 
 ; mkdir commutes on distinct files when parent not equal
-; (assert (forall ((fs1 FS) (fs2 FS) (fs3 FS) (fs4 FS) (fs5 FS) (p1 Path) (p2 Path))
-;           (=> (and (mkdir fs1 fs2 p1) (mkdir fs2 fs3 p2)
-;                    (mkdir fs1 fs4 p2) (mkdir fs4 fs5 p1)
-;                    (not (issubpath p1 p2))
-;                    (not (issubpath p2 p1)))
-;               (= fs3 fs5))))
+(assert (forall ((fs1 FS) (fs2 FS) (fs3 FS) (fs4 FS) (fs5 FS) (p1 Path) (p2 Path))
+          (=> (and (mkdir fs1 fs2 p1) (mkdir fs2 fs3 p2)
+                   (mkdir fs1 fs4 p2) (mkdir fs4 fs5 p1)
+                   (not (issubpath p1 p2))
+                   (not (issubpath p2 p1)))
+              (= fs3 fs5))))
 
 ; create and mkdir commute
 ; (assert (forall ((fs1 FS) (fs2 FS) (fs3 FS) (fs4 FS) (fs5 FS) (p1 Path) (p2 Path) (c Content))
@@ -168,12 +167,12 @@
 
 (push)
 
-
 (declare-const foo Path)
 (declare-const bar Path)
+(assert (not (= foo rootPath)))
+(assert (not (= bar rootPath)))
 
-(assert (not (= foo bar)))
-
+;(assert (not (= foo bar)))
 (assert (not (issubpath foo bar)))
 (assert (not (issubpath bar foo)))
 
@@ -191,61 +190,73 @@
 (echo "Any silly contradictions? (sat expected)")
 (check-sat)
 
-; (echo "Checking validity of commutivity of mkdir. \"Unsat\" expected:")
-; (assert (not (= fs3 fs5)))
+(echo "Checking validity of commutivity of mkdir. \"Unsat\" expected:")
+(assert (not (= fs3 fs5)))
 
-; (check-sat)
+(check-sat)
 
-; (pop)
-
-
-; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; ;;;;;;;;;;;;;;;;;;;;; triplets commute ;;;;;;;;;;;;;;;;;;;;;;;;
-; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; (push)
-; (declare-const foo Path)
-; (declare-const bar Path)
-; (declare-const baz Path)
-; (assert (not (= foo bar)))
-; (assert (not (issubpath foo bar)))
-; (assert (not (issubpath bar foo)))
-
-; (assert (not (= bar baz)))
-; (assert (not (issubpath bar baz)))
-; (assert (not (issubpath baz bar)))
-
-; (assert (not (= foo baz)))
-; (assert (not (issubpath foo baz)))
-; (assert (not (issubpath baz foo)))
-
-; (declare-const fs1 FS)
-; (declare-const fs2 FS)
-; (declare-const fs3 FS)
-; (declare-const fs4 FS)
-; (declare-const fs5 FS)
-; (declare-const fs6 FS)
-; (declare-const fs7 FS)
-
-; (assert (mkdir fs1 fs2 foo))
-; (assert (mkdir fs2 fs3 bar))
-; (assert (mkdir fs3 fs4 baz))
-
-; (assert (mkdir fs1 fs5 bar))
-; (assert (mkdir fs5 fs6 baz))
-; (assert (mkdir fs6 fs7 foo))
-
-; (echo "Any silly contradictions? (sat expected)")
-; (check-sat)
-
-; (echo "Checking validity of commutivity of mkdir triplets. \"Unsat\" expected:")
-; (assert (not (= fs7 fs4)))
-
-; (check-sat)
+(pop)
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;; triplets commute ;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(push)
+(declare-const foo Path)
+(declare-const bar Path)
+(declare-const baz Path)
 
+;(assert (forall ((x Path))
+;           (or (= x rootPath) (= x foo)
+;               (= x bar) (= x baz))))
 
-; (pop)
+;(assert (not (= foo bar)))
+(assert (not (= rootPath foo)))
+(assert (not (= rootPath bar)))
+(assert (not (= rootPath baz)))
+
+(assert (not (issubpath foo bar)))
+(assert (not (issubpath bar foo)))
+
+;(assert (not (= bar baz)))
+(assert (not (issubpath bar baz)))
+(assert (not (issubpath baz bar)))
+
+;(assert (not (= foo baz)))
+(assert (not (issubpath foo baz)))
+(assert (not (issubpath baz foo)))
+
+(declare-const fs1 FS)
+(declare-const fs2 FS)
+(declare-const fs3 FS)
+(declare-const fs4 FS)
+(declare-const fs5 FS)
+(declare-const fs6 FS)
+(declare-const fs7 FS)
+
+(assert (mkdir fs1 fs2 foo))
+(assert (mkdir fs2 fs3 bar))
+(assert (mkdir fs3 fs4 baz))
+
+(assert (mkdir fs1 fs5 bar))
+(assert (mkdir fs5 fs6 baz))
+(assert (mkdir fs6 fs7 foo))
+
+(assert (=> (and (mkdir fs5 fs6 baz) (mkdir fs6 fs7 foo)
+                 (mkdir fs5 fs6 foo) (mkdir fs6 fs7 baz))
+
+;(assert (mkdir fs1 fs5 foo))
+;(assert (mkdir fs5 fs6 baz))
+;(assert (mkdir fs6 fs7 bar))
+
+(echo "Any silly contradictions? (sat expected)")
+(check-sat)
+
+(echo "Checking validity of commutivity of mkdir triplets. \"Unsat\" expected:")
+(assert (not (= fs4 fs7)))
+(check-sat)
+; (get-model)
+(pop)
 
 
 
