@@ -6,19 +6,85 @@
 (declare-sort FS)
 (declare-sort Content)
 
+; Function declaration
 (declare-fun mkdir (FS FS Path) Bool)
-(declare-fun pexists (FS Path) Bool)
+;(declare-fun pexists (FS Path) Bool)
 (declare-fun create (FS FS Path Content) Bool)
-(declare-fun dirname (Path) Path)
+
+(declare-const rootPath Path)
+
+; dirname /etc/apache2 /etc = true
+; dirname /etc /etc/apache2 = false
+(declare-fun dirname (Path Path) Bool)
+
+; / does not have a parent
+(assert (forall ((p Path)) (= (dirname rootPath p) false)))
+
+; Every path other than root has a parent
+;(assert (forall ((p Path))
+;          (=> (not (= p rootPath))
+;              (exists ((parent Path))
+;                       (dirname p parent)))))
+
 (declare-fun issubpath (Path Path) Bool)
 
+; (is-ancestor "/" "/bin") is true
+; (is-ancestor "/bin" "/") is false
+(declare-fun is-ancestor (Path Path) Bool)
+
+
+(assert (forall ((dir Path) (parent Path))
+         (=> (dirname dir parent) (is-ancestor parent dir))))
+
+; is-ancestor is transitive
+(assert
+   (forall ((p1 Path) (p2 Path) (p3 Path))
+      (=> (and (is-ancestor p1 p2) (is-ancestor p2 p3))
+          (is-ancestor p1 p3))))
+
+; no cycles
+(assert (forall ((p1 Path) (p2 Path))
+           (not (and (is-ancestor p1 p2) (is-ancestor p2 p1)))))
+
+
 ; every path is its own subpath
-(assert (forall ((p Path)) (issubpath p p)))
+;(assert (forall ((p Path)) (issubpath p p)))
+
+; issubpath is the reflexive closure of the is-ancestor relation
+;(assert (forall ((dir Path) (parent Path))
+;          (=> (is-ancestor parent dir)
+;              (issubpath parent dir))))
 
 (assert (forall ((p1 Path) (p2 Path))
-           (=> (and (issubpath p1 p2)
-                    (issubpath p2 p1))
-               (= p1 p2))))
+           (=> (issubpath p1 p2)
+               (or (= p1 p2) (is-ancestor p1 p2)))))
+
+
+(push)
+;---------------------------------------------------
+(declare-const p1 Path)
+(declare-const p2 Path)
+
+;(assert (forall ((x Path))
+;          (or (= x rootPath) (= x p1) (= x p2))))
+(assert (not (= p1 rootPath)))
+(assert (not (= p2 rootPath)))
+
+(assert (issubpath p1 p2))
+(assert (issubpath p2 p1))
+(echo "Silly constraints check ... Please say SAT")
+(check-sat)
+(echo "Path equality test ... Please say UNSAT")
+(assert (not (= p1 p2)))
+(check-sat)
+;----------------------------------------------------
+(pop)
+
+; ; issubpath is anti-symmetric
+; (assert (forall ((p1 Path) (p2 Path))
+;            (=> (and (issubpath p1 p2)
+;                     (issubpath p2 p1))
+;                (= p1 p2))))
 
 ;(assert (forall ((fs1 FS) (fs2 FS) (p Path) (c Content))
 ;           (=> (create fs1 fs2 p c) (pexists fs2 p))))
@@ -50,8 +116,8 @@
                (= fs3 fs5))))
 
 ; mkdir is idempotent
-;(assert (forall ((fs1 FS) (fs2 FS) (fs3 FS) (p Path))
-;           (=> (and (mkdir fs1 fs2 p) (mkdir fs2 fs3 p)) (= fs2 fs3))))
+(assert (forall ((fs1 FS) (fs2 FS) (fs3 FS) (p Path))
+           (=> (and (mkdir fs1 fs2 p) (mkdir fs1 fs3 p)) (= fs2 fs3))))
 
 ; mkdir is injective
 ;(assert (forall ((fs1 FS) (fs2 FS) (fs3 FS) (p1 Path) (p2 Path))
@@ -100,7 +166,10 @@
 
 (declare-const foo Path)
 (declare-const bar Path)
-(assert (not (= foo bar)))
+(assert (not (= foo rootPath)))
+(assert (not (= bar rootPath)))
+
+;(assert (not (= foo bar)))
 (assert (not (issubpath foo bar)))
 (assert (not (issubpath bar foo)))
 
@@ -123,6 +192,61 @@
 
 (check-sat)
 
+(pop)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;; triplets commute ;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(push)
+(declare-const foo Path)
+(declare-const bar Path)
+(declare-const baz Path)
+
+(assert (not (= foo bar)))
+(assert (not (= bar baz)))
+(assert (not (= foo baz)))
+
+(assert (not (= rootPath foo)))
+(assert (not (= rootPath bar)))
+(assert (not (= rootPath baz)))
+
+(assert (not (issubpath foo bar)))
+(assert (not (issubpath bar foo)))
+
+(assert (not (issubpath bar baz)))
+(assert (not (issubpath baz bar)))
+
+(assert (not (issubpath foo baz)))
+(assert (not (issubpath baz foo)))
+
+(declare-const fs1 FS)
+(declare-const fs2 FS)
+(declare-const fs3 FS)
+(declare-const fs4 FS)
+(declare-const fs5 FS)
+(declare-const fs6 FS)
+(declare-const fs7 FS)
+
+(assert (mkdir fs1 fs2 foo))
+(assert (mkdir fs2 fs3 bar))
+(assert (mkdir fs3 fs4 baz))
+
+(assert (mkdir fs1 fs5 bar))
+(assert (mkdir fs5 fs6 baz))
+(assert (mkdir fs6 fs7 foo))
+
+;(assert (mkdir fs1 fs5 foo))
+;(assert (mkdir fs5 fs6 baz))
+;(assert (mkdir fs6 fs7 bar))
+
+(echo "Any silly contradictions? (sat expected)")
+(check-sat)
+
+(echo "Checking validity of commutivity of mkdir triplets. \"Unsat\" expected:")
+(assert (not (= fs4 fs7)))
+(check-sat)
+; (get-model)
 (pop)
 
 
