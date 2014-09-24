@@ -206,11 +206,10 @@
 (declare-const bar Path)
 (declare-const baz Path)
 
-;(assert (forall ((x Path))
-;           (or (= x rootPath) (= x foo)
-;               (= x bar) (= x baz))))
+(assert (not (= foo bar)))
+(assert (not (= bar baz)))
+(assert (not (= foo baz)))
 
-;(assert (not (= foo bar)))
 (assert (not (= rootPath foo)))
 (assert (not (= rootPath bar)))
 (assert (not (= rootPath baz)))
@@ -218,11 +217,9 @@
 (assert (not (issubpath foo bar)))
 (assert (not (issubpath bar foo)))
 
-;(assert (not (= bar baz)))
 (assert (not (issubpath bar baz)))
 (assert (not (issubpath baz bar)))
 
-;(assert (not (= foo baz)))
 (assert (not (issubpath foo baz)))
 (assert (not (issubpath baz foo)))
 
@@ -241,9 +238,6 @@
 (assert (mkdir fs1 fs5 bar))
 (assert (mkdir fs5 fs6 baz))
 (assert (mkdir fs6 fs7 foo))
-
-(assert (=> (and (mkdir fs5 fs6 baz) (mkdir fs6 fs7 foo)
-                 (mkdir fs5 fs6 foo) (mkdir fs6 fs7 baz))
 
 ;(assert (mkdir fs1 fs5 foo))
 ;(assert (mkdir fs5 fs6 baz))
