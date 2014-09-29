@@ -96,9 +96,10 @@
 (assert (mkdir fs1 fs2 a))
 (assert (mkdir fs2 fs3 b))
 (assert (mkdir fs3 fs4 c))
-(assert (mkdir fs1 fs5 b))
+
+(assert (mkdir fs1 fs5 c))
 (assert (mkdir fs5 fs6 a))
-(assert (mkdir fs6 fs7 c))
+(assert (mkdir fs6 fs7 b))
 
 (assert (not (= fs4 fs7)))
 (echo "Expected unsat below:")
