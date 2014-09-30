@@ -8,13 +8,19 @@ class Core extends FunSuite with Matchers {
   test("Core") {
     val z3 = new Z3Context(new Z3Config("MODEL" -> true))
 
-    val x = z3.mkFreshConst("x", z3.mkIntSort)
-    val y = z3.mkFreshConst("y", z3.mkIntSort)
+    assert(java.nio.file.Files.isRegularFile(java.nio.file.Paths.get("../smt/axioms.smt")))
+    // val r = z3.parseSMTLIB2File("../smt/axioms.smt")
+    // println(r)
+
+
+    val x = z3.mkFreshConst("x", z3.mkBoolSort)
+    val y = z3.mkFreshConst("y", z3.mkBoolSort)
 
     val solver = z3.mkSolver
     val expr = (x === y) || (x !== y)
     solver.assertCnstr(expr.ast(z3))
     println(solver.checkAssumptions())
+    println(solver.getModel())
     // solver.assertCnstr(p2 --> !(y === zero))
     // solver.assertCnstr(p3 --> !(x === zero))
 
