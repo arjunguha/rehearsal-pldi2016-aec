@@ -4,16 +4,22 @@
 (declare-datatypes () ((Path root a b c d)))
 
 ; paths are / /a /b /c /a/d
-(define-fun dirname ((p1 Path) (p2 Path)) Bool
-  (or (and (= p1 a) (= p2 root))
-      (and (= p1 b) (= p2 root))
-      (and (= p1 c) (= p2 root))
-      (and (= p1 d) (= p2 a))))
+;(define-fun dirname ((p1 Path) (p2 Path)) Bool
+;  (or (and (= p1 a) (= p2 root))
+;      (and (= p1 b) (= p2 root))
+;      (and (= p1 c) (= p2 root))
+;      (and (= p1 d) (= p2 a))))
 
-(define-fun is-ancestor ((p1 Path) (p2 Path)) Bool
-  (or (= p1 p2)
-      (= root p2)
-      (= a d)))
+;(define-fun is-ancestor ((p1 Path) (p2 Path)) Bool
+;  (or (= p1 p2)
+;      (= root p2)
+;      (= a d)))
+(declare-fun is-ancestor (Path Path) Bool)
+(assert (forall ((p1 Path) (p2 Path))
+           (= (is-ancestor p1 p2)
+               (or (= p1 p2)
+                   (= root p2)
+                   (= a d)))))
 
 
 (echo "Sanity check")
@@ -48,8 +54,8 @@
 ;                  (seq (mkdir p2) (mkdir p1)))))
 
 
-(echo "Expected SAT:")
-(check-sat)
+;(echo "Expected SAT:")
+;(check-sat)
 
 
 (push)
