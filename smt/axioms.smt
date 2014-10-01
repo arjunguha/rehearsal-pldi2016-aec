@@ -1,4 +1,18 @@
-(declare-sort Path)
+; (declare-sort Path)
+
+;(declare-datatypes () ((Path root a b c d)))
+
+(declare-const root Path)
+(declare-const a Path)
+(declare-const b Path)
+(declare-const c Path)
+(declare-const d Path)
+
+(define-fun is-ancestor ((p1 Path) (p2 Path)) Bool
+  (or (= p1 p2)
+      (= root p2)
+      (= a d)))
+
 
 ; S is a file-system operation, or error
 (declare-sort S)
@@ -34,3 +48,5 @@
   (forall ((p1 Path) (p2 Path))
     (=> (and (not (is-ancestor p1 p2)) (not (is-ancestor p1 p2)))
         (= (seq (mkdir p1) (create p2)) (seq (create p2) (mkdir p1))))))
+
+;(check-sat)
