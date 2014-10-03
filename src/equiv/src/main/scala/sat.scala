@@ -25,7 +25,6 @@ object Z3Puppet {
   val (pathSymbol, pathSort) = mkZ3Sort("Path")
   val (sSymbol, sSort) = mkZ3Sort("S")
 
-
   // z3 func declares in our model
   val (errSymbol, err) = mkZ3Func("err", Seq(), sSort)
   val (seqSymbol, seq) = mkZ3Func("seq", Seq(sSort, sSort), sSort)
@@ -39,7 +38,6 @@ object Z3Puppet {
 
   private val rootPathSymbol = z3.mkStringSymbol("root")
   private val root = z3.mkConst(rootPathSymbol, pathSort)
-
 
   //one transitive step
   private def addTransitive[A, B](s: Set[(A, B)]) = {
@@ -85,8 +83,8 @@ object Z3Puppet {
         pathMap += ((parent, newast))
       }
 
-      t ++ (parent, path)
-      t ++ dirnameofpath(parent)
+      val s = t + ((parent, path))
+      s ++ dirnameofpath(parent)
     }
   }
 
@@ -98,13 +96,13 @@ object Z3Puppet {
 
   private def dirnameaxiomtree(relation: Set[(Path, Path)], p1: Z3AST, p2: Z3AST): Z3AST = {
     (dirname(p1, p2) --> (relation.map ({ case (l, r) => p1 === pathMap(l) && p2 == pathMap(r) })
-                                  .foldLeft(false)({ case (acc, elem) => acc || elem })))
+                                  .foldLeft(false: Operands.BoolOperand)({ case (acc, elem) => acc || elem })))
   }
 
   private def isAncestorAxiomTree(relation: Set[(Path, Path)], p1: Z3AST, p2: Z3AST): Z3AST = {
-    val condexpr = relation.map({ case (parent, child) => (p1 === pathMap(parent) && p2 === pathMap(child)) })
-                           .foldLeft(false)({case (acc, elem) => acc || elem })
-    (is_ancestor(p1, p2) --> (p1 === p2) || condexpr)
+    val condexpr: Operands.BoolOperand = relation.map({ case (parent, child) => (p1 === pathMap(parent) && p2 === pathMap(child)) })
+                           .foldLeft(false: Operands.BoolOperand)({case (acc: Operands.BoolOperand, elem) => acc || elem })
+    ((is_ancestor(p1, p2)) --> ((p1 === p2) || condexpr))
   }
 
   def check() {
