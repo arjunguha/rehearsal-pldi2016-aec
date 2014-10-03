@@ -1,6 +1,6 @@
-package verification.master.semantics
+package equiv.semantics
 
-import verification.master.ast._
+import equiv.ast._
 import puppet.common.util._
 
 /*

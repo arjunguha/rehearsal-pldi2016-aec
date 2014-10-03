@@ -1,6 +1,6 @@
-package verification.master.desugar
+package equiv.desugar
 
-import verification.master.ast._
+import equiv.ast._
 import java.nio.file.Path
 
 sealed trait ExprC

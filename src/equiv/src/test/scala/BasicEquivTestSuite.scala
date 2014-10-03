@@ -27,13 +27,13 @@ class Core extends FunSuite with Matchers {
     val (errSymbol, err) = mkZ3Func("err", Seq(), sSort)
     val (seqSymbol, seq) = mkZ3Func("seq", Seq(sSort, sSort), sSort)
     val (ancSymbol, is_ancestor) = mkZ3Func("is-ancestor", Seq(pathSort, pathSort), z3.mkBoolSort)
-    val (mkdirSymbol, mkdir) = mkZ3Func("mkdir", Seq(pathSort), sSort);
+    val (mkdirSymbol, mkdir) = mkZ3Func("mkdir", Seq(pathSort), sSort)
     val (createSymbol, create) = mkZ3Func("create", Seq(pathSort), sSort)
 
-    val sortMap = Map(pathSymbol -> pathSort, sSymbol -> sSort);
+    val sortMap = Map(pathSymbol -> pathSort, sSymbol -> sSort)
     val funcMap = Map(errSymbol -> err, seqSymbol -> seq,
-                       ancSymbol -> is_ancestor, mkdirSymbol -> mkdir,
-                       createSymbol -> create)
+                      ancSymbol -> is_ancestor, mkdirSymbol -> mkdir,
+                      createSymbol -> create)
 
     assert(java.nio.file.Files.isRegularFile(java.nio.file.Paths.get("../smt/axioms.smt")))
     z3.parseSMTLIB2File("../smt/axioms.smt", sortMap, funcMap)
@@ -61,7 +61,7 @@ class Core extends FunSuite with Matchers {
     val p1 = z3.mkBound(0, pathSort)
     val p2 = z3.mkBound(1, pathSort)
     val pattern = z3.mkPattern(is_ancestor(p1 , p2)) // Not sure
-    val axiomtree = z3.mkImplies(is_ancestor(p1, p2), z3.mkOr(p1 === p2, root === p2, a === d))
+    val axiomtree = (is_ancestor(p1, p2) --> (p1 === p2) || (root === p2) ||  (a === d))
 
     val p1Symbol: Z3Symbol = z3.mkStringSymbol("p1")
     val p2Symbol: Z3Symbol = z3.mkStringSymbol("p2")
@@ -71,9 +71,6 @@ class Core extends FunSuite with Matchers {
     val commute_axiom = ((seq(mkdir(a), mkdir(b))) !== (seq(mkdir(a),(mkdir(b)))))
 
     val solver = z3.mkSolver
-    // val expr = (x !== y)
-
-    //solver.assertCnstr(expr.ast(z3))
 
     solver.assertCnstr(is_ancestor_defn)
     solver.assertCnstr(commute_axiom)

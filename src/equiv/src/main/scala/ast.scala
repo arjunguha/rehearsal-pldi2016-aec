@@ -1,4 +1,4 @@
-package verification.master.ast
+package equiv.ast
 
 // Surface Verification Lanuguage AST nodes
 import java.nio.file.Path

@@ -1,8 +1,8 @@
 package puppet.verification.master
 
 import puppet.common._
-import verification.master.semantics._
-import verification.master.ast._
+// import verification.master.semantics._
+// import verification.master.ast._
 
 // Bootable akka that receives a graph, generate permuations and send it to worker
 import akka.kernel.Bootable
@@ -38,10 +38,12 @@ class Master extends Actor {
       import scalax.collection.GraphEdge._
 
       println("Graph Received")
+      /*
       val asts = (work.asInstanceOf[Graph[Resource, DiEdge]])
                  .nodes
                  .map((n: Graph[Resource, DiEdge]#NodeT) => Provider(n.value).toFSOps)
       asts foreach ((ast) => println(PrettyPrint(ast)))
+      */
     }
     case WorkerCreated(w) => println("Worker created")
     case WorkerAvailable(w) => println("Worker available")
