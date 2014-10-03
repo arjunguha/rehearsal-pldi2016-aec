@@ -95,14 +95,15 @@ object Z3Puppet {
   }
 
   private def dirnameaxiomtree(relation: Set[(Path, Path)], p1: Z3AST, p2: Z3AST): Z3AST = {
-    (dirname(p1, p2) --> (relation.map ({ case (l, r) => p1 === pathMap(l) && p2 == pathMap(r) })
-                                  .foldLeft(false: Operands.BoolOperand)({ case (acc, elem) => acc || elem })))
+    val condexpr = relation.map ({ case (l, r) => p1 === pathMap(l) && p2 == pathMap(r) })
+                                  .foldLeft(false: Operands.BoolOperand)({ case (acc, elem) => acc || elem })
+    z3.mkImplies(dirname(p1, p2), condexpr.ast(z3))
   }
 
   private def isAncestorAxiomTree(relation: Set[(Path, Path)], p1: Z3AST, p2: Z3AST): Z3AST = {
     val condexpr: Operands.BoolOperand = relation.map({ case (parent, child) => (p1 === pathMap(parent) && p2 === pathMap(child)) })
                            .foldLeft(false: Operands.BoolOperand)({case (acc: Operands.BoolOperand, elem) => acc || elem })
-    ((is_ancestor(p1, p2)) --> ((p1 === p2) || condexpr))
+    z3.mkImplies(is_ancestor(p1, p2), ((p1 === p2) || condexpr).ast(z3))
   }
 
   def check() {
