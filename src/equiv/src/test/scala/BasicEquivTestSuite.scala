@@ -67,6 +67,7 @@ class Core extends FunSuite with Matchers {
     val p1Symbol: Z3Symbol = z3.mkStringSymbol("p1")
     val p2Symbol: Z3Symbol = z3.mkStringSymbol("p2")
     val is_ancestor_defn = z3.mkForAll(0, List(pattern), List((p1Symbol, pathSort), (p2Symbol, pathSort)), axiomtree)
+    println(is_ancestor_defn)
 
     // Commutative
     val commute_axiom = ((seq(mkdir(a), mkdir(b))) !== (seq(mkdir(a),(mkdir(b)))))

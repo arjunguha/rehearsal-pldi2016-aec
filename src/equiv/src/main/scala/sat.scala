@@ -147,10 +147,16 @@ class Z3Puppet {
     val isancestorDefn = z3.mkForAll(0, List(isancestorpattern), List((p3Symbol, pathSort), (p4Symbol, pathSort)), isancestorAxiom)
     println(isancestorDefn)
 
+    
+
     assert(java.nio.file.Files.isRegularFile(java.nio.file.Paths.get("../smt/axioms.smt")))
     z3.parseSMTLIB2File("../smt/axioms.smt", sortMap, funcMap)
 
     val solver = z3.mkSolver
+
+    val z3paths = pathMap.values.toSeq
+    solver.assertCnstr(z3.mkDistinct(z3paths: _*))
+
     solver.assertCnstr(dirnameDefn)
     solver.assertCnstr(isancestorDefn)
     solver.assertCnstr(ast)
