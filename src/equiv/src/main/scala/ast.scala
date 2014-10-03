@@ -14,6 +14,7 @@ case class IsRegularFile(p: Path) extends Predicate
 case class And(lhs: Predicate, rhs: Predicate) extends Predicate
 case class Or(lhs: Predicate, rhs: Predicate) extends Predicate
 case class Not(oper: Predicate) extends Predicate
+// TODO(arjun): Should this be "if and only if"? i.e., class Iff(...)
 case class IsEqual(lhs: Predicate, rhs: Predicate) extends Predicate
 
 /* Abstract Content */
@@ -35,6 +36,40 @@ case class RmDir(p: Path) extends Op
 case class Link(p: Path, t: Path) extends Op
 case class Unlink(p: Path) extends Op
 case class ShellExec(cmd: String) extends Op
+
+object Predicate {
+
+  def gatherPaths(pred: Predicate): Set[Path] = pred match {
+    case True => Set.empty
+    case False => Set.empty
+    case Exists(p) => Set(p)
+    case IsDir(p) => Set(p)
+    case IsLink(p) => Set(p)
+    case IsRegularFile(p) => Set(p)
+    case And(a, b) => gatherPaths(a) union gatherPaths(b)
+    case Or(a, b) => gatherPaths(a) union gatherPaths(b)
+    case Not(a) => gatherPaths(a)
+    case IsEqual(a, b) => gatherPaths(a) union gatherPaths(b)
+  }
+
+}
+
+object Expr {
+
+  def gatherPaths(expr: Expr): Set[Path] = expr match {
+    case If(e1, e2, e3) =>
+      Predicate.gatherPaths(e1) union gatherPaths(e2) union gatherPaths(e3)
+    case Block(es @ _*) => es.map(gatherPaths).toSet.flatten
+    case CreateFile(p, _) => Set(p)
+    case DeleteFile(p) => Set(p)
+    case MkDir(p) => Set(p)
+    case RmDir(p) => Set(p)
+    case Link(p1, p2) => Set(p1, p2)
+    case Unlink(p) => Set(p)
+    case ShellExec(_) => Set.empty
+  }
+
+}
 
 object ExprWellFormed {
 
@@ -77,7 +112,7 @@ object PrettyPrint {
   }
 
   def apply(e: Expr): String = e match {
-    case Block(exprs @ _*) => " { " + 
+    case Block(exprs @ _*) => " { " +
                               exprs.map((e) => PrettyPrint(e)).mkString("; ") +
                                " } " + "\n"
     case If(cond, e1, e2) => "if (" + printPred(cond) + ")" + PrettyPrint(e1) + " else " + PrettyPrint(e2)
