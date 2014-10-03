@@ -5,6 +5,8 @@ class Core extends FunSuite with Matchers {
   import z3.scala._
   import z3.scala.dsl._
 
+  import equiv.sat._
+
   def mkZ3Sort(name: String)
               (implicit z3: Z3Context): (Z3Symbol, Z3Sort) = {
     val symbol = z3.mkStringSymbol(name)
@@ -51,7 +53,6 @@ class Core extends FunSuite with Matchers {
     val c = z3.mkConst(cPathSymbol, pathSort)
     val d = z3.mkConst(dPathSymbol, pathSort)
 
-
     /* forall ((p1 Path) (p2 Path))
      *   (= (is-ancestor p1 p2)
      *       (or (= p1 p2)
@@ -61,7 +62,7 @@ class Core extends FunSuite with Matchers {
     val p1 = z3.mkBound(0, pathSort)
     val p2 = z3.mkBound(1, pathSort)
     val pattern = z3.mkPattern(is_ancestor(p1 , p2)) // Not sure
-    val axiomtree = (is_ancestor(p1, p2) --> (p1 === p2) || (root === p2) ||  (a === d))
+    val axiomtree = z3.mkImplies(is_ancestor(p1, p2), ((p1 === p2) || (root === p2) ||  (a === d)).ast(z3))
 
     val p1Symbol: Z3Symbol = z3.mkStringSymbol("p1")
     val p2Symbol: Z3Symbol = z3.mkStringSymbol("p2")
@@ -75,14 +76,16 @@ class Core extends FunSuite with Matchers {
     solver.assertCnstr(is_ancestor_defn)
     solver.assertCnstr(commute_axiom)
     println(solver.checkAssumptions())
-    // println(solver.getModel())
-    // solver.assertCnstr(p2 --> !(y === zero))
-    // solver.assertCnstr(p3 --> !(x === zero))
+  }
 
-    // solver.checkAssumptions(p1, p2, p3) match {
+  test("mkdir-commutes") {
+    val z3 = new Z3Puppet
 
-    // result should equal (Some(false))
-    // core.toSet should equal (Set(p1, p3))
+    val p1 = "/b"
+    val p2 = "/c"
+
+    val commute_axiom = z3.seq(z3.mkdir(z3.toZ3Path(p1)), z3.mkdir(z3.toZ3Path(p2))) !== z3.seq(z3.mkdir(z3.toZ3Path(p2)), z3.mkdir(z3.toZ3Path(p1)))
+
+    println(z3.isSatisfiable(commute_axiom))
   }
 }
-
