@@ -3,6 +3,8 @@ package equiv.semantics
 import equiv.ast._
 import puppet.common.util._
 
+import java.nio.file.{Paths, Path}
+
 /*
  * Give filesystem semantics to resources
  *
@@ -10,7 +12,6 @@ import puppet.common.util._
  */
 object Provider {
 
-  import java.nio.file.Paths
 
   import puppet.common.resource._
   import puppet.common.resource.Extractor._
@@ -238,13 +239,13 @@ object Provider {
     }
   }
 
-  /*
   case class PuppetPackage(res: Resource) extends Provider(res) {
 
     private val validEnsureVals = List("present", "installed", "absent", "purged", "held", "latest")
 
     val ensure = validVal("ensure", validEnsureVals)
-
+    
+    /*
     def latest: String = {
 
       import scala.collection.JavaConversions
@@ -261,7 +262,61 @@ object Provider {
         throw new Exception(s"$cmd failed: $err")
       }
     }
+    */
 
+    /* apt-file must be installed and should be updated */
+    private def files: List[Path] = {
+
+      val cmd = s"apt-file -F list $name"
+      val (sts, out, err) = Cmd.exec(cmd)
+      if (0 == sts) {
+        out.lines.toList.map((l) => Paths.get(l.split(" ")(1)).normalize)
+      }
+      else {
+        throw new Exception(s"$cmd failed: $err")
+      }
+    }
+
+    private def parentdir(path: Path): Set[Path] = {
+      if(null == path.getParent) { Set.empty }
+      else { Set(path.getParent) ++ parentdir(path.getParent) }
+    }
+
+    private def parentdirs(paths: List[Path]): Set[Path] = {
+      (for (path <- paths) yield parentdir(path)).toSet.flatten
+    }
+
+    def toFSOps: Expr = {
+
+      import scala.collection.SortedSet
+
+      ensure match {
+        case Some("present") | Some("installed") | Some("latest") => {
+
+          val somecontent = Content("")
+
+          // Arrange dirs by closest first
+          val orderby = Ordering.by[Path, Int](_.getNameCount)
+          val dirs = SortedSet[Path]()(orderby) ++ parentdirs(files)
+
+          val mkdirs = dirs.map((d) => If(Not(Exists(d)), MkDir(d), Block())).toList
+          val createfiles = files.map((f) => CreateFile(f, somecontent))
+
+          val exprs = (mkdirs ++ createfiles)
+          Block(exprs: _*)
+        }
+
+        case Some("absent") | Some("purged") => {
+          val exprs = files.map(DeleteFile(_))
+          Block(exprs: _*)
+        }
+
+        case Some("held")   => throw new Exception("NYI package held") // TODO
+        case _ => throw new Exception("One or more required attribute is missing")
+      }
+    }
+
+    /*
     def realize() {
       val cmd = ensure match {
         case Some("present") | Some("installed") => "apt-get -y -q install %s".format(name)
@@ -280,8 +335,8 @@ object Provider {
         throw new Exception(err)
       }
     }
+    */
   }
-  */
 
   case class User(res: Resource) extends Provider(res) {
 
