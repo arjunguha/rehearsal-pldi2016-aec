@@ -7,7 +7,8 @@ import java.nio.file.{Paths, Path}
 
 class Z3Puppet {
 
-  private implicit val z3 = new Z3Context(new Z3Config("MODEL" -> true))
+  implicit val context = new Z3Context(new Z3Config("MODEL" -> true))
+  private val z3 = context
 
   private def mkZ3Sort(name: String)
               (implicit z3: Z3Context): (Z3Symbol, Z3Sort) = {
@@ -24,23 +25,36 @@ class Z3Puppet {
   // z3 sorts in our model
   val (pathSymbol, pathSort) = mkZ3Sort("Path")
   val (sSymbol, sSort) = mkZ3Sort("S")
+  val (cmdSymbol, cmdSort) = mkZ3Sort("Cmd")
 
-  val sortMap = Map(pathSymbol -> pathSort, sSymbol -> sSort)
+  /* val sortMap = Map(pathSymbol -> pathSort, sSymbol -> sSort) */
 
   // z3 func declares in our model
-  val (errSymbol, err) = mkZ3Func("err", Seq(), sSort)
+  val (errSymbol, err) = mkZ3Func("err", Seq(), sSort) // 0 in KAT
+  val (idSymbol, id) = mkZ3Func("id", Seq(), sSort) // 1 in KAT
+
   val (seqSymbol, seq) = mkZ3Func("seq", Seq(sSort, sSort), sSort)
+  val (unionSymbol, union) = mkZ3Func("union", Seq(z3.mkBoolSort, sSort, sSort), sSort)
+
   val (ancSymbol, is_ancestor) = mkZ3Func("is-ancestor", Seq(pathSort, pathSort), z3.mkBoolSort)
   val (dirnameSymbol, dirname) = mkZ3Func("dirname", Seq(pathSort, pathSort), z3.mkBoolSort)
+  val (existsSymbol, pexists) = mkZ3Func("exists", Seq(pathSort), z3.mkBoolSort)
+  val (isdirSymbol, isdir) = mkZ3Func("isdir", Seq(pathSort), z3.mkBoolSort)
+  val (isregularfileSymbol, isregularfile) = mkZ3Func("isregularfile", Seq(pathSort), z3.mkBoolSort)
+  val (islinkSymbol, islink) = mkZ3Func("islink", Seq(pathSort), z3.mkBoolSort)
+
   val (mkdirSymbol, mkdir) = mkZ3Func("mkdir", Seq(pathSort), sSort)
   val (rmdirSymbol, rmdir) = mkZ3Func("rmdir", Seq(pathSort), sSort)
   val (createSymbol, create) = mkZ3Func("create", Seq(pathSort), sSort)
   val (deleteSymbol, delete) = mkZ3Func("delete", Seq(pathSort), sSort)
+  val (linkSymbol, link) = mkZ3Func("link", Seq(pathSort), sSort)
+  val (unlinkSymbol, unlink) = mkZ3Func("unlink", Seq(pathSort), sSort)
   val (shellSymbol, shell) = mkZ3Func("shell", Seq(pathSort), sSort)
-  val (idSymbol, id) = mkZ3Func("id", Seq(pathSort), sSort)
 
+  /*
   val funcMap = Map(errSymbol -> err,
                     seqSymbol -> seq,
+                    unionSymbol -> union,
                     ancSymbol -> is_ancestor,
                     dirnameSymbol -> dirname,
                     mkdirSymbol -> mkdir,
@@ -49,6 +63,7 @@ class Z3Puppet {
                     deleteSymbol -> delete,
                     shellSymbol -> shell,
                     idSymbol -> id)
+  */
 
   private val rootPathSymbol = z3.mkStringSymbol("root")
   private val root = z3.mkConst(rootPathSymbol, pathSort)
@@ -67,6 +82,15 @@ class Z3Puppet {
   // '/a' -> a ...
   private val pathMap = collection.mutable.Map[Path, Z3AST]((Paths.get("/"), root))
 
+  def toZ3Path(p: Path): Z3AST = {
+    val ast = pathMap.get(p)
+    ast getOrElse {
+      val newast = z3.mkConst(p.toString, pathSort)
+      pathMap += ((p, newast))
+      newast
+    }
+  }
+
   def toZ3Path(path: String): Z3AST = {
     val p = Paths.get(path).normalize()
     val ast = pathMap.get(p)
@@ -75,6 +99,10 @@ class Z3Puppet {
       pathMap += ((p, newast))
       newast
     }
+  }
+
+  def toZ3Cmd(cmd: String): Z3AST = {
+    z3.mkConst(cmd, cmdSort)
   }
 
   // Define dir Name
@@ -134,13 +162,16 @@ class Z3Puppet {
     val dirnameDefn = z3.mkForAll(0, List(), List((p1Symbol, pathSort), (p2Symbol, pathSort)), dirnameAxiom)
     val isancestorDefn = z3.mkForAll(0, List(), List((p1Symbol, pathSort), (p2Symbol, pathSort)), isancestorAxiom)
 
-    
     val solver = z3.mkSolver
+
+    solver.assertCnstr(dirnameDefn)
+    solver.assertCnstr(isancestorDefn)
+
 
     val z3paths = pathMap.values.toSeq
     solver.assertCnstr(z3.mkDistinct(z3paths: _*))
 
-    /**************************** seq assoc axioms *************************************/
+    /**************************** seq op is associative *************************************/
     val sa = z3.mkBound(0, sSort)
     val sb = z3.mkBound(1, sSort)
     val sc = z3.mkBound(2, sSort)
@@ -155,14 +186,19 @@ class Z3Puppet {
 
 
     /**************************** mkdir is commutative ********************************/
-    val mkdir_commute = z3.mkImplies((!is_ancestor(p1, p2) && !is_ancestor(p2, p1)).ast(z3),
-                                     z3.mkEq(seq(mkdir(p1), mkdir(p2)), seq(mkdir(p2), mkdir(p1))))
-    val commute_forall = z3.mkForAll(0, List(), List((p1Symbol, pathSort), (p2Symbol, pathSort)), mkdir_commute)
-    solver.assertCnstr(commute_forall)
+    val mkdir_commute_axiom = z3.mkImplies((!is_ancestor(p1, p2) && !is_ancestor(p2, p1)).ast(z3),
+                                           z3.mkEq(seq(mkdir(p1), mkdir(p2)), seq(mkdir(p2), mkdir(p1))))
+    val mkdir_commute_forall = z3.mkForAll(0, List(), List((p1Symbol, pathSort), (p2Symbol, pathSort)), mkdir_commute_axiom)
+    solver.assertCnstr(mkdir_commute_forall)
     /*********************************************************************************/
 
-    solver.assertCnstr(dirnameDefn)
-    solver.assertCnstr(isancestorDefn)
+    /**************************** create is commutative ********************************/
+    val create_commute_axiom = z3.mkImplies((!is_ancestor(p1, p2) && !is_ancestor(p2, p1)).ast(z3),
+                                            z3.mkEq(seq(create(p1), create(p2)), seq(create(p2), create(p1))))
+    val create_commute_forall = z3.mkForAll(0, List(), List((p1Symbol, pathSort), (p2Symbol, pathSort)), create_commute_axiom)
+    solver.assertCnstr(create_commute_forall)
+    /*********************************************************************************/
+
     solver.assertCnstr(ast)
     solver.checkAssumptions()
   }

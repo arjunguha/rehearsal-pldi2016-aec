@@ -1,49 +1,37 @@
 package equiv.desugar
 
+import equiv.ast
 import equiv.ast._
 import equiv.sat._
 import z3.scala._
-/*
-import java.nio.file.Path
+import z3.scala.dsl._
 
-sealed trait ExprC
-
-sealed trait OpC extends ExprC
-case class CreateFileC(p: Path, c: Content) extends OpC
-case class DeleteFileC(p: Path) extends OpC
-case class MkDirC(p: Path) extends OpC
-case class RmDirC(p: Path) extends OpC
-case class LinkC(p: Path, t: Path) extends OpC
-case class UnlinkC(p: Path) extends OpC
-case class ShellExecC(cmd: String) extends OpC
-
-
-case class App(pr: Predicate) extends ExprC
-case class Seq(lhs: ExprC, rhs: ExprC) extends ExprC
-case class Union(lhs: ExprC, rhs: ExprC) extends ExprC
-*/
-
-
-/*
 object Desugar {
 
-  private def desugarPredicate(pr: Predicate): Z3AST = pr match {
-    case 
+  private def DesugarPred(pr: Predicate)(implicit z3: Z3Puppet): Z3AST = pr match {
+    case True => (true).ast(z3.context)
+    case False => (false).ast(z3.context)
+    case Exists(p) => z3.pexists(z3.toZ3Path(p))
+    case IsDir(p) => z3.isdir(z3.toZ3Path(p))
+    case IsLink(p) => z3.islink(z3.toZ3Path(p))
+    case IsRegularFile(p) => z3.isregularfile(z3.toZ3Path(p))
+    case ast.And(lhs, rhs) => (DesugarPred(lhs) && DesugarPred(rhs)).ast(z3.context)
+    case ast.Or(lhs, rhs) => (DesugarPred(lhs) && DesugarPred(rhs)).ast(z3.context)
+    case ast.Not(pr) => (!DesugarPred(pr)).ast(z3.context)
+    case IsEqual(lhs, rhs) => DesugarPred(lhs) === DesugarPred(rhs)
+  }
 
-  def apply (expr: Expr)(implicit val z3: Z3Puppet): Z3AST = expr match {
-    case Block(exprs @ _*) if 0 == exprs.size => Z3Puppet.id
+  def apply (expr: Expr)(implicit z3: Z3Puppet): Z3AST = expr match {
+    case Block(exprs @ _*) if 0 == exprs.size => z3.id()
     case Block(exprs @ _*) if 1 == exprs.size => Desugar(exprs(0))
-    case Block(exprs @ _*) => exprs.foldRight(Z3Puppet.id)((e, acc) => Seq(Desugar(e), acc))
-    case If(cond, trueBranch, falseBranch) => Z3Puppet.seq(App(cond), Desugar(trueBranch)),
-                                                    Seq(App(Not(cond)), Desugar(falseBranch)))
-
-    case CreateFile(p, _) => Z3Puppet.create(Z3Puppet.toZ3Path(p))
-    case DeleteFile(p) => Z3Puppet.delete(Z3Puppet.toZ3Path(p))
-    case MkDir(p) => Z3Puppet.mkdir(Z3Puppet.toZ3Path(p))
-    case RmDir(p) => Z3Puppet.rmdir(Z3Puppet.toZ3Path(p))
-    case Link(p, _) => Z3Puppet.link(Z3Puppet.toZ3Path(p))
-    case Unlink(p) => Z3Puppet.unlink(Z3Puppet.toZ3Path(p))
-    case ShellExec(cmd) => // Z3Puppet.shell(cmd)
+    case Block(exprs @ _*) => exprs.foldRight(z3.id())((e, acc) => z3.seq(Desugar(e), acc))
+    case If(cond, trueBranch, falseBranch) => z3.union(DesugarPred(cond), Desugar(trueBranch), Desugar(falseBranch)) 
+    case CreateFile(p, _) => z3.create(z3.toZ3Path(p))
+    case DeleteFile(p) => z3.delete(z3.toZ3Path(p))
+    case MkDir(p) => z3.mkdir(z3.toZ3Path(p))
+    case RmDir(p) => z3.rmdir(z3.toZ3Path(p))
+    case Link(p, _) => z3.link(z3.toZ3Path(p))
+    case Unlink(p) => z3.unlink(z3.toZ3Path(p))
+    case ShellExec(cmd) => z3.shell(z3.toZ3Cmd(cmd))
   }
 }
-*/
