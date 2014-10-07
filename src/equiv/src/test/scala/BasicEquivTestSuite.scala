@@ -18,14 +18,14 @@ class Core extends FunSuite with Matchers {
     val symbol = z3.mkStringSymbol(name)
     (symbol, z3.mkFuncDecl(symbol, DomainSorts, RangeSort))
   }
-              
+
 
   test("Core") {
     implicit val z3 = new Z3Context(new Z3Config("MODEL" -> true))
 
     val (pathSymbol, pathSort) = mkZ3Sort("Path")
     val (sSymbol, sSort) = mkZ3Sort("S")
- 
+
     val (errSymbol, err) = mkZ3Func("err", Seq(), sSort)
     val (seqSymbol, seq) = mkZ3Func("seq", Seq(sSort, sSort), sSort)
     val (ancSymbol, is_ancestor) = mkZ3Func("is-ancestor", Seq(pathSort, pathSort), z3.mkBoolSort)
@@ -105,6 +105,24 @@ class Core extends FunSuite with Matchers {
     val seq = z3.seq
 
     val commute_axiom = seq(mkdir(z3p1), mkdir(z3p2)) !== seq(mkdir(z3p2), mkdir(z3p1))
+
+    assert(z3.isSatisfiable(commute_axiom) == Some(false))
+  }
+
+  test("mkdir-commutes-3") {
+    val z3 = new Z3Puppet
+    import z3._
+
+    val p1 = "/b"
+    val p2 = "/c"
+    val p3 = "/c"
+
+    val z3p1 = toZ3Path (p1)
+    val z3p2 = toZ3Path (p2)
+    val z3p3 = toZ3Path(p3)
+
+    val commute_axiom = seq(mkdir(z3p1), seq(mkdir(z3p3), mkdir(z3p2))) !==
+                        seq(seq(mkdir(z3p3), mkdir(z3p2)), mkdir(z3p1))
 
     assert(z3.isSatisfiable(commute_axiom) == Some(false))
   }
