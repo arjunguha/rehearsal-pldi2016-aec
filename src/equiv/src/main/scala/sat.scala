@@ -186,7 +186,6 @@ class Z3Puppet {
     val solver = z3.mkSolver
 
     val dirnamerelation = dirnameRelation(pathMap.keySet.toSet)
-    val isAncestorRelation = transitiveClosure(dirnamerelation)
 
     val dirnameAxiom = forall(pathSort, pathSort) { (p1, p2) =>
       dirnameaxiomtree(dirnamerelation, p1, p2)
@@ -194,7 +193,7 @@ class Z3Puppet {
     solver.assertCnstr(dirnameAxiom)
 
     val isancestorAxiom = forall(pathSort, pathSort) { (p1, p2) =>
-      isAncestorAxiomTree(isAncestorRelation, p1, p2)
+      isAncestorAxiomTree(transitiveClosure(dirnamerelation), p1, p2)
     }
     solver.assertCnstr(isancestorAxiom)
 
