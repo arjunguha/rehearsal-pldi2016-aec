@@ -149,6 +149,7 @@ class Z3Puppet {
   def isEquiv(e1: equiv.ast.Expr, e2: equiv.ast.Expr): Option[Boolean] = {
     import equiv.desugar.Desugar
     implicit val z3 = this
+    pathMap.clear
     val e1Z3 = Desugar(e1)
     val e2Z3 = Desugar(e2)
     isSatisfiable(e1Z3 !== e2Z3) map { b => !b }
@@ -182,8 +183,35 @@ class Z3Puppet {
   }
 
 
+  val solver = z3.mkSolver
+
+  // Axioms
+  val id_seq_r = forall(sSort) { a => seq(a, id()) === a }
+  solver.assertCnstr(id_seq_r)
+
+  val seq_assoc = forall(sSort, sSort, sSort) { (sa, sb, sc) =>
+    seq(sa, seq (sb, sc)) === seq(seq(sa, sb), sc)
+  }
+  solver.assertCnstr(seq_assoc)
+
+  val mkdir_comm = forall(pathSort, pathSort) { (p1, p2) =>
+    val e = (!is_ancestor(p1, p2) && !is_ancestor(p2, p1)) -->
+            (seq(mkdir(p1), mkdir(p2)) === seq(mkdir(p2), mkdir(p1)))
+    e.ast(z3)
+  }
+  solver.assertCnstr(mkdir_comm)
+
+  val create_comm = forall(pathSort, pathSort) { (p1, p2) =>
+    val e = (!is_ancestor(p1, p2) && !is_ancestor(p2, p1)) -->
+            (seq(create(p1), create(p2)) === seq(create(p2), create(p1)))
+    e.ast(z3)
+  }
+  solver.assertCnstr(create_comm)
+
+
   def isSatisfiable(ast: Z3AST): Option[Boolean] = {
-    val solver = z3.mkSolver
+
+    solver.push
 
     val dirnamerelation = dirnameRelation(pathMap.keySet.toSet)
 
@@ -200,30 +228,10 @@ class Z3Puppet {
     val z3paths = pathMap.values.toSeq
     solver.assertCnstr(z3.mkDistinct(z3paths: _*))
 
-    val id_seq_r = forall(sSort) { a => seq(a, id()) === a }
-    solver.assertCnstr(id_seq_r)
-
-    val seq_assoc = forall(sSort, sSort, sSort) { (sa, sb, sc) =>
-      seq(sa, seq (sb, sc)) === seq(seq(sa, sb), sc)
-    }
-    solver.assertCnstr(seq_assoc)
-
-    val mkdir_comm = forall(pathSort, pathSort) { (p1, p2) =>
-      val e =(!is_ancestor(p1, p2) && !is_ancestor(p2, p1)) -->
-               (seq(mkdir(p1), mkdir(p2)) === seq(mkdir(p2), mkdir(p1)))
-      e.ast(z3)
-    }
-    solver.assertCnstr(mkdir_comm)
-
-    val create_comm = forall(pathSort, pathSort) { (p1, p2) =>
-      val e = (!is_ancestor(p1, p2) && !is_ancestor(p2, p1)) -->
-              (seq(create(p1), create(p2)) === seq(create(p2), create(p1)))
-      e.ast(z3)
-    }
-    solver.assertCnstr(create_comm)
-
-
     solver.assertCnstr(ast)
-    solver.checkAssumptions()
+    val result = solver.checkAssumptions()
+    solver.pop()
+
+    result
   }
 }
