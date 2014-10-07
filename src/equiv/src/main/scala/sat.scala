@@ -154,68 +154,73 @@ class Z3Puppet {
     isSatisfiable(e1Z3 !== e2Z3) map { b => !b }
   }
 
-  def forall(x: String, sort: Z3Sort)(body: Z3AST => Z3AST): Z3AST = {
-    val n = z3.mkBound(0, sort)
-    val s = z3.mkStringSymbol(x)
-    z3.mkForAll(0, Seq(), Seq(s -> sort), body(n))
+  def forall(s: Z3Sort)(body: Z3AST => Z3AST): Z3AST = {
+    val n = z3.mkBound(0, s)
+    z3.mkForAll(0, Seq(), Seq(z3.mkStringSymbol("x") -> s), body(n))
   }
 
+  def forall(s1: Z3Sort, s2: Z3Sort)
+            (body: (Z3AST, Z3AST) => Z3AST): Z3AST = {
+    val n1 = z3.mkBound(0, s1)
+    val n2 = z3.mkBound(1, s2)
+    z3.mkForAll(0, Seq(),
+                Seq(z3.mkStringSymbol("x") -> s1,
+                    z3.mkStringSymbol("y") -> s2),
+                body(n1, n2))
+  }
+
+  def forall(s1: Z3Sort, s2: Z3Sort, s3: Z3Sort)
+            (body: (Z3AST, Z3AST, Z3AST) => Z3AST): Z3AST = {
+    val n1 = z3.mkBound(0, s1)
+    val n2 = z3.mkBound(1, s2)
+    val n3 = z3.mkBound(2, s3)
+    z3.mkForAll(0, Seq(),
+                Seq(z3.mkStringSymbol("x") -> s1,
+                    z3.mkStringSymbol("y") -> s2,
+                    z3.mkStringSymbol("z") -> s3),
+                body(n1, n2, n3))
+  }
+
+
   def isSatisfiable(ast: Z3AST): Option[Boolean] = {
+    val solver = z3.mkSolver
+
     val dirnamerelation = dirnameRelation(pathMap.keySet.toSet)
     val isAncestorRelation = transitiveClosure(dirnamerelation)
 
-    val p1 = z3.mkBound(0, pathSort)
-    val p2 = z3.mkBound(1, pathSort)
+    val dirnameAxiom = forall(pathSort, pathSort) { (p1, p2) =>
+      dirnameaxiomtree(dirnamerelation, p1, p2)
+    }
+    solver.assertCnstr(dirnameAxiom)
 
-    val dirnameAxiom = dirnameaxiomtree(dirnamerelation, p1, p2)
-    val isancestorAxiom = isAncestorAxiomTree(isAncestorRelation, p1, p2)
-
-
-    val p1Symbol = z3.mkStringSymbol("p1")
-    val p2Symbol = z3.mkStringSymbol("p2")
-
-    val dirnameDefn = z3.mkForAll(0, List(), List((p1Symbol, pathSort), (p2Symbol, pathSort)), dirnameAxiom)
-    val isancestorDefn = z3.mkForAll(0, List(), List((p1Symbol, pathSort), (p2Symbol, pathSort)), isancestorAxiom)
-
-    val solver = z3.mkSolver
-
-    solver.assertCnstr(dirnameDefn)
-    solver.assertCnstr(isancestorDefn)
-
+    val isancestorAxiom = forall(pathSort, pathSort) { (p1, p2) =>
+      isAncestorAxiomTree(isAncestorRelation, p1, p2)
+    }
+    solver.assertCnstr(isancestorAxiom)
 
     val z3paths = pathMap.values.toSeq
     solver.assertCnstr(z3.mkDistinct(z3paths: _*))
 
-    val id_seq_r = forall("a", sSort) { a => seq(a, id()) === a }
+    val id_seq_r = forall(sSort) { a => seq(a, id()) === a }
     solver.assertCnstr(id_seq_r)
 
-    /**************************** seq op is associative *************************************/
-    val sa = z3.mkBound(0, sSort)
-    val sb = z3.mkBound(1, sSort)
-    val sc = z3.mkBound(2, sSort)
-    val assoc = z3.mkEq(seq(sa, seq (sb, sc)), seq(seq(sa, sb), sc))
+    val seq_assoc = forall(sSort, sSort, sSort) { (sa, sb, sc) =>
+      z3.mkEq(seq(sa, seq (sb, sc)), seq(seq(sa, sb), sc))
+    }
+    solver.assertCnstr(seq_assoc)
 
-    val saSymbol = z3.mkStringSymbol("sa")
-    val sbSymbol = z3.mkStringSymbol("sb")
-    val scSymbol = z3.mkStringSymbol("sc")
-    val assoc_forall = z3.mkForAll(0, List(), List((saSymbol, sSort), (sbSymbol, sSort), (scSymbol, sSort)), assoc)
-    solver.assertCnstr(assoc_forall)
-    /**********************************************************************************/
+    val mkdir_comm = forall(pathSort, pathSort) { (p1, p2) =>
+      z3.mkImplies((!is_ancestor(p1, p2) && !is_ancestor(p2, p1)).ast(z3),
+                   z3.mkEq(seq(mkdir(p1), mkdir(p2)), seq(mkdir(p2), mkdir(p1))))
+    }
+    solver.assertCnstr(mkdir_comm)
 
+    val create_comm = forall(pathSort, pathSort) { (p1, p2) =>
+      z3.mkImplies((!is_ancestor(p1, p2) && !is_ancestor(p2, p1)).ast(z3),
+                   z3.mkEq(seq(create(p1), create(p2)), seq(create(p2), create(p1))))
+    }
+    solver.assertCnstr(create_comm)
 
-    /**************************** mkdir is commutative ********************************/
-    val mkdir_commute_axiom = z3.mkImplies((!is_ancestor(p1, p2) && !is_ancestor(p2, p1)).ast(z3),
-                                           z3.mkEq(seq(mkdir(p1), mkdir(p2)), seq(mkdir(p2), mkdir(p1))))
-    val mkdir_commute_forall = z3.mkForAll(0, List(), List((p1Symbol, pathSort), (p2Symbol, pathSort)), mkdir_commute_axiom)
-    solver.assertCnstr(mkdir_commute_forall)
-    /*********************************************************************************/
-
-    /**************************** create is commutative ********************************/
-    val create_commute_axiom = z3.mkImplies((!is_ancestor(p1, p2) && !is_ancestor(p2, p1)).ast(z3),
-                                            z3.mkEq(seq(create(p1), create(p2)), seq(create(p2), create(p1))))
-    val create_commute_forall = z3.mkForAll(0, List(), List((p1Symbol, pathSort), (p2Symbol, pathSort)), create_commute_axiom)
-    solver.assertCnstr(create_commute_forall)
-    /*********************************************************************************/
 
     solver.assertCnstr(ast)
     solver.checkAssumptions()
