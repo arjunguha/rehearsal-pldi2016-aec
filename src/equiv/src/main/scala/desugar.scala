@@ -25,7 +25,7 @@ object Desugar {
     case Block(exprs @ _*) if 0 == exprs.size => z3.id()
     case Block(exprs @ _*) if 1 == exprs.size => Desugar(exprs(0))
     case Block(exprs @ _*) => exprs.foldRight(z3.id())((e, acc) => z3.seq(Desugar(e), acc))
-    case If(cond, trueBranch, falseBranch) => z3.union(DesugarPred(cond), Desugar(trueBranch), Desugar(falseBranch)) 
+    case If(cond, trueBranch, falseBranch) => z3.union(DesugarPred(cond), Desugar(trueBranch), Desugar(falseBranch))
     case CreateFile(p, _) => z3.create(z3.toZ3Path(p))
     case DeleteFile(p) => z3.delete(z3.toZ3Path(p))
     case MkDir(p) => z3.mkdir(z3.toZ3Path(p))

@@ -145,6 +145,21 @@ class Z3Puppet {
     z3.mkImplies(is_ancestor(p1, p2), ((p1 === p2) || condexpr).ast(z3))
   }
 
+
+  def isEquiv(e1: equiv.ast.Expr, e2: equiv.ast.Expr): Option[Boolean] = {
+    import equiv.desugar.Desugar
+    implicit val z3 = this
+    val e1Z3 = Desugar(e1)
+    val e2Z3 = Desugar(e2)
+    isSatisfiable(e1Z3 !== e2Z3) map { b => !b }
+  }
+
+  def forall(x: String, sort: Z3Sort)(body: Z3AST => Z3AST): Z3AST = {
+    val n = z3.mkBound(0, sort)
+    val s = z3.mkStringSymbol(x)
+    z3.mkForAll(0, Seq(), Seq(s -> sort), body(n))
+  }
+
   def isSatisfiable(ast: Z3AST): Option[Boolean] = {
     val dirnamerelation = dirnameRelation(pathMap.keySet.toSet)
     val isAncestorRelation = transitiveClosure(dirnamerelation)
@@ -170,6 +185,9 @@ class Z3Puppet {
 
     val z3paths = pathMap.values.toSeq
     solver.assertCnstr(z3.mkDistinct(z3paths: _*))
+
+    val id_seq_r = forall("a", sSort) { a => seq(a, id()) === a }
+    solver.assertCnstr(id_seq_r)
 
     /**************************** seq op is associative *************************************/
     val sa = z3.mkBound(0, sSort)

@@ -1,8 +1,10 @@
 package equiv.ast
 
-// Surface Verification Lanuguage AST nodes
-import java.nio.file.Path
+import z3.scala._
+import equiv.sat._
 
+// Surface Verification Lanuguage AST nodes
+import java.nio.file.{Path, Paths}
 
 sealed trait Predicate
 case object True extends Predicate
@@ -36,6 +38,13 @@ case class RmDir(p: Path) extends Op
 case class Link(p: Path, t: Path) extends Op
 case class Unlink(p: Path) extends Op
 case class ShellExec(cmd: String) extends Op
+
+object MkDir {
+  def apply(p: String): MkDir = {
+  MkDir(Paths.get(p).normalize)
+}
+}
+
 
 object Predicate {
 

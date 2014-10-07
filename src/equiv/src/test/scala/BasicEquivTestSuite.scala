@@ -1,3 +1,4 @@
+import equiv.ast._
 
 import org.scalatest.{FunSuite, Matchers}
 
@@ -109,21 +110,26 @@ class Core extends FunSuite with Matchers {
     assert(z3.isSatisfiable(commute_axiom) == Some(false))
   }
 
-  test("mkdir-commutes-3") {
-    val z3 = new Z3Puppet
-    import z3._
-
-    val p1 = "/b"
-    val p2 = "/c"
-    val p3 = "/c"
-
-    val z3p1 = toZ3Path (p1)
-    val z3p2 = toZ3Path (p2)
-    val z3p3 = toZ3Path(p3)
-
-    val commute_axiom = seq(mkdir(z3p1), seq(mkdir(z3p3), mkdir(z3p2))) !==
-                        seq(seq(mkdir(z3p3), mkdir(z3p2)), mkdir(z3p1))
-
-    assert(z3.isSatisfiable(commute_axiom) == Some(false))
+  test("mkdir commutes") {
+    val e1 = Block(MkDir("/a"), MkDir("/b"))
+    val e2 = Block(MkDir("/b"), MkDir("/a"))
+    val z3 = new Z3Puppet()
+    assert(Some(true) == z3.isEquiv(e1, e2))
   }
+
+  test("mkdir commutes (2x associativity needed)") {
+    val z3 = new Z3Puppet()
+    val e1 = Block(MkDir("/a"), Block(MkDir("/b"), MkDir("/c")))
+    val e2 = Block(Block(MkDir("/c"), MkDir("/a")), MkDir("/b"))
+    assert(Some(true) == z3.isEquiv(e1, e2))
+  }
+
+  test("mkdir commutes (3x associativity needed)") {
+    val z3 = new Z3Puppet()
+    val e1 = Block(MkDir("/a"), Block(MkDir("/c"), MkDir("/b")))
+    val e2 = Block(Block(MkDir("/c"), MkDir("/a")), MkDir("/b"))
+    assert(Some(true) == z3.isEquiv(e1, e2))
+  }
+
+
 }
