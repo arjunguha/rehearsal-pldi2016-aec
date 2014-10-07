@@ -205,19 +205,21 @@ class Z3Puppet {
     solver.assertCnstr(id_seq_r)
 
     val seq_assoc = forall(sSort, sSort, sSort) { (sa, sb, sc) =>
-      z3.mkEq(seq(sa, seq (sb, sc)), seq(seq(sa, sb), sc))
+      seq(sa, seq (sb, sc)) === seq(seq(sa, sb), sc)
     }
     solver.assertCnstr(seq_assoc)
 
     val mkdir_comm = forall(pathSort, pathSort) { (p1, p2) =>
-      z3.mkImplies((!is_ancestor(p1, p2) && !is_ancestor(p2, p1)).ast(z3),
-                   z3.mkEq(seq(mkdir(p1), mkdir(p2)), seq(mkdir(p2), mkdir(p1))))
+      val e =(!is_ancestor(p1, p2) && !is_ancestor(p2, p1)) -->
+               (seq(mkdir(p1), mkdir(p2)) === seq(mkdir(p2), mkdir(p1)))
+      e.ast(z3)
     }
     solver.assertCnstr(mkdir_comm)
 
     val create_comm = forall(pathSort, pathSort) { (p1, p2) =>
-      z3.mkImplies((!is_ancestor(p1, p2) && !is_ancestor(p2, p1)).ast(z3),
-                   z3.mkEq(seq(create(p1), create(p2)), seq(create(p2), create(p1))))
+      val e = (!is_ancestor(p1, p2) && !is_ancestor(p2, p1)) -->
+              (seq(create(p1), create(p2)) === seq(create(p2), create(p1)))
+      e.ast(z3)
     }
     solver.assertCnstr(create_comm)
 
