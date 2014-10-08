@@ -29,9 +29,20 @@ class Core extends FunSuite with Matchers {
   }
 
   // This test hangs
-  // test("creating two distinct paths is not the same") {
-  //   assert(Some(true) == z3p.isEquiv(MkDir("/a"), MkDir("/b")))
-  // }
+  /*
+  test("creating two distinct paths is not the same") {
+     assert(Some(true) == z3p.isEquiv(MkDir("/a"), MkDir("/b")))
+  }
+  */
 
+  test ("creating two distinct paths is not the same") {
 
+    import z3p._ 
+
+    val p1 = z3p.toZ3Path("/a")
+    val p2 = z3p.toZ3Path("/b")
+
+    val axiom = mkdir(p1) === mkdir(p2)
+    assert(Some(false) == z3p.isSatisfiable(axiom))
+  }
 }
