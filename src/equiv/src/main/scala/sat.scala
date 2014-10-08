@@ -10,63 +10,34 @@ class Z3Puppet {
   implicit val context = new Z3Context(new Z3Config("MODEL" -> true))
   private val z3 = context
 
-  private def mkZ3Sort(name: String)
-              (implicit z3: Z3Context): (Z3Symbol, Z3Sort) = {
-    val symbol = z3.mkStringSymbol(name)
-    (symbol, z3.mkUninterpretedSort(symbol))
-  }
-
-  def mkZ3Func(name: String, DomainSorts: Seq[Z3Sort], RangeSort: Z3Sort)
-              (implicit z3: Z3Context): (Z3Symbol, Z3FuncDecl) = {
-    val symbol = z3.mkStringSymbol(name)
-    (symbol, z3.mkFuncDecl(symbol, DomainSorts, RangeSort))
-  }
-
   // z3 sorts in our model
-  val (pathSymbol, pathSort) = mkZ3Sort("Path")
-  val (sSymbol, sSort) = mkZ3Sort("S")
-  val (cmdSymbol, cmdSort) = mkZ3Sort("Cmd")
-
-  /* val sortMap = Map(pathSymbol -> pathSort, sSymbol -> sSort) */
+  val pathSort = z3.mkUninterpretedSort("Path")
+  val sSort    = z3.mkUninterpretedSort("S")
+  val cmdSort  = z3.mkUninterpretedSort("Cmd")
 
   // z3 func declares in our model
-  val (errSymbol, err) = mkZ3Func("err", Seq(), sSort) // 0 in KAT
-  val (idSymbol, id) = mkZ3Func("id", Seq(), sSort) // 1 in KAT
+  val err = z3.mkFuncDecl("err", Seq(), sSort) // 0 in KAT
+  val id = z3.mkFuncDecl("id", Seq(), sSort) // 1 in KAT
 
-  val (seqSymbol, seq) = mkZ3Func("seq", Seq(sSort, sSort), sSort)
-  val (unionSymbol, union) = mkZ3Func("union", Seq(z3.mkBoolSort, sSort, sSort), sSort)
+  val seq   = z3.mkFuncDecl("seq", Seq(sSort, sSort), sSort)
+  val union = z3.mkFuncDecl("opt", Seq(z3.mkBoolSort, sSort, sSort), sSort)
 
-  val (ancSymbol, is_ancestor) = mkZ3Func("is-ancestor", Seq(pathSort, pathSort), z3.mkBoolSort)
-  val (dirnameSymbol, dirname) = mkZ3Func("dirname", Seq(pathSort, pathSort), z3.mkBoolSort)
-  val (existsSymbol, pexists) = mkZ3Func("exists", Seq(pathSort), z3.mkBoolSort)
-  val (isdirSymbol, isdir) = mkZ3Func("isdir", Seq(pathSort), z3.mkBoolSort)
-  val (isregularfileSymbol, isregularfile) = mkZ3Func("isregularfile", Seq(pathSort), z3.mkBoolSort)
-  val (islinkSymbol, islink) = mkZ3Func("islink", Seq(pathSort), z3.mkBoolSort)
+  val is_ancestor   = z3.mkFuncDecl("is-ancestor", Seq(pathSort, pathSort), z3.mkBoolSort)
+  val dirname       = z3.mkFuncDecl("dirname", Seq(pathSort, pathSort), z3.mkBoolSort)
+  val pexists       = z3.mkFuncDecl("exists", Seq(pathSort), z3.mkBoolSort)
+  val isdir         = z3.mkFuncDecl("isdir", Seq(pathSort), z3.mkBoolSort)
+  val isregularfile = z3.mkFuncDecl("isregularfile", Seq(pathSort), z3.mkBoolSort)
+  val islink        = z3.mkFuncDecl("islink", Seq(pathSort), z3.mkBoolSort)
 
-  val (mkdirSymbol, mkdir) = mkZ3Func("mkdir", Seq(pathSort), sSort)
-  val (rmdirSymbol, rmdir) = mkZ3Func("rmdir", Seq(pathSort), sSort)
-  val (createSymbol, create) = mkZ3Func("create", Seq(pathSort), sSort)
-  val (deleteSymbol, delete) = mkZ3Func("delete", Seq(pathSort), sSort)
-  val (linkSymbol, link) = mkZ3Func("link", Seq(pathSort), sSort)
-  val (unlinkSymbol, unlink) = mkZ3Func("unlink", Seq(pathSort), sSort)
-  val (shellSymbol, shell) = mkZ3Func("shell", Seq(pathSort), sSort)
+  val mkdir  = z3.mkFuncDecl("mkdir", Seq(pathSort), sSort)
+  val rmdir  = z3.mkFuncDecl("rmdir", Seq(pathSort), sSort)
+  val create = z3.mkFuncDecl("create", Seq(pathSort), sSort)
+  val delete = z3.mkFuncDecl("delete", Seq(pathSort), sSort)
+  val link   = z3.mkFuncDecl("link", Seq(pathSort), sSort)
+  val unlink = z3.mkFuncDecl("unlink", Seq(pathSort), sSort)
+  val shell  = z3.mkFuncDecl("shell", Seq(cmdSort), sSort)
 
-  /*
-  val funcMap = Map(errSymbol -> err,
-                    seqSymbol -> seq,
-                    unionSymbol -> union,
-                    ancSymbol -> is_ancestor,
-                    dirnameSymbol -> dirname,
-                    mkdirSymbol -> mkdir,
-                    rmdirSymbol -> rmdir,
-                    createSymbol -> create,
-                    deleteSymbol -> delete,
-                    shellSymbol -> shell,
-                    idSymbol -> id)
-  */
-
-  private val rootPathSymbol = z3.mkStringSymbol("root")
-  private val root = z3.mkConst(rootPathSymbol, pathSort)
+  private val root = z3.mkConst("root", pathSort)
 
   //one transitive step
   private def addTransitive[A](s: Set[(A, A)]) = {
@@ -208,8 +179,16 @@ class Z3Puppet {
   }
   solver.assertCnstr(create_comm)
 
+  val mkdir_inj = forall(pathSort, pathSort) { (p1, p2) =>
+    val e = (p1 !== p2) --> (mkdir(p1) !== mkdir(p2))
+    e.ast(z3)
+  }
+  solver.assertCnstr(mkdir_inj)
+
 
   def isSatisfiable(ast: Z3AST): Option[Boolean] = {
+
+    println(ast)
 
     solver.push
 
