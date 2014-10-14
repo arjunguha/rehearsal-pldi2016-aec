@@ -7,16 +7,17 @@
 (set-option :smt.ematching true)
 ;(set-option :model.compact true)
 
-;(declare-datatypes () ((Path root a b c g1 g2 gs1 gs2)))
-(declare-datatypes () ((Path root g1 g2 gs1 gs2)))
+(declare-datatypes () ((Path root a b c u1 u2 uh1 uh2 us1 us2 g1 g2 gs1 gs2)))
 
 ; paths are / /a /b /c
 (declare-fun dirname (Path Path) Bool)
 (assert (forall ((p1 Path) (p2 Path))
            (= (dirname p1 p2)
-              (or ;(and (= p1 a) (= p2 root))
-                  ;(and (= p1 b) (= p2 root))
-                  ;(and (= p1 c) (= p2 root))
+              (or (and (= p1 a) (= p2 root))
+                  (and (= p1 b) (= p2 root))
+                  (and (= p1 c) (= p2 root))
+                  (and (= p1 us1) (= p2 u1))
+                  (and (= p1 us2) (= p2 u2))
                   (and (= p1 gs1) (= p2 g1))
                   (and (= p1 gs2) (= p2 g2))))))
 
@@ -29,6 +30,8 @@
            (= (is-ancestor p1 p2)
                (or (= p1 p2)
                    (= root p2)
+                   (and (= p1 us1) (= p2 u1))
+                   (and (= p1 us2) (= p2 u2))
                    (and (= p1 gs1) (= p2 g1))
                    (and (= p1 gs2) (= p2 g2))))))
 
@@ -255,3 +258,24 @@
 (check-sat)
 (pop)
 
+
+(push)
+(assert (not (not (= (seq (opt (seq (seq (notpexists u1) (seq (mkdir u1) (create us1))) (opt (seq (notpexists uh1) (mkdir uh1)) (seq (pexists uh1) id))) (seq (pexists u1) id))
+                     (opt (seq (seq (seq (notpexists u2) (mkdir u2)) (create us2)) (opt (seq (notpexists uh2) (mkdir uh2)) (seq (pexists uh2) id))) (seq (pexists u2) id)))
+                (seq (opt (seq (seq (seq (notpexists u2) (mkdir u2)) (create us2)) (opt (seq (notpexists uh2) (mkdir uh2)) (seq (pexists uh2) id))) (seq (pexists u2) id))
+                     (opt (seq (seq (seq (notpexists u1) (mkdir u1)) (create us1)) (opt (seq (notpexists uh1) (mkdir uh1)) (seq (pexists uh1) id))) (seq (pexists u1) id)))
+))))
+(echo "Testing negation of user creation commutes .. Expected SAT/UNKNOWN")
+(check-sat)
+(push)
+
+
+(push)
+(assert (not (= (seq (opt (seq (seq (notpexists u1) (seq (mkdir u1) (create us1))) (opt (seq (notpexists uh1) (mkdir uh1)) (seq (pexists uh1) id))) (seq (pexists u1) id))
+                     (opt (seq (seq (seq (notpexists u2) (mkdir u2)) (create us2)) (opt (seq (notpexists uh2) (mkdir uh2)) (seq (pexists uh2) id))) (seq (pexists u2) id)))
+                (seq (opt (seq (seq (seq (notpexists u2) (mkdir u2)) (create us2)) (opt (seq (notpexists uh2) (mkdir uh2)) (seq (pexists uh2) id))) (seq (pexists u2) id))
+                     (opt (seq (seq (seq (notpexists u1) (mkdir u1)) (create us1)) (opt (seq (notpexists uh1) (mkdir uh1)) (seq (pexists uh1) id))) (seq (pexists u1) id)))
+)))
+(echo "Testing user creation commutes .. Expected Unsat")
+(check-sat)
+(push)
