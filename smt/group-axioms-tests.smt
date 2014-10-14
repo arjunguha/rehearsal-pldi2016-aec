@@ -164,7 +164,6 @@
      (=> (not (= p1 p2))
          (= (seq (pexists p1) (mkdir p2)) (seq (mkdir p2) (pexists p1))))))
 
-
 ; notpexists commmutes with mkdir
 (assert
   (forall ((p1 Path) (p2 Path))
@@ -183,33 +182,6 @@
   (forall ((p1 Path) (p2 Path))
      (=> (not (= p1 p2))
          (= (seq (notpexists p1) (create p2)) (seq (create p2) (notpexists p1))))))
-
-
-; triplets of seq commutes when 
-(assert
-   (forall ((s1 S) (s2 S) (s3 S))
-      (=> (and (= (seq s1 s2) (seq s2 s1))
-               (= (seq s1 s3) (seq s3 s1)))
-          (= (seq s1 (seq s2 s3)) (seq (seq s2 s3) s1)))))
-
-
-;(assert
-;   (forall ((s1 S) (s2 S) (s3 S) (s4 S))
-;      (=> (and (= (seq s1 s3) (seq s3 s1))
-;               (= (seq s1 s4) (seq s4 s1))
-;               (= (seq s2 s3) (seq s3 s2))
-;               (= (seq s2 s4) (seq s4 s2)))
-;          (= (seq (seq s1 s2) (seq s3 s4)) (seq (seq s3 s4) (seq s1 s2))))))
-
-(assert
-  (forall ((s1 S) (s2 S) (s3 S) (s4 S))
-     (=> (and (= (seq s1 s3) (seq s3 s1))
-              (= (seq s1 s4) (seq s4 s1))
-              (= (seq s2 s3) (seq s3 s2))
-              (= (seq s2 s4) (seq s4 s2)))
-         (= (seq (opt s1 s2) (opt s3 s4)) (seq (opt s3 s4) (opt s1 s2))))))
-
-
 
 ;(echo "Expected SAT:")
 ;(check-sat)
