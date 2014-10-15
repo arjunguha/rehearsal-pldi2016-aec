@@ -19,7 +19,7 @@ object Provider {
 
   def apply(r: Resource): Provider = r.typ match {
     case "File" => File(r)
-    // case "Package" => PuppetPackage(r)
+    case "Package" => PuppetPackage(r)
     case "User" => User(r)
     // case "Notify" => Notify(r)
     // case "Service" => Service(r)

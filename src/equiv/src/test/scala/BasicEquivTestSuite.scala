@@ -10,6 +10,12 @@ class Core extends FunSuite with Matchers {
 
   val z3p = new Z3Puppet()
 
+  test("sanity check") {
+    // Should get unknown or sat
+    z3p.printAssertions
+    assert(Some(false) != z3p.sanityCheck())
+  }
+
   test("mkdir commutes") {
     val e1 = Block(MkDir("/a"), MkDir("/b"))
     val e2 = Block(MkDir("/b"), MkDir("/a"))
@@ -28,14 +34,54 @@ class Core extends FunSuite with Matchers {
     assert(Some(true) == z3p.isEquiv(e1, e2))
   }
 
-  // This test hangs
+  test("Group creation should commute for different groups") {
+
+    import equiv.semantics._
+    import puppet.common.resource._
+
+    val attrs1 = Map("type" -> StringV("Group"),
+                     "name" -> StringV("abc"),
+                     "ensure" -> StringV("present"),
+                     "managehome" -> StringV("yes"))
+    val attrs2 = Map("type" -> StringV("Group"),
+                     "name" -> StringV("xyz"),
+                     "ensure" -> StringV("present"),
+                     "managehome" -> StringV("yes"))
+
+    val u1 = Provider(Resource(attrs1))
+    val u2 = Provider(Resource(attrs2))
+    assert(Some(true) == z3p.isEquiv(u1.toFSOps, u2.toFSOps))
+  }
+
+
   /*
-  test("creating two distinct paths is not the same") {
-     assert(Some(true) == z3p.isEquiv(MkDir("/a"), MkDir("/b")))
+  test("user creation should commute for different users") {
+
+    import equiv.semantics._
+    import puppet.common.resource._
+
+    val attrs1 = Map("type" -> StringV("User"),
+                     "name" -> StringV("abc"),
+                     "ensure" -> StringV("present"),
+                     "managehome" -> StringV("yes"))
+    val attrs2 = Map("type" -> StringV("User"),
+                     "name" -> StringV("xyz"),
+                     "ensure" -> StringV("present"),
+                     "managehome" -> StringV("yes"))
+
+    val u1 = Provider(Resource(attrs1))
+    val u2 = Provider(Resource(attrs2))
+    assert(Some(true) == z3p.isEquiv(u1.toFSOps, u2.toFSOps))
   }
   */
 
-  test ("creating two distinct paths is not the same") {
+  /*
+  // This test hangs
+  test("creating two distinct paths is not the same") {
+     assert(Some(true) == z3p.isEquiv(MkDir("/a"), MkDir("/b")))
+  }
+
+  test ("creating two distinct paths is not the same 2") {
 
     import z3p._ 
 
@@ -45,4 +91,5 @@ class Core extends FunSuite with Matchers {
     val axiom = mkdir(p1) === mkdir(p2)
     assert(Some(false) == z3p.isSatisfiable(axiom))
   }
+  */
 }
