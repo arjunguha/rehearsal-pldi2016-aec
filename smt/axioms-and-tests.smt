@@ -7,7 +7,7 @@
 (set-option :smt.ematching true)
 ;(set-option :model.compact true)
 
-(declare-datatypes () ((Path root a b c u1 u2 uh1 uh2 us1 us2 g1 g2 gs1 gs2)))
+(declare-datatypes () ((Path root a b c u1 u2 uh1 uh2 us1 us2 g1 g2 gs1 gs2 fp1 fp2)))
 
 ; paths are / /a /b /c
 (declare-fun dirname (Path Path) Bool)
@@ -80,30 +80,19 @@
 (declare-fun notpexists (Path) S)
 (assert (forall ((p Path)) (distinct (pexists p) (notpexists p))))
 
-;(assert (forall ((p Path))
-;           (or (= (pexists p) id)
-;               (= (pexists p) err))))
-
-;(assert (forall ((p Path))
-;           (or (= (notpexists p) id)
-;               (= (notpexists p) err))))
-
-;(assert (forall ((p Path))
-;           (= (seq (pexists p) (notpexists p))
-;               err)))
-;(assert (forall ((p Path))
-;           (= (opt (pexists p) (notpexists p))
-;               id)))
 
 ;(declare-fun isdir (Path) S)
-;(declare-fun isregularfile (Path) S)
+(declare-fun isregularfile (Path) S)
+(declare-fun notisregularfile (Path) S)
+(assert (forall ((p Path)) (distinct (isregularfile p) (notisregularfile p))))
+
 ;(declare-fun islink (Path) S)
 
 
 (declare-fun mkdir (Path) S)
 ;(declare-fun rmdir (Path) S)
 (declare-fun create (Path) S)
-;(declare-fun delete (Path) S)
+(declare-fun delete (Path) S)
 ;(declare-fun link (Path) S)
 ;(declare-fun unlink (Path) S)
 ;(declare-fun shell (Cmd) S)
@@ -121,21 +110,29 @@
    (=> (and (not (is-ancestor p1 p2)) (not (is-ancestor p2 p1)))
        (= (seq (mkdir p1) (mkdir p2)) (seq (mkdir p2) (mkdir p1))))))
 
-
-
 ; seq is commutative for create
 (assert
  (forall ((p1 Path) (p2 Path))
    (=> (and (not (is-ancestor p1 p2)) (not (is-ancestor p2 p1)))
        (= (seq (create p1) (create p2)) (seq (create p2) (create p1))))))
 
+; seq is commutative for create
+(assert
+ (forall ((p1 Path) (p2 Path))
+   (=> (and (not (is-ancestor p1 p2)) (not (is-ancestor p2 p1)))
+       (= (seq (delete p1) (delete p2)) (seq (delete p2) (delete p1))))))
+
+; seq is commutative for create and delete
+(assert
+  (forall ((p1 Path) (p2 Path))
+    (=> (and (not (is-ancestor p1 p2)) (not (is-ancestor p2 p1)))
+        (= (seq (delete p1) (create p2)) (seq (create p2) (delete p1))))))
 
 ; seq is commutative for create and mkdir
 (assert
   (forall ((p1 Path) (p2 Path))
     (=> (and (not (is-ancestor p1 p2)) (not (is-ancestor p2 p1)))
         (= (seq (mkdir p1) (create p2)) (seq (create p2) (mkdir p1))))))
-
 
 ; checking if directory exists and then creating is equal to creating a directory
 ;(assert
@@ -160,6 +157,46 @@
   (forall ((p1 Path) (p2 Path))
      (= (seq (notpexists p1) (pexists p2))
         (seq (pexists p2) (notpexists p1)))))
+
+
+; isregularfile check commutes with itself
+(assert
+  (forall ((p1 Path) (p2 Path))
+     (= (seq (isregularfile p1) (isregularfile p2))
+        (seq (isregularfile p2) (isregularfile p1)))))
+
+; notisregularfile check commutes with itself
+(assert
+  (forall ((p1 Path) (p2 Path))
+     (= (seq (notisregularfile p1) (notisregularfile p2))
+        (seq (notisregularfile p2) (notisregularfile p1)))))
+
+; notisregularfile commutes with isregularfile
+(assert
+  (forall ((p1 Path) (p2 Path))
+     (= (seq (notisregularfile p1) (isregularfile p2))
+        (seq (isregularfile p2) (notisregularfile p1)))))
+
+(assert
+  (forall ((p1 Path) (p2 Path))
+     (= (seq (isregularfile p1) (pexists p2))
+        (seq (pexists p2) (isregularfile p1)))))
+
+(assert
+   (forall ((p1 Path) (p2 Path))
+      (= (seq (notisregularfile p1) (pexists p2))
+         (seq (pexists p2) (notisregularfile p1)))))
+
+(assert
+   (forall ((p1 Path) (p2 Path))
+      (= (seq (isregularfile p1) (notpexists p2))
+         (seq (notpexists p2) (isregularfile p1)))))
+
+(assert
+   (forall ((p1 Path) (p2 Path))
+      (= (seq (notisregularfile p1) (notpexists p2))
+         (seq (notpexists p2) (notisregularfile p1)))))
+
 
 ; pexists commmutes with mkdir
 (assert
@@ -186,8 +223,47 @@
      (=> (not (= p1 p2))
          (= (seq (notpexists p1) (create p2)) (seq (create p2) (notpexists p1))))))
 
-;(echo "Expected SAT:")
-;(check-sat)
+; isregularfile commutes with create
+(assert
+  (forall ((p1 Path) (p2 Path))
+     (=> (not (= p1 p2))
+         (= (seq (isregularfile p1) (create p2)) (seq (create p2) (isregularfile p1))))))
+
+; notisregularfile commutes with create
+(assert
+  (forall ((p1 Path) (p2 Path))
+     (=> (not (= p1 p2))
+         (= (seq (notisregularfile p1) (create p2)) (seq (create p2) (notisregularfile p1))))))
+
+
+; pexists commutes with delete
+(assert
+  (forall ((p1 Path) (p2 Path))
+     (=> (not (= p1 p2))
+         (= (seq (pexists p1) (delete p2)) (seq (delete p2) (pexists p1))))))
+
+; notpexists commutes with delete
+(assert
+  (forall ((p1 Path) (p2 Path))
+     (=> (not (= p1 p2))
+         (= (seq (notpexists p1) (delete p2)) (seq (delete p2) (notpexists p1))))))
+
+; isregularfile commutes with delete
+(assert
+  (forall ((p1 Path) (p2 Path))
+     (=> (not (= p1 p2))
+         (= (seq (isregularfile p1) (delete p2)) (seq (delete p2) (isregularfile p1))))))
+
+; notisregularfile commutes with delete
+(assert
+  (forall ((p1 Path) (p2 Path))
+     (=> (not (= p1 p2))
+         (= (seq (notisregularfile p1) (delete p2)) (seq (delete p2) (notisregularfile p1))))))
+
+
+
+(echo "Expected SAT/UNKNOWN:")
+(check-sat)
 
 (push)
 (assert (not (not (= (seq (mkdir g1) (create gs2))
@@ -267,15 +343,54 @@
 ))))
 (echo "Testing negation of user creation commutes .. Expected SAT/UNKNOWN")
 (check-sat)
-(push)
+(pop)
 
 
 (push)
-(assert (not (= (seq (opt (seq (seq (notpexists u1) (seq (mkdir u1) (create us1))) (opt (seq (notpexists uh1) (mkdir uh1)) (seq (pexists uh1) id))) (seq (pexists u1) id))
-                     (opt (seq (seq (seq (notpexists u2) (mkdir u2)) (create us2)) (opt (seq (notpexists uh2) (mkdir uh2)) (seq (pexists uh2) id))) (seq (pexists u2) id)))
-                (seq (opt (seq (seq (seq (notpexists u2) (mkdir u2)) (create us2)) (opt (seq (notpexists uh2) (mkdir uh2)) (seq (pexists uh2) id))) (seq (pexists u2) id))
-                     (opt (seq (seq (seq (notpexists u1) (mkdir u1)) (create us1)) (opt (seq (notpexists uh1) (mkdir uh1)) (seq (pexists uh1) id))) (seq (pexists u1) id)))
+(assert (not (= (seq (opt (seq (seq (notpexists u1) (seq (mkdir u1) (create us1))) (opt (seq (notpexists uh1) (mkdir uh1))
+                                                                                        (seq (pexists uh1) id)))
+                          (seq (pexists u1) id))
+                     (opt (seq (seq (seq (notpexists u2) (mkdir u2)) (create us2)) (opt (seq (notpexists uh2) (mkdir uh2))
+                                                                                        (seq (pexists uh2) id)))
+                          (seq (pexists u2) id)))
+                (seq (opt (seq (seq (seq (notpexists u2) (mkdir u2)) (create us2)) (opt (seq (notpexists uh2) (mkdir uh2))
+                                                                                        (seq (pexists uh2) id)))
+                          (seq (pexists u2) id))
+                     (opt (seq (seq (seq (notpexists u1) (mkdir u1)) (create us1)) (opt (seq (notpexists uh1) (mkdir uh1))
+                                                                                        (seq (pexists uh1) id)))
+                          (seq (pexists u1) id)))
 )))
 (echo "Testing user creation commutes .. Expected Unsat")
 (check-sat)
+(pop)
+
+
+
 (push)
+(assert (not (not (= (seq (opt (seq (seq (pexists fp1) (isregularfile fp1)) (seq (delete fp1) (create fp1)))
+                               (seq (opt (notpexists fp1) (notisregularfile fp1)) (opt (seq (notpexists fp1) (create fp1)) (seq (pexists fp1) id))))
+                          (opt (seq (seq (pexists fp2) (isregularfile fp2)) (seq (delete fp2) (create fp2)))
+                          (seq (opt (notpexists fp2) (notisregularfile fp2)) (opt (seq (notpexists fp2) (create fp2)) (seq (pexists fp2) id)))))
+                     (seq (opt (seq (seq (pexists fp2) (isregularfile fp2)) (seq (delete fp2) (create fp2)))
+                               (seq (opt (notpexists fp2) (notisregularfile fp2)) (opt (seq (notpexists fp2) (create fp2)) (seq (pexists fp2) id))))
+                          (opt (seq (seq (pexists fp1) (isregularfile fp1)) (seq (delete fp1) (create fp1)))
+                               (seq (opt (notpexists fp1) (notisregularfile fp1)) (opt (seq (notpexists fp1) (create fp1)) (seq (pexists fp1) id)))))))))
+
+(echo "Testing negation of if file creation commutes .. Expected SAT/UNKNOWN")
+(check-sat)
+(pop)
+
+
+(push)
+(assert (not (= (seq (opt (seq (seq (pexists fp1) (isregularfile fp1)) (seq (delete fp1) (create fp1)))
+                          (seq (opt (notpexists fp1) (notisregularfile fp1)) (opt (seq (notpexists fp1) (create fp1)) (seq (pexists fp1) id))))
+                     (opt (seq (seq (pexists fp2) (isregularfile fp2)) (seq (delete fp2) (create fp2)))
+                          (seq (opt (notpexists fp2) (notisregularfile fp2)) (opt (seq (notpexists fp2) (create fp2)) (seq (pexists fp2) id)))))
+                (seq (opt (seq (seq (pexists fp2) (isregularfile fp2)) (seq (delete fp2) (create fp2)))
+                          (seq (opt (notpexists fp2) (notisregularfile fp2)) (opt (seq (notpexists fp2) (create fp2)) (seq (pexists fp2) id))))
+                     (opt (seq (seq (pexists fp1) (isregularfile fp1)) (seq (delete fp1) (create fp1)))
+                          (seq (opt (notpexists fp1) (notisregularfile fp1)) (opt (seq (notpexists fp1) (create fp1)) (seq (pexists fp1) id))))))))
+
+(echo "Testing if file creation commutes .. Expected unsat")
+(check-sat)
+(pop)
