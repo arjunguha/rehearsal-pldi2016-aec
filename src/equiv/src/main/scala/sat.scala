@@ -28,8 +28,8 @@ class Z3Puppet {
   val boolSort = z3.mkBoolSort
 
   // z3 func declares in our model
-  val err = z3.mkFuncDecl("err", Seq(), sSort) // 0 in KAT
-  val id = z3.mkFuncDecl("id", Seq(), sSort) // 1 in KAT
+  val err = z3.mkFuncDecl("err", Seq(), sSort)
+  val id = z3.mkFuncDecl("id", Seq(), sSort)
 
   val seq = z3.mkFuncDecl("seq", Seq(sSort, sSort), sSort)
   val opt = z3.mkFuncDecl("opt", Seq(sSort, sSort), sSort)
@@ -39,13 +39,9 @@ class Z3Puppet {
   val dirname       = z3.mkFuncDecl("dirname", Seq(pathSort, pathSort), z3.mkBoolSort)
 
   val pexists       = z3.mkFuncDecl("pexists", Seq(pathSort), boolSort)
-  val notpexists    = z3.mkFuncDecl("notpexists", Seq(pathSort), boolSort)
   val isdir         = z3.mkFuncDecl("isdir", Seq(pathSort), boolSort)
-  val notisdir      = z3.mkFuncDecl("notisdir", Seq(pathSort), boolSort)
   val isregularfile = z3.mkFuncDecl("isregularfile", Seq(pathSort), boolSort)
-  val notisregularfile = z3.mkFuncDecl("notisregularfile", Seq(pathSort), boolSort)
   val islink        = z3.mkFuncDecl("islink", Seq(pathSort), boolSort)
-  val notislink     = z3.mkFuncDecl("notislink", Seq(pathSort), boolSort)
 
   val mkdir  = z3.mkFuncDecl("mkdir", Seq(pathSort), sSort)
   val rmdir  = z3.mkFuncDecl("rmdir", Seq(pathSort), sSort)
@@ -173,6 +169,21 @@ class Z3Puppet {
                 body(n1, n2, n3))
   }
 
+  def forall(s1: Z3Sort, s2: Z3Sort, s3: Z3Sort, s4: Z3Sort)
+            (body: (Z3AST, Z3AST, Z3AST, Z3AST) => Z3AST): Z3AST = {
+    val n1 = z3.mkBound(0, s1)
+    val n2 = z3.mkBound(1, s2)
+    val n3 = z3.mkBound(2, s3)
+    val n4 = z3.mkBound(3, s4)
+    z3.mkForAll(0, Seq(),
+                Seq(z3.mkStringSymbol("x") -> s1,
+                    z3.mkStringSymbol("y") -> s2,
+                    z3.mkStringSymbol("z") -> s3,
+                    z3.mkStringSymbol("a") -> s4),
+                body(n1, n2, n3, n4))
+  }
+
+
 
   val solver = z3.mkSolver
 
@@ -206,7 +217,7 @@ class Z3Puppet {
   val opt_assoc = forall(sSort, sSort, sSort) { (sa, sb, sc) =>
     opt(sa, opt(sb, sc)) === opt(opt(sa, sb), sc)
   }
-  solver.assertCnstr(seq_assoc)
+  solver.assertCnstr(opt_assoc)
 
   val opt_comm = forall(sSort, sSort) { (sa, sb) =>
     opt(sa, sb) === opt(sb, sa)
@@ -252,7 +263,7 @@ class Z3Puppet {
   val false_is_err = filter(context.mkFalse) === err()
   solver.assertCnstr(false_is_err)
 
-  val comm_preds = List(pexists, notpexists, isdir, notisdir, isregularfile, notisregularfile, islink, notislink)
+  val comm_preds = List(pexists, isdir, isregularfile, islink)
 
   val pred_op_commute_axioms =
     for {pr <- comm_preds; op <- comm_ops} yield {
