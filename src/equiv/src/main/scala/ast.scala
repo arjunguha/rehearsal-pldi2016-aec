@@ -25,10 +25,25 @@ object Content {
   def apply(str: String): Content = new Content(str)
 }
 
+object Exists {
+
+  def apply(str: String): Predicate = Exists(Paths.get(str))
+
+}
+
+object CreateFile {
+
+  def apply(p: String, content: String): Expr = {
+    CreateFile(Paths.get(p), Content(content))
+  }
+
+}
+
 sealed trait Expr
 
 case class Block(expr: Expr*) extends Expr
 case class If(cond: Predicate, trueBranch: Expr, falseBranch: Expr) extends Expr
+case class Filter(a: Predicate) extends Expr
 
 sealed trait Op extends Expr
 case class CreateFile(p: Path, Content: Content) extends Op
@@ -66,6 +81,7 @@ object Predicate {
 object Expr {
 
   def gatherPaths(expr: Expr): Set[Path] = expr match {
+    case Filter(a) => Predicate.gatherPaths(a)
     case If(e1, e2, e3) =>
       Predicate.gatherPaths(e1) union gatherPaths(e2) union gatherPaths(e3)
     case Block(es @ _*) => es.map(gatherPaths).toSet.flatten
@@ -91,6 +107,7 @@ object ExprWellFormed {
   }
 
   def apply(e: Expr): Boolean = e match {
+    case Filter(p) => PredicateWellFormed(p)
     case Block(exprs @ _*) => exprs.foldLeft(true)((acc, e) => acc && ExprWellFormed(e))
     case If(cond, e1, e2) => PredicateWellFormed(cond) && ExprWellFormed(e1) && ExprWellFormed(e2)
     case CreateFile(_, _)  => true
@@ -121,6 +138,7 @@ object PrettyPrint {
   }
 
   def apply(e: Expr): String = e match {
+    case Filter(a) => s"filter(${printPred(a)})"
     case Block(exprs @ _*) => " { " +
                               exprs.map((e) => PrettyPrint(e)).mkString("; ") +
                                " } " + "\n"

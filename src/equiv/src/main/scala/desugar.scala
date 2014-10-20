@@ -22,15 +22,15 @@ object Desugar {
   }
 
   private def DesugarPred(pr: Predicate)(implicit z3: Z3Puppet): Z3AST = pr match {
-    case True => z3.id()
-    case False => z3.err()
+    case True => z3.context.mkTrue
+    case False => z3.context.mkFalse
     case Exists(p) => z3.pexists(z3.toZ3Path(p))
     case IsDir(p) => z3.isdir(z3.toZ3Path(p))
     case IsLink(p) => z3.islink(z3.toZ3Path(p))
     case IsRegularFile(p) => z3.isregularfile(z3.toZ3Path(p))
     case ast.And(lhs, rhs) => (DesugarPred(lhs) && DesugarPred(rhs)).ast(z3.context)
-    case ast.Or(lhs, rhs) => (DesugarPred(lhs) && DesugarPred(rhs)).ast(z3.context)
-    case ast.Not(pr) => Invert(pr)
+    case ast.Or(lhs, rhs) => (DesugarPred(lhs) || DesugarPred(rhs)).ast(z3.context)
+    case ast.Not(pr) => (!DesugarPred(pr)).ast(z3.context)
     case IsEqual(lhs, rhs) => DesugarPred(lhs) === DesugarPred(rhs)
   }
 
@@ -38,8 +38,9 @@ object Desugar {
     case Block(exprs @ _*) if 0 == exprs.size => z3.id()
     case Block(exprs @ _*) if 1 == exprs.size => Desugar(exprs(0))
     case Block(exprs @ _*) => exprs.foldRight(z3.id())((e, acc) => z3.seq(Desugar(e), acc))
-    case If(cond, trueBranch, falseBranch) => z3.opt(z3.seq(DesugarPred(cond), Desugar(trueBranch)),
-                                                     z3.seq(DesugarPred(ast.Not(cond)),  Desugar(falseBranch)))
+    case Filter(a) => z3.filter(DesugarPred(a))
+    case If(cond, trueBranch, falseBranch) => z3.opt(z3.seq(z3.filter(DesugarPred(cond)), Desugar(trueBranch)),
+                                                     z3.seq(z3.filter(DesugarPred(ast.Not(cond))),  Desugar(falseBranch)))
     case CreateFile(p, _) => z3.create(z3.toZ3Path(p))
     case DeleteFile(p) => z3.delete(z3.toZ3Path(p))
     case MkDir(p) => z3.mkdir(z3.toZ3Path(p))

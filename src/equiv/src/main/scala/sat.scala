@@ -25,6 +25,7 @@ class Z3Puppet {
   val pathSort = z3.mkUninterpretedSort("Path")
   val sSort    = z3.mkUninterpretedSort("S")
   val cmdSort  = z3.mkUninterpretedSort("Cmd")
+  val boolSort = z3.mkBoolSort
 
   // z3 func declares in our model
   val err = z3.mkFuncDecl("err", Seq(), sSort) // 0 in KAT
@@ -32,21 +33,19 @@ class Z3Puppet {
 
   val seq = z3.mkFuncDecl("seq", Seq(sSort, sSort), sSort)
   val opt = z3.mkFuncDecl("opt", Seq(sSort, sSort), sSort)
+  val filter = z3.mkFuncDecl("filter", Seq(boolSort), sSort)
 
   val is_ancestor   = z3.mkFuncDecl("is-ancestor", Seq(pathSort, pathSort), z3.mkBoolSort)
   val dirname       = z3.mkFuncDecl("dirname", Seq(pathSort, pathSort), z3.mkBoolSort)
 
-  val pexists       = z3.mkFuncDecl("pexists", Seq(pathSort), sSort)
-  val notpexists    = z3.mkFuncDecl("notpexists", Seq(pathSort), sSort)
-  val isdir         = z3.mkFuncDecl("isdir", Seq(pathSort), sSort)
-  val notisdir      = z3.mkFuncDecl("notisdir", Seq(pathSort), sSort)
-  val isregularfile = z3.mkFuncDecl("isregularfile", Seq(pathSort), sSort)
-  val notisregularfile = z3.mkFuncDecl("notisregularfile", Seq(pathSort), sSort)
-  val islink        = z3.mkFuncDecl("islink", Seq(pathSort), sSort)
-  val notislink     = z3.mkFuncDecl("notislink", Seq(pathSort), sSort)
-
-  val comm_preds = List(pexists, notpexists, isdir, notisdir, isregularfile, notisregularfile, islink, notislink)
-  val not_pred_pairs = List((pexists, notpexists), (isdir, notisdir), (isregularfile, notisregularfile), (islink, notislink))
+  val pexists       = z3.mkFuncDecl("pexists", Seq(pathSort), boolSort)
+  val notpexists    = z3.mkFuncDecl("notpexists", Seq(pathSort), boolSort)
+  val isdir         = z3.mkFuncDecl("isdir", Seq(pathSort), boolSort)
+  val notisdir      = z3.mkFuncDecl("notisdir", Seq(pathSort), boolSort)
+  val isregularfile = z3.mkFuncDecl("isregularfile", Seq(pathSort), boolSort)
+  val notisregularfile = z3.mkFuncDecl("notisregularfile", Seq(pathSort), boolSort)
+  val islink        = z3.mkFuncDecl("islink", Seq(pathSort), boolSort)
+  val notislink     = z3.mkFuncDecl("notislink", Seq(pathSort), boolSort)
 
   val mkdir  = z3.mkFuncDecl("mkdir", Seq(pathSort), sSort)
   val rmdir  = z3.mkFuncDecl("rmdir", Seq(pathSort), sSort)
@@ -181,13 +180,6 @@ class Z3Puppet {
   val id_err_not_same = z3.mkDistinct(id(), err())
   solver.assertCnstr(id_err_not_same)
 
-  val notpred_pairs_distinct_axioms = not_pred_pairs map { case (pred, notpred) =>
-    forall(pathSort) { p =>
-      pred(p) !== notpred(p)
-    }
-  }
-  notpred_pairs_distinct_axioms.foreach(solver.assertCnstr _)
-
   val id_seq_r = forall(sSort) { a => seq(a, id()) === a }
   solver.assertCnstr(id_seq_r)
 
@@ -203,15 +195,23 @@ class Z3Puppet {
   val err_opt = forall(sSort) { a => opt(a, err()) === a }
   solver.assertCnstr(err_opt)
 
+  val opt_idem = forall(sSort) { a => opt(a, a) === a }
+  solver.assertCnstr(opt_idem)
+
   val seq_assoc = forall(sSort, sSort, sSort) { (sa, sb, sc) =>
     seq(sa, seq (sb, sc)) === seq(seq(sa, sb), sc)
   }
   solver.assertCnstr(seq_assoc)
 
-  val op_comm = forall(sSort, sSort) { (sa, sb) =>
+  val opt_assoc = forall(sSort, sSort, sSort) { (sa, sb, sc) =>
+    opt(sa, opt(sb, sc)) === opt(opt(sa, sb), sc)
+  }
+  solver.assertCnstr(seq_assoc)
+
+  val opt_comm = forall(sSort, sSort) { (sa, sb) =>
     opt(sa, sb) === opt(sb, sa)
   }
-  solver.assertCnstr(op_comm)
+  solver.assertCnstr(opt_comm)
 
   val seq_dist_l = forall(sSort, sSort, sSort) { (sa, sb, sc) =>
     seq(sa, opt(sb, sc)) === opt(seq(sa, sb), seq(sa, sc))
@@ -235,20 +235,29 @@ class Z3Puppet {
   }
   op_op_commute_axioms.foreach(solver.assertCnstr _)
 
-  // Combinations of two alone would not generate self pairs of type (a, a)
-  val pred_pairs = (comm_preds zip comm_preds) ::: (combinations(2, comm_preds) map {case List(a, b) => (a, b)})
-  val pred_pred_commute_axioms = pred_pairs map { case (pr1, pr2) => {
-    forall(pathSort, pathSort) { (p1, p2) => 
-      seq(pr1(p1), pr2(p2)) === seq(pr2(p2), pr1(p1))
-      }
-    }
+  // 4 axioms that characterize filter
+  val and_is_seq = forall(boolSort, boolSort) { (a, b) =>
+    seq(filter(a), filter(b)) === filter(context.mkAnd(a, b))
   }
-  pred_pred_commute_axioms.foreach(solver.assertCnstr _)
+  solver.assertCnstr(and_is_seq)
+
+  val or_is_opt = forall(boolSort, boolSort) { (a, b) =>
+    opt(filter(a), filter(b)) === filter(context.mkOr(a, b))
+  }
+  solver.assertCnstr(or_is_opt)
+
+  val true_is_id = filter(context.mkTrue) === id()
+  solver.assertCnstr(true_is_id)
+
+  val false_is_err = filter(context.mkFalse) === err()
+  solver.assertCnstr(false_is_err)
+
+  val comm_preds = List(pexists, notpexists, isdir, notisdir, isregularfile, notisregularfile, islink, notislink)
 
   val pred_op_commute_axioms =
     for {pr <- comm_preds; op <- comm_ops} yield {
       forall(pathSort, pathSort) { (p1, p2) =>
-        val e = (p1 !== p2) --> (seq(pr(p1), op(p2)) === seq(op(p2), pr(p1)))
+        val e = (p1 !== p2) --> (seq(filter(pr(p1)), op(p2)) === seq(op(p2), filter(pr(p1))))
         e.ast(z3)
       }
     }
