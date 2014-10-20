@@ -48,13 +48,11 @@ class Core extends FunSuite with Matchers {
                      "ensure" -> StringV("present"),
                      "managehome" -> StringV("yes"))
 
-    val u1 = Provider(Resource(attrs1))
-    val u2 = Provider(Resource(attrs2))
-    assert(Some(true) == z3p.isEquiv(u1.toFSOps, u2.toFSOps))
+    val g1 = Provider(Resource(attrs1))
+    val g2 = Provider(Resource(attrs2))
+    assert(Some(true) == z3p.isEquiv(Block(g1.toFSOps, g2.toFSOps), Block(g2.toFSOps, g1.toFSOps)))
   }
 
-
-  /*
   test("user creation should commute for different users") {
 
     import equiv.semantics._
@@ -71,9 +69,8 @@ class Core extends FunSuite with Matchers {
 
     val u1 = Provider(Resource(attrs1))
     val u2 = Provider(Resource(attrs2))
-    assert(Some(true) == z3p.isEquiv(u1.toFSOps, u2.toFSOps))
+    assert(Some(true) == z3p.isEquiv(Block(u1.toFSOps, u2.toFSOps), Block(u2.toFSOps, u1.toFSOps)))
   }
-  */
 
   /*
   // This test hangs

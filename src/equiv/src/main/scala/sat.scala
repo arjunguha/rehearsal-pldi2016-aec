@@ -7,6 +7,17 @@ import java.nio.file.{Paths, Path}
 
 class Z3Puppet {
 
+  private def combinations[T](k: Int, lst: List[T]): List[List[T]] = {
+    if (k > lst.size) Nil
+    else {
+      lst match {
+        case Nil => Nil
+        case _ :: _ if k == 1 => lst map (List(_))
+        case hd :: xs => (combinations(k-1, xs) map (hd :: _)) ::: combinations(k, xs)
+      }
+    }
+  }
+
   implicit val context = new Z3Context(new Z3Config("MODEL" -> true, "TIMEOUT" -> 3000))
   private val z3 = context
 
@@ -34,7 +45,8 @@ class Z3Puppet {
   val islink        = z3.mkFuncDecl("islink", Seq(pathSort), sSort)
   val notislink     = z3.mkFuncDecl("notislink", Seq(pathSort), sSort)
 
-  val comm_preds = List(pexists, notpexists/*, isdir, notisdir, isregularfile, notisregularfile, islink, notislink*/)
+  val comm_preds = List(pexists, notpexists, isdir, notisdir, isregularfile, notisregularfile, islink, notislink)
+  val not_pred_pairs = List((pexists, notpexists), (isdir, notisdir), (isregularfile, notisregularfile), (islink, notislink))
 
   val mkdir  = z3.mkFuncDecl("mkdir", Seq(pathSort), sSort)
   val rmdir  = z3.mkFuncDecl("rmdir", Seq(pathSort), sSort)
@@ -44,7 +56,7 @@ class Z3Puppet {
   val unlink = z3.mkFuncDecl("unlink", Seq(pathSort), sSort)
   val shell  = z3.mkFuncDecl("shell", Seq(cmdSort), sSort)
 
-  val comm_ops = List(mkdir, /*rmdir,*/ create/*, delete, link, unlink*/)
+  val comm_ops = List(mkdir, rmdir, create, delete, link, unlink)
 
   private val root = z3.mkConst("root", pathSort)
 
@@ -169,15 +181,12 @@ class Z3Puppet {
   val id_err_not_same = z3.mkDistinct(id(), err())
   solver.assertCnstr(id_err_not_same)
 
-  val pexists_notpexists_not_same = forall(pathSort) { p =>
-    pexists(p) !== notpexists(p)
+  val notpred_pairs_distinct_axioms = not_pred_pairs map { case (pred, notpred) =>
+    forall(pathSort) { p =>
+      pred(p) !== notpred(p)
+    }
   }
-  solver.assertCnstr(pexists_notpexists_not_same)
-
-  val isreg_notisreg_not_same = forall(pathSort) { p =>
-    isregularfile(p) !== notisregularfile(p)
-  }
-  solver.assertCnstr(isreg_notisreg_not_same)
+  notpred_pairs_distinct_axioms.foreach(solver.assertCnstr _)
 
   val id_seq_r = forall(sSort) { a => seq(a, id()) === a }
   solver.assertCnstr(id_seq_r)
@@ -214,58 +223,23 @@ class Z3Puppet {
   }
   solver.assertCnstr(seq_dist_r)
 
-  /*
-  val mkdir_comm = forall(pathSort, pathSort) { (p1, p2) =>
-    val e = (!is_ancestor(p1, p2) && !is_ancestor(p2, p1)) -->
-            (seq(mkdir(p1), mkdir(p2)) === seq(mkdir(p2), mkdir(p1)))
-    e.ast(z3)
-  }
-  solver.assertCnstr(mkdir_comm)
-
-  val create_comm = forall(pathSort, pathSort) { (p1, p2) =>
-    val e = (!is_ancestor(p1, p2) && !is_ancestor(p2, p1)) -->
-            (seq(create(p1), create(p2)) === seq(create(p2), create(p1)))
-    e.ast(z3)
-  }
-  solver.assertCnstr(create_comm)
-
-  val delete_comm = forall(pathSort, pathSort) { (p1, p2) =>
-    val e = (!is_ancestor(p1, p2) && !is_ancestor(p2, p1)) -->
-            (seq(delete(p1), delete(p2)) === seq(delete(p2), delete(p1)))
-    e.ast(z3)
-  }
-  solver.assertCnstr(delete_comm)
-
-  val create_delete_comm = forall(pathSort, pathSort) { (p1, p2) =>
-    val e = (!is_ancestor(p1, p2) && !is_ancestor(p2, p1)) -->
-            (seq(create(p1), delete(p2)) === seq(delete(p2), create(p1)))
-    e.ast(z3)
-  }
-  solver.assertCnstr(create_delete_comm)
-
-  val create_mkdir_comm = forall(pathSort, pathSort) { (p1, p2) =>
-     val e = (!is_ancestor(p1, p2) && !is_ancestor(p2, p1)) -->
-            (seq(mkdir(p1), create(p2)) === seq(create(p2), mkdir(p1)))
-    e.ast(z3)
-  }
-  solver.assertCnstr(create_mkdir_comm)
-  */
-
-  val op_op_commute_axioms =
-    (for {op1 <- comm_ops; op2 <- comm_ops} yield (op1, op2)).distinct map { case (op1, op2) => {
-        forall(pathSort, pathSort) { (p1, p2) =>
-          val e = (!is_ancestor(p1, p2) && !is_ancestor(p2, p1)) -->
-                  (seq(op1(p1), op2(p2)) === seq(op2(p2), op1(p1)))
-          e.ast(z3)
-        }
+  // Combinations of two alone would not generate self pairs of type (a, a)
+  val ops_pairs = (comm_ops zip comm_ops) ::: (combinations(2, comm_ops) map {case List(a, b) => (a, b)})
+  val op_op_commute_axioms = ops_pairs map { case (op1, op2) => {
+    forall(pathSort, pathSort) { (p1, p2) =>
+      val e = (!is_ancestor(p1, p2) && !is_ancestor(p2, p1)) -->
+        (seq(op1(p1), op2(p2)) === seq(op2(p2), op1(p1)))
+        e.ast(z3)
       }
     }
+  }
   op_op_commute_axioms.foreach(solver.assertCnstr _)
 
-  val pred_pred_commute_axioms =
-    (for {pr1 <- comm_preds; pr2 <- comm_preds} yield (pr1, pr2)).distinct map { case (pr1, pr2) => {
-      forall(pathSort, pathSort) { (p1, p2) => 
-        seq(pr1(p1), pr2(p2)) === seq(pr2(p2), pr1(p1))
+  // Combinations of two alone would not generate self pairs of type (a, a)
+  val pred_pairs = (comm_preds zip comm_preds) ::: (combinations(2, comm_preds) map {case List(a, b) => (a, b)})
+  val pred_pred_commute_axioms = pred_pairs map { case (pr1, pr2) => {
+    forall(pathSort, pathSort) { (p1, p2) => 
+      seq(pr1(p1), pr2(p2)) === seq(pr2(p2), pr1(p1))
       }
     }
   }
@@ -286,11 +260,13 @@ class Z3Puppet {
 
   def printAssertions {
     solver.getAssertions().toSeq.foreach(println)
+    println("-------------------------------------------------------------------------------")
   }
 
   def isSatisfiable(ast: Z3AST): Option[Boolean] = {
 
     println(ast)
+    println("-------------------------------------------------------------------------------")
 
     solver.push
 
