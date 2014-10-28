@@ -14,19 +14,7 @@ one sig Root extends Path {}
 fact { no Root.dirname } // Root does not have any parent
 fact { all p: Path | Root in p.isAncestor } // root is ancestor of every path
 
-sig FS {
-//  id: lone FS,
-//  err: lone FS
-}
-
-one sig Id, Err extends FS {}
-
-/*
-fact {
-  id = FS <: iden
-  all fs: FS | fs.err = none
-}
-*/
+sig FS {}
 
 abstract sig Test {
   apply: FS -> Path -> one Bool
@@ -37,74 +25,77 @@ one sig PExists, IsDir, IsRegularFile, IsLink extends Test {}
 abstract sig Op {
   apply: Path -> FS -> lone FS
 }
+one sig Mkdir, Rmdir, Create, Delete, Link, Unlink extends Op {}
+one sig Id, Err extends Op {}
 
 fact {
-  // applying any operation to Err FS results in error
-  all op: Op, p: Path | Err.(p.(op.apply)) = Err
+  all p: Path | p.(Id.apply) = FS <: iden
+  all p: Path, fs: FS | fs.(p.(Err.apply)) = none
 }
 
-one sig Mkdir, Rmdir, Create, Delete, Link, Unlink extends Op {}
 one sig Filter {
-  apply: Test -> FS -> lone FS
+  apply: Test -> Op
 }
 
 fact {
   // filter gives either id or err depending on bool value
   all fs: FS, p: Path, b: Bool, t: Test | b = p.(fs.(t.apply)) =>
-    b = True => fs.(t.(Filter.apply)) = fs and 
-    b = False => fs.(t.(Filter.apply)) = Err
+    b = True => t.(Filter.apply) = Id and 
+    b = False => t.(Filter.apply) = Err
 }
 
+one sig Seq, Opt {
+  apply: Path -> Op -> Path -> Op -> FS -> FS
+}
+
+
+// Seq and Opt could be functions?
+
+fact seq_def {
+  // What is seq
+  all p1, p2: Path, op1, op2: Op, fsinit, fsfinal: FS |
+    Seq.apply = (p1->op1->p2->op2->fsinit->fsfinal) =>
+      fsfinal = (fsinit.(p1.(op1.apply))).(p2.(op2.apply))
+}
+
+fact opt_def {
+  // What is opt
+  all p1, p2: Path, op1, op2: Op, fsinit, fsfinal: FS |
+    Opt.apply = (p1->op1->p2->op2->fsinit->fsfinal) =>
+      fsfinal = fsinit.(p1.(op1.apply)) or
+      fsfinal = fsinit.(p2.(op2.apply))
+}
+
+pred sanitycheck {}
+run sanitycheck
 
 /*
-// May e ID and Err needs to have same type and that of FS
-one sig Id {
-  apply: FS -> one FS
-}
-one sig Err {
-  apply: FS -> lone FS
-}
-
-
-fact {
-  Id.apply = FS <: iden
-  all fs: FS | fs.(Err.apply) = none
-}
-*/
-
-
-abstract sig Combinator {
-  apply: FS -> FS -> FS
-}
-
-one sig Seq, Opt extends Combinator {}
-
 fact seq_id {
-  all fs: FS | fs.(Id.(Seq.apply)) = fs
-  all fs: FS | Id.(fs.(Seq.apply)) = fs
+  // How is fsfinal reached when Id op is involved with Seq
 }
 
 fact seq_err {
-  all fs: FS | fs.(Err.(Seq.apply)) = Err
-  all fs: FS | Err.(fs.(Seq.apply)) = Err
+  // How is fsfinal reached when Err op is involved with Seq
 }
 
 fact opt_err {
-  all fs: FS | fs.(Err.(Opt.apply)) = fs
-  all fs: FS | Err.(fs.(Opt.apply)) = fs
+  // How is fsfinal reached when Err op is involved with Seq
 }
 
 fact seq_assoc {
   // Seq is associative (seq a (seq b c)) = (seq (seq a b) c) 
+  // TODO : Check? should follow from relational algebra : write a pred to confirm
   all a, b, c: FS | (c.(b.(Seq.apply))).(a.(Seq.apply)) = c.((b.(a.(Seq.apply))).(Seq.apply))
 }
 
 fact opt_assoc {
   // Opt is associative (opt a (opt b c)) = (opt (opt a b) c)
+  // TODO: Check? Should follow from relational algebra : write a pred to confirm
   all a, b, c: FS | (c.(b.(Opt.apply))).(a.(Opt.apply)) = c.((b.(a.(Opt.apply))).(Opt.apply))
 }
 
 fact opt_commute {
+  // TODO: Should follow from definition of opt : write a pred to confirm
   all fs1, fs2: FS | fs1.(fs2.(Opt.apply)) = fs2.(fs1.(Opt.apply))
 }
 
@@ -117,7 +108,7 @@ fact seq_dist_opt {
 }
 
 
-// if p1 not subpath p2 and p2 not subpath p1 then create and mkdir commute
+// if p1 not subpath p2 and p2 not subpath p1 then sequence of operations commute
 fact {
   all fs, fs1, fs2, fs3, fs4: FS, p1, p2: Path, opA, opB: Op | 
     fs1 = fs.(p1.(opA.apply))   and
@@ -141,3 +132,4 @@ assert  doesnotcommute {
        fs2.(fs1.(Seq.apply)) != fs4.(fs3.(Seq.apply))
 }
 check doesnotcommute for 3
+*/
