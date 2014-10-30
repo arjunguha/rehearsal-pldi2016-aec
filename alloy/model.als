@@ -2,17 +2,20 @@ open util/boolean
 
 sig Path {
   dirname: lone Path,
-  isAncestor: Path
+  isAncestor: set Path
 }
 
 fact {
+  no p: Path | p in p.^dirname
   // isAncestor is reflexive transitive closure of dirname
-  all p:Path | p.isAncestor = p.*dirname
+  all p: Path | p.isAncestor = p.*dirname
 }
 
+/*
 one sig Root extends Path {}
 fact { no Root.dirname } // Root does not have any parent
 fact { all p: Path | Root in p.isAncestor } // root is ancestor of every path
+*/
 
 sig FS {
   id: one FS,
@@ -80,35 +83,15 @@ assert seq_opt_dist_r {
 }
 
 fact ops_commute {
-  all p1, p2: Path, op1, op2: Op |
-    ((not p2 in p1.isAncestor) and (not p1 in p2.isAncestor)) =>
+  no p1, p2: Path | all op1, op2: Op |
+    ((p2 in p1.isAncestor) and (p1 in p2.isAncestor)) =>
   	  Seq[App[op1, p1], App[op2, p2]] = Seq[App[op2, p2], App[op1, p1]]
 }
-
-/*
-fact and_is_seq {
-  all p1, p2: Path, t1, t2: Test, fs: FS |
-    (True = And[fs.(p1.(t1.eval)), fs.(p2.(t2.eval))]) =>
-       id = Seq[Filter[t1, p1], Filter[t2, p2]]
-    else
-       err = Seq[Filter[t1, p1], Filter[t2, p2]]
-}
-*/
 
 fact and_is_seq {
   all p1, p2: Path, t1, t2: Test |
     Filter[t1, p1] & Filter[t2, p2] = Seq[Filter[t1, p1], Filter[t2, p2]]
 }
-
-/*
-fact or_is_opt {
-  all p1, p2: Path, t1, t2: Test, fs: FS |
-    (True = Or[fs.(p1.(t1.eval)), fs.(p2.(t2.eval))]) =>
-       id = Opt[Filter[t1, p1], Filter[t2, p2]]
-    else
-       err = Opt[Filter[t1, p1], Filter[t2, p2]]
-}
-*/
 
 fact or_is_opt {
   all p1, p2: Path, t1, t2: Test |
@@ -123,6 +106,18 @@ fact pred_op_commute {
 pred sanitycheck {}
 run sanitycheck
 
+assert shouldcommute {
+  all p1, p2: Path | p1 != p2 and p2 != p1.dirname and p1 != p2.dirname =>
+  Seq[App[Mkdir, p1], App[Create, p2]] = Seq[App[Create, p2], App[Mkdir, p1]]
+}
+check shouldcommute
+
+assert shouldnotcommute0 {
+  all p1, p2: Path | p2->p1  in dirname =>
+    Seq[App[Mkdir, p1], App[Create, p2]] != Seq[App[Create, p2], App[Mkdir, p1]]
+}
+check shouldnotcommute0
+
 fun CreateGroup[dir, settings: Path]: FS -> lone FS {
   Opt[Seq[NotFilter[PExists, dir], Seq[App[Mkdir, dir], App[Create, settings]]],
          Seq[Filter[PExists, dir], id]]
@@ -136,7 +131,6 @@ pred group_creation_commutes {
 }
 
 run group_creation_commutes
-
 
 // Also take group into account
 fun CreateUser[dir, settings, homedir: Path]: FS -> lone FS {
@@ -155,14 +149,10 @@ pred user_creation_commutes {
 
 run user_creation_commutes
 
-// TODO : the predicate holds but it shouldn't
-pred shouldnotcommute {
+assert shouldnotcommute {
   all u1dir, u1settings, u1homedir, file: Path |
     dirname = u1settings -> u1dir + file->u1homedir =>
-      Seq[CreateUser[u1dir, u1settings, u1homedir], App[Create, file]] =
+      Seq[CreateUser[u1dir, u1settings, u1homedir], App[Create, file]] !=
       Seq[App[Create, file], CreateUser[u1dir, u1settings, u1homedir]]
 }
-
-run shouldnotcommute
-
-
+check shouldnotcommute
