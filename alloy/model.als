@@ -6,6 +6,7 @@ sig Path {
 }
 
 fact {
+   // dirname is acyclic relation
   no p: Path | p in p.^dirname
   // isAncestor is reflexive transitive closure of dirname
   all p: Path | p.isAncestor = p.*dirname
@@ -50,37 +51,43 @@ fun NotFilter[t: Test, p: Path]: FS -> lone FS {
   ({fs: FS | (fs->False) in p.(t.eval)} <: id)
 }
 
-assert {
+assert filter_props {
   all p: Path, t: Test | Filter[t, p] + NotFilter[t, p] = id
   all p: Path, t: Test | Filter[t, p] & NotFilter[t, p] = err
 }
+
+check filter_props
 
 fun Seq[a, b: FS -> lone FS]: FS -> lone FS { a.b }
 fun Opt[a, b: FS -> lone FS]: FS -> lone FS { a+b}
 
 /* associativity properties for seq and opt follows from relational algebra */
 /* commutativity of opt follows from relational algebra */
-/* commutativity of seq is defined below */
+/* commutativity of seq is conditional and is defined below */
 
 assert seq_id_r {
   all p: Path, op: Op | Seq[App[op, p], id] = App[op, p]
 }
+check seq_id_r
 
 assert seq_id_l {
   all p: Path, op: Op | Seq[id, App[op, p]] = App[op, p]
 }
+check seq_id_l
 
 assert seq_opt_dist_l {
   all p1, p2, p3: Path, op1, op2, op3: Op |
   Seq[App[op1, p1], Opt[App[op2, p2], App[op3, p3]]] =
     Opt[Seq[App[op1, p1], App[op2, p2]], Seq[App[op1, p1], App[op3, p3]]]
 }
+check seq_opt_dist_l
 
 assert seq_opt_dist_r {
   all p1, p2, p3: Path, op1, op2, op3: Op |
     Seq[Opt[App[op1, p1], App[op2, p2]], App[op3, p3]] =
       Opt[Seq[App[op1, p1], App[op3, p3]], Seq[App[op2, p2], App[op3, p3]]]
 }
+check seq_opt_dist_r
 
 fact ops_commute {
   no p1, p2: Path | all op1, op2: Op |
@@ -123,14 +130,14 @@ fun CreateGroup[dir, settings: Path]: FS -> lone FS {
          Seq[Filter[PExists, dir], id]]
 }
 
-pred group_creation_commutes {
+assert group_creation_commutes {
   all u1settings, u1dir, u2settings, u2dir: Path |
   	dirname = u1settings->u1dir + u2settings->u2dir =>
   		Seq[CreateGroup[u1dir, u1settings], CreateGroup[u2dir, u2settings]] =
   		Seq[CreateGroup[u2dir, u2settings], CreateGroup[u1dir, u1settings]]
 }
 
-run group_creation_commutes
+check group_creation_commutes
 
 // Also take group into account
 fun CreateUser[dir, settings, homedir: Path]: FS -> lone FS {
@@ -140,14 +147,14 @@ fun CreateUser[dir, settings, homedir: Path]: FS -> lone FS {
          Seq[Filter[PExists, dir], id]]
 }
 
-pred user_creation_commutes {
+assert user_creation_commutes {
   all u1dir, u1settings, u1homedir, u2dir, u2settings, u2homedir: Path |
     dirname = u1settings->u1dir + u2settings->u2dir =>
     Seq[CreateUser[u1dir, u1settings, u1homedir], CreateUser[u2dir, u2settings, u2homedir]] =
     Seq[CreateUser[u2dir, u2settings, u2homedir], CreateUser[u1dir, u1settings, u1homedir]]
 }
 
-run user_creation_commutes
+check user_creation_commutes
 
 assert shouldnotcommute {
   all u1dir, u1settings, u1homedir, file: Path |
