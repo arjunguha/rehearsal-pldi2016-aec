@@ -98,11 +98,6 @@ fact ops_commute {
   	  Seq[App[op1, p1], App[op2, p2]] = Seq[App[op2, p2], App[op1, p1]]
 }
 
-fact shell_not_commute {
-  no p1, p2: Path, op: Op |
-    Seq[App[op, p1], App[Shell, p2]] = Seq[App[Shell, p2], App[op, p1]]
-}
-
 fact and_is_seq {
   all p1, p2: Path, t1, t2: Test |
     Filter[t1, p1] & Filter[t2, p2] = Seq[Filter[t1, p1], Filter[t2, p2]]
@@ -116,6 +111,14 @@ fact or_is_opt {
 fact pred_op_commute {
   all p1, p2: Path, t: Test, op: Op - Shell |
     (p1 != p2) => Seq[Filter[t, p1], App[op, p2]] = Seq[App[op, p2], Filter[t, p1]]
+}
+
+fact shell_seq_point {
+  no p1, p2: Path, op: Op |
+    Seq[App[op, p1], App[Shell, p2]] = Seq[App[Shell, p2], App[op, p1]]
+
+  no p1, p2: Path, t: Test |
+    Seq[Filter[t, p1], App[Shell, p2]] = Seq[App[Shell, p2], Filter[t, p1]]
 }
 
 pred sanitycheck {}
