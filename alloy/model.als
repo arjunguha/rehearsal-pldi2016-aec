@@ -30,7 +30,7 @@ fact {
 abstract sig Test {
   eval: Path -> FS -> one Bool
 }
-one sig PExists, IsDir, IsRegularFile, IsLink extends Test {}
+one sig PExists, IsDir, IsFile, IsLink extends Test {}
 
 abstract sig Op {
   apply: Path -> FS -> lone FS
@@ -51,12 +51,15 @@ fun NotFilter[t: Test, p: Path]: FS -> lone FS {
   ({fs: FS | (fs->False) in p.(t.eval)} <: id)
 }
 
-assert filter_props {
+assert filter_prop_id {
   all p: Path, t: Test | Filter[t, p] + NotFilter[t, p] = id
+}
+check filter_prop_id
+
+assert filter_prop_err {
   all p: Path, t: Test | Filter[t, p] & NotFilter[t, p] = err
 }
-
-check filter_props
+check filter_prop_err
 
 fun Seq[a, b: FS -> lone FS]: FS -> lone FS { a.b }
 fun Opt[a, b: FS -> lone FS]: FS -> lone FS { a+b}
@@ -136,7 +139,6 @@ assert group_creation_commutes {
   		Seq[CreateGroup[u1dir, u1settings], CreateGroup[u2dir, u2settings]] =
   		Seq[CreateGroup[u2dir, u2settings], CreateGroup[u1dir, u1settings]]
 }
-
 check group_creation_commutes
 
 // Also take group into account
@@ -153,8 +155,21 @@ assert user_creation_commutes {
     Seq[CreateUser[u1dir, u1settings, u1homedir], CreateUser[u2dir, u2settings, u2homedir]] =
     Seq[CreateUser[u2dir, u2settings, u2homedir], CreateUser[u1dir, u1settings, u1homedir]]
 }
-
 check user_creation_commutes
+
+fun CreateFile[p: Path]: FS -> lone FS {
+  Seq[Opt[Seq[Filter[PExists, p], App[Rmdir, p]],
+                 Seq[NotFilter[PExists, p], Opt[Seq[Filter[IsLink, p], App[Unlink, p]],
+                                                                 Seq[NotFilter[IsLink, p], Seq[Filter[IsFile, p], App[Delete, p]]]]]],
+          App[Create, p]]
+}
+
+assert file_creation_commutes {
+  all file1, file2: Path | file1 != file2 and file1 != file2.dirname and file2 != file1.dirname =>
+    Seq[CreateFile[file1], CreateFile[file2]] = Seq[CreateFile[file2], CreateFile[file1]]
+}
+check file_creation_commutes
+
 
 assert shouldnotcommute {
   all u1dir, u1settings, u1homedir, file: Path |
@@ -163,3 +178,12 @@ assert shouldnotcommute {
       Seq[App[Create, file], CreateUser[u1dir, u1settings, u1homedir]]
 }
 check shouldnotcommute
+
+
+assert shouldnotcommute1 {
+  all u1dir, u1settings, u1homedir, file: Path |
+    dirname = u1settings -> u1dir + file->u1homedir =>
+      Seq[CreateUser[u1dir, u1settings, u1homedir], CreateFile[file]] !=
+      Seq[CreateFile[file], CreateUser[u1dir, u1settings, u1homedir]]
+}
+check shouldnotcommute1
