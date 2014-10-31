@@ -35,7 +35,7 @@ one sig PExists, IsDir, IsFile, IsLink extends Test {}
 abstract sig Op {
   apply: Path -> FS -> lone FS
 }
-one sig Mkdir, Rmdir, Create, Delete, Link, Unlink extends Op {}
+one sig Mkdir, Rmdir, Create, Delete, Link, Unlink, Shell extends Op {}
 fun App[op: Op, p: Path]: FS -> lone FS { p.(op.apply) }
 
 fun Filter[t: Test, p: Path]: FS -> lone FS {
@@ -93,9 +93,14 @@ assert seq_opt_dist_r {
 check seq_opt_dist_r
 
 fact ops_commute {
-  no p1, p2: Path | all op1, op2: Op |
+  no p1, p2: Path | all op1, op2: Op - Shell |
     ((p2 in p1.isAncestor) and (p1 in p2.isAncestor)) =>
   	  Seq[App[op1, p1], App[op2, p2]] = Seq[App[op2, p2], App[op1, p1]]
+}
+
+fact shell_not_commute {
+  no p1, p2: Path, op: Op |
+    Seq[App[op, p1], App[Shell, p2]] = Seq[App[Shell, p2], App[op, p1]]
 }
 
 fact and_is_seq {
@@ -109,7 +114,7 @@ fact or_is_opt {
 }
 
 fact pred_op_commute {
-  all p1, p2: Path, t: Test, op: Op |
+  all p1, p2: Path, t: Test, op: Op - Shell |
     (p1 != p2) => Seq[Filter[t, p1], App[op, p2]] = Seq[App[op, p2], Filter[t, p1]]
 }
 
@@ -121,6 +126,12 @@ assert shouldcommute {
   Seq[App[Mkdir, p1], App[Create, p2]] = Seq[App[Create, p2], App[Mkdir, p1]]
 }
 check shouldcommute
+
+assert shellshouldnotcommute {
+  all p1, p2: Path | Seq[App[Shell, p1], App[Create, p2]] !=
+                              Seq[App[Create, p2], App[Shell, p1]]
+}
+check shellshouldnotcommute
 
 assert shouldnotcommute0 {
   all p1, p2: Path | p2->p1  in dirname =>
