@@ -375,10 +375,8 @@ object Provider {
     def toFSOps (): Expr = {
 
       val u = Paths.get(s"/etc/users/$name")
-      val shadow = Paths.get(s"/etc/users/$name/shadow")
-      val shadowcontent = Content("")
-      val passwd = Paths.get(s"/etc/users/$name/passwd")
-      val passwdcontent = Content("")
+      val usettings = Paths.get(s"/etc/users/$name/settings")
+      val usettingscontent = Content("")
       val g = Paths.get(s"/etc/groups/$name")
       val gsettings = Paths.get(s"/etc/groups/$name/settings")
       val gsettingscontent = Content("")
@@ -415,8 +413,7 @@ object Provider {
 
         case ("present", true) => If(Not(Exists(u)),
                                      Block(MkDir(u),
-                                           CreateFile(shadow, shadowcontent),
-                                           CreateFile(passwd, passwdcontent),
+                                           CreateFile(usettings, usettingscontent),
                                            If(Not(Exists(g)), Block(MkDir(g), CreateFile(gsettings, gsettingscontent)), Block()),
                                            // TODO : Add to rest of groups
                                            If(Not(Exists(h)), MkDir(h), Block())),
@@ -424,8 +421,7 @@ object Provider {
 
         case ("present", false) => If(Not(Exists(u)),
                                       Block(MkDir(u),
-                                            CreateFile(shadow, shadowcontent),
-                                            CreateFile(passwd, passwdcontent),
+                                            CreateFile(usettings, usettingscontent),
                                             If(Not(Exists(g)), Block(MkDir(g), CreateFile(gsettings, gsettingscontent)), Block())
                                             // tODO: Add to rest of groups
                                             ),

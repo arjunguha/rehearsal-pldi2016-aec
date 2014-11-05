@@ -34,6 +34,14 @@ class Core extends FunSuite with Matchers {
     assert(Some(true) == z3p.isEquiv(e1, e2))
   }
 
+  test("mkdir should not commute for /a and /a/b") {
+    val e1 = Block(MkDir("/a"), MkDir("/a/b"))
+    val e2 = Block(MkDir("/a/b"), MkDir("/a"))
+    assert(Some(false) == z3p.isEquiv(e1, e2))
+  }
+
+
+  /*
   test("group test case - reduced 1") {
 
     val a1 = Block(Filter(equiv.ast.Not(Exists("/etc/groups/abc"))),
@@ -79,6 +87,7 @@ class Core extends FunSuite with Matchers {
     val ast11 = z3p.context.mkDistinct(opt(seq(a1z, a3z), seq(a2z, a3z)),
                                       opt(seq(a3z, a1z), seq(a2z, a3z)))
     assert(Some(false) == isSatisfiable(ast11))
+    */
 
     /*
     // Same order: Not passing
@@ -91,9 +100,10 @@ class Core extends FunSuite with Matchers {
                                       opt(seq(a3z, a1z), opt(seq(a3z, a2z), opt(seq(a4z, a1z), seq(a4z, a2z)))))
     assert(Some(false) == isSatisfiable(ast2))
     */
-  }
+  // }
 
 
+  /*
   test("Group creation should commute for different groups") {
 
     import equiv.semantics._
@@ -131,6 +141,7 @@ class Core extends FunSuite with Matchers {
     val u2 = Provider(Resource(attrs2))
     assert(Some(true) == z3p.isEquiv(Block(u1.toFSOps, u2.toFSOps), Block(u2.toFSOps, u1.toFSOps)))
   }
+  */
 
   /*
   // This test hangs

@@ -2,14 +2,43 @@ package equiv.desugar
 
 import equiv.ast
 import equiv.ast._
-import equiv.sat._
-import z3.scala._
-import z3.scala.dsl._
+import java.nio.file.{Path, Paths}
+
+// Resuse predicate from ast
+/*
+sealed trait FSKATPred
+case object True extends FSKATPred
+case object False extends FSKATPred
+case class Exists(path: Path) extends FSKATPred
+case class IsDir(path: Path) extends FSKATPred
+case class IsFile(path: Path) extends FSKATPred
+case class IsLink(path: Path) extends FSKATPred
+case class And(lhs: FSKATPred, rhs: FSKATPred) extends FSKATPred
+case class Or(lhs: FSKATPred, rhs: FSKATPred) extends FSKATPred
+case class Not(oper: FSKATPred) extends FSKATPred
+*/
+
+
+sealed trait FSKATExpr
+case object Id extends FSKATExpr
+case object Err extends FSKATExpr
+case class MkDir(path: Path) extends FSKATExpr
+case class RmDir(path: Path) extends FSKATExpr
+case class Create(path: Path) extends FSKATExpr
+case class Delete(path: Path) extends FSKATExpr
+case class Link(path: Path) extends FSKATExpr
+case class Unlink(path: Path) extends FSKATExpr
+case class Shell(path: Path) extends FSKATExpr // TODO
+case class Filter(pred: /*FSKATPred*/ ast.Predicate) extends FSKATExpr
+case class Seqn(lhs: FSKATExpr, rhs: FSKATExpr) extends FSKATExpr
+case class Opt(lhs: FSKATExpr, rhs: FSKATExpr) extends FSKATExpr
+
 
 object Desugar {
 
+  /*
   private def DesugarPred(pr: Predicate)(implicit z3: Z3Puppet): Z3AST = pr match {
-    case True => z3.context.mkTrue
+    case True => 
     case False => z3.context.mkFalse
     case Exists(p) => z3.pexists(z3.toZ3Path(p))
     case IsDir(p) => z3.isdir(z3.toZ3Path(p))
@@ -20,20 +49,21 @@ object Desugar {
     case ast.Not(pr) => (!DesugarPred(pr)).ast(z3.context)
     case IsEqual(lhs, rhs) => DesugarPred(lhs) === DesugarPred(rhs)
   }
+  */
 
-  def apply (expr: Expr)(implicit z3: Z3Puppet): Z3AST = expr match {
-    case Block(exprs @ _*) if 0 == exprs.size => z3.id()
+  def apply (expr: Expr): FSKATExpr = expr match {
+    case Block(exprs @ _*) if 0 == exprs.size => Id
     case Block(exprs @ _*) if 1 == exprs.size => Desugar(exprs(0))
-    case Block(exprs @ _*) => exprs.foldRight(z3.id())((e, acc) => z3.seq(Desugar(e), acc))
-    case Filter(a) => z3.filter(DesugarPred(a))
-    case If(cond, trueBranch, falseBranch) => z3.opt(z3.seq(z3.filter(DesugarPred(cond)), Desugar(trueBranch)),
-                                                     z3.seq(z3.filter(DesugarPred(ast.Not(cond))),  Desugar(falseBranch)))
-    case CreateFile(p, _) => z3.create(z3.toZ3Path(p))
-    case DeleteFile(p) => z3.delete(z3.toZ3Path(p))
-    case MkDir(p) => z3.mkdir(z3.toZ3Path(p))
-    case RmDir(p) => z3.rmdir(z3.toZ3Path(p))
-    case Link(p, _) => z3.link(z3.toZ3Path(p))
-    case Unlink(p) => z3.unlink(z3.toZ3Path(p))
-    case ShellExec(cmd) => z3.shell(z3.toZ3Cmd(cmd))
+    case Block(exprs @ _*) => exprs.foldRight(Id: FSKATExpr)((e, acc) => Seqn(Desugar(e), acc))
+    case ast.Filter(a) => Filter(a)
+    case If(cond, trueBranch, falseBranch) => Opt(Seqn(Filter(cond), Desugar(trueBranch)),
+                                                  Seqn(Filter(ast.Not(cond)),  Desugar(falseBranch)))
+    case CreateFile(p, _) => Create(p)
+    case DeleteFile(p) => Delete(p)
+    case ast.MkDir(p) => MkDir(p)
+    case ast.RmDir(p) => RmDir(p)
+    case ast.Link(p, _) => Link(p)
+    case ast.Unlink(p) => Unlink(p)
+    case ShellExec(cmd) => Shell(Paths.get("/tmp/script.sh")) // Assume that command is written to file /tmp/script.sh which shell executes
   }
 }

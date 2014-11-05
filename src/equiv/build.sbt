@@ -6,6 +6,8 @@ libraryDependencies ++= Seq(
 
 parallelExecution in Test := false
 
+excludeFilter in unmanagedSources := "old_sat.scala"
+
 /*
  * D - Show durations for each test
  * F - Show full stack traces on exception

@@ -17,7 +17,7 @@ case class And(lhs: Predicate, rhs: Predicate) extends Predicate
 case class Or(lhs: Predicate, rhs: Predicate) extends Predicate
 case class Not(oper: Predicate) extends Predicate
 // TODO(arjun): Should this be "if and only if"? i.e., class Iff(...)
-case class IsEqual(lhs: Predicate, rhs: Predicate) extends Predicate
+// case class IsEqual(lhs: Predicate, rhs: Predicate) extends Predicate
 
 /* Abstract Content */
 class Content(str: String) {}
@@ -73,7 +73,7 @@ object Predicate {
     case And(a, b) => gatherPaths(a) union gatherPaths(b)
     case Or(a, b) => gatherPaths(a) union gatherPaths(b)
     case Not(a) => gatherPaths(a)
-    case IsEqual(a, b) => gatherPaths(a) union gatherPaths(b)
+    // case IsEqual(a, b) => gatherPaths(a) union gatherPaths(b)
   }
 
 }
@@ -103,7 +103,7 @@ object ExprWellFormed {
     case And(pr1, pr2) => PredicateWellFormed(pr1) && PredicateWellFormed(pr2)
     case Or(pr1, pr2) => PredicateWellFormed(pr1) && PredicateWellFormed(pr2)
     case Not(pr) => PredicateWellFormed(pr)
-    case IsEqual(pr1, pr2) => PredicateWellFormed(pr1) && PredicateWellFormed(pr2)
+    // case IsEqual(pr1, pr2) => PredicateWellFormed(pr1) && PredicateWellFormed(pr2)
   }
 
   def apply(e: Expr): Boolean = e match {
@@ -134,7 +134,7 @@ object PrettyPrint {
     case And(lhs, rhs) => printPred(lhs) + " && " + printPred(rhs)
     case Or(lhs, rhs) => printPred(lhs) + " || " + printPred(rhs)
     case Not(oper) => "! " + printPred(oper)
-    case IsEqual(lhs, rhs) => printPred(lhs) + " == " + printPred(rhs)
+    // case IsEqual(lhs, rhs) => printPred(lhs) + " == " + printPred(rhs)
   }
 
   def apply(e: Expr): String = e match {
