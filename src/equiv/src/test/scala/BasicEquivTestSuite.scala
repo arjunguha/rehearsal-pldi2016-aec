@@ -40,6 +40,16 @@ class Core extends FunSuite with Matchers {
     assert(Some(false) == z3p.isEquiv(e1, e2))
   }
 
+  /*
+  test("performance test") {
+    val ops =  scala.io.Source.fromFile("usr_files.txt").getLines.map(MkDir(_)).toSeq
+    val block1 = Block(ops:_*)
+    val block2 = Block(ops:_*)
+
+    assert(Some(true) == z3p.isEquiv(block1, block2))
+  }
+  */
+
 
   /*
   test("group test case - reduced 1") {
