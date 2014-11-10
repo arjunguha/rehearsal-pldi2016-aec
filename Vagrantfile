@@ -7,7 +7,7 @@ Vagrant.configure("2") do |config|
   config.vm.provider "vmware_fusion" do |v|
     v.vmx["memsize"] = "3072"
     v.vmx["numvcpus"] = "2"
-    v.gui = true
+    v.gui = false
   end
 
   config.vm.provision "puppet"
