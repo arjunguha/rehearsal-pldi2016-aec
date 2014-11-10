@@ -3,9 +3,9 @@ package equiv.ast
 import z3.scala._
 import equiv.sat._
 
-// Surface Verification Lanuguage AST nodes
 import java.nio.file.{Path, Paths}
 
+// Surface Verification Language AST nodes
 sealed trait Predicate
 case object True extends Predicate
 case object False extends Predicate
@@ -36,7 +36,6 @@ object CreateFile {
   def apply(p: String, content: String): Expr = {
     CreateFile(Paths.get(p), Content(content))
   }
-
 }
 
 sealed trait Expr
@@ -131,8 +130,8 @@ object PrettyPrint {
     case IsDir(p) => "isdir(%s)".format(printPath(p))
     case IsLink(p) => "islink(%s)".format(printPath(p))
     case IsRegularFile(p) => "isregularfile(%s)".format(printPath(p))
-    case And(lhs, rhs) => printPred(lhs) + " && " + printPred(rhs)
-    case Or(lhs, rhs) => printPred(lhs) + " || " + printPred(rhs)
+    case And(lhs, rhs) => printPred(lhs) + " && " + printPred(rhs) // TODO : No parens: bug?
+    case Or(lhs, rhs) => printPred(lhs) + " || " + printPred(rhs) // TODO: No parens: bug?
     case Not(oper) => "! " + printPred(oper)
     // case IsEqual(lhs, rhs) => printPred(lhs) + " == " + printPred(rhs)
   }
