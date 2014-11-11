@@ -17,11 +17,15 @@ resolvers ++= Seq(
 
 libraryDependencies ++= {
   val akkaV = "2.3.4"
+  val graphV = "1.9.0"
   Seq(
     "org.scalatest" % "scalatest_2.10" % "2.1.3" % "test",
     "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
+    "com.assembla.scala-incubator" %% "graph-core" % graphV,
+    "edu.umass.cs" %% "docker" % "0.3-SNAPSHOT",
     "com.typesafe.akka" %% "akka-actor"  % akkaV,
     "com.typesafe.akka" %% "akka-kernel" % akkaV,
     "com.typesafe.akka" %% "akka-remote" % akkaV
   )
 }
+
