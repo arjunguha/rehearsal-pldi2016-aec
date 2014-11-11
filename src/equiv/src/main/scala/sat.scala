@@ -1,5 +1,6 @@
-package equiv.sat 
+package equiv.sat
 
+import equiv._
 import equiv.desugar._
 import equiv.ast
 
@@ -13,7 +14,7 @@ import scala.collection.immutable.HashMap
 import scala.annotation.tailrec
 
 class Z3Puppet {
-  
+
   import equiv.desugar.Desugar._
 
   implicit val context = new Z3Context(new Z3Config("MODEL" -> true, "TIMEOUT" -> 3000))
@@ -33,48 +34,6 @@ class Z3Puppet {
   val isdir   = z3.mkFuncDecl("isdir",   Seq(pathSort, fsSort), boolSort)
   val isfile  = z3.mkFuncDecl("isfile",  Seq(pathSort, fsSort), boolSort)
   val islink  = z3.mkFuncDecl("islink",  Seq(pathSort, fsSort), boolSort)
-
-  @tailrec
-  private def ancestors(p: Path,
-                        result: Set[Path] = Set.empty): Set[Path] = {
-    // Check if we have already solved this problem
-    if (!result(p)) {
-      p.getParent match {
-        case null => result
-        case parent: Path => ancestors(parent, result + p.normalize)
-      }
-    }
-    else {
-      result
-    }
-  }
- 
-  private def gatherPaths(pr: ast.Predicate): Set[Path] = pr match {
-    case ast.True => Set.empty
-    case ast.False => Set.empty
-    case ast.Exists(p) => ancestors(p)
-    case ast.IsDir(p) => ancestors(p)
-    case ast.IsRegularFile(p) => ancestors(p)
-    case ast.IsLink(p) => ancestors(p)
-    case ast.And(lhs, rhs) => gatherPaths(lhs) ++ gatherPaths(rhs)
-    case ast.Or(lhs, rhs) => gatherPaths(lhs) ++ gatherPaths(rhs)
-    case ast.Not(oper) => gatherPaths(oper)
-  }
-
-  private def gatherPaths(e: FSKATExpr, result: Set[Path] = Set.empty): Set[Path] = e match {
-    case Id => result
-    case Err => result
-    case MkDir(p) => result + p 
-    case RmDir(p) => result + p
-    case Create(p) => result + p
-    case Delete(p) => result + p 
-    case Link(p) => result + p 
-    case Unlink(p) => result + p 
-    case Shell(p) => result + p 
-    case Filter(pr) => result ++ gatherPaths(pr)
-    case Seqn(exprs @ _*) => exprs.foldLeft(result)((acc, e) => gatherPaths(e, acc))
-    case Opt(lhs, rhs) => gatherPaths(lhs, gatherPaths(rhs, result))
-  }
 
   private def toZ3AST(p: Path): Z3AST = z3.mkConst(p.toString, pathSort)
 
@@ -220,9 +179,7 @@ class Z3Puppet {
     val e1fskat = Desugar(e1)
     val e2fskat = Desugar(e2)
 
-    val allpaths = Seq(e1fskat, e2fskat)
-                     .foldLeft(Set[Path]())((acc, e)=>gatherPaths(e, acc))
-                     .flatMap(ancestors(_))
+    val allpaths = ancestors(FSKATExpr.gatherPaths(e1fskat) union FSKATExpr.gatherPaths(e2fskat))
 
     val pathmap = HashMap(((allpaths map {p=>(p->toZ3AST(p))}).toSeq):_*) + (Paths.get("/")->root)
 

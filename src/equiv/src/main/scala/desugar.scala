@@ -18,6 +18,24 @@ case class Filter(pred: ast.Predicate) extends FSKATExpr
 case class Seqn(exprs: FSKATExpr*) extends FSKATExpr
 case class Opt(lhs: FSKATExpr, rhs: FSKATExpr) extends FSKATExpr
 
+object FSKATExpr {
+
+  def gatherPaths(e: FSKATExpr): Set[Path] = e match {
+    case Id | Err => Set()
+    case MkDir(p) => Set(p)
+    case RmDir(p) => Set(p)
+    case Create(p) => Set(p)
+    case Link(p)  => Set(p)
+    case Unlink(p) => Set(p)
+    case Delete(p) => Set(p)
+    case Shell(p) => Set(p) // TODO(arjun): fishy
+    case Filter(pr) => equiv.ast.Predicate.gatherPaths(pr)
+    case Seqn(exprs @ _*) => exprs.map(gatherPaths).toSet.flatten
+    case Opt(lhs, rhs) => gatherPaths(lhs) union gatherPaths(rhs)
+   }
+
+ }
+
 
 object Desugar {
 
