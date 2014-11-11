@@ -37,7 +37,7 @@ class Z3Puppet {
 
   private def toZ3AST(p: Path): Z3AST = z3.mkConst(p.toString, pathSort)
 
-  private object model extends ast.PredModel {
+  private object model extends ast.ExprModel {
 
     type S = Z3AST
     type B = Z3AST // The type of boolean expressions in the model
@@ -61,107 +61,10 @@ class Z3Puppet {
 
   }
 
-  private def predeval(pr: ast.Predicate, infs: Z3AST, pathmap: Map[Path, Z3AST]) = model.eval(pr, infs, pathmap)
-
-  private def filter(pr: ast.Predicate, infs: Z3AST, outfs: Z3AST)
-                    (implicit pathmap: Map[Path, Z3AST]): Z3AST = {
-    ((predeval(pr, infs, pathmap) --> idfs(infs, outfs, pathmap)) &&
-     (!predeval(pr, infs, pathmap) --> errfs(outfs, pathmap))).ast(context)
-  }
-
-  private def mkdir(infs: Z3AST, outfs: Z3AST, path: Path, pathmap: Map[Path, Z3AST]): Z3AST = {
-    val z3parentpath = pathmap(path.getParent)
-    val z3path = pathmap(path)
-    val e = (pexists(z3parentpath, infs) --> (pexists(z3path, outfs) && idfs(infs, outfs, pathmap - path))) &&
-            (!pexists(z3parentpath, infs) --> errfs(outfs, pathmap))
-    e.ast(context)
-  }
-
-  private def idfs(infs: Z3AST, outfs: Z3AST, pathmap: Map[Path, Z3AST]): Z3AST = {
-    z3.mkAnd((pathmap.toSeq map {case (_, p) => pexists(p, infs) === pexists(p, outfs)}):_*)
-  }
-
-  private def errfs(fs: Z3AST, pathmap: Map[Path, Z3AST]): Z3AST = {
-    z3.mkAnd((pathmap.toSeq map {case (_, p) => (pexists(p, fserr) === (pexists(p, fs)))}):_*)
-  }
-
-  private def eval(e: FSKATExpr,
-                   initfs: Z3AST)
-                   (implicit pathmap: Map[Path, Z3AST]): Z3AST /* Final FS */ = e match {
-
-    case Id => {
-      val outfs = z3.mkFreshConst("fs", fsSort)
-      solver.assertCnstr(idfs(initfs, outfs, pathmap))
-      outfs
-    }
-
-    case Err => {
-      val outfs = z3.mkFreshConst("fs", fsSort)
-      solver.assertCnstr(errfs(outfs, pathmap))
-      outfs
-    }
-
-    case MkDir(p) => {
-      val outfs = z3.mkFreshConst("fs", fsSort)
-      solver.assertCnstr(mkdir(initfs, outfs, p, pathmap))
-      outfs
-    }
-
-    case RmDir(p) => {
-      val outfs = z3.mkFreshConst("fs", fsSort)
-      // solver.assertCnstr(rmdir(initfs, outfs, p))
-      solver.assertCnstr(mkdir(initfs, outfs, p, pathmap)) // TODO
-      outfs
-    }
-
-    case Create(p) => {
-      val outfs = z3.mkFreshConst("fs", fsSort)
-      // solver.assertCnstr(create(initfs, outfs, p))
-      solver.assertCnstr(mkdir(initfs, outfs, p, pathmap)) // TODO
-      outfs
-    }
-
-    case Delete(p) => {
-      val outfs = z3.mkFreshConst("fs", fsSort)
-      // solver.assertCnstr(delete(initfs, outfs, p))
-      solver.assertCnstr(mkdir(initfs, outfs, p, pathmap)) // TODO
-      outfs
-    }
-
-    case Link(p) => {
-      val outfs = z3.mkFreshConst("fs", fsSort)
-      // solver.assertCnstr(link(initfs, outfs, p))
-      solver.assertCnstr(mkdir(initfs, outfs, p, pathmap)) // TODO
-      outfs
-    }
-
-    case Unlink(p) => {
-      val outfs = z3.mkFreshConst("fs", fsSort)
-      // solver.assertCnstr(unlink(initfs, outfs, p))
-      solver.assertCnstr(mkdir(initfs, outfs, p, pathmap)) // TODO
-      outfs
-    }
-
-    case Shell(p) => {
-      val outfs = z3.mkFreshConst("fs", fsSort)
-      // solver.assertCnstr(shell(initfs, outfs, p))
-      solver.assertCnstr(mkdir(initfs, outfs, p, pathmap)) // TODO
-      outfs
-    }
-
-    case Filter(pr) => {
-      val outfs = z3.mkFreshConst("fs", fsSort)
-      solver.assertCnstr(filter(pr, initfs, outfs))
-      outfs
-    }
-
-    case Seqn(e1, e2) => eval(e2, eval(e1, initfs))
-
-    case Opt(lhs, rhs) => {
-      val outfs1 = eval(lhs, initfs)
-      val outfs2 = eval(rhs, initfs)
-      outfs2 // random TODO
-    }
+  private def eval(e: FSKATExpr, initfs: Z3AST, pathmap: Map[Path, Z3AST]): Z3AST  = {
+    val (b, s) = model.eval(e, pathmap, initfs)
+    solver.assertCnstr(b)
+    s
   }
 
   private def parentshouldexist(fs: Z3AST, pathmap: Map[Path, Z3AST]): Z3AST = {
@@ -202,8 +105,8 @@ class Z3Puppet {
     // assert this condition for only initial FS and all FS derived from initial FS will follow
     solver.assertCnstr(parentshouldexist(initfs, pathmap))
 
-    val fsfinal_e1 = eval(e1fskat, initfs)(pathmap)
-    val fsfinal_e2 = eval(e2fskat, initfs)(pathmap)
+    val fsfinal_e1 = eval(e1fskat, initfs, pathmap)
+    val fsfinal_e2 = eval(e2fskat, initfs, pathmap)
 
     // assert that paths are distinct
     val z3paths = pathmap.values.toSeq

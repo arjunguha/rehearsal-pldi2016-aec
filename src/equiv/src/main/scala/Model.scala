@@ -59,6 +59,36 @@ trait PredModel extends TypedModel {
 
 }
 
+trait ExprModel extends TypedModel with PredModel {
+
+ import equiv.desugar._
+
+  def eval(expr: FSKATExpr, paths: Map[Path, P], s0: S): (B, S) = expr match {
+    case Id => (trueB, s0)
+    case Err => (falseB, errState)
+    case MkDir(p) => {
+      val s1 = mkState()
+      val path = paths(p)
+      val parent = paths(p.getParent)
+      val b = ifB(andB(exists(parent, s0), notB(exists(path, s0))),
+                  andB(exists(path, s1), samePaths(s0, s1, paths - p)),
+                  eqState(s1, errState))
+      (b, s1)
+    }
+    case Seqn(e1, e2) => {
+      val (b1, s1) = eval(e1, paths, s0)
+      val (b2, s2) = eval(e2, paths, s1)
+      (andB(b1, b2), s2)
+    }
+    case Opt(e1, e2) => {
+      val (b1, s1) = eval(e1, paths, s0)
+      val (b2, s2) = eval(e2, paths, s0)
+      val s3 = mkState()
+      val b = orB(andB(b1, eqState(s1, s3)), andB(b2, eqState(s2, s3)))
+      (b, s3)
+    }
+  }
+}
 
 trait OptExprModel extends TypedModel with PredModel {
 
@@ -87,13 +117,15 @@ trait OptExprModel extends TypedModel with PredModel {
       // In all other cases, return the most general expression. But, we can
       // do better by considering other state for the parent and path.
       case _ => {
+        val s00 = mkState()
+        val b0 = reifyState(s0, paths, known, s00)
         val s1 = mkState()
         val path = paths(p)
         val parent = paths(p.getParent)
-        val b = ifB(exists(parent, s0),
-            andB(exists(path, s1), samePaths(s0, s1, paths - p)),
-            eqState(s0, errState))
-        Some((b, s1, known + (p -> PathIsDir)))
+        val b = ifB(andB(exists(parent, s00), notB(exists(path, s00))),
+            andB(exists(path, s1), samePaths(s00, s1, paths - p)),
+            eqState(s1, errState))
+        Some((andB(b0, b), s1, Map()))
       }
     }
     case Seqn(e1, e2) => for {
@@ -129,7 +161,7 @@ trait OptExprModel extends TypedModel with PredModel {
       case None => (eqState(s0, errState), s0)
       case Some((b, s1, known)) => {
         val s2 = mkState()
-        (reifyState(s1, paths, known, s2), s2)
+        (andB(b, reifyState(s1, paths, known, s2)), s2)
       }
     }
   }

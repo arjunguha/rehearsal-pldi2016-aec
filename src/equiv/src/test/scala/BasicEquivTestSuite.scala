@@ -40,16 +40,13 @@ class Core extends FunSuite with Matchers {
     assert(Some(false) == z3p.isEquiv(e1, e2))
   }
 
-  /*
   test("performance test") {
-    val ops =  scala.io.Source.fromFile("usr_files.txt").getLines.map(MkDir(_)).toSeq
+    val ops =  scala.io.Source.fromFile("usr_files.txt").getLines.map(MkDir(_)).take(10).toSeq
     val block1 = Block(ops:_*)
     val block2 = Block(ops:_*)
 
     assert(Some(true) == z3p.isEquiv(block1, block2))
   }
-  */
-
 
   /*
   test("group test case - reduced 1") {
@@ -80,14 +77,14 @@ class Core extends FunSuite with Matchers {
     import z3p._
 
     // check if associativity matters in proving equality of opts ops
-    val ast0 = z3.forall(sSort, sSort, sSort, sSort) { (a, b, c, d) => 
+    val ast0 = z3.forall(sSort, sSort, sSort, sSort) { (a, b, c, d) =>
        z3p.context.mkDistinct(opt(a, opt(b, opt(c, d))),
                               opt(a, opt(opt(b, c), d)))
     }
     assert(Some(false) == isSatisfiable(ast0))
 
     // Check if order matters when proving equality of opts ops
-    val ast00 = z3.forall(sSort, sSort, sSort, sSort) { (a, b, c, d) => 
+    val ast00 = z3.forall(sSort, sSort, sSort, sSort) { (a, b, c, d) =>
        z3p.context.mkDistinct(opt(a, opt(b, opt(c, d))),
                               opt(a, opt(c, opt(b, d))))
     }
