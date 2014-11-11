@@ -1,7 +1,7 @@
 name := "equiv"
 
 libraryDependencies ++= Seq(
-  "ch.epfl.lara" %% "scalaz3" % "2.1"
+  "edu.umass.cs" %% "scalaz3" % "2.1-SNAPSHOT"
 )
 
 parallelExecution in Test := false

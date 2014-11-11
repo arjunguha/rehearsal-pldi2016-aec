@@ -10,7 +10,7 @@ scalacOptions in ThisBuild ++= Seq(
 )
 
 resolvers in ThisBuild ++= Seq(
-  "scala-docker" at "https://oss.sonatype.org/content/repositories/snapshots/",
+  "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
   "Typesafe Repository" at "http://repo.akka.io/snapshots/"
 )
 
