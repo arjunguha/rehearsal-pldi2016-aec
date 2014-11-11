@@ -1,6 +1,0 @@
-[submodule "ScalaZ3"]
-	path = submodules/ScalaZ3
-	url = https://github.com/epfl-lara/ScalaZ3.git
-[submodule "z3"]
-	path = submodules/z3
-	url = https://git01.codeplex.com/z3
