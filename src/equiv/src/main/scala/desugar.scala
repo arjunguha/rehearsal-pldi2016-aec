@@ -34,7 +34,7 @@ object FSKATExpr {
     case Opt(lhs, rhs) => gatherPaths(lhs) union gatherPaths(rhs)
    }
 
- }
+}
 
 
 object Desugar {
