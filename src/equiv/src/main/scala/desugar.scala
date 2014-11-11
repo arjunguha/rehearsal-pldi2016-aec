@@ -15,7 +15,7 @@ case class Link(path: Path) extends FSKATExpr
 case class Unlink(path: Path) extends FSKATExpr
 case class Shell(path: Path) extends FSKATExpr // TODO
 case class Filter(pred: ast.Predicate) extends FSKATExpr
-case class Seqn(exprs: FSKATExpr*) extends FSKATExpr
+case class Seqn(e1: FSKATExpr, e2: FSKATExpr) extends FSKATExpr
 case class Opt(lhs: FSKATExpr, rhs: FSKATExpr) extends FSKATExpr
 
 object FSKATExpr {
@@ -30,7 +30,7 @@ object FSKATExpr {
     case Delete(p) => Set(p)
     case Shell(p) => Set(p) // TODO(arjun): fishy
     case Filter(pr) => equiv.ast.Predicate.gatherPaths(pr)
-    case Seqn(exprs @ _*) => exprs.map(gatherPaths).toSet.flatten
+    case Seqn(e1, e2) => gatherPaths(e1) union gatherPaths(e2)
     case Opt(lhs, rhs) => gatherPaths(lhs) union gatherPaths(rhs)
    }
 
@@ -40,7 +40,7 @@ object FSKATExpr {
 object Desugar {
 
   def apply (expr: Expr): FSKATExpr = expr match {
-    case Block(exprs @ _*) => Seqn((exprs.map(Desugar(_))):_*)
+    case Block(exprs @ _*) => exprs.foldRight(Id : FSKATExpr)((lhs, rhs) => Seqn(Desugar(lhs), rhs))
     case ast.Filter(a) => Filter(a)
     case If(cond, trueBranch, falseBranch) => Opt(Seqn(Filter(cond), Desugar(trueBranch)),
                                                   Seqn(Filter(ast.Not(cond)),  Desugar(falseBranch)))

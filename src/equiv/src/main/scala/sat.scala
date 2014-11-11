@@ -37,23 +37,44 @@ class Z3Puppet {
 
   private def toZ3AST(p: Path): Z3AST = z3.mkConst(p.toString, pathSort)
 
-  private def predeval(pr: ast.Predicate, infs: Z3AST)
-                      (implicit pathmap: Map[Path, Z3AST]): Z3AST = pr match {
-    case ast.True => (true).ast(context)
-    case ast.False => (false).ast(context)
-    case ast.Exists(p) => pexists(pathmap(p), infs)
-    case ast.IsDir(p) => isdir(pathmap(p), infs)
-    case ast.IsRegularFile(p) => isfile(pathmap(p), infs)
-    case ast.IsLink(p) => islink(pathmap(p), infs)
-    case ast.And(lhs, rhs) => (predeval(lhs, infs) && predeval(rhs, infs)).ast(context)
-    case ast.Or(lhs, rhs) => (predeval(lhs, infs) || predeval(rhs, infs)).ast(context)
-    case ast.Not(oper) => (!predeval(oper, infs)).ast(context)
+  private object model extends ast.PredModel {
+
+    type S = Z3AST
+    type B = Z3AST // The type of boolean expressions in the model
+    type P = Z3AST
+
+    val trueB = true.ast(context)
+    def falseB = false.ast(context)
+    def andB(e1: B, e2: B): B = (e1 && e2).ast(context)
+    def orB(e1: B, e2: B): B = (e1 || e2).ast(context)
+    def notB(e: B): B = (!e).ast(context)
+
+    def exists(path: P, state: S): B = pexists(path, state)
+    def isDir(path: P, state: S): B = isdir(path, state)
+    def isFile(path: P, state: S): B = isfile(path, state)
+    def isLink(path: P, state: S): B = islink(path, state)
+
   }
+
+  private def predeval(pr: ast.Predicate, infs: Z3AST, pathmap: Map[Path, Z3AST]) = model.eval(pr, infs, pathmap)
+
+  // private def predeval(pr: ast.Predicate, infs: Z3AST)
+  //                     (implicit pathmap: Map[Path, Z3AST]): Z3AST = pr match {
+  //   case ast.True => (true).ast(context)
+  //   case ast.False => (false).ast(context)
+  //   case ast.Exists(p) => pexists(pathmap(p), infs)
+  //   case ast.IsDir(p) => isdir(pathmap(p), infs)
+  //   case ast.IsRegularFile(p) => isfile(pathmap(p), infs)
+  //   case ast.IsLink(p) => islink(pathmap(p), infs)
+  //   case ast.And(lhs, rhs) => (predeval(lhs, infs) && predeval(rhs, infs)).ast(context)
+  //   case ast.Or(lhs, rhs) => (predeval(lhs, infs) || predeval(rhs, infs)).ast(context)
+  //   case ast.Not(oper) => (!predeval(oper, infs)).ast(context)
+  // }
 
   private def filter(pr: ast.Predicate, infs: Z3AST, outfs: Z3AST)
                     (implicit pathmap: Map[Path, Z3AST]): Z3AST = {
-    ((predeval(pr, infs) --> idfs(infs, outfs, pathmap)) &&
-     (!predeval(pr, infs) --> errfs(outfs, pathmap))).ast(context)
+    ((predeval(pr, infs, pathmap) --> idfs(infs, outfs, pathmap)) &&
+     (!predeval(pr, infs, pathmap) --> errfs(outfs, pathmap))).ast(context)
   }
 
   private def mkdir(infs: Z3AST, outfs: Z3AST, path: Path, pathmap: Map[Path, Z3AST]): Z3AST = {
@@ -142,7 +163,7 @@ class Z3Puppet {
       outfs
     }
 
-    case Seqn(exprs @ _*) => exprs.foldLeft(initfs)((infs, e)=> eval(e, infs))
+    case Seqn(e1, e2) => eval(e2, eval(e1, initfs))
 
     case Opt(lhs, rhs) => {
       val outfs1 = eval(lhs, initfs)
