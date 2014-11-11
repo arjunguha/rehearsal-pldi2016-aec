@@ -13,3 +13,10 @@ excludeFilter in unmanagedSources := "old_sat.scala"
  * F - Show full stack traces on exception
  */
 testOptions in Test += Tests.Argument("-oF")
+
+// Disable fatal warnings while we are hacking around
+scalacOptions := Seq(
+  "-deprecation",
+  "-unchecked",
+  "-feature"
+)

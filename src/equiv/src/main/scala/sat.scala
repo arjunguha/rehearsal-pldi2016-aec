@@ -48,6 +48,11 @@ class Z3Puppet {
     def andB(e1: B, e2: B): B = (e1 && e2).ast(context)
     def orB(e1: B, e2: B): B = (e1 || e2).ast(context)
     def notB(e: B): B = (!e).ast(context)
+    def ifB(e1: B, e2: B, e3: B) = ((e1 --> e2) && (!e1 --> e3)).ast(context)
+    def iffB(e1: B, e2: B) = (e1 <--> e2).ast(context)
+    def eqState(s1: S, s2: S): B = (s1 === s2)
+    def errState: S = fserr
+    def mkState(): S = z3.mkFreshConst("fs", fsSort)
 
     def exists(path: P, state: S): B = pexists(path, state)
     def isDir(path: P, state: S): B = isdir(path, state)
