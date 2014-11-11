@@ -12,7 +12,6 @@ class Core extends FunSuite with Matchers {
 
   test("sanity check") {
     // Should get unknown or sat
-    z3p.printAssertions
     assert(Some(false) != z3p.sanityCheck())
   }
 
@@ -34,19 +33,62 @@ class Core extends FunSuite with Matchers {
     assert(Some(true) == z3p.isEquiv(e1, e2))
   }
 
+  test("Can create /a") {
+    import equiv.desugar._
+    assert(Some(false) == z3p.isEquiv(MkDir("/a"), Err))
+  }
+
+  test("can create /a then /a/b") {
+    import equiv.desugar._
+    assert(Some(false) == z3p.isEquiv(Seqn(MkDir("/a"), MkDir("/a/b")), Err))
+  }
+
   test("mkdir should not commute for /a and /a/b") {
     val e1 = Block(MkDir("/a"), MkDir("/a/b"))
     val e2 = Block(MkDir("/a/b"), MkDir("/a"))
     assert(Some(false) == z3p.isEquiv(e1, e2))
   }
 
+  test("error; mkdir") {
+    import equiv.desugar._
+    assert(Some(true) == z3p.isEquiv(Err, Seqn(Err, MkDir("/a"))))
+  }
+
+  test("mkdir; error") {
+    import equiv.desugar._
+    assert(Some(true) == z3p.isEquiv(Err, Seqn(MkDir("/a"), Err)))
+  }
+
+  test("mkdir + error != err") {
+    import equiv.desugar._
+    assert(Some(false) == z3p.isEquiv(Err, Opt(MkDir("/a"), Err)))
+  }
+
+  test("mkdir + error != mkdir") {
+    import equiv.desugar._
+    assert(Some(false) == z3p.isEquiv(MkDir("/a"), Opt(MkDir("/a"), Err)))
+
+  }
+
+  test("mkdir == mkdir") {
+    import equiv.desugar._
+    assert(Some(true) == z3p.isEquiv(MkDir("/a"), MkDir("/a")))
+  }
+
+  test("error == error") {
+    import equiv.desugar._
+    assert(Some(true) == z3p.isEquiv(Err, Err))
+  }
+
   test("performance test") {
-    val ops =  scala.io.Source.fromFile("usr_files.txt").getLines.map(MkDir(_)).take(10).toSeq
+    val ops =  scala.io.Source.fromFile("usr_files.txt").getLines.take(500).map(MkDir(_)).toSeq
     val block1 = Block(ops:_*)
     val block2 = Block(ops:_*)
 
     assert(Some(true) == z3p.isEquiv(block1, block2))
   }
+
+
 
   /*
   test("group test case - reduced 1") {

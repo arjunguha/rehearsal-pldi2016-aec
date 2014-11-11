@@ -18,6 +18,11 @@ case class Filter(pred: ast.Predicate) extends FSKATExpr
 case class Seqn(e1: FSKATExpr, e2: FSKATExpr) extends FSKATExpr
 case class Opt(lhs: FSKATExpr, rhs: FSKATExpr) extends FSKATExpr
 
+object MkDir {
+
+  def apply(path: String): MkDir = MkDir(Paths.get(path))
+
+}
 object FSKATExpr {
 
   def gatherPaths(e: FSKATExpr): Set[Path] = e match {

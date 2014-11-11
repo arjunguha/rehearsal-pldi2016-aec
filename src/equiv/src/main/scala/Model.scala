@@ -22,13 +22,14 @@ trait TypedModel {
   def notB(e: B): B
   def iffB(e1: B, e2: B): B
   def ifB(e1: B, e2: B, e3: B): B
+  def impliesB(e1: B, e2: B): B
 
   def exists(path: P, state: S): B
   def isDir(path: P, state: S): B
   def isFile(path: P, state: S): B
   def isLink(path: P, state: S): B
 
-  def errState: S
+  def isError(state: S): B
 
   def mkState(): S
 
@@ -40,6 +41,8 @@ trait TypedModel {
                   }
     clauses.foldLeft(trueB)(andB)
   }
+
+  def seqError(s0: S, s1: S): B = impliesB(isError(s0), isError(s1))
 
 }
 
@@ -65,27 +68,36 @@ trait ExprModel extends TypedModel with PredModel {
 
   def eval(expr: FSKATExpr, paths: Map[Path, P], s0: S): (B, S) = expr match {
     case Id => (trueB, s0)
-    case Err => (falseB, errState)
+    case Err => {
+      val s1 = mkState()
+      (isError(s1), s1)
+    }
     case MkDir(p) => {
       val s1 = mkState()
       val path = paths(p)
       val parent = paths(p.getParent)
       val b = ifB(andB(exists(parent, s0), notB(exists(path, s0))),
                   andB(exists(path, s1), samePaths(s0, s1, paths - p)),
-                  eqState(s1, errState))
+                  isError(s1))
       (b, s1)
     }
     case Seqn(e1, e2) => {
       val (b1, s1) = eval(e1, paths, s0)
       val (b2, s2) = eval(e2, paths, s1)
-      (andB(b1, b2), s2)
+      (andB(andB(andB(b1, b2),
+                 impliesB(isError(s0), isError(s1))),
+            impliesB(isError(s1), isError(s2))),
+       s2)
     }
     case Opt(e1, e2) => {
       val (b1, s1) = eval(e1, paths, s0)
       val (b2, s2) = eval(e2, paths, s0)
       val s3 = mkState()
       val b = orB(andB(b1, eqState(s1, s3)), andB(b2, eqState(s2, s3)))
-      (b, s3)
+      val errB = andB(impliesB(isError(s0), isError(s1)),
+                      andB(impliesB(isError(s0), isError(s2)),
+                           impliesB(orB(isError(s1), isError(s2)), isError(s3))))
+      (andB(b, errB), s3)
     }
   }
 }
@@ -94,76 +106,80 @@ trait OptExprModel extends TypedModel with PredModel {
 
   import equiv.desugar._
 
+  case class State(s: S, paths: Map[Path, PathInfo], error: Option[Boolean])
+
   // We represent states as a state-variable (s0) and a map from
   // paths to their statically known states.
   //
   def evalOpt(expr: FSKATExpr,
               paths: Map[Path, P],
-              s0: S,
-              known: Map[Path, PathInfo]): Option[(B, S, Map[Path, PathInfo])] = expr match {
-    case Id => Some((trueB, s0, known))
-    case Err => None
-    case MkDir(p) => (known.get(p.getParent), known.get(p)) match {
+              s0: State) : (B, State) = expr match {
+    case Id => (trueB, s0)
+    case Err => {
+      val s1 = mkState()
+      (trueB, State(s1, Map(), Some(true)))
+    }
+    case MkDir(p) => (s0.paths.get(p.getParent), s0.paths.get(p)) match {
       // The parent is a directory and the child does not exist
       case (Some(PathIsDir), Some(PathDoesNotExist)) => {
         val path = paths(p)
         val parent = paths(p.getParent)
-        Some((trueB,
-              s0, // The output state is s0, but with a different known-set.
-              known + (p -> PathIsDir)))
+        (trueB, State(s0.s, s0.paths + (p -> PathIsDir), s0.error))
       }
       // p already exists in some state, so mkdir will error
-      case (_, Some(_)) => None
+      // case (_, Some(_)) => (trueB, State(s0.s, s0.paths, Some(true)))
       // In all other cases, return the most general expression. But, we can
       // do better by considering other state for the parent and path.
       case _ => {
         val s00 = mkState()
-        val b0 = reifyState(s0, paths, known, s00)
+        val b0 = reifyState(s0, paths, s00)
         val s1 = mkState()
         val path = paths(p)
         val parent = paths(p.getParent)
         val b = ifB(andB(exists(parent, s00), notB(exists(path, s00))),
-            andB(exists(path, s1), samePaths(s00, s1, paths - p)),
-            eqState(s1, errState))
-        Some((andB(b0, b), s1, Map()))
+                    andB(seqError(s00, s1), andB(exists(path, s1), samePaths(s00, s1, paths - p))),
+                    isError(s1))
+        (andB(b0, b),
+         State(s1, Map(), None))
       }
     }
-    case Seqn(e1, e2) => for {
-      (b1, s1, known1) <- evalOpt(e1, paths, s0, known)
-      (b2, s2, known2) <- evalOpt(e2, paths, s1, known1)
-    } yield (andB(b1, b2), s2, known2)
-    case Opt(e1, e2) => (evalOpt(e1, paths, s0, known), evalOpt(e1, paths, s0, known)) match {
-      case (None, None) => None
-      case (Some(r), None) => Some(r) // e2 is statically eliminated
-      case (None, Some(r)) => Some(r) // e1 is statically eliminated
-      case (Some((b1, s1, known1)), Some((b2, s2, known2))) => {
-        val s3 = mkState()
-        Some((orB(andB(b1, reifyState(s1, paths, known1, s3)),
-                  andB(b2, reifyState(s2, paths, known2, s3))),
-              s3, Map()))
-      }
+    case Seqn(e1, e2) => {
+      val (b1, s1) = evalOpt(e1, paths, s0)
+      val (b2, s2) = evalOpt(e2, paths, s1)
+      (andB(b1, b2), s2)
+    }
+    case Opt(e1, e2) => {
+      val (b1, s1) = evalOpt(e1, paths, s0)
+      val (b2, s2) = evalOpt(e2, paths, s0)
+      val s3 = mkState()
+      val b = orB(andB(b1, reifyState(s1, paths, s3)),
+                  andB(b2, reifyState(s2, paths, s3)))
+      (b, State(s3, Map(), None))
     }
   }
 
   // Produces an expression that asserts that s1 is the same as s0, but with
   // the known paths' state set
-  private def reifyState(s0: S,
-                         paths: Map[Path, P],
-                         known: Map[Path, PathInfo],
-                         s1: S): B = {
-    val clauses = known.toSeq.map { case (p, _) => exists(paths(p), s1) }
-    andB(samePaths(s0, s1, paths -- known.keys),
-         clauses.foldLeft(trueB)(andB))
+  private def reifyState(s0: State, paths: Map[Path, P], s1: S): B = {
+    val clauses = s0.paths.toSeq.map { case (p, _) => exists(paths(p), s1) }
+    andB(andB(clauses.foldLeft(trueB)(andB), samePaths(s0.s, s1, paths -- s0.paths.keys)),
+         s0.error match {
+          case Some(true) => isError(s1) // seqError(s0.s, s1)
+          case Some(false) => notB(isError(s1))
+          case None => seqError(s0.s, s1)
+        })
   }
 
-  def eval(expr: FSKATExpr, s0: S, paths: Map[Path, P]): (B, S) = {
-    evalOpt(expr, paths, s0, Map()) match {
-      case None => (eqState(s0, errState), s0)
-      case Some((b, s1, known)) => {
-        val s2 = mkState()
-        (andB(b, reifyState(s1, paths, known, s2)), s2)
-      }
-    }
+  val rootPath = java.nio.file.Paths.get("/")
+  def concretePaths[A](paths: Map[Path, A]): Map[Path, PathInfo] = {
+    paths.map { case (path, _) => if (path == rootPath) (path, PathIsDir) else (path, PathDoesNotExist) }
+    //Map()
+  }
+
+  def eval(expr: FSKATExpr, paths: Map[Path, P], s0: S): (B, S) = {
+    val (b, s1) = evalOpt(expr, paths, State(s0, concretePaths(paths), Some(false)))
+    val s2 = mkState()
+    (andB(b, reifyState(s1, paths, s2)), s2)
   }
 
 }

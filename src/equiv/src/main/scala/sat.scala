@@ -26,7 +26,6 @@ class Z3Puppet {
   val boolSort = z3.mkBoolSort
 
   val initfs = z3.mkConst("FSINIT", fsSort)
-  val fserr  = z3.mkConst("FSERR", fsSort)
 
   val root = z3.mkConst("/", pathSort)
 
@@ -34,14 +33,17 @@ class Z3Puppet {
   val isdir   = z3.mkFuncDecl("isdir",   Seq(pathSort, fsSort), boolSort)
   val isfile  = z3.mkFuncDecl("isfile",  Seq(pathSort, fsSort), boolSort)
   val islink  = z3.mkFuncDecl("islink",  Seq(pathSort, fsSort), boolSort)
+  val iserror = z3.mkFuncDecl("iserror", Seq(fsSort), boolSort)
 
   private def toZ3AST(p: Path): Z3AST = z3.mkConst(p.toString, pathSort)
 
-  private object model extends ast.ExprModel {
+  private object model extends ast.OptExprModel {
 
     type S = Z3AST
     type B = Z3AST // The type of boolean expressions in the model
     type P = Z3AST
+
+    var numStates = 0
 
     val trueB = true.ast(context)
     def falseB = false.ast(context)
@@ -50,15 +52,19 @@ class Z3Puppet {
     def notB(e: B): B = (!e).ast(context)
     def ifB(e1: B, e2: B, e3: B) = ((e1 --> e2) && (!e1 --> e3)).ast(context)
     def iffB(e1: B, e2: B) = (e1 <--> e2).ast(context)
+    def impliesB(e1: B, e2: B) = (e1 --> e2).ast(context)
     def eqState(s1: S, s2: S): B = (s1 === s2)
-    def errState: S = fserr
-    def mkState(): S = z3.mkFreshConst("fs", fsSort)
+    def mkState(): S = {
+      numStates = numStates + 1
+      z3.mkFreshConst("fs", fsSort)
+
+    }
 
     def exists(path: P, state: S): B = pexists(path, state)
     def isDir(path: P, state: S): B = isdir(path, state)
     def isFile(path: P, state: S): B = isfile(path, state)
     def isLink(path: P, state: S): B = islink(path, state)
-
+    def isError(s: S): B = iserror(s)
   }
 
   private def eval(e: FSKATExpr, initfs: Z3AST, pathmap: Map[Path, Z3AST]): Z3AST  = {
@@ -89,21 +95,25 @@ class Z3Puppet {
   }
 
   def isEquiv(e1: equiv.ast.Expr, e2: equiv.ast.Expr): Option[Boolean] = {
+    isEquiv(Desugar(e1), Desugar(e2))
+  }
+
+  def isEquiv(e1fskat: FSKATExpr, e2fskat: FSKATExpr): Option[Boolean] = {
 
     solver.push
-
-    val e1fskat = Desugar(e1)
-    val e2fskat = Desugar(e2)
+    model.numStates = 0
 
     val allpaths = ancestors(FSKATExpr.gatherPaths(e1fskat) union FSKATExpr.gatherPaths(e2fskat))
 
     val pathmap = HashMap(((allpaths map {p=>(p->toZ3AST(p))}).toSeq):_*) + (Paths.get("/")->root)
 
-    // define errfs
-    solver.assertCnstr(z3.mkAnd((pathmap.toSeq.map({case(_, p) => (!pexists(p, fserr)).ast(context)})):_*))
 
-    // assert this condition for only initial FS and all FS derived from initial FS will follow
-    solver.assertCnstr(parentshouldexist(initfs, pathmap))
+    // Only the root directory exists in the initial state
+    for ((_, p) <- pathmap; if (p != root)) {
+      solver.assertCnstr(model.notB(model.exists(p, initfs)))
+    }
+    solver.assertCnstr(model.exists(root, initfs))
+    solver.assertCnstr(model.notB(model.isError(initfs)))
 
     val fsfinal_e1 = eval(e1fskat, initfs, pathmap)
     val fsfinal_e2 = eval(e2fskat, initfs, pathmap)
@@ -122,12 +132,28 @@ class Z3Puppet {
       return Some(false)
     }
 
-    // Assert that final fs_s are same wrt to all the paths
-    solver.assertCnstr(z3.mkNot(z3.mkAnd((pathmap.toSeq map {case(_, p) => (pexists(p, fsfinal_e1) === pexists(p, fsfinal_e2))}):_*)))
+    def similar(s1: Z3AST, s2: Z3AST): Z3AST = {
+      pathmap.values.toSeq.foldLeft(model.trueB) { (b, p) =>
+        model.andB(b,  model.exists(p, s1) === model.exists(p, s2))
+      }
+    }
 
-    // printAssertions()
+    println(s"${model.numStates} states and ${pathmap.size} paths generated in Z3")
 
-    val result = solver.checkAssumptions() map { b => !b }
+    solver.assertCnstr((!((iserror(fsfinal_e1) && iserror(fsfinal_e2)) ||
+                           similar(fsfinal_e1, fsfinal_e2))).ast(context))
+
+                       //)
+
+    val result = solver.checkAssumptions() map { b =>
+      // if (b) {
+      //   println("*************** MODEL *****************")
+      //   solver.getAssertions().toSeq.foreach(println)
+      //   println(solver.getModel)
+      // }
+
+      !b
+    }
 
     solver.pop()
 
