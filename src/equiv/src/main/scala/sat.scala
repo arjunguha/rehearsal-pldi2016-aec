@@ -63,19 +63,6 @@ class Z3Puppet {
 
   private def predeval(pr: ast.Predicate, infs: Z3AST, pathmap: Map[Path, Z3AST]) = model.eval(pr, infs, pathmap)
 
-  // private def predeval(pr: ast.Predicate, infs: Z3AST)
-  //                     (implicit pathmap: Map[Path, Z3AST]): Z3AST = pr match {
-  //   case ast.True => (true).ast(context)
-  //   case ast.False => (false).ast(context)
-  //   case ast.Exists(p) => pexists(pathmap(p), infs)
-  //   case ast.IsDir(p) => isdir(pathmap(p), infs)
-  //   case ast.IsRegularFile(p) => isfile(pathmap(p), infs)
-  //   case ast.IsLink(p) => islink(pathmap(p), infs)
-  //   case ast.And(lhs, rhs) => (predeval(lhs, infs) && predeval(rhs, infs)).ast(context)
-  //   case ast.Or(lhs, rhs) => (predeval(lhs, infs) || predeval(rhs, infs)).ast(context)
-  //   case ast.Not(oper) => (!predeval(oper, infs)).ast(context)
-  // }
-
   private def filter(pr: ast.Predicate, infs: Z3AST, outfs: Z3AST)
                     (implicit pathmap: Map[Path, Z3AST]): Z3AST = {
     ((predeval(pr, infs, pathmap) --> idfs(infs, outfs, pathmap)) &&
