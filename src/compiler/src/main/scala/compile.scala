@@ -76,6 +76,19 @@ object PuppetCompile {
     })
   }
 
+  private def getResourceList(attrs: List[Attribute]): List[List[Attribute]] = {
+    val nameattr = attrs.find((a) => a.name == "name") getOrElse
+      (throw new Exception("Name attribute not found"))
+
+    nameattr.value match {
+      case StringV(_) => List(attrs)
+      case ASTArrayV(arr) => arr.map((v) => Attribute("name", v) ::
+                                             (Attribute("namevar", v) ::
+                                                attrs.filterNot((a) => a.name == "name" || a.name == "namevar"))).toList
+      case _ => throw new Exception("Unexpected type")
+    }
+  }
+
   private def evalAttribute(a: AttributeC)
                            (implicit env: ScopeChain,
                                      catalog: Catalog,
@@ -141,7 +154,10 @@ object PuppetCompile {
       rhs
     }
 
-    case ResourceDeclC(attrs) => catalog.addResource(attrs.map(evalAttribute(_)), containedBy, Some(env.curScope))
+    case ResourceDeclC(attrs) => {
+      val resources = getResourceList(attrs.map(evalAttribute(_)))
+      resources.map((r) => catalog.addResource(r, containedBy, Some(env.curScope))).last
+    }
 
     case FilterExprC(lhs, rhs, op) => ResourceRefV(eval(lhs), eval(rhs), op)
 
