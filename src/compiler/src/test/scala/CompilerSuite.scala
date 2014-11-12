@@ -4,7 +4,7 @@ import java.io.File
 
 class CompilerSuite extends FunSuite {
 
-  val src = "./example/compiler/"
+  val src = "./compiler/example/compiler/"
 
   private def recursiveListFiles (f: File): Array[File] = {
     val these = f.listFiles
