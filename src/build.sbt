@@ -31,3 +31,5 @@ lazy val worker = project.in(file("verification/worker"))
                          .dependsOn(common)
 
 lazy val equiv = project.dependsOn(compiler)
+
+lazy val pipeline = project.dependsOn(compiler, equiv)
