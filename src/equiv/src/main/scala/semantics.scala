@@ -52,6 +52,7 @@ object Provider {
     private val validEnsureVals = List("present", "absent", "file", "directory", "link")
 
     val path = r.get[String]("path") getOrElse name
+    val source = r.get[String]("source")
     val ensure = validVal("ensure", validEnsureVals)
     val force = validVal("force", validBoolVals) getOrElse false
     val purge = validVal("purge", validBoolVals) getOrElse false
@@ -66,7 +67,11 @@ object Provider {
        val c = Content(content getOrElse "")
        val t = Paths.get(target getOrElse "/tmp/")
 
-      ensure match {
+       val _ensure = if (ensure.isDefined) ensure
+                     else if (source.isDefined) Some("file")
+                     else None
+
+      _ensure match {
         // Broken symlinks are ignored
         /* What if content is set 
          *   - Depends on file type
@@ -234,7 +239,7 @@ object Provider {
                                    If(Not(Exists(p)), Link(p, t), Block()))
 
 
-        case _ => throw new Exception("One or more required attribute missing")
+        case _ => println(name); println(ensure); throw new Exception("One or more required attribute missing")
       }
     }
   }
