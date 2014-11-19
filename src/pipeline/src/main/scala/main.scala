@@ -100,10 +100,12 @@ object Pipeline {
          val DQij = Eij.seq.foldLeft(Seqn(R1, R3): FSKATExpr)((acc, e) => Opt(acc, e.label.expr))
 
          // Could not get types to match (ie.value/ie.edge) therefore recreating edge
-         dfa.remove(LDiEdge(ie.source.value, state.value)(R1))
-         dfa.remove(LDiEdge(state.value, oe.source.value)(R3))
+         // dfa.remove(LDiEdge(ie.source.value, state.value)(R1))
+         // dfa.remove(LDiEdge(state.value, oe.source.value)(R3))
          dfa.add(LDiEdge(Qi.value, Qj.value)(FSKATExprLabel(DQij)))
        }
+       in_edges.foreach(e=>dfa.remove(LDiEdge(e.source.value, state.value)(e.label)))
+       out_edges.foreach(e=>dfa.remove(LDiEdge(state.value, e.target.value)(e.label)))
        dfa.remove(state.value)
        DFAtoRegExpr(dfa)
      }
