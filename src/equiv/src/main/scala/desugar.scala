@@ -58,3 +58,23 @@ object Desugar {
     case ShellExec(cmd) => Shell(Paths.get("/tmp/script.sh")) // Assume that command is written to file /tmp/script.sh which shell executes
   }
 }
+
+object PrettyPrintFSKATExpr {
+
+  private def printPath(p: Path): String = p.toAbsolutePath.toString
+
+  def apply(expr: FSKATExpr): String = expr match {
+    case Id => "id"
+    case Err => "err"
+    case MkDir(p) => s"mkdir(${printPath(p)})"
+    case RmDir(p) => s"rmdir(${printPath(p)})"
+    case Create(p) => s"create(${printPath(p)})"
+    case Delete(p) => s"delete(${printPath(p)})"
+    case Link(p) => s"link(${printPath(p)})"
+    case Unlink(p) => s"unlink(${printPath(p)})"
+    case Shell(p) => s"shell(${printPath(p)})"
+    case Filter(pr) => s"(filter(${ast.PrettyPrint.printPred(pr)}))"
+    case Seqn(x, y) => s"(${PrettyPrintFSKATExpr(x)} o ${PrettyPrintFSKATExpr(y)})"
+    case Opt(x, y) => s"(${PrettyPrintFSKATExpr(x)} + ${PrettyPrintFSKATExpr(y)})"
+  }
+}
