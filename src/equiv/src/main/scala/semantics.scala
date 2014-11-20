@@ -22,7 +22,7 @@ object Provider {
     case "Package" => PuppetPackage(r)
     case "User" => User(r)
     // case "Notify" => Notify(r)
-    // case "Service" => Service(r)
+    case "Service" => Service(r)
     case "Group" => Group(r)
     case "Exec" => Exec(r)
     case _ => throw new Exception("Resource type \"%s\" not supported yet".format(r.typ))
@@ -464,6 +464,7 @@ object Provider {
 
     def realize() { println(msg) }
   }
+  */
 
   case class Service(res: Resource) extends Provider(res) {
     private val validEnsureVals = List((StringV("stopped"): Value, "stopped"),
@@ -485,59 +486,28 @@ object Provider {
     // if a service's init script has a functional status command,
     val hasstatus = validVal("hasstatus", validHasStatusVals) getOrElse true
     val path = r.get[String]("path") getOrElse "/etc/init.d/"
-    */
     /* pattern to search for in process table, used for stopping services that do not support init scripts
      * Also used for determining service status on those service whose init scripts do not include a status command
      */
-     /*
     val pattern = r.get[String]("pattern") getOrElse binary
     val restart = r.get[String]("restart") // If not provided then service will be first stopped and then started
     val start = r.get[String]("start") getOrElse "start"
     val stop = r.get[String]("stop") getOrElse "stop"
     val status = r.get[String]("status")
 
-    // TODO : handle Refresh
-    def realize() {
+    def toFSOps(): Expr = {
 
-      import puppet.installer.Services
-
-      // XXX: Since we are not supporting notifications, we do not need to deal with restart related stuff
-
-      // Make sure binary exists after adding path variable to environment
-      val p = Paths.get(s"${path}/${binary}")
-      if(!Files.exists(p) || !Files.isExecutable(p)) {
-        throw new Exception(s"Invalid shell $p for user $name")
-      }
-
-      val isRunning = Services.isRunning(path, binary)
-
-      // TODO : Mark service to start on reboot if enable
       val mode = ensure match {
         case "stopped" => "stop"
         case "running" => "start"
-        case "undef" => if(isRunning) "start" else "stop"
+        case "undef" => "start"
         case _ => throw new Exception(s"Invalid value $ensure for a service provider for $name")
       }
 
-      Services.enlist(binary, path, flags, mode)
-
-      (mode, isRunning) match {
-        case ("start", true) | ("stop", false) => ()
-        case ("start", false) => if (!Services.start(path, binary, Some(flags))) {
-          val msg = s"Failed to start service: $name"
-          System.err.println(msg)
-          throw new Exception(msg)
-        }
-        case ("stop", true)  => if (!Services.stop(path, binary)) {
-          val msg = s"Failed to stop service: $name"
-          System.err.println(msg)
-          throw new Exception(msg)
-        }
-        case _ => throw new Exception(s"Invalid value $mode for service $name")
-      }
+      val command = s"${path}/${binary} ${flags} ${mode}"
+      ShellExec(command)
     }
   }
-  */
 
   case class Group(res: Resource) extends Provider(res) {
     private val validEnsureVals = List("present", "absent")
