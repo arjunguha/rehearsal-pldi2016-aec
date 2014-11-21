@@ -99,11 +99,10 @@ object Pipeline {
          val Eij = Qj.connectionsWith(Qi)
          val DQij = Eij.seq.foldLeft(Seqn(R1, R3): FSKATExpr)((acc, e) => Opt(acc, e.label.expr))
 
-         // Could not get types to match (ie.value/ie.edge) therefore recreating edge
-         // dfa.remove(LDiEdge(ie.source.value, state.value)(R1))
-         // dfa.remove(LDiEdge(state.value, oe.source.value)(R3))
          dfa.add(LDiEdge(Qi.value, Qj.value)(FSKATExprLabel(DQij)))
        }
+
+       // Could not get types to match (ie.value/ie.edge) therefore recreating edge
        in_edges.foreach(e=>dfa.remove(LDiEdge(e.source.value, state.value)(e.label)))
        out_edges.foreach(e=>dfa.remove(LDiEdge(state.value, e.target.value)(e.label)))
        dfa.remove(state.value)
@@ -196,9 +195,14 @@ object Pipeline {
 
     val dfa = DAGtoDFA(im_graph)
     val dfa_fskatlabel = labelstoFSKATExpr(dfa)
-    val regexp = DFAtoRegExpr(dfa_fskatlabel)
-    println(PrettyPrintFSKATExpr(regexp))
+    val fskat_expr = DFAtoRegExpr(dfa_fskatlabel)
+    println(PrettyPrintFSKATExpr(fskat_expr))
     println("------------------------------------------------------------------")
+    val z3 = new Z3Puppet
+    val res = z3.isSatisfiable(fskat_expr)
+    println(res)
+    println("---------------------- XX --------------------")
+    
 
     /*
     // println("Generate toposort")
