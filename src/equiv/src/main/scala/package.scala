@@ -18,7 +18,7 @@ package object equiv {
       }
     }
 
-    pathSet.foldLeft(pathSet) { (pathSet, path) => loop(path, pathSet) }
+    pathSet.foldLeft(Set.empty[Path]) { (pathSet, path) => loop(path, pathSet) }
   }
 
 }
