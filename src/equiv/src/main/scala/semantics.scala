@@ -270,49 +270,41 @@ object Provider {
     */
 
     /* apt-file must be installed and should be updated */
-    private def files: List[Path] = {
+    private def files: Set[Path] = {
 
       val cmd = s"apt-file -F list $name"
       val (sts, out, err) = Cmd.exec(cmd)
       if (0 == sts) {
-        out.lines.toList.map((l) => Paths.get(l.split(" ")(1)).normalize)
+        out.lines.toList.map((l) => Paths.get(l.split(" ")(1)).normalize).toSet
       }
       else {
         throw new Exception(s"$cmd failed: $err")
       }
     }
 
-    private def parentdir(path: Path): Set[Path] = {
-      if(null == path.getParent) { Set.empty }
-      else { Set(path.getParent) ++ parentdir(path.getParent) }
-    }
-
-    private def parentdirs(paths: List[Path]): Set[Path] = {
-      (for (path <- paths) yield parentdir(path)).toSet.flatten
-    }
-
     def toFSOps: Expr = {
 
       import scala.collection.SortedSet
+
+      // Arrange dirs by closest first
+      val orderby = Ordering.by[Path, Int](_.getNameCount)
+
+      val root = Paths.get("/")
+      val allpaths = SortedSet[Path]()(orderby) ++ equiv.ancestors(files)
+      val dirs = (allpaths -- files)
 
       ensure match {
         case Some("present") | Some("installed") | Some("latest") => {
 
           val somecontent = Content("")
-
-          // Arrange dirs by closest first
-          val orderby = Ordering.by[Path, Int](_.getNameCount)
-          val dirs = SortedSet[Path]()(orderby) ++ parentdirs(files)
-
-          val mkdirs = dirs.map((d) => If(Not(Exists(d)), MkDir(d), Block())).toList
+          val mkdirs = (dirs - root).map(d => If(Not(Exists(d)), MkDir(d), Block())).toList
           val createfiles = files.map((f) => CreateFile(f, somecontent))
-
           val exprs = (mkdirs ++ createfiles)
           Block(exprs: _*)
         }
 
         case Some("absent") | Some("purged") => {
-          val exprs = files.map(DeleteFile(_))
+          val exprs = files.map(DeleteFile(_)).toSeq
           Block(exprs: _*)
         }
 
@@ -320,27 +312,6 @@ object Provider {
         case _ => throw new Exception("One or more required attribute is missing")
       }
     }
-
-    /*
-    def realize() {
-      val cmd = ensure match {
-        case Some("present") | Some("installed") => "apt-get -y -q install %s".format(name)
-        case Some("absent") => "apt-get -y -q remove %s".format(name)
-        case Some("purged") => "apt-get -y -q remove --purge %s".format(name)
-        case Some("held")   => throw new Exception("NYI package held") // TODO
-        case Some("latest") => "apt-get -y -q install %s=%s".format(name, latest)
-        case _ => throw new Exception("One or more required attribute is missing")
-      }
-
-      println(s"Executing: $cmd")
-      val (sts, out, err) = Cmd.exec(cmd)
-      println(out)
-      if(sts != 0) {
-        System.err.println(err)
-        throw new Exception(err)
-      }
-    }
-    */
   }
 
   case class User(res: Resource) extends Provider(res) {
