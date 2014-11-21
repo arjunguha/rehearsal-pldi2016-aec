@@ -160,6 +160,33 @@ class Z3Puppet {
     result
   }
 
+  def isSatisfiable(e: FSKATExpr): Boolean = {
+
+    solver.push
+    model.numStates = 0
+
+    val allpaths = ancestors(FSKATExpr.gatherPaths(e))
+    val pathmap = HashMap(((allpaths map {p=>(p->toZ3AST(p))}).toSeq):_*) + (Paths.get("/")->root)
+
+    // Only the root directory exists in the initial state
+    for ((_, p) <- pathmap; if (p != root)) {
+      solver.assertCnstr(model.notB(model.exists(p, initfs)))
+    }
+    solver.assertCnstr(model.exists(root, initfs))
+    solver.assertCnstr(model.notB(model.isError(initfs)))
+
+    // assert that paths are distinct
+    solver.assertCnstr(z3.mkDistinct(pathmap.values.toSeq: _*))
+
+    // evaluate
+    val fsfinal = eval(e, initfs, pathmap)
+    solver.assertCnstr((!iserror(fsfinal)).ast(context))
+
+    val result = solver.checkAssumptions()
+    solver.pop()
+    result getOrElse false
+  }
+
   val solver = z3.mkSolver
 
   def sanityCheck(): Option[Boolean] = {

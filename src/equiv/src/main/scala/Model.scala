@@ -66,21 +66,23 @@ trait ExprModel extends TypedModel with PredModel {
 
  import equiv.desugar._
 
+   private def mkdirEval(p: Path, paths: Map[Path, P], s0: S): (B, S) = {
+     val s1 = mkState()
+     val path = paths(p)
+     val parent = paths(p.getParent)
+     val b = ifB(andB(exists(parent, s0), notB(exists(path, s0))),
+                 andB(exists(path, s1), samePaths(s0, s1, paths - p)),
+                 isError(s1))
+     (b, s1)
+  }
+
   def eval(expr: FSKATExpr, paths: Map[Path, P], s0: S): (B, S) = expr match {
     case Id => (trueB, s0)
     case Err => {
       val s1 = mkState()
       (isError(s1), s1)
     }
-    case MkDir(p) => {
-      val s1 = mkState()
-      val path = paths(p)
-      val parent = paths(p.getParent)
-      val b = ifB(andB(exists(parent, s0), notB(exists(path, s0))),
-                  andB(exists(path, s1), samePaths(s0, s1, paths - p)),
-                  isError(s1))
-      (b, s1)
-    }
+    case MkDir(p) => mkdirEval(p, paths, s0)
     case Seqn(e1, e2) => {
       val (b1, s1) = eval(e1, paths, s0)
       val (b2, s2) = eval(e2, paths, s1)
@@ -108,6 +110,140 @@ trait OptExprModel extends TypedModel with PredModel {
 
   case class State(s: S, paths: Map[Path, PathInfo], error: Option[Boolean])
 
+  private def evalMkdir(p: Path,
+                        paths: Map[Path, P],
+                        s0: State): (B, State) = (s0.paths.get(p.getParent), s0.paths.get(p)) match {
+    // The parent is a directory and the child does not exist
+    case (Some(PathIsDir), Some(PathDoesNotExist)) => {
+      val path = paths(p)
+      val parent = paths(p.getParent)
+      (trueB, State(s0.s, s0.paths + (p -> PathIsDir), s0.error))
+    }
+    // p already exists in some state, so mkdir will error
+    // case (_, Some(_)) => (trueB, State(s0.s, s0.paths, Some(true)))
+    // In all other cases, return the most general expression. But, we can
+    // do better by considering other state for the parent and path.
+    case _ => {
+      val s00 = mkState()
+      val b0 = reifyState(s0, paths, s00)
+      val s1 = mkState()
+      val path = paths(p)
+      val parent = paths(p.getParent)
+      val b = ifB(andB(exists(parent, s00), notB(exists(path, s00))),
+                  andB(seqError(s00, s1), andB(exists(path, s1), samePaths(s00, s1, paths - p))),
+                  isError(s1))
+      (andB(b0, b),
+       State(s1, Map(), None))
+    }
+  }
+
+  private def evalCreate(p: Path,
+                         paths: Map[Path, P],
+                         s0: State): (B, State) = (s0.paths.get(p.getParent), s0.paths.get(p)) match {
+    // The parent is a directory and the child does not exist
+    case (Some(PathIsDir), Some(PathDoesNotExist)) => {
+      val path = paths(p)
+      val parent = paths(p.getParent)
+      (trueB, State(s0.s, s0.paths + (p -> PathIsFile), s0.error))
+    }
+
+    // p already exists in some state, so create will error
+    // case (_, Some(_)) => (trueB, State(s0.s, s0.paths, Some(true)))
+    // In all other cases, return the most general expression. But, we can
+    // do better by considering other state for the parent and path
+    case _ => {
+      val s00 = mkState()
+      val b0 = reifyState(s0, paths, s00)
+      val s1 = mkState()
+      val path = paths(p)
+      val parent = paths(p.getParent)
+      val b = ifB(andB(exists(parent, s00), notB(exists(path, s00))),
+                  andB(seqError(s00, s1), andB(exists(path, s1), samePaths(s00, s1, paths - p))),
+                  isError(s1))
+      (andB(b0, b),
+       State(s1, Map(), None))
+    }
+  }
+
+  private def evalDelete(p: Path,
+                         paths: Map[Path, P],
+                         s0: State): (B, State) = (s0.paths.get(p)) match {
+    case Some(PathIsFile) => {
+      val path = paths(p)
+      (trueB, State(s0.s, s0.paths - p, s0.error))
+    }
+
+    case _ => {
+      val s00 = mkState()
+      val b0 = reifyState(s0, paths, s00)
+      val s1 = mkState()
+      val path = paths(p)
+      val b = ifB(exists(path, s00),
+                  andB(seqError(s00, s1),
+                       andB(notB(exists(path, s1)),
+                            samePaths(s00, s1, paths - p))),
+                  isError(s1))
+      (andB(b0, b),
+       State(s1, Map(), None))
+    }
+  }
+
+  private def evalPredConcrete(pr: Predicate,
+                               paths: Map[Path, PathInfo]): Option[Boolean] = pr match {
+    case True => Some(true)
+    case False => Some(false)
+    case Exists(p) => paths.get(p).map({case PathDoesNotExist => false
+                                        case _ => true})
+    case IsDir(p) => paths.get(p).map({case PathIsDir => true
+                                       case _ => false})
+    case IsRegularFile(p) => paths.get(p).map({case PathIsFile => true
+                                               case _ => false})
+    case IsLink(p) => paths.get(p).map({case PathIsLink => true
+                                        case _ => false})
+    case And(lhs, rhs) => (evalPredConcrete(lhs, paths), evalPredConcrete(rhs, paths)) match {
+      case (None, _) => None
+      case (_, None) => None
+      case (Some(true), Some(true)) => Some(true)
+      case _ => Some(false)
+    }
+    case Or(lhs, rhs) => (evalPredConcrete(lhs, paths), evalPredConcrete(rhs, paths)) match {
+      case (None, _) => None
+      case (_, None) => None
+      case (Some(false), Some(false)) => Some(false)
+      case _ => Some(true)
+    }
+    case Not(pr) => evalPredConcrete(pr, paths).map(b => !b)
+  }
+
+  private def evalFilter(pr: Predicate,
+                         paths: Map[Path, P],
+                         s0: State): (B, State) = evalPredConcrete(pr, s0.paths) match {
+    case Some(true) => (trueB, s0)
+    case Some(false) => (falseB, State(s0.s, s0.paths, Some(true)))
+    case None => /* Could not evaluate, we have partial information */ {
+      // TODO : Do we need to reify state
+      val s00 = mkState()
+      val b0 = reifyState(s0, paths, s00)
+      val s1 = mkState()
+      val b = ifB(eval(pr, s00, paths), andB(seqError(s00, s1), samePaths(s00, s1, paths)), isError(s1))
+      (andB(b0, b), State(s1, s0.paths, None))
+    }
+  }
+
+  /* There is nothing to do while statically evaluating a shell script execution
+   * Theoretically it could wipe out root directory
+   * Conservatively, lets drop all knowledge about filesystem that have been
+   * gathered till this point and start afresh
+   */
+  private def evalShell(p: Path, paths: Map[Path, P], s0: State): (B, State) = {
+
+    val s00 = mkState()
+    val b0 = reifyState(s0, paths, s00)
+    val s1 = mkState()
+    (b0, State(s1, Map(), None))
+  }
+
+
   // We represent states as a state-variable (s0) and a map from
   // paths to their statically known states.
   //
@@ -119,30 +255,11 @@ trait OptExprModel extends TypedModel with PredModel {
       val s1 = mkState()
       (trueB, State(s1, Map(), Some(true)))
     }
-    case MkDir(p) => (s0.paths.get(p.getParent), s0.paths.get(p)) match {
-      // The parent is a directory and the child does not exist
-      case (Some(PathIsDir), Some(PathDoesNotExist)) => {
-        val path = paths(p)
-        val parent = paths(p.getParent)
-        (trueB, State(s0.s, s0.paths + (p -> PathIsDir), s0.error))
-      }
-      // p already exists in some state, so mkdir will error
-      // case (_, Some(_)) => (trueB, State(s0.s, s0.paths, Some(true)))
-      // In all other cases, return the most general expression. But, we can
-      // do better by considering other state for the parent and path.
-      case _ => {
-        val s00 = mkState()
-        val b0 = reifyState(s0, paths, s00)
-        val s1 = mkState()
-        val path = paths(p)
-        val parent = paths(p.getParent)
-        val b = ifB(andB(exists(parent, s00), notB(exists(path, s00))),
-                    andB(seqError(s00, s1), andB(exists(path, s1), samePaths(s00, s1, paths - p))),
-                    isError(s1))
-        (andB(b0, b),
-         State(s1, Map(), None))
-      }
-    }
+    case MkDir(p) => evalMkdir(p, paths, s0)
+    case Create(p) => evalCreate(p, paths, s0)
+    case Delete(p) => evalDelete(p, paths, s0)
+    case Filter(pr) => evalFilter(pr, paths, s0)
+    case Shell(p) => evalShell(p, paths, s0)
     case Seqn(e1, e2) => {
       val (b1, s1) = evalOpt(e1, paths, s0)
       val (b2, s2) = evalOpt(e2, paths, s1)
