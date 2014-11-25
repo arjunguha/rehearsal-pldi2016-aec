@@ -8,12 +8,13 @@ import equiv.ast._
 import equiv.desugar._
 import equiv.semantics._
 
+import puppet.driver.{PuppetDriver => driver}
+
 import scala.collection.mutable
 
 import scala.collection.immutable.HashMap
 import scala.collection.mutable.{HashMap => MHashMap}
 
-import scala.collection.immutable.Stream
 import scalax.collection.Graph
 import scalax.collection.GraphEdge._
 import scalax.collection.GraphPredef._
@@ -33,28 +34,38 @@ object Pipeline {
 
   import scalax.collection.mutable.{Graph => MGraph}
 
-  def func[T](trees: Stream[LazyTree[T]]): Stream[List[T]] = trees match {
-    case x #:: xs =>  {
-      val ch = func(x.children)
-      (x.root :: ch.head) #:: ((ch.tail map {ls=> x.root :: ls}) ++ func(xs))
-    }
+  private def DFAtoDot(dfa: Graph[Symbol, LDiEdge]): String = {
 
-    case _ => Stream(List())
-  }
+    import scalax.collection.io.dot._
+    import scala.language.existentials
+    
+    val root = DotRootGraph(
+      directed = true,
+      id = Some("DFA"),
+      kvList = Seq[DotAttr]())
 
-  private def printDFA(dfa: Graph[Symbol, LDiEdge]) {
-    println("TODO")
+    def edgeTransformer(innerEdge: Graph[Symbol, LDiEdge]#EdgeT):
+      Option[(DotGraph, DotEdgeStmt)] = {
+        val edge = innerEdge.edge
+        val label = edge.label.asInstanceOf[ResourceLabel]
+        Some((root,
+              DotEdgeStmt(edge.from.value.name,
+                          edge.to.value.name,
+                          List(DotAttr("label", label.r.title))
+                          )))
+      }
+      dfa.toDot(root, edgeTransformer)
   }
 
 
   def DFAtoRegExpr(dfa: Graph[Symbol, LDiEdge]): FSKATExpr = {
     val mdfa = MGraph.from(dfa.nodes.map(_.value),
                            dfa.edges.map(e => LDiEdge(e.source.value, e.target.value)(e.label)))
-    _DFAtoRegExpr(mdfa)
+    DFAtoRegExpr(mdfa)
   }
 
 
-  private def _DFAtoRegExpr(dfa: MGraph[Symbol, LDiEdge]): FSKATExpr = {
+  private def DFAtoRegExpr(dfa: MGraph[Symbol, LDiEdge]): FSKATExpr = {
 
     import FSKATImplicit._
 
@@ -113,7 +124,6 @@ object Pipeline {
   private def labelstoFSKATExpr (dfa: Graph[Symbol, LDiEdge]): Graph[Symbol, LDiEdge] = {
 
     import RImplicit._
-    import puppet.driver.{PuppetDriver => driver}
 
     Graph.from(dfa.nodes.map(_.value),
                dfa.edges.map(e=> {
@@ -184,42 +194,18 @@ object Pipeline {
     import puppet.driver.{PuppetDriver => driver}
 
     val im_graph = driver.compile(driver.prepareContent(mainFile, modulePath))
-
-    /*
-    val mgraph = MGraph.from(im_graph.nodes.map(_.value),
-                             im_graph.edges.map ((e) => e.source.value ~> e.target.value))
-
-    val lst = Complexity[Resource](mgraph, Set(Set()))
-    lst foreach (println(_))
-    */
+    driver.printDOTGraph(im_graph)
 
     val dfa = DAGtoDFA(im_graph)
+    val dot_str = DFAtoDot(dfa)
+    println(dot_str)
     val dfa_fskatlabel = labelstoFSKATExpr(dfa)
     val fskat_expr = DFAtoRegExpr(dfa_fskatlabel)
-    println(PrettyPrintFSKATExpr(fskat_expr))
+    // println(PrettyPrintFSKATExpr(fskat_expr))
     println("------------------------------------------------------------------")
     val z3 = new Z3Puppet
     val res = z3.isSatisfiable(fskat_expr)
     println(res)
     println("---------------------- XX --------------------")
-    
-
-    /*
-    // println("Generate toposort")
-    val permtree = TopoSortPermutationLazyTree(graph)
-
-    // println("generate list of perms")
-    val perms = func(permtree)
-
-    val z3 = new Z3Puppet
-
-    val x = perms(0)
-    val y = perms(1)
-
-    val x_expr = Block((x.map((r) => Provider(r).toFSOps())).toSeq:_*)
-    val y_expr = Block((y.map((r) => Provider(r).toFSOps())).toSeq:_*)
-
-    println(z3.isEquiv(x_expr, y_expr))
-    */
   }
 }
