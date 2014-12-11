@@ -26,15 +26,23 @@ object Content {
 }
 
 object Exists {
-
   def apply(str: String): Predicate = Exists(Paths.get(str))
+}
 
+object IsRegularFile {
+  def apply(str: String): Predicate = IsRegularFile(Paths.get(str))
 }
 
 object CreateFile {
-
   def apply(p: String, content: String): Expr = {
     CreateFile(Paths.get(p), Content(content))
+  }
+}
+
+
+object DeleteFile {
+  def apply(p: String): Expr = {
+    DeleteFile(Paths.get(p))
   }
 }
 

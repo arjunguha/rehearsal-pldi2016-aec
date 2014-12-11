@@ -88,6 +88,19 @@ class Core extends FunSuite with Matchers {
     assert(Some(true) == z3p.isEquiv(block1, block2))
   }
 
+  test("""semantics of Puppet's file resource""") {
+    val p = "/tmp"
+    val c = "contents"
+    import equiv.ast._
+    val exp = If(And(Exists(p), IsRegularFile(p)),
+                                   Block(DeleteFile(p), CreateFile(p, c)), // true branch
+                                   If(Not(Exists(p)),
+                                      Block(CreateFile(p, c)),
+                                      Block()))
+
+    assert(z3p.isSatisfiable(equiv.desugar.Desugar(exp)))
+  }
+
 
 
   /*

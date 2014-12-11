@@ -38,7 +38,7 @@ object Pipeline {
 
     import scalax.collection.io.dot._
     import scala.language.existentials
-    
+
     val root = DotRootGraph(
       directed = true,
       id = Some("DFA"),
@@ -75,7 +75,7 @@ object Pipeline {
      * 2. If k = 2, then G must consist of a start state, an accept state, and a single
      *    arrow connecting them and labeled with a regular expression R
      *    Return the expression R
-     * 3. If k > 2, we select any state Qrip (belonging to Q) different from Qstart and 
+     * 3. If k > 2, we select any state Qrip (belonging to Q) different from Qstart and
      *    Qaccept and let G' be the GNFA (Q', Sigma, d', Qstart, Qaccept), where
      *         Q' = Q - {Qrip}
      * and for any Qi belonging to Q' - {Qaccept} and and Qj belonging to Q' - {Qstart} let
@@ -143,7 +143,7 @@ object Pipeline {
     // Construct dfa with labelled edges
     def grunt(dfa: MGraph[Symbol, LDiEdge], level: Map[Set[N], Symbol]) {
 
-      val nextlevel = MHashMap.empty[Set[N], Symbol] 
+      val nextlevel = MHashMap.empty[Set[N], Symbol]
 
       level foreach { case (set, src_symb) => {
         val tmpgraph = MGraph.from(dag.nodes.map(_.value),
@@ -190,10 +190,14 @@ object Pipeline {
   }
 
   def apply(mainFile: String, modulePath: Option[String] = None) {
+    runPipeline(driver.prepareContent(mainFile, modulePath))
+  }
+
+  def runPipeline(puppetProgram: String) {
 
     import puppet.driver.{PuppetDriver => driver}
 
-    val im_graph = driver.compile(driver.prepareContent(mainFile, modulePath))
+    val im_graph = driver.compile(puppetProgram)
     driver.printDOTGraph(im_graph)
 
     val dfa = DAGtoDFA(im_graph)
