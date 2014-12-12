@@ -183,8 +183,16 @@ class Z3Puppet {
     solver.assertCnstr((!iserror(fsfinal)).ast(context))
 
     val result = solver.checkAssumptions()
+
+    if (!result.isDefined) {
+      println("SAT could not determine if this is solvable")
+    }
+    printAssertions()
+
+    // val results = solver.checkAndGetAllModels()
     solver.pop()
-    result getOrElse false
+    // results.size > 0
+    return result getOrElse false
   }
 
   val solver = z3.mkSolver
