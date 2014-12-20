@@ -162,7 +162,42 @@ class TestSuite extends org.scalatest.FunSuite {
     }
   }
 
+  test("Block mkdir, remove dir returns start state") {
+    assertResult(List(startState)) {
+      eval(Block(Mkdir(nonexDir),
+                 Rm(nonexDir)),
+           startState)
+    }
+  }
 
+  test("Block mkdir, cp, remove dir returns state with copied dir") {
+    val target: Path = rootDir + "/new"
+
+    assertResult(
+      List(startState + (target -> IsDir))
+      ) {
+      eval(Block(Mkdir(nonexDir),
+                 Cp(nonexDir, target),
+                 Rm(nonexDir)),
+           startState)
+    }
+  }
+
+  test("Block removing dir before making it fails") {
+    assertResult(List()) {
+      eval(Block(Rm(nonexDir),
+                 Mkdir(nonexDir)),
+           startState)
+    }
+  }
+
+  test("Block making same dir twice fails") {
+    assertResult(List()) {
+      eval(Block(Mkdir(nonexDir),
+                 Mkdir(nonexDir)),
+           startState)
+    }
+  }
 
   test("can constuct expressions") {
 
