@@ -199,6 +199,34 @@ class TestSuite extends org.scalatest.FunSuite {
     }
   }
 
+  test("Alt returns both possible states for 2 distinct valid operations") {
+    val newDir: Path = emptyDir + "/new"
+    val res = eval(Alt(Rm(startFile),
+                       Mkdir(newDir)),
+                   startState)
+    assert(res.contains(startState - startFile))
+    assert(res.contains(startState + (newDir -> IsDir)))
+    assert(res.length == 2)
+  }
+
+  test("Alt returns only state from non-failing expression") {
+    assertResult(
+      List(startState - startFile)
+      ) {
+      eval(Alt(Rm(startFile),
+               Rm(nonexDir)),
+           startState)
+    }
+  }
+
+  test("Alt twice with valid distinct exprs results in 4 states") {
+    val res = eval(Block(Alt(Mkdir("/1"), Mkdir("/2")),
+                         Alt(Mkdir("/a"), Mkdir("/b"))),
+                   startState)
+    assert(res.length == 4)
+  }
+
+
   test("can constuct expressions") {
 
     Cp("/tmp/foo", "/home/kai/foo")
