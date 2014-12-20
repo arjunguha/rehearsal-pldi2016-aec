@@ -108,7 +108,7 @@ class TestSuite extends org.scalatest.FunSuite {
     }
   }
 
-  test("Cp fails when source does not exist") {
+  test("Cp fails when src does not exist") {
     val target = rootDir + "/new"
 
     assertResult(List()) {
@@ -129,6 +129,40 @@ class TestSuite extends org.scalatest.FunSuite {
       eval(Cp(startFile, target), startState)
     }
   }
+
+  test("Mv moves file when src exists, target does not, & target's dir does") {
+    val target: Path = emptyDir + "/new.txt"
+
+    assertResult(
+      List(startState - startFile + (target -> IsFile))
+      ) {
+      eval(Mv(startFile, target), startState)
+    }
+  }
+
+  test("Mv fails when src does not exist") {
+    val target = rootDir + "/new"
+
+    assertResult(List()) {
+      eval(Mv(nonexDir, target), startState)
+    }
+  }
+
+  test("Mv fails when target already exists") {
+    assertResult(List()) {
+      eval(Mv(rootDir, emptyDir), startState)
+    }
+  }
+
+  test("Mv fails when target's parent does not exist") {
+    val target = nonexDir + "/new.txt"
+
+    assertResult(List()) {
+      eval(Mv(startFile, target), startState)
+    }
+  }
+
+
 
   test("can constuct expressions") {
 
