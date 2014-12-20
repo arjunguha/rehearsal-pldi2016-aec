@@ -8,12 +8,11 @@ import Eval._
 class TestSuite extends org.scalatest.FunSuite {
 
   val emptyState: Map[Path, FileState] = Map()
-  val existingDir = "/pictures"
+  val existingDir = "pictures/"
+  val existingFile = existingDir + "README.txt"
   // TODO(kgeffen) Improve this line
-  val startState: Map[Path, FileState] = Map(stringToPath("/usr") -> IsDir,
-                                             stringToPath("/usr/kai") -> IsDir,
-                                             stringToPath(existingDir) -> IsDir,
-                                             stringToPath("/usr/kai/config") -> IsFile)
+  val startState: Map[Path, FileState] = Map(stringToPath(existingDir) -> IsDir,
+                                             stringToPath(existingFile) -> IsFile)
 
   // TODO(kgeffen) Better title
   test("Error returns empty list of possible states") {
@@ -28,12 +27,12 @@ class TestSuite extends org.scalatest.FunSuite {
     val newDir = existingDir + "/cats"
 
     assertResult(eval(Mkdir(newDir), startState)) {
-      startState ++ Map(newDir -> IsDir)
+      List(startState ++ Map(newDir -> IsDir))
     }
   }
 
   test("Mkdir fails when parent does not exist") {
-    val newDir = existingDir + "/cats/kittens"
+    val newDir = existingDir + "/nonExistantDir/cats"
 
     assertResult(eval(Mkdir(newDir), startState)) {
       List()
@@ -42,6 +41,28 @@ class TestSuite extends org.scalatest.FunSuite {
 
   test("Mkdir fails when dir already exists") {
     assertResult(eval(Mkdir(existingDir), startState)) {
+      List()
+    }
+  }
+
+  test("CreateFile succeeds when parent dir exists and file does not") {
+    val newFile = existingDir + "new.jpg"
+
+    assertResult(eval(CreateFile(newFile), startState)) {
+      List(startState ++ newFile -> IsFile)
+    }
+  }
+
+  test("CreateFile fails when parent dir does not exist") {
+    val newFile = existingDir + "/nonExistantDir/food.jpg"
+
+    assertResult(eval(CreateFile(newFile), startState)) {
+      List()
+    }
+  }
+
+  test("CreateFile fails when file already exists") {
+    assertResult(eval(CreateFile(existingFile), startState)) {
       List()
     }
   }
