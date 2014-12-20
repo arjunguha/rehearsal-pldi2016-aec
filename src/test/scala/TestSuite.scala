@@ -24,46 +24,50 @@ class TestSuite extends org.scalatest.FunSuite {
   }
 
   test("Mkdir creates dir if parent exists and dir does not") {
-    val newDir = existingDir + "/cats"
+    val newDir: Path = existingDir + "cats"
 
-    assertResult(eval(Mkdir(newDir), startState)) {
-      List(startState ++ Map(newDir -> IsDir))
+    assertResult(
+      List(startState + (newDir -> IsDir))
+      ) {
+      eval(Mkdir(newDir), startState)
     }
   }
 
   test("Mkdir fails when parent does not exist") {
     val newDir = existingDir + "/nonExistantDir/cats"
 
-    assertResult(eval(Mkdir(newDir), startState)) {
-      List()
+    assertResult(List()) {
+      eval(Mkdir(newDir), startState)
     }
   }
 
   test("Mkdir fails when dir already exists") {
-    assertResult(eval(Mkdir(existingDir), startState)) {
-      List()
+    assertResult(List()) {
+      eval(Mkdir(existingDir), startState)
     }
   }
 
   test("CreateFile succeeds when parent dir exists and file does not") {
-    val newFile = existingDir + "new.jpg"
+    val newFile: Path = existingDir + "new.jpg"
 
-    assertResult(eval(CreateFile(newFile), startState)) {
-      List(startState ++ newFile -> IsFile)
+    assertResult(
+      List(startState + (newFile -> IsFile))
+      ) {
+      eval(CreateFile(newFile), startState)
     }
   }
 
   test("CreateFile fails when parent dir does not exist") {
     val newFile = existingDir + "/nonExistantDir/food.jpg"
 
-    assertResult(eval(CreateFile(newFile), startState)) {
-      List()
+    assertResult(List()) {
+      eval(CreateFile(newFile), startState)
     }
   }
 
   test("CreateFile fails when file already exists") {
-    assertResult(eval(CreateFile(existingFile), startState)) {
-      List()
+    assertResult(List()) {
+      eval(CreateFile(existingFile), startState)
     }
   }
 
