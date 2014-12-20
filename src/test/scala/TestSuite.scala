@@ -3,6 +3,7 @@ package fsmodel
 import java.nio.file.Path
 
 import Implicits._
+import Eval._
 
 class TestSuite extends org.scalatest.FunSuite {
 
@@ -16,17 +17,17 @@ class TestSuite extends org.scalatest.FunSuite {
 
   // TODO(kgeffen) Better title
   test("Error returns empty list of possible states") {
-    assert(Eval.eval(Error, startState) == List())
+    assert(eval(Error, startState) == List())
   }
 
   test("Skip does not change state") {
-    assert(Eval.eval(Skip, startState) == List(startState))
+    assert(eval(Skip, startState) == List(startState))
   }
 
   test("Mkdir creates dir if parent exists and dir does not") {
     val newDir = existingDir + "/cats"
 
-    assertResult(Eval.eval(Mkdir(newDir), startState)) {
+    assertResult(eval(Mkdir(newDir), startState)) {
       startState ++ Map(newDir -> IsDir)
     }
   }
@@ -34,13 +35,13 @@ class TestSuite extends org.scalatest.FunSuite {
   test("Mkdir fails when parent does not exist") {
     val newDir = existingDir + "/cats/kittens"
 
-    assertResult(Eval.eval(Mkdir(newDir), startState)) {
+    assertResult(eval(Mkdir(newDir), startState)) {
       List()
     }
   }
 
   test("Mkdir fails when dir already exists") {
-    assertResult(Eval.eval(Mkdir(existingDir), startState)) {
+    assertResult(eval(Mkdir(existingDir), startState)) {
       List()
     }
   }
