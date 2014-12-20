@@ -10,6 +10,7 @@ class TestSuite extends org.scalatest.FunSuite {
   val rootDir: Path = "/root"
   val startFile: Path = rootDir + "/README.txt"
   val emptyDir: Path = rootDir + "/empty"
+  val nonexDir: Path = rootDir + "/unicorn"
   val startState: Map[Path, FileState] = Map(rootDir -> IsDir,
                                              startFile -> IsFile,
                                              emptyDir -> IsDir)
@@ -24,17 +25,15 @@ class TestSuite extends org.scalatest.FunSuite {
   }
 
   test("Mkdir creates dir if parent exists and dir does not") {
-    val newDir: Path = rootDir + "/new"
-
     assertResult(
-      List(startState + (newDir -> IsDir))
+      List(startState + (nonexDir -> IsDir))
       ) {
-      eval(Mkdir(newDir), startState)
+      eval(Mkdir(nonexDir), startState)
     }
   }
 
   test("Mkdir fails when parent does not exist") {
-    val newDir = rootDir + "/nonexistantDir/new/"
+    val newDir = nonexDir + "/new"
 
     assertResult(List()) {
       eval(Mkdir(newDir), startState)
@@ -58,7 +57,7 @@ class TestSuite extends org.scalatest.FunSuite {
   }
 
   test("CreateFile fails when parent dir does not exist") {
-    val newFile = rootDir + "/nonExistantDir/food.jpg"
+    val newFile = nonexDir + "/food.jpg"
 
     assertResult(List()) {
       eval(CreateFile(newFile), startState)
@@ -71,7 +70,7 @@ class TestSuite extends org.scalatest.FunSuite {
     }
   }
 
-  test("Rm removes file if it exists") {
+  test("Rm removes file when it exists") {
     assertResult(
       List(startState - startFile)
       ) {
@@ -79,7 +78,7 @@ class TestSuite extends org.scalatest.FunSuite {
     }
   }
 
-  test("Rm removes folder if it exists and is empty") {
+  test("Rm removes folder when it exists and is empty") {
     assertResult(
       List(startState - emptyDir)
       ) {
@@ -87,17 +86,47 @@ class TestSuite extends org.scalatest.FunSuite {
     }
   }
 
-  test("Rm fails to remove nonexistant file") {
-    val nonexistant = rootDir + "/nonex.jpg"
-
+  test("Rm fails to remove nonexistant dir") {
     assertResult(List()) {
-      eval(Rm(nonexistant), startState)
+      eval(Rm(nonexDir), startState)
     }
   }
 
   test("Rm fails to remove filled dir") {
     assertResult(List()) {
       eval(Rm(rootDir), startState)
+    }
+  }
+
+  test("Cp copies file when src exists, target does not, & target's dir does") {
+    val target: Path = emptyDir + "/new.txt"
+
+    assertResult(
+      List(startState + (target -> IsFile))
+      ) {
+      eval(Cp(startFile, target), startState)
+    }
+  }
+
+  test("Cp fails when source does not exist") {
+    val target = rootDir + "/new"
+
+    assertResult(List()) {
+      eval(Cp(nonexDir, target), startState)
+    }
+  }
+
+  test("Cp fails when target already exists") {
+    assertResult(List()) {
+      eval(Cp(rootDir, emptyDir), startState)
+    }
+  }
+
+  test("Cp fails when target's parent does not exist") {
+    val target = nonexDir + "/new.txt"
+
+    assertResult(List()) {
+      eval(Cp(startFile, target), startState)
     }
   }
 
