@@ -23,11 +23,25 @@ class TestSuite extends org.scalatest.FunSuite {
     assert(Eval.eval(Skip, startState) == List(startState))
   }
 
-  test("Mkdir creates file if parent exists and dir does not yet exist") {
+  test("Mkdir creates dir if parent exists and dir does not") {
     val newDir = existingDir + "/cats"
 
     assertResult(Eval.eval(Mkdir(newDir), startState)) {
       startState ++ Map(newDir -> IsDir)
+    }
+  }
+
+  test("Mkdir fails when parent does not exist") {
+    val newDir = existingDir + "/cats/kittens"
+
+    assertResult(Eval.eval(Mkdir(newDir), startState)) {
+      List()
+    }
+  }
+
+  test("Mkdir fails when dir already exists") {
+    assertResult(Eval.eval(Mkdir(existingDir), startState)) {
+      List()
     }
   }
 
