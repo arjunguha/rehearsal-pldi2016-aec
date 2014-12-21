@@ -226,7 +226,59 @@ class TestSuite extends org.scalatest.FunSuite {
     assert(res.length == 4)
   }
 
+  test("If True runs first expression") {
+    assertResult(List()) {
+      eval(If(True,
+              Error,
+              Skip),
+           startState)
+    }
+  }
 
+  test("If False runs second expression") {
+    assertResult(List()) {
+      eval(If(False,
+              Skip,
+              Error),
+           startState)
+    }
+  }
+
+  test("If Not behaves like unless") {
+    assertResult(List()) {
+      eval(If(!True, Skip, Error),
+           startState)
+    }
+    assertResult(List()) {
+      eval(If(!False, Error, Skip),
+           startState)
+    }
+  }
+
+  test("If And is true only when both predicates are true") {
+    def errorIfAnd(p1: Pred, p2: Pred): List[State] = {
+      eval(If(p1 && p2, Error, Skip), startState)
+    }
+    assert(errorIfAnd(True, True) == List() &&
+           errorIfAnd(True, False) == List(startState) &&
+           errorIfAnd(False, True) == List(startState) &&
+           errorIfAnd(False, False) == List(startState))
+  }
+
+  test("If Or is false only when both predicates are false") {
+    def errorIfOr(p1: Pred, p2: Pred): List[State] = {
+      eval(If(p1 || p2, Error, Skip), startState)
+    }
+    assert(errorIfOr(False, False) == List(startState) &&
+           errorIfOr(True, False) == List() &&
+           errorIfOr(False, True) == List() &&
+           errorIfOr(True, True) == List())
+  }
+
+
+
+
+  // Temp?
   test("can constuct expressions") {
 
     Cp("/tmp/foo", "/home/kai/foo")
