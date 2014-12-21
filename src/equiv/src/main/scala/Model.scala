@@ -188,6 +188,28 @@ trait OptExprModel extends TypedModel with PredModel {
     }
   }
 
+  private def evalUnlink(p: Path,
+                         paths: Map[Path, P],
+                         s0: State): (B, State) = (s0.paths.get(p)) match {
+    case Some(PathIsLink) => {
+      val path = paths(p)
+      (trueB, State(s0.s, s0.paths - p, s0.error))
+    }
+
+    case _ => {
+      val s00 = mkState()
+      val b0 = reifyState(s0, paths, s00)
+      val s1 = mkState()
+      val path = paths(p)
+      val b = ifB(exists(path, s00),
+                  andB(seqError(s00, s1),
+                       andB(notB(exists(path, s1)),
+                            samePaths(s00, s1, paths - p))),
+                  isError(s1))
+      (andB(b0, b), State(s1, Map(), None))
+    }
+  }
+
   private def evalPredConcrete(pr: Predicate,
                                paths: Map[Path, PathInfo]): Option[Boolean] = pr match {
     case True => Some(true)
@@ -230,6 +252,7 @@ trait OptExprModel extends TypedModel with PredModel {
     }
   }
 
+
   /* There is nothing to do while statically evaluating a shell script execution
    * Theoretically it could wipe out root directory
    * Conservatively, lets drop all knowledge about filesystem that have been
@@ -258,6 +281,8 @@ trait OptExprModel extends TypedModel with PredModel {
     case MkDir(p) => evalMkdir(p, paths, s0)
     case Create(p) => evalCreate(p, paths, s0)
     case Delete(p) => evalDelete(p, paths, s0)
+    case Link(p) => throw new Exception("Not yet implemented")
+    case Unlink(p) => evalUnlink(p, paths, s0) 
     case Filter(pr) => evalFilter(pr, paths, s0)
     case Shell(p) => evalShell(p, paths, s0)
     case Seqn(e1, e2) => {
