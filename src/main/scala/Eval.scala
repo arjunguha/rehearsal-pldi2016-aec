@@ -59,9 +59,9 @@ object Eval {
     case And(a, b) => evalPred(a, s) && evalPred(b, s)
     case Or(a, b) =>  evalPred(a, s) || evalPred(b, s)
     case Not(a) => !evalPred(a, s)
-    case TestFileState(path, fileState) => s.get(path) match {
-      case None => fileState == DoesNotExist
-      case Some(realFileState) => realFileState == fileState
+    case TestFileState(path, expectedFileState) => s.get(path) match {
+      case None => expectedFileState == DoesNotExist
+      case Some(fileState) => expectedFileState == fileState
     }
   }
 
