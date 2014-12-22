@@ -15,8 +15,7 @@ class TestSuite extends org.scalatest.FunSuite {
                                              startFile -> IsFile,
                                              emptyDir -> IsDir)
 
-  // TODO(kgeffen) Better title
-  test("Error returns empty list of possible states") {
+  test("Eval(Error) returns empty list of possible states") {
     assert(eval(Error, startState) == List())
   }
 
@@ -246,39 +245,62 @@ class TestSuite extends org.scalatest.FunSuite {
 
   test("If Not behaves like unless") {
     assertResult(List()) {
-      eval(If(!True, Skip, Error),
-           startState)
+      eval(If(!True, Skip, Error), startState)
     }
     assertResult(List()) {
-      eval(If(!False, Error, Skip),
-           startState)
+      eval(If(!False, Error, Skip), startState)
     }
   }
 
   test("If And is true only when both predicates are true") {
-    def errorIfAnd(p1: Pred, p2: Pred): List[State] = {
-      eval(If(p1 && p2, Error, Skip), startState)
+    def evalAnd(p1: Pred, p2: Pred): Boolean = {
+      eval(If(p1 && p2, Error, Skip), startState) == List()
     }
-    assert(errorIfAnd(True, True) == List() &&
-           errorIfAnd(True, False) == List(startState) &&
-           errorIfAnd(False, True) == List(startState) &&
-           errorIfAnd(False, False) == List(startState))
+    assert(evalAnd(True, True))
+    assert(!evalAnd(True, False))
+    assert(!evalAnd(False, True))
+    assert(!evalAnd(False, False))
   }
 
   test("If Or is false only when both predicates are false") {
-    def errorIfOr(p1: Pred, p2: Pred): List[State] = {
-      eval(If(p1 || p2, Error, Skip), startState)
+    def evalOr(p1: Pred, p2: Pred): Boolean = {
+      eval(If(p1 || p2, Error, Skip), startState) == List()
     }
-    assert(errorIfOr(False, False) == List(startState) &&
-           errorIfOr(True, False) == List() &&
-           errorIfOr(False, True) == List() &&
-           errorIfOr(True, True) == List())
+    assert(!evalOr(False, False))
+    assert(evalOr(True, False))
+    assert(evalOr(False, True))
+    assert(evalOr(True, True))
   }
 
+  test("TestFileState correctly identifies IsFile, IsDir, DoesNotExist in static state") {
+    def evalFileStateMatch(path: Path, s: FileState): Boolean = {
+      eval(If(TestFileState(path, s), Error, Skip), startState) == List()
+    }
+    assert(evalFileStateMatch(emptyDir, IsDir))
+    assert(evalFileStateMatch(startFile, IsFile))
+    assert(evalFileStateMatch(nonexDir, DoesNotExist))
+  }
 
+  test("TestFileState identifies nonexistance of file after being removed") {
+    assertResult(List()) {
+      eval(Block(Rm(emptyDir),
+                 If(TestFileState(emptyDir, DoesNotExist),
+                    Error, Skip)),
+           startState)
+    }
+  }
 
+  test("TestFileState identifies type for path whose type changed") {
+    assertResult(List()) {
+      eval(Block(Rm(startFile),
+                 Mkdir(startFile),
+                 If(TestFileState(emptyDir, IsDir),
+                    Error, Skip)),
+           startState)
+    }
+  }
 
-  // Temp?
+  // TODO(kgeffen) Remove
   test("can constuct expressions") {
 
     Cp("/tmp/foo", "/home/kai/foo")
