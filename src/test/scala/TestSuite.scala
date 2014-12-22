@@ -97,67 +97,67 @@ class TestSuite extends org.scalatest.FunSuite {
     }
   }
 
-  test("Cp copies file when src exists, target does not, & target's dir does") {
-    val target: Path = emptyDir + "/new.txt"
+  test("Cp copies file when src exists, dst does not, & dst's dir does") {
+    val dst: Path = emptyDir + "/new.txt"
 
     assertResult(
-      List(startState + (target -> IsFile))
+      List(startState + (dst -> IsFile))
       ) {
-      eval(Cp(startFile, target), startState)
+      eval(Cp(startFile, dst), startState)
     }
   }
 
   test("Cp fails when src does not exist") {
-    val target = rootDir + "/new"
+    val dst = rootDir + "/new"
 
     assertResult(List()) {
-      eval(Cp(nonexDir, target), startState)
+      eval(Cp(nonexDir, dst), startState)
     }
   }
 
-  test("Cp fails when target already exists") {
+  test("Cp fails when dst already exists") {
     assertResult(List()) {
       eval(Cp(rootDir, emptyDir), startState)
     }
   }
 
-  test("Cp fails when target's parent does not exist") {
-    val target = nonexDir + "/new.txt"
+  test("Cp fails when dst's parent does not exist") {
+    val dst = nonexDir + "/new.txt"
 
     assertResult(List()) {
-      eval(Cp(startFile, target), startState)
+      eval(Cp(startFile, dst), startState)
     }
   }
 
-  test("Mv moves file when src exists, target does not, & target's dir does") {
-    val target: Path = emptyDir + "/new.txt"
+  test("Mv moves file when src exists, dst does not, & dst's dir does") {
+    val dst: Path = emptyDir + "/new.txt"
 
     assertResult(
-      List(startState - startFile + (target -> IsFile))
+      List(startState - startFile + (dst -> IsFile))
       ) {
-      eval(Mv(startFile, target), startState)
+      eval(Mv(startFile, dst), startState)
     }
   }
 
   test("Mv fails when src does not exist") {
-    val target = rootDir + "/new"
+    val dst = rootDir + "/new"
 
     assertResult(List()) {
-      eval(Mv(nonexDir, target), startState)
+      eval(Mv(nonexDir, dst), startState)
     }
   }
 
-  test("Mv fails when target already exists") {
+  test("Mv fails when dst already exists") {
     assertResult(List()) {
       eval(Mv(rootDir, emptyDir), startState)
     }
   }
 
-  test("Mv fails when target's parent does not exist") {
-    val target = nonexDir + "/new.txt"
+  test("Mv fails when dst's parent does not exist") {
+    val dst = nonexDir + "/new.txt"
 
     assertResult(List()) {
-      eval(Mv(startFile, target), startState)
+      eval(Mv(startFile, dst), startState)
     }
   }
 
@@ -170,13 +170,13 @@ class TestSuite extends org.scalatest.FunSuite {
   }
 
   test("Block mkdir, cp, remove dir returns state with copied dir") {
-    val target: Path = rootDir + "/new"
+    val dst: Path = rootDir + "/new"
 
     assertResult(
-      List(startState + (target -> IsDir))
+      List(startState + (dst -> IsDir))
       ) {
       eval(Block(Mkdir(nonexDir),
-                 Cp(nonexDir, target),
+                 Cp(nonexDir, dst),
                  Rm(nonexDir)),
            startState)
     }
