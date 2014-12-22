@@ -11,9 +11,9 @@ class TestSuite extends org.scalatest.FunSuite {
   val startFile: Path = rootDir + "/README.txt"
   val emptyDir: Path = rootDir + "/empty"
   val nonexDir: Path = rootDir + "/unicorn"
-  val startState: Map[Path, FileState] = Map(rootDir -> IsDir,
-                                             startFile -> IsFile,
-                                             emptyDir -> IsDir)
+  val startState: State = Map(rootDir -> IsDir,
+                              startFile -> IsFile,
+                              emptyDir -> IsDir)
 
   test("Eval(Error) returns empty list of possible states") {
     assert(eval(Error, startState) == List())
@@ -219,8 +219,8 @@ class TestSuite extends org.scalatest.FunSuite {
   }
 
   test("Alt twice with valid distinct exprs results in 4 states") {
-    val res = eval(Block(Alt(Mkdir("/1"), Mkdir("/2")),
-                         Alt(Mkdir("/a"), Mkdir("/b"))),
+    val res = eval(Block(Alt(Mkdir(emptyDir + "/1"), Mkdir(emptyDir + "/2")),
+                         Alt(Mkdir(emptyDir + "/a"), Mkdir(emptyDir + "/b"))),
                    startState)
     assert(res.length == 4)
   }
@@ -298,29 +298,6 @@ class TestSuite extends org.scalatest.FunSuite {
                     Error, Skip)),
            startState)
     }
-  }
-
-  // TODO(kgeffen) Remove
-  test("can constuct expressions") {
-
-    Cp("/tmp/foo", "/home/kai/foo")
-
-  }
-
-
-  test("can constuct sequences") {
-
-    val e = Block(Cp("/tmp/foo", "/home/kai/foo"),
-                  Mv("/home/kai/foo", "/home/kai/bar"),
-                  Mv("/home/kai/foo", "/home/kai/bar"))
-
-  }
-
-  test("can write predicates") {
-
-    val a = !TestFileState("/foo", IsFile) && TestFileState("/bar", IsFile)
-    println(a)
-
   }
 
 }

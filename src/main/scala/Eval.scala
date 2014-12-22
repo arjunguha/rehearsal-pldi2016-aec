@@ -4,12 +4,9 @@ import java.nio.file.Path
 
 object Eval {
 
-
   type State = Map[Path, FileState]
-
   
-  // Perhaps Set[State] (may be unnecessarily complex)
-  def eval(pred: Expr, s: State): List[State] = pred match {
+  def eval(expr: Expr, s: State): List[State] = expr match {
 		case Error => List()
 		case Skip => List(s)
 		case Mkdir(path) => path match {
@@ -17,7 +14,7 @@ object Eval {
 			case _ if !s.contains(path.getParent) => List()
 			case _ => List(s + (path -> IsDir))
 		}
-		// NOTE(kgeffen) File contents not yet used
+		// TODO(kgeffen) Use file contents
 		case CreateFile(path, hash) => path match {
 			case _ if s.contains(path) => List()
 			case _ if !s.contains(path.getParent) => List()
@@ -29,6 +26,7 @@ object Eval {
 			case _ => s.get(src) match {
 				case None => List()
 				case Some(srcState) => srcState match {
+					// TODO(kgeffen) This is akward, this line should not have to exist, consider refactoring
 					case DoesNotExist => List()
 					case IsDir => eval(Mkdir(dst), s)
 					// TODO(kgeffen) When contents are used, include contents here
@@ -39,27 +37,32 @@ object Eval {
 		case Mv(src, dst) => eval(Block(Cp(src, dst), Rm(src)), s)
 		case Rm(path) => path match {
 			case _ if !s.contains(path) => List()
-			// If path is an occupied dir (Has any children)
+			// Fail if path is an occupied dir (Is the parent of any files)
 			case _ if s.keys.exists(k => k.getParent == path) => List()
 			case _ => List(s - path)
 		}
-		case Block(p1, p2) => {
-			eval(p1, s).flatMap(newState => eval(p2, newState))
+		case Block(p, q) => {
+			eval(p, s).flatMap(newState => eval(q, newState))
 		}
-		case _ => List(s)
-		/*
-		case Block(p, q) =>
-		case Alt(p, q) =>
-		case If(pred, p, q) =>
-		case Mkdir(path) =>
-		case CreateFile(path, hash) =>
-		case Rm(path) =>
-		case Cp(src, dst) =>
-		case Mv(src, dst) =>
-		*/
+		case Alt(p, q) => {
+			eval(p, s) ++ eval(q, s)
+		}
+		case If(pred, p, q) => evalPred(pred, s) match {
+			case true => eval(p, s)
+			case false => eval(q, s)
+		}
   }
 
-  
-
+  def evalPred(pred: Pred, s: State): Boolean = pred match {
+  	case True => true
+  	case False => false
+  	case And(a, b) => evalPred(a, s) && evalPred(b, s)
+  	case Or(a, b) =>  evalPred(a, s) || evalPred(b, s)
+  	case Not(a) => !evalPred(a, s)
+  	case TestFileState(path, fileState) => s.get(path) match {
+  		case None => fileState == DoesNotExist
+  		case Some(realFileState) => realFileState == fileState
+  	}
+  }
 
 }
