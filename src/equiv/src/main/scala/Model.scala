@@ -115,8 +115,6 @@ trait OptExprModel extends TypedModel with PredModel {
                         s0: State): (B, State) = (s0.paths.get(p.getParent), s0.paths.get(p)) match {
     // The parent is a directory and the child does not exist
     case (Some(PathIsDir), Some(PathDoesNotExist)) => {
-      val path = paths(p)
-      val parent = paths(p.getParent)
       (trueB, State(s0.s, s0.paths + (p -> PathIsDir), s0.error))
     }
     // p already exists in some state, so mkdir will error
@@ -142,8 +140,6 @@ trait OptExprModel extends TypedModel with PredModel {
                          s0: State): (B, State) = (s0.paths.get(p.getParent), s0.paths.get(p)) match {
     // The parent is a directory and the child does not exist
     case (Some(PathIsDir), Some(PathDoesNotExist)) => {
-      val path = paths(p)
-      val parent = paths(p.getParent)
       (trueB, State(s0.s, s0.paths + (p -> PathIsFile), s0.error))
     }
 
@@ -165,11 +161,30 @@ trait OptExprModel extends TypedModel with PredModel {
     }
   }
 
+  private def evalLink(p: Path,
+                       paths: Map[Path, P],
+                       s0: State): (B, State) = (s0.paths.get(p.getParent), s0.paths.get(p)) match {
+    case (Some(PathIsDir), Some(PathDoesNotExist)) => {
+      (trueB, State(s0.s, s0.paths + (p -> PathIsLink), s0.error))
+    }
+
+    case _ => {
+      val s00 = mkState()
+      val b0 = reifyState(s0, paths, s00)
+      val s1 = mkState()
+      val path = paths(p)
+      val parent = paths(p.getParent)
+      val b = ifB(andB(exists(parent, s00), notB(exists(path, s00))),
+                  andB(seqError(s00, s1), andB(exists(path, s1), samePaths(s00, s1, paths - p))),
+                  isError(s1))
+      (andB(b0, b), State(s1, Map(), None))
+    }
+  }
+
   private def evalDelete(p: Path,
                          paths: Map[Path, P],
                          s0: State): (B, State) = (s0.paths.get(p)) match {
     case Some(PathIsFile) => {
-      val path = paths(p)
       (trueB, State(s0.s, s0.paths - p, s0.error))
     }
 
@@ -188,11 +203,31 @@ trait OptExprModel extends TypedModel with PredModel {
     }
   }
 
+  private def evalRmdir(p: Path,
+                        paths: Map[Path, P],
+                        s0: State): (B, State) = (s0.paths.get(p)) match {
+    case Some(PathIsDir) => {
+      (trueB, State(s0.s, s0.paths - p, s0.error))
+    }
+
+    case _ => {
+      val s00 = mkState()
+      val b0 = reifyState(s0, paths, s00)
+      val s1 = mkState()
+      val path = paths(p)
+      val b = ifB(exists(path, s00),
+                  andB(seqError(s00, s1),
+                       andB(notB(exists(path, s1)),
+                            samePaths(s00, s1, paths - p))),
+                  isError(s1))
+      (andB(b0, b), State(s1, Map(), None))
+    }
+  }
+
   private def evalUnlink(p: Path,
                          paths: Map[Path, P],
                          s0: State): (B, State) = (s0.paths.get(p)) match {
     case Some(PathIsLink) => {
-      val path = paths(p)
       (trueB, State(s0.s, s0.paths - p, s0.error))
     }
 
@@ -279,9 +314,10 @@ trait OptExprModel extends TypedModel with PredModel {
       (trueB, State(s1, Map(), Some(true)))
     }
     case MkDir(p) => evalMkdir(p, paths, s0)
+    case RmDir(p) => evalRmdir(p, paths, s0)
     case Create(p) => evalCreate(p, paths, s0)
     case Delete(p) => evalDelete(p, paths, s0)
-    case Link(p) => throw new Exception("Not yet implemented")
+    case Link(p) => evalLink(p, paths, s0)
     case Unlink(p) => evalUnlink(p, paths, s0) 
     case Filter(pr) => evalFilter(pr, paths, s0)
     case Shell(p) => evalShell(p, paths, s0)

@@ -23,4 +23,37 @@ class UnitTestSuite extends FunSuite {
                               ensure => directory
                             }""")
   }
+
+  test("single puppet file resource with force") {
+    Pipeline.runPipeline("""file{"/foo":
+                              ensure => file,
+                              force => true
+                            }""")
+  }
+
+  test("delete file resource") {
+    Pipeline.runPipeline("""file{"/foo": ensure => absent }""")
+  }
+
+  test("delete dir with force") {
+    Pipeline.runPipeline("""file {"/tmp":
+                              ensure => absent,
+                              force => true
+                            }""")
+  }
+
+  test("link file") {
+    Pipeline.runPipeline("""file{"/foo":
+                              ensure => link,
+                              target => "/bar"
+                            }""")
+  }
+
+  test("link file force") {
+    Pipeline.runPipeline("""file{"/foo":
+                              ensure => link,
+                              target => "/bar",
+                              force => true
+                            }""")
+  }
 }
