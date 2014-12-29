@@ -7,6 +7,7 @@ import Eval._
 
 class TestSuite extends org.scalatest.FunSuite {
 
+  // TODO(arjun): rename to just "/", maybe?
   val rootDir: Path = "/root"
   val startFile: Path = rootDir + "/README.txt"
   val emptyDir: Path = rootDir + "/empty"

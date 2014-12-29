@@ -5,7 +5,7 @@ import java.nio.file.Path
 object Eval {
 
   type State = Map[Path, FileState]
-  
+
   def eval(expr: Expr, s: State): List[State] = expr match {
     case Error => List()
     case Skip => List(s)
@@ -28,12 +28,14 @@ object Eval {
         case Some(srcState) => srcState match {
           // TODO(kgeffen) This is akward, this line should not have to exist, consider refactoring
           case DoesNotExist => List()
-          case IsDir => eval(Mkdir(dst), s)
+          case IsDir => eval(Mkdir(dst), s) // TODO(arjun): should be error
           // TODO(kgeffen) When contents are used, include contents here
           case IsFile => eval(CreateFile(dst), s)
         }
       }
     }
+    // TODO(arjun): Can move directories (don't forget the contents of src).
+    // Write a test. Good example.
     case Mv(src, dst) => eval(Block(Cp(src, dst), Rm(src)), s)
     case Rm(path) => path match {
       case _ if !s.contains(path) => List()
