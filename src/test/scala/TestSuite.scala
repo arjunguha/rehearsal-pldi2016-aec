@@ -7,9 +7,9 @@ import Eval._
 
 class TestSuite extends org.scalatest.FunSuite {
 
-  // TODO(arjun): rename to just "/", maybe?
   val rootDir: Path = "/"
   val startFile: Path = rootDir + "/README.txt"
+  val startFile2: Path = rootDir + "/cat.gif"
   val emptyDir: Path = rootDir + "/empty"
   val nonexDir: Path = rootDir + "/nonexDir"
   val nonexFile: Path = rootDir + "/nonexFile"
@@ -124,12 +124,8 @@ class TestSuite extends org.scalatest.FunSuite {
   }
 
   test("Cp fails when dst already exists") {
-    val dst = nonexFile
-
     assertResult(List()) {
-      eval(Block(CreateFile(dst),
-                 Cp(startFile, dst)),
-           startState)
+      eval(Cp(startFile, startFile2), startState)
     }
   }
 
@@ -142,26 +138,24 @@ class TestSuite extends org.scalatest.FunSuite {
   }
 
   test("Mv moves file when src exists, dst does not, & dst's dir does") {
-    val dst: Path = emptyDir + "/new.txt"
-
     assertResult(
-      List(startState - startFile + (dst -> IsFile))
+      List(startState - startFile + (nonexFile -> IsFile))
       ) {
-      eval(Mv(startFile, dst), startState)
+      eval(Mv(startFile, nonexFile), startState)
     }
   }
 
   test("Mv fails when src does not exist") {
-    val dst = rootDir + "/new"
+    val dst = rootDir + "/new.jpg"
 
     assertResult(List()) {
-      eval(Mv(nonexDir, dst), startState)
+      eval(Mv(nonexFile, dst), startState)
     }
   }
 
   test("Mv fails when dst already exists") {
     assertResult(List()) {
-      eval(Mv(rootDir, emptyDir), startState)
+      eval(Mv(startFile, startFile2), startState)
     }
   }
 
@@ -170,6 +164,41 @@ class TestSuite extends org.scalatest.FunSuite {
 
     assertResult(List()) {
       eval(Mv(startFile, dst), startState)
+    }
+  }
+
+  test("Mv moves empty dir when src exists, dst does not, dst's parent does") {
+    assertResult(
+      List(startState - emptyDir + (nonexDir -> IsDir))
+      ) {
+      eval(Mv(emptyDir, nonexDir), startState)
+    }
+  }
+
+  test("Mv moves dir and its contents") {
+    val childDirStart: Path = emptyDir + "/newDir"
+    val childDirEnd: Path = nonexDir + "/newDir"
+    val outerFileStart: Path = emptyDir + "/1.jpg"
+    val outerFileEnd: Path = nonexDir + "/1.jpg"
+    val innerFileStart: Path = childDirStart + "/2.jpg"
+    val innerFileEnd: Path = childDirEnd + "/2.jpg"
+
+    assertResult(
+      List(startState - emptyDir + (nonexDir -> IsDir) + (childDirEnd -> IsDir) + 
+        (outerFileEnd -> IsFile) + (innerFileEnd -> IsFile))
+      ) {
+      eval(Block(Mkdir(childDirStart),
+                 CreateFile(outerFileStart),
+                 CreateFile(innerFileStart),
+                 // emptyDir now contains a file and a dir with a file
+                 Mv(emptyDir, nonexDir)),
+           startState)
+    }
+  }
+
+  test("Mv fails to move a dir within itself") {
+    assertResult(List()) {
+      eval(Mv(rootDir, nonexDir), startState)
     }
   }
 
