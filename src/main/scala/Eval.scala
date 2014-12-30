@@ -27,7 +27,20 @@ object Eval {
     }
     // TODO(arjun): Can move directories (don't forget the contents of src).
     // Write a test. Good example.
-    case Mv(src, dst) => eval(Block(Cp(src, dst), Rm(src)), s)
+    case Mv(src, dst) => s.get(src) match {
+      case None => List()
+      case Some(DoesNotExist) => List()
+      case Some(IsFile) => eval(Block(Cp(src, dst), Rm(src)), s)
+      case Some(IsDir) => {
+        val mvChildren: Seq[Expr] = 
+          s.keys.filter(k => k.getParent == src).map(k => Cp(k, /*TODO*/k.getFileName)).toSeq
+        val equivExprs: Seq[Expr] = Mkdir(dst) +: mvChildren :+ Rm(src)
+        eval(Block(equivExprs: _*), s)
+      }
+    }
+
+
+    eval(Block(Cp(src, dst), Rm(src)), s)
     case Rm(path) => path match {
       case _ if !s.contains(path) => List()
       // Fail if path is an occupied dir (Is the parent of any files)
