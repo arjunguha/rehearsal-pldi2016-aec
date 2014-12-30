@@ -15,6 +15,7 @@ class TestSuite extends org.scalatest.FunSuite {
   val nonexFile: Path = rootDir + "/nonexFile"
   val startState: State = Map(rootDir -> IsDir,
                               startFile -> IsFile,
+                              startFile2 -> IsFile,
                               emptyDir -> IsDir)
 
   test("Eval(Error) returns empty list of possible states") {
