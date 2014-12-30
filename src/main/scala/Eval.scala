@@ -2,6 +2,8 @@ package fsmodel
 
 import java.nio.file.Path
 
+import Implicits._
+
 object Eval {
 
   type State = Map[Path, FileState]
@@ -25,22 +27,21 @@ object Eval {
       case Some(IsFile) => eval(CreateFile(dst), s)
       case _ => List()
     }
-    // TODO(arjun): Can move directories (don't forget the contents of src).
-    // Write a test. Good example.
     case Mv(src, dst) => s.get(src) match {
-      case None => List()
-      case Some(DoesNotExist) => List()
-      case Some(IsFile) => eval(Block(Cp(src, dst), Rm(src)), s)
+      // TODO(kgeffen) When contents are used, include contents here
+      case Some(IsFile) => eval(Block(CreateFile(dst), Rm(src)), s)
       case Some(IsDir) => {
-        val mvChildren: Seq[Expr] = 
-          s.keys.filter(k => k.getParent == src).map(k => Cp(k, /*TODO*/k.getFileName)).toSeq
+        // Get all (children of src) in state, make sequence of exprs moving each
+        val mvChildren: Seq[Expr] =
+          s.keys.filter(k => k.getParent == src).map(
+            k => Mv(k, dst + "/" + k.getFileName)
+            ).toSeq
         val equivExprs: Seq[Expr] = Mkdir(dst) +: mvChildren :+ Rm(src)
+
         eval(Block(equivExprs: _*), s)
       }
+      case _ => List()
     }
-
-
-    eval(Block(Cp(src, dst), Rm(src)), s)
     case Rm(path) => path match {
       case _ if !s.contains(path) => List()
       // Fail if path is an occupied dir (Is the parent of any files)
