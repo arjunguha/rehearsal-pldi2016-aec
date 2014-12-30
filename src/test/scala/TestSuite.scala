@@ -8,10 +8,11 @@ import Eval._
 class TestSuite extends org.scalatest.FunSuite {
 
   // TODO(arjun): rename to just "/", maybe?
-  val rootDir: Path = "/root"
+  val rootDir: Path = "/"
   val startFile: Path = rootDir + "/README.txt"
   val emptyDir: Path = rootDir + "/empty"
-  val nonexDir: Path = rootDir + "/unicorn"
+  val nonexDir: Path = rootDir + "/nonexDir"
+  val nonexFile: Path = rootDir + "/nonexFile"
   val startState: State = Map(rootDir -> IsDir,
                               startFile -> IsFile,
                               emptyDir -> IsDir)
@@ -108,17 +109,27 @@ class TestSuite extends org.scalatest.FunSuite {
     }
   }
 
+  test("Cp fails when src is a dir") {
+    assertResult(List()) {
+      eval(Cp(emptyDir, nonexDir), startState)
+    }
+  }
+
   test("Cp fails when src does not exist") {
-    val dst = rootDir + "/new"
+    val dst = rootDir + "/new.txt"
 
     assertResult(List()) {
-      eval(Cp(nonexDir, dst), startState)
+      eval(Cp(nonexFile, dst), startState)
     }
   }
 
   test("Cp fails when dst already exists") {
+    val dst = nonexFile
+
     assertResult(List()) {
-      eval(Cp(rootDir, emptyDir), startState)
+      eval(Block(CreateFile(dst),
+                 Cp(startFile, dst)),
+           startState)
     }
   }
 
@@ -170,15 +181,15 @@ class TestSuite extends org.scalatest.FunSuite {
     }
   }
 
-  test("Block mkdir, cp, remove dir returns state with copied dir") {
-    val dst: Path = rootDir + "/new"
+  test("Block create file, cp, remove file returns state with copied file") {
+    val dst: Path = rootDir + "/new.jpg"
 
     assertResult(
-      List(startState + (dst -> IsDir))
+      List(startState + (dst -> IsFile))
       ) {
-      eval(Block(Mkdir(nonexDir),
-                 Cp(nonexDir, dst),
-                 Rm(nonexDir)),
+      eval(Block(CreateFile(nonexFile),
+                 Cp(nonexFile, dst),
+                 Rm(nonexFile)),
            startState)
     }
   }

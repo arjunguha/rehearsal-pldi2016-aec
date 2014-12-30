@@ -20,19 +20,10 @@ object Eval {
       case _ if !s.contains(path.getParent) => List()
       case _ => List(s + (path -> IsFile))
     }
-    case Cp(src, dst) => dst match {
-      case _ if s.contains(dst) => List()
-      case _ if !s.contains(dst.getParent) => List()
-      case _ => s.get(src) match {
-        case None => List()
-        case Some(srcState) => srcState match {
-          // TODO(kgeffen) This is akward, this line should not have to exist, consider refactoring
-          case DoesNotExist => List()
-          case IsDir => eval(Mkdir(dst), s) // TODO(arjun): should be error
-          // TODO(kgeffen) When contents are used, include contents here
-          case IsFile => eval(CreateFile(dst), s)
-        }
-      }
+    case Cp(src, dst) => s.get(src) match {
+      // TODO(kgeffen) When contents are used, include contents here
+      case Some(IsFile) => eval(CreateFile(dst), s)
+      case _ => List()
     }
     // TODO(arjun): Can move directories (don't forget the contents of src).
     // Write a test. Good example.
