@@ -30,6 +30,8 @@ object Eval {
     case Mv(src, dst) => s.get(src) match {
       // TODO(kgeffen) When contents are used, include contents here
       case Some(IsFile) => eval(Block(CreateFile(dst), Rm(src)), s)
+      // Fail if dst is within src; cannot move dir inside itself
+      case Some(IsDir) if dst.startsWith(src) => List()
       case Some(IsDir) => {
         // NOTE(kgeffen) Creates dst first, moves all contents of src, then removes src.
         // Because move is called on all contents, any dirs contained in src will
