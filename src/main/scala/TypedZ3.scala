@@ -86,7 +86,7 @@ class Z3Impl() extends TypedZ3 {
   // (declare-const IsFile FileState)
   val isFile = cxt.mkConst("IsFile", fileStateSort)
   val isDir = cxt.mkConst("IsDir", fileStateSort)
-  val doesDoesExist = cxt.mkConst("DoesNotExist", fileStateSort)
+  val doesNotExist = cxt.mkConst("DoesNotExist", fileStateSort)
 
   // (distinct ...)
   solver.assertCnstr(cxt.mkDistinct(isFile, isDir, doesNotExist))
@@ -109,6 +109,7 @@ class Z3Impl() extends TypedZ3 {
   // def and(a: Z3Bool, b: Z3Bool): Z3Bool
   // def or(a: Z3Bool, b: Z3Bool): Z3Bool
   // def implies(a: Z3Bool, b: Z3Bool): Z3Bool
+  // def not(a: Z3Bool): Z3Bool
 
 
 }
