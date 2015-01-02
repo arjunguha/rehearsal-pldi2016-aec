@@ -7,5 +7,11 @@ object Implicits {
 
   implicit def stringToPath(str: String): Path = Paths.get(str)
 
+  implicit class RichString(str: String) {
+
+    def toPath = Paths.get(str)
+
+  }
+
 }
 
