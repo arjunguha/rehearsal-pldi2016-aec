@@ -23,6 +23,7 @@ trait TypedZ3 {
   def and(a: Z3Bool, b: Z3Bool): Z3Bool
   def or(a: Z3Bool, b: Z3Bool): Z3Bool
   def implies(a: Z3Bool, b: Z3Bool): Z3Bool
+  def not(a: Z3Bool): Z3Bool
 
   // TODO(arjun): In the implementation, remember to assert that all paths
   // are distinct before calling (check-sat)
@@ -30,7 +31,7 @@ trait TypedZ3 {
 
   object Implicits {
 
-    import  scala.language.implicitConversions
+    import scala.language.implicitConversions
 
     implicit def boolToZ3Bool(b: Boolean): Z3Bool = {
       if (b) z3true else z3false
@@ -40,6 +41,7 @@ trait TypedZ3 {
       def &&(other: Z3Bool) = and(bool, other)
       def ||(other: Z3Bool) = or(bool, other)
       def -->(other: Z3Bool) = implies(bool, other)
+      def unary_!() = not(bool)
     }
 
   }
@@ -50,7 +52,7 @@ trait Z3Eval extends TypedZ3 {
 
   import Implicits._
 
-  val tmp: Z3Bool = true && false
+  val tmp: Z3Bool = !true && false
 
   def eval(expr: Expr, s1: Z3FileState): Z3FileState
 
