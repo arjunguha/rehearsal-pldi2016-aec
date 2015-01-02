@@ -31,7 +31,9 @@ object Eval {
       // TODO(kgeffen) When contents are used, include contents here
       case Some(IsFile) => eval(Block(CreateFile(dst), Rm(src)), s)
       case Some(IsDir) => {
-        // Get all (children of src) in state, make sequence of exprs moving each
+        // NOTE(kgeffen) Creates dst first, moves all contents of src, then removes src.
+        // Because move is called on all contents, any dirs contained in src will
+        // move all of their children before src is removed. Move works recursively.
         val mvChildren: Seq[Expr] =
           s.keys.filter(k => k.getParent == src).map(
             k => Mv(k, dst + "/" + k.getFileName)
