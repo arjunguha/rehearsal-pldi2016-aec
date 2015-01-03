@@ -54,7 +54,7 @@ trait Z3Eval extends TypedZ3 {
 
   val tmp: Z3Bool = !true && false
 
-  def eval(expr: Expr, s1: Z3FileState): Z3FileState
+  def eval(expr: Expr, s1: Z3FileSystemState): Z3FileSystemState
 
 }
 
