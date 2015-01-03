@@ -129,6 +129,7 @@ class Z3Impl() extends TypedZ3 {
   }
 
   def newState(): Z3FileSystemState = {
+    //wrong
     cxt.mkConst("FileSystemState", fileSystemStateSort)
   }
 

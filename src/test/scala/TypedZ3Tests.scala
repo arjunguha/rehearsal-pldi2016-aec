@@ -45,6 +45,19 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
     assert(z.not(fa) == tr)
   }
 
+  test("checkSAT returns true for trivial cases") {
+    assert(z.checkSAT(tr) == Some(true))
+    assert(z.checkSAT(fa) == Some(true))
+  }
 
+  test("checkSAT not true for system with path consigned to multiple states") {
+    // TODO(kgeffen) same z used throughout, maybe have startup method so paths not preserved between tests
+    val p = z.path("/")
+    val fss = z.newState()
+
+    assert(Some(true) !=
+      z.checkSAT(z.and(z.testFileState(p, z.isDir, fss),
+                       z.testFileState(p, z.isFile, fss))))
+  }
 
 }
