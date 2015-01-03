@@ -64,6 +64,7 @@ class Z3Impl() extends TypedZ3 {
   import z3.scala.dsl._
   import z3.scala.dsl.Operands._
 
+
   private val cxt = new Z3Context(new Z3Config("MODEL" -> true,
                                                "TIMEOUT" -> 3000))
 
@@ -109,17 +110,20 @@ class Z3Impl() extends TypedZ3 {
   def testFileState(path: Z3Path, fileState: Z3FileState): Z3Bool = {
     z3true
   }
-  def and(a: Z3Bool, b: Z3Bool): Z3Bool = {
-    z3true
+  def and(a: Z3Bool, b: Z3Bool): Z3Bool = (a,b) match {
+    case (`z3true`, `z3true`) => z3true
+    case _ => z3false
   }
-  def or(a: Z3Bool, b: Z3Bool): Z3Bool = {
-    z3true
+  def or(a: Z3Bool, b: Z3Bool): Z3Bool = (a,b) match {
+    case (`z3false`, `z3false`) => z3false
+    case _ => z3true
   }
   def implies(a: Z3Bool, b: Z3Bool): Z3Bool = {
-    z3true
+    or(a, b)
   }
+  import Implicits._
   def not(a: Z3Bool): Z3Bool = {
-    z3true
+    a == z3false
   }
   def checkSAT(formula: Z3Bool): Option[Boolean] = {
     None
