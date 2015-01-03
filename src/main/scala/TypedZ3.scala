@@ -41,7 +41,7 @@ trait TypedZ3 {
       def &&(other: Z3Bool) = and(bool, other)
       def ||(other: Z3Bool) = or(bool, other)
       def -->(other: Z3Bool) = implies(bool, other)
-      def unary_!() = not(bool)
+      //def unary_!() = not(bool)
     }
 
   }
@@ -110,21 +110,25 @@ class Z3Impl() extends TypedZ3 {
   def testFileState(path: Z3Path, fileState: Z3FileState): Z3Bool = {
     z3true
   }
-  def and(a: Z3Bool, b: Z3Bool): Z3Bool = (a,b) match {
-    case (`z3true`, `z3true`) => z3true
-    case _ => z3false
-  }
-  def or(a: Z3Bool, b: Z3Bool): Z3Bool = (a,b) match {
-    case (`z3false`, `z3false`) => z3false
-    case _ => z3true
-  }
-  def implies(a: Z3Bool, b: Z3Bool): Z3Bool = {
-    or(a, b)
-  }
+
+
   import Implicits._
+
+  def and(a: Z3Bool, b: Z3Bool): Z3Bool = {
+    a == z3true && b == z3true
+  }
+  def or(a: Z3Bool, b: Z3Bool): Z3Bool = {
+    a == z3true || b == z3true
+  }
+
+  def implies(a: Z3Bool, b: Z3Bool): Z3Bool = {
+    not(a) || b
+  }
+  
   def not(a: Z3Bool): Z3Bool = {
     a == z3false
   }
+  
   def checkSAT(formula: Z3Bool): Option[Boolean] = {
     None
   }
