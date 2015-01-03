@@ -6,10 +6,12 @@ import Implicits._
 
 class TypedZ3Tests extends org.scalatest.FunSuite {
 
-	val z = new Z3Impl
+  val z = new Z3Impl
+  val tr = z.z3true
+  val fa = z.z3false
 
   test("Z3Bools are distinct") {
-    assert(z.z3true != z.z3false)
+    assert(tr != fa)
   }
 
   test("Z3FileStates are distinct") {
@@ -17,31 +19,30 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
     assert(z.isFile != z.doesNotExist)
   }
 
-  // TODO(kgeffen) Get implicit conversion working outside of TypedZ3 file
-	test("And functions correctly for Z3Bools") {
-		assert(z.z3true == z.and(z.z3true, z.z3true))
-		assert(z.z3false == z.and(z.z3true, z.z3false))
-		assert(z.z3false == z.and(z.z3false, z.z3true))
-		assert(z.z3false == z.and(z.z3false, z.z3false))
+  test("And functions correctly for Z3Bools") {
+    assert(tr == z.and(tr, tr))
+    assert(fa == z.and(tr, fa))
+    assert(fa == z.and(fa, tr))
+    assert(fa == z.and(fa, fa))
   }
 
   test("Or functions correctly for Z3Bools") {
-		assert(z.z3false == z.or(z.z3false, z.z3false))
-		assert(z.z3true == z.or(z.z3true, z.z3false))
-		assert(z.z3true == z.or(z.z3false, z.z3true))
-		assert(z.z3true == z.or(z.z3true, z.z3true))
+    assert(fa == z.or(fa, fa))
+    assert(tr == z.or(tr, fa))
+    assert(tr == z.or(fa, tr))
+    assert(tr == z.or(tr, tr))
   }
 
   test("Implies functions correctly for Z3Bools") {
-		assert(z.z3false == z.implies(z.z3true, z.z3false))
-		assert(z.z3true == z.implies(z.z3true, z.z3true))
-		assert(z.z3true == z.implies(z.z3false, z.z3true))
-		assert(z.z3true == z.implies(z.z3false, z.z3false))
+    assert(fa == z.implies(tr, fa))
+    assert(tr == z.implies(tr, tr))
+    assert(tr == z.implies(fa, tr))
+    assert(tr == z.implies(fa, fa))
   }
 
   test("Not works for Z3Bools") {
-  	assert(z.not(z.z3true) == z.z3false)
-  	assert(z.not(z.z3false) == z.z3true)
+    assert(z.not(tr) == fa)
+    assert(z.not(fa) == tr)
   }
 
 

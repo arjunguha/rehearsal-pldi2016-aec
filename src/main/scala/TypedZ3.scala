@@ -64,6 +64,8 @@ class Z3Impl() extends TypedZ3 {
   import z3.scala.dsl._
   import z3.scala.dsl.Operands._
 
+  import Implicits._
+
 
   private val cxt = new Z3Context(new Z3Config("MODEL" -> true,
                                                "TIMEOUT" -> 3000))
@@ -106,17 +108,10 @@ class Z3Impl() extends TypedZ3 {
     }
   }
 
-  // TODO(kgeffen) Implement
-  def testFileState(path: Z3Path, fileState: Z3FileState): Z3Bool = {
-    z3true
-  }
-
-
-  import Implicits._
-
   def and(a: Z3Bool, b: Z3Bool): Z3Bool = {
     a == z3true && b == z3true
   }
+
   def or(a: Z3Bool, b: Z3Bool): Z3Bool = {
     a == z3true || b == z3true
   }
@@ -124,14 +119,15 @@ class Z3Impl() extends TypedZ3 {
   def implies(a: Z3Bool, b: Z3Bool): Z3Bool = {
     not(a) || b
   }
-  
+
   def not(a: Z3Bool): Z3Bool = {
     a == z3false
   }
-  
+
   def checkSAT(formula: Z3Bool): Option[Boolean] = {
     None
   }
+
   def newState(): Z3FileSystemState = {
     cxt.mkConst("FileSystemState", fileSystemStateSort)
   }
