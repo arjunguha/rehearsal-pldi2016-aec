@@ -105,11 +105,33 @@ class Z3Impl() extends TypedZ3 {
     }
   }
 
-  // def testFileState(path: Z3Path, fileState: Z3FileState): Z3Bool
-  // def and(a: Z3Bool, b: Z3Bool): Z3Bool
-  // def or(a: Z3Bool, b: Z3Bool): Z3Bool
-  // def implies(a: Z3Bool, b: Z3Bool): Z3Bool
-  // def not(a: Z3Bool): Z3Bool
+  // TODO(kgeffen) Implement
+  def testFileState(path: Z3Path, fileState: Z3FileState): Z3Bool = {
+    z3true
+  }
+  def and(a: Z3Bool, b: Z3Bool): Z3Bool = {
+    z3true
+  }
+  def or(a: Z3Bool, b: Z3Bool): Z3Bool = {
+    z3true
+  }
+  def implies(a: Z3Bool, b: Z3Bool): Z3Bool = {
+    z3true
+  }
+  def not(a: Z3Bool): Z3Bool = {
+    z3true
+  }
+  def checkSAT(formula: Z3Bool): Option[Boolean] = {
+    None
+  }
+  def newState(): Z3FileSystemState = {
+    cxt.mkConst("FileSystemState", fileSystemStateSort)
+  }
+
+  def testFileState(path: Z3Path, fileState: Z3FileState,
+                    fileSystemState: Z3FileSystemState): Z3Bool = {
+    z3true
+  }
 
 
 }
