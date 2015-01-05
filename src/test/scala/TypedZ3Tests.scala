@@ -60,9 +60,10 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
                        z.testFileState(p, z.isFile, fss))))
   }
 
-  test("newState can be called multiple times") {
-    val s1 = z.newState
-    val s2 = z.newState
+  test("newState generates state distinct from predecessors") {
+    val s1 = z.newState()
+    val s2 = z.newState()
+    assert(s1 != s2)
   }
 
 }

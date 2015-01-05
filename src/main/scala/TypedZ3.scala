@@ -135,9 +135,10 @@ class Z3Impl() extends TypedZ3 {
     solver.check()
   }
 
+  var stateCount: Int = 0
   def newState(): Z3FileSystemState = {
-    //  wrong - change const name
-    cxt.mkConst("FileSystemState", fileSystemStateSort)
+    stateCount += 1
+    cxt.mkConst(s"FileSystemState($stateCount)", fileSystemStateSort)
   }
 
   def testFileState(path: Z3Path, fileState: Z3FileState,
