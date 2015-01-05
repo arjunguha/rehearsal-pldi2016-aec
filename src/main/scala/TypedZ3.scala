@@ -97,7 +97,6 @@ class Z3Impl() extends TypedZ3 {
   private val seenPaths = collection.mutable.Map[java.nio.file.Path, Z3Path]()
 
   def path(p: java.nio.file.Path): Z3Path = {
-    println("path called") // TODO remove
     seenPaths.get(p) match {
       case Some(z3Path) => z3Path
       case None => {
@@ -126,16 +125,18 @@ class Z3Impl() extends TypedZ3 {
   }
 
   def checkSAT(formula: Z3Bool): Option[Boolean] = {
+    solver.push
     // Ensure paths are distinct
-    // push/pop?
     if(!seenPaths.isEmpty) {
       solver.assertCnstr(cxt.mkDistinct(seenPaths.values.toSeq: _*))
     }
 
-    solver.check()
+    val res = solver.check()
+    solver.pop(1)
+    res
   }
 
-  var stateCount: Int = 0
+  var stateCount = -1
   def newState(): Z3FileSystemState = {
     stateCount += 1
     cxt.mkConst(s"FileSystemState($stateCount)", fileSystemStateSort)
