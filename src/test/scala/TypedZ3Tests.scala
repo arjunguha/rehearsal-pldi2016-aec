@@ -45,9 +45,8 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
     assert(z.not(fa) == tr)
   }
 
-  test("checkSAT true for trivial cases") {
+  test("checkSAT(true) is true") {
     assert(z.checkSAT(tr) == Some(true))
-    assert(z.checkSAT(fa) == Some(true))
   }
 
   test("checkSAT not true for system with path consigned to multiple states") {

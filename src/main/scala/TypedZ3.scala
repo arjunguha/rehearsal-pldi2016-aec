@@ -131,6 +131,8 @@ class Z3Impl() extends TypedZ3 {
       solver.assertCnstr(cxt.mkDistinct(seenPaths.values.toSeq: _*))
     }
 
+    solver.assertCnstr(formula)
+
     val res = solver.check()
     solver.pop(1)
     res
