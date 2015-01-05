@@ -10,42 +10,42 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
   val tr = z.z3true
   val fa = z.z3false
 
-  test("Z3Bools are distinct") {
-    assert(tr != fa)
-  }
+  // test("Z3Bools are distinct") {
+  //   assert(tr != fa)
+  // }
 
-  test("Z3FileStates are distinct") {
-    assert(z.isFile != z.isDir)
-    assert(z.isFile != z.doesNotExist)
-  }
+  // test("Z3FileStates are distinct") {
+  //   assert(z.isFile != z.isDir)
+  //   assert(z.isFile != z.doesNotExist)
+  // }
 
-  test("And functions correctly for Z3Bools") {
-    assert(tr == z.and(tr, tr))
-    assert(fa == z.and(tr, fa))
-    assert(fa == z.and(fa, tr))
-    assert(fa == z.and(fa, fa))
-  }
+  // test("And functions correctly for Z3Bools") {
+  //   assert(tr == z.and(tr, tr))
+  //   assert(fa == z.and(tr, fa))
+  //   assert(fa == z.and(fa, tr))
+  //   assert(fa == z.and(fa, fa))
+  // }
 
-  test("Or functions correctly for Z3Bools") {
-    assert(fa == z.or(fa, fa))
-    assert(tr == z.or(tr, fa))
-    assert(tr == z.or(fa, tr))
-    assert(tr == z.or(tr, tr))
-  }
+  // test("Or functions correctly for Z3Bools") {
+  //   assert(fa == z.or(fa, fa))
+  //   assert(tr == z.or(tr, fa))
+  //   assert(tr == z.or(fa, tr))
+  //   assert(tr == z.or(tr, tr))
+  // }
 
-  test("Implies functions correctly for Z3Bools") {
-    assert(fa == z.implies(tr, fa))
-    assert(tr == z.implies(tr, tr))
-    assert(tr == z.implies(fa, tr))
-    assert(tr == z.implies(fa, fa))
-  }
+  // test("Implies functions correctly for Z3Bools") {
+  //   assert(fa == z.implies(tr, fa))
+  //   assert(tr == z.implies(tr, tr))
+  //   assert(tr == z.implies(fa, tr))
+  //   assert(tr == z.implies(fa, fa))
+  // }
 
-  test("Not works for Z3Bools") {
-    assert(z.not(tr) == fa)
-    assert(z.not(fa) == tr)
-  }
+  // test("Not works for Z3Bools") {
+  //   assert(z.not(tr) == fa)
+  //   assert(z.not(fa) == tr)
+  // }
 
-  test("checkSAT returns true for trivial cases") {
+  test("checkSAT true for trivial cases") {
     assert(z.checkSAT(tr) == Some(true))
     assert(z.checkSAT(fa) == Some(true))
   }
@@ -58,6 +58,11 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
     assert(Some(true) !=
       z.checkSAT(z.and(z.testFileState(p, z.isDir, fss),
                        z.testFileState(p, z.isFile, fss))))
+  }
+
+  test("newState can be called multiple times") {
+    val s1 = z.newState
+    val s2 = z.newState
   }
 
 }
