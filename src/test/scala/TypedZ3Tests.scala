@@ -17,6 +17,7 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
     assert(checkSAT(false) != Some(true))
   }
 
+  // TODO(kgeffen) This might be wrong. Don't forget
   test("Filestates are distinct") {
     assert(checkSAT(isFile == isDir) != Some(true))
     assert(checkSAT(isFile == doesNotExist) != Some(true))
@@ -35,25 +36,54 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
     assert(!checkAnd(false, false))
   }
 
-  test("checkSAT(true) is true") {
-    assert(checkSAT(true) == Some(true))
+  test("Or functions correctly for Z3Bools") {
+    def checkOr(a: Z3Bool, b: Z3Bool): Boolean =
+      checkSAT(a || b) match {
+        case Some(true) => true
+        case _ => false
+      }
+
+    assert(checkOr(true, true))
+    assert(checkOr(true, false))
+    assert(checkOr(false, true))
+    assert(!checkOr(false, false))
   }
 
-  test("checkSAT not trueue for system with path consigned to multiple states") {
+  test("Implies functions correctly for Z3Bools") {
+    def checkImplies(a: Z3Bool, b: Z3Bool): Boolean =
+      checkSAT(a --> b) match {
+        case Some(true) => true
+        case _ => false
+      }
+
+    assert(checkImplies(true, true))
+    assert(!checkImplies(true, false))
+    assert(checkImplies(false, true))
+    assert(checkImplies(false, false))
+  }
+
+  test("Not functions correctly for Z3Bools") {
+    def checkNot(a: Z3Bool): Boolean =
+      checkSAT(!a) match {
+        case Some(true) => true
+        case _ => false
+      }
+
+    assert(!checkNot(true))
+    assert(checkNot(false))
+  }
+
+  test("checkSAT not true for system with path consigned to multiple states") {
     val p = path("/")
     val fss = newState()
 
     assert(Some(true) !=
       checkSAT(and(testFileState(p, isDir, fss),
-                       testFileState(p, isFile, fss))))
+                   testFileState(p, isFile, fss))))
   }
 
   test("newState generates distinct state") {
     assert(newState != newState)
   }
-
-  // test("f") {
-  //   assert(z.checkSAT(z.isFile == z.isDir) == None)
-  // }
 
 }
