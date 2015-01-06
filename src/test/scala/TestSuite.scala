@@ -342,24 +342,4 @@ class TestSuite extends org.scalatest.FunSuite {
     }
   }
 
-  test("mv moves descendants that are not immediate children") {
-    val init: State = Map(
-      "/".toPath -> IsDir,
-      "/a1".toPath -> IsDir,
-      "/a1/b".toPath -> IsDir,
-      "/a1/b/c".toPath -> IsFile,
-      "/a2".toPath -> DoesNotExist,
-      "/a2/b".toPath -> DoesNotExist,
-      "/a2/b/c".toPath -> DoesNotExist)
-    val expected: State = Map(
-      "/".toPath -> IsDir,
-      "/a1".toPath -> DoesNotExist,
-      "/a1/b".toPath -> DoesNotExist,
-      "/a1/b/c".toPath -> DoesNotExist,
-      "/a2".toPath -> IsDir,
-      "/a2/b".toPath -> IsDir,
-      "/a2/b/c".toPath -> IsFile)
-    assert(eval(Mv("/a1","/a2"), init) == List(expected))
-  }
-
 }
