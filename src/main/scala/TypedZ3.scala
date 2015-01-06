@@ -41,7 +41,7 @@ trait TypedZ3 {
       def &&(other: Z3Bool) = and(bool, other)
       def ||(other: Z3Bool) = or(bool, other)
       def -->(other: Z3Bool) = implies(bool, other)
-      //def unary_!() = not(bool)
+      def unary_!() = not(bool)
     }
 
   }
@@ -52,7 +52,7 @@ trait Z3Eval extends TypedZ3 {
 
   import Implicits._
 
-  val tmp: Z3Bool = !true && false
+  val tmp: Z3Bool = !z3true && false
 
   def eval(expr: Expr, s1: Z3FileSystemState): Z3FileSystemState
 

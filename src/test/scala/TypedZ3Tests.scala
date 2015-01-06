@@ -7,59 +7,53 @@ import Implicits._
 class TypedZ3Tests extends org.scalatest.FunSuite {
 
   val z = new Z3Impl
-  val tr = z.z3true
-  val fa = z.z3false
+  import z._
+  // NOTE(kgeffen) Must be imported again after contents of z are imported
+  // because TypedZ3 implicits are needed
+  import Implicits._
 
-  test("Z3Bools are distinct") {
-    assert(tr != fa)
+  test("CheckSAT is true for true and not for false") {
+    assert(checkSAT(true) == Some(true))
+    assert(checkSAT(false) != Some(true))
   }
 
-  test("Z3FileStates are distinct") {
-    assert(z.isFile != z.isDir)
-    assert(z.isFile != z.doesNotExist)
+  test("Filestates are distinct") {
+    assert(checkSAT(isFile == isDir) != Some(true))
+    assert(checkSAT(isFile == doesNotExist) != Some(true))
   }
 
   test("And functions correctly for Z3Bools") {
-    assert(tr == z.and(tr, tr))
-    assert(fa == z.and(tr, fa))
-    assert(fa == z.and(fa, tr))
-    assert(fa == z.and(fa, fa))
-  }
+    def checkAnd(a: Z3Bool, b: Z3Bool): Boolean =
+      checkSAT(a && b) match {
+        case Some(true) => true
+        case _ => false
+      }
 
-  test("Or functions correctly for Z3Bools") {
-    assert(fa == z.or(fa, fa))
-    assert(tr == z.or(tr, fa))
-    assert(tr == z.or(fa, tr))
-    assert(tr == z.or(tr, tr))
-  }
-
-  test("Implies functions correctly for Z3Bools") {
-    assert(fa == z.implies(tr, fa))
-    assert(tr == z.implies(tr, tr))
-    assert(tr == z.implies(fa, tr))
-    assert(tr == z.implies(fa, fa))
-  }
-
-  test("Not works for Z3Bools") {
-    assert(z.not(tr) == fa)
-    assert(z.not(fa) == tr)
+    assert(checkAnd(true, true))
+    assert(!checkAnd(true, false))
+    assert(!checkAnd(false, true))
+    assert(!checkAnd(false, false))
   }
 
   test("checkSAT(true) is true") {
-    assert(z.checkSAT(tr) == Some(true))
+    assert(checkSAT(true) == Some(true))
   }
 
-  test("checkSAT not true for system with path consigned to multiple states") {
-    val p = z.path("/")
-    val fss = z.newState()
+  test("checkSAT not trueue for system with path consigned to multiple states") {
+    val p = path("/")
+    val fss = newState()
 
     assert(Some(true) !=
-      z.checkSAT(z.and(z.testFileState(p, z.isDir, fss),
-                       z.testFileState(p, z.isFile, fss))))
+      checkSAT(and(testFileState(p, isDir, fss),
+                       testFileState(p, isFile, fss))))
   }
 
   test("newState generates distinct state") {
-    assert(z.newState != z.newState)
+    assert(newState != newState)
   }
+
+  // test("f") {
+  //   assert(z.checkSAT(z.isFile == z.isDir) == None)
+  // }
 
 }
