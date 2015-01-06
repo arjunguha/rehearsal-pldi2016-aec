@@ -108,21 +108,10 @@ class Z3Impl() extends TypedZ3 {
     }
   }
 
-  def and(a: Z3Bool, b: Z3Bool): Z3Bool = {
-    a == z3true && b == z3true
-  }
-
-  def or(a: Z3Bool, b: Z3Bool): Z3Bool = {
-    a == z3true || b == z3true
-  }
-
-  def implies(a: Z3Bool, b: Z3Bool): Z3Bool = {
-    not(a) || b
-  }
-
-  def not(a: Z3Bool): Z3Bool = {
-    a == z3false
-  }
+  def and(a: Z3Bool, b: Z3Bool): Z3Bool = cxt.mkAnd(a, b)
+  def or(a: Z3Bool, b: Z3Bool): Z3Bool = cxt.mkOr(a, b)
+  def implies(a: Z3Bool, b: Z3Bool): Z3Bool = cxt.mkImplies(a, b)
+  def not(a: Z3Bool): Z3Bool = cxt.mkNot(a)
 
   def checkSAT(formula: Z3Bool): Option[Boolean] = {
     solver.push
