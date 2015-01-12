@@ -24,11 +24,8 @@ trait TypedZ3 {
   def or(a: Z3Bool, b: Z3Bool): Z3Bool
   def implies(a: Z3Bool, b: Z3Bool): Z3Bool
   def not(a: Z3Bool): Z3Bool
-
   def eq(a: Z3FileState, b: Z3FileState): Z3Bool
 
-  // TODO(arjun): In the implementation, remember to assert that all paths
-  // are distinct before calling (check-sat)
   def checkSAT(formula: Z3Bool): Option[Boolean]
 
   object Implicits {
@@ -54,8 +51,6 @@ trait Z3Eval extends TypedZ3 {
 
   import Implicits._
 
-  val tmp: Z3Bool = !z3true && false
-
   def eval(expr: Expr, s1: Z3FileSystemState): Z3FileSystemState 
   // = expr match {
     // case Error => 
@@ -80,16 +75,12 @@ class Z3Impl() extends TypedZ3 {
 
   import Implicits._
 
-
   private val cxt = new Z3Context(new Z3Config("MODEL" -> true,
                                                "TIMEOUT" -> 3000))
-
   private val solver = cxt.mkSolver
 
   private val pathSort = cxt.mkUninterpretedSort("Path")
-  // (declare-sort FileState)
   private val fileStateSort = cxt.mkUninterpretedSort("FileState")
-
   private val fileSystemStateSort = cxt.mkArraySort(pathSort, fileStateSort)
 
   type Z3Bool = Z3AST
@@ -108,13 +99,13 @@ class Z3Impl() extends TypedZ3 {
 
   private val seenPaths = collection.mutable.Map[java.nio.file.Path, Z3Path]()
 
+  // NOTE(kgeffen) Paths made distinct in checkSAT, not here
   def path(p: java.nio.file.Path): Z3Path = {
     seenPaths.get(p) match {
       case Some(z3Path) => z3Path
       case None => {
         val z3Path = cxt.mkConst(s"Path($p)", pathSort)
         seenPaths += (p -> z3Path)
-        // Note that (distinct ...) for paths is added by checkSAT()
         z3Path
       }
     }
@@ -124,11 +115,11 @@ class Z3Impl() extends TypedZ3 {
   def or(a: Z3Bool, b: Z3Bool): Z3Bool = cxt.mkOr(a, b)
   def implies(a: Z3Bool, b: Z3Bool): Z3Bool = cxt.mkImplies(a, b)
   def not(a: Z3Bool): Z3Bool = cxt.mkNot(a)
-
   def eq(a: Z3FileState, b: Z3FileState) = cxt.mkEq(a, b)
 
   def checkSAT(formula: Z3Bool): Option[Boolean] = {
     solver.push
+    
     // Ensure paths are distinct
     if(!seenPaths.isEmpty) {
       solver.assertCnstr(cxt.mkDistinct(seenPaths.values.toSeq: _*))
