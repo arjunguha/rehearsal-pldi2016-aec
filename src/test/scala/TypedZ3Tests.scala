@@ -81,6 +81,7 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
                    testFileState(p, isFile, fss))))
   }
 
+  // TODO(kgeffen) Determine if this test works as intended and provides meaningful testing
   test("newState generates distinct state") {
     assert(newState != newState)
   }

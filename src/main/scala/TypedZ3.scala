@@ -88,13 +88,9 @@ class Z3Impl() extends TypedZ3 {
   val z3true = true.ast(cxt)
   val z3false = false.ast(cxt)
 
-  // (declare-const IsFile FileState)
-  val isFile = cxt.mkConst("IsFile", fileStateSort)
-  val isDir = cxt.mkConst("IsDir", fileStateSort)
-  val doesNotExist = cxt.mkConst("DoesNotExist", fileStateSort)
-
-  // (distinct ...)
-  solver.assertCnstr(cxt.mkDistinct(isFile, isDir, doesNotExist))
+  val isFile = cxt.mkFreshConst("IsFile", fileStateSort)
+  val isDir = cxt.mkFreshConst("IsDir", fileStateSort)
+  val doesNotExist = cxt.mkFreshConst("DoesNotExist", fileStateSort)
 
   private val seenPaths = collection.mutable.Map[java.nio.file.Path, Z3Path]()
 
