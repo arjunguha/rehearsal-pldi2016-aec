@@ -18,8 +18,8 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
   }
 
   test("Filestates are distinct") {
-    assert(checkSAT(eq(isFile, isDir)) != Some(true))
-    assert(checkSAT(eq(isFile, doesNotExist)) != Some(true))
+    assert(checkSAT(z.eq(isFile, isDir)) != Some(true))
+    assert(checkSAT(z.eq(isFile, doesNotExist)) != Some(true))
   }
 
   test("And functions correctly for Z3Bools") {
