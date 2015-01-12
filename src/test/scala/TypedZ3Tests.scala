@@ -17,10 +17,9 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
     assert(checkSAT(false) != Some(true))
   }
 
-  // TODO(kgeffen) This might be wrong. Don't forget
   test("Filestates are distinct") {
-    assert(checkSAT(isFile == isDir) != Some(true))
-    assert(checkSAT(isFile == doesNotExist) != Some(true))
+    assert(checkSAT(eq(isFile, isDir)) != Some(true))
+    assert(checkSAT(eq(isFile, doesNotExist)) != Some(true))
   }
 
   test("And functions correctly for Z3Bools") {

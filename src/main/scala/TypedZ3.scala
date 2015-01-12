@@ -25,6 +25,8 @@ trait TypedZ3 {
   def implies(a: Z3Bool, b: Z3Bool): Z3Bool
   def not(a: Z3Bool): Z3Bool
 
+  def eq(a: Z3FileState, b: Z3FileState): Z3Bool
+
   // TODO(arjun): In the implementation, remember to assert that all paths
   // are distinct before calling (check-sat)
   def checkSAT(formula: Z3Bool): Option[Boolean]
@@ -112,6 +114,8 @@ class Z3Impl() extends TypedZ3 {
   def or(a: Z3Bool, b: Z3Bool): Z3Bool = cxt.mkOr(a, b)
   def implies(a: Z3Bool, b: Z3Bool): Z3Bool = cxt.mkImplies(a, b)
   def not(a: Z3Bool): Z3Bool = cxt.mkNot(a)
+
+  def eq(a: Z3FileState, b: Z3FileState) = cxt.mkEq(a, b)
 
   def checkSAT(formula: Z3Bool): Option[Boolean] = {
     solver.push
