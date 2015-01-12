@@ -56,7 +56,7 @@ trait Z3Eval extends TypedZ3 {
 
   val tmp: Z3Bool = !z3true && false
 
-  def eval(expr: Expr, s1: Z3FileSystemState): Z3FileSystemState
+  def eval(expr: Expr, s1: Z3FileSystemState): Z3FileSystemState 
   // = expr match {
     // case Error => 
     // case Skip => 
@@ -90,7 +90,7 @@ class Z3Impl() extends TypedZ3 {
   // (declare-sort FileState)
   private val fileStateSort = cxt.mkUninterpretedSort("FileState")
 
-  private val fileSystemStateSort = cxt.mkUninterpretedSort("FileSystemState")
+  private val fileSystemStateSort = cxt.mkArraySort(pathSort, fileStateSort)
 
   type Z3Bool = Z3AST
   type Z3Path = Z3AST
@@ -147,7 +147,9 @@ class Z3Impl() extends TypedZ3 {
 
   def testFileState(path: Z3Path, fileState: Z3FileState,
                     fileSystemState: Z3FileSystemState): Z3Bool = {
-    true
+    eq(fileState,
+      cxt.mkSelect(fileSystemState, path)
+      )
   }
 
 }
