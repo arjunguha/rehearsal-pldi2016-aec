@@ -57,6 +57,18 @@ trait Z3Eval extends TypedZ3 {
   val tmp: Z3Bool = !z3true && false
 
   def eval(expr: Expr, s1: Z3FileSystemState): Z3FileSystemState
+  // = expr match {
+    // case Error => 
+    // case Skip => 
+    // case Mkdir(path) => 
+    // case CreateFile(path, hash) => 
+    // case Cp(src, dst) => 
+    // case Mv(src, dst) => 
+    // case Rm(path) => 
+    // case Block(p, q) => 
+    // case Alt(p, q) => 
+    // case If(pred, p, q) => 
+  // }
 
 }
 
