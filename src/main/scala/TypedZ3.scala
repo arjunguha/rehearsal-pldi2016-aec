@@ -51,18 +51,32 @@ trait Z3Eval extends TypedZ3 {
 
   import Implicits._
 
-  def eval(expr: Expr, s1: Z3FileSystemState): Z3FileSystemState 
+  val z = new Z3Impl
+  import z._
+
+  def eval(expr: Expr, s1: Z3FileSystemState): Z3FileSystemState
   // = expr match {
-    // case Error => 
-    // case Skip => 
-    // case Mkdir(path) => 
-    // case CreateFile(path, hash) => 
-    // case Cp(src, dst) => 
-    // case Mv(src, dst) => 
-    // case Rm(path) => 
-    // case Block(p, q) => 
-    // case Alt(p, q) => 
-    // case If(pred, p, q) => 
+  //   // TODO(kgeffen) scratch, untested 
+  //   case Error => s1 // Should fail, maybe return a (fss which is unsat)
+  //   case Skip => s1
+  //   case Mkdir(path) => 
+  //     // Will look something like
+  //     //some z3 context . mkStore(s1, dst, isFile)
+  //   case CreateFile(path, hash) => 
+  //   case Cp(src, dst) => 
+  //   // It would be nice to be able to do this:
+  //     // testFileState(src, isFile, s1) --> testFileState(dst, isFile, s1)
+  //   // But with current signatures, above is impossible, could do this
+  //     // testFileState(src, isFile, s1) match
+  //       // case Some(true) => eval(CreateFile(dst), s1)
+  //       // case _ => eval(Error, s1)
+  //     // Is almost same as regular eval
+  //   case Mv(src, dst) => 
+  //     // testFileState(src, isFile, s1) --> eval(Block(CreateFile(dst), Rm(src)), s1)
+  //   case Rm(path) =>
+  //   case Block(p, q) => 
+  //   case Alt(p, q) => 
+  //   case If(pred, p, q) => 
   // }
 
 }
