@@ -18,8 +18,9 @@ object PartialOrderGlue {
     tc.foreach({ case (u, v) => {
       val i = s_list.indexOf(u)
       val j = s_list.indexOf(v)
-
-      arr(i)(j) = true
+      
+      // Don't introduce cycles
+      if(i != j) { arr(i)(j) = true }
     }})
 
     arr
