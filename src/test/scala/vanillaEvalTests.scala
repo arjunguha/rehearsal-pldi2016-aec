@@ -342,4 +342,33 @@ class TestSuite extends org.scalatest.FunSuite {
     }
   }
 
+  // NOTE(kgeffen) Except in case when expr causes error
+  test("evalR is eval's identity function") {
+    val exprs = List(Skip,
+                     Mkdir(nonexDir),
+                     CreateFile(nonexFile),
+                     Cp(startFile, nonexFile),
+                     Mv(emptyDir, nonexDir),
+                     Mv(startFile, nonexFile),
+                     Rm(startFile),
+                     Rm(emptyDir),
+                     Alt(CreateFile(nonexFile), Mkdir(nonexDir)),
+                     Alt(Rm(rootDir), Rm(emptyDir)),  // first expr will fail because dir filled
+                     // Rm(rootDir) should fail but isn't reached
+                     If(TestFileState(emptyDir, IsDir), Rm(emptyDir), Rm(rootDir)),
+                     If(TestFileState(emptyDir, IsDir), Rm(rootDir), Rm(emptyDir)),
+                     Block(CreateFile(nonexFile), Rm(nonexFile)),
+                     Block(Rm(startFile), Rm(emptyDir))
+                     )
+    assert(exprs.forall(evalIdentityHolds(_)))
+  }
+
+  def evalIdentityHolds(expr: Expr): Boolean = {
+    val endStates = eval(expr, startState)
+    if(endStates.length > 0)
+      evalR(expr, startState, endStates.head)
+    else
+      false
+  }
+
 }
