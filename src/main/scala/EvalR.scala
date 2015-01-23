@@ -41,6 +41,12 @@ object EvalR {
       } 
       case _ => false
     }
+    case Rm(path) => s0.contains(path) &&
+                     // Would fail if path is an occupied dir
+                     !s0.keys.exists(k => k.getParent == path) &&
+                     s0 - path == s1 - path &&
+                     // Allows either implementation
+                     (s1.get(path) == DoesNotExist || s1.get(path) == None)
     case _ => true
   }
 }
