@@ -116,7 +116,7 @@ object Eval {
                      (s1.get(path) == DoesNotExist || s1.get(path) == None)
     case Block(p, q) => {
       // If we could guess a state sInter which satisfies
-      // evalR(q, sInter, s1) && evalR(p, s0, sInter)
+      // evalR(p, s0, sInter) && evalR(q, sInter, s1)
       // that would work.
       true
     }
