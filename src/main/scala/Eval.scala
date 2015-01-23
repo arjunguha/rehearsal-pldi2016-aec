@@ -115,12 +115,11 @@ object Eval {
                      // Allows either implementation
                      (s1.get(path) == DoesNotExist || s1.get(path) == None)
     case Block(p, q) => {
-      // If we could guess a state sInter which satisfies
-      // evalR(p, s0, sInter) && evalR(q, sInter, s1)
-      // that would work.
-      true
+      eval(p, s0).exists(sInter => evalR(q, sInter, s1))
     }
-    case Alt(p, q) => evalR(p, s0, s1) || evalR(q, s0, s1)
+    case Alt(p, q) => {
+      evalR(p, s0, s1) || evalR(q, s0, s1)
+    }
     case If(pred, p, q) => evalPred(pred, s0) match {
       case true => evalR(p, s0, s1)
       case false => evalR(q, s0, s1)
