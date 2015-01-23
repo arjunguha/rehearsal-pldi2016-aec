@@ -98,7 +98,6 @@ object Eval {
         // NOTE(kgeffen) Creates dst first, moves all contents of src, then removes src.
         // Because move is called on all contents, any dirs contained in src will
         // move all of their children before src is removed. Move works recursively.
-        // NOTE(kgeffen) Code is nearly identical to corresponding case in Eval.scala
         val mvChildren: Seq[Expr] =
           s0.keys.filter(k => k.getParent == src).map(
             k => Mv(k, dst + "/" + k.getFileName)
@@ -115,7 +114,12 @@ object Eval {
                      s0 - path == s1 - path &&
                      // Allows either implementation
                      (s1.get(path) == DoesNotExist || s1.get(path) == None)
-    case Block(p, q) => 
+    case Block(p, q) => {
+      // If we could guess a state sInter which satisfies
+      // evalR(q, sInter, s1) && evalR(p, s0, sInter)
+      // that would work.
+      true
+    }
     case Alt(p, q) => evalR(p, s0, s1) || evalR(q, s0, s1)
     case If(pred, p, q) => evalPred(pred, s0) match {
       case true => evalR(p, s0, s1)
