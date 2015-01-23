@@ -356,7 +356,7 @@ class TestSuite extends org.scalatest.FunSuite {
                      Alt(Rm(rootDir), Rm(emptyDir)),  // first expr will fail because dir filled
                      // Rm(rootDir) should fail but isn't reached
                      If(TestFileState(emptyDir, IsDir), Rm(emptyDir), Rm(rootDir)),
-                     If(TestFileState(emptyDir, IsDir), Rm(rootDir), Rm(emptyDir)),
+                     If(TestFileState(emptyDir, IsFile), Rm(rootDir), Rm(emptyDir)),
                      Block(CreateFile(nonexFile), Rm(nonexFile)),
                      Block(Rm(startFile), Rm(emptyDir))
                      )
