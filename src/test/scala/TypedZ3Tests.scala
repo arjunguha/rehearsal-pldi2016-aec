@@ -103,4 +103,9 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
       )
   }
 
+  // test("Excluded middle") {
+  //   val a = newBool
+  //   assert(checkSAT(!(a || !a) == Some(false)))
+  // }
+
 }

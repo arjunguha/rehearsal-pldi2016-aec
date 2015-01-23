@@ -17,6 +17,7 @@ trait TypedZ3 {
   def path(p: java.nio.file.Path): Z3Path
 
   def newState(): Z3FileSystemState
+  def newBool(): Z3Bool
 
   def testFileState(path: Z3Path, fileState: Z3FileState,
                     fileSystemState: Z3FileSystemState): Z3Bool
@@ -55,29 +56,6 @@ trait Z3Eval extends TypedZ3 {
   import z._
 
   def eval(expr: Expr, s1: Z3FileSystemState): Z3FileSystemState
-  // = expr match {
-  //   // TODO(kgeffen) scratch, untested 
-  //   case Error => s1 // Should fail, maybe return a (fss which is unsat)
-  //   case Skip => s1
-  //   case Mkdir(path) => 
-  //     // Will look something like
-  //     //some z3 context . mkStore(s1, dst, isFile)
-  //   case CreateFile(path, hash) => 
-  //   case Cp(src, dst) => 
-  //   // It would be nice to be able to do this:
-  //     // testFileState(src, isFile, s1) --> testFileState(dst, isFile, s1)
-  //   // But with current signatures, above is impossible, could do this
-  //     // testFileState(src, isFile, s1) match
-  //       // case Some(true) => eval(CreateFile(dst), s1)
-  //       // case _ => eval(Error, s1)
-  //     // Is almost same as regular eval
-  //   case Mv(src, dst) => 
-  //     // testFileState(src, isFile, s1) --> eval(Block(CreateFile(dst), Rm(src)), s1)
-  //   case Rm(path) =>
-  //   case Block(p, q) => 
-  //   case Alt(p, q) => 
-  //   case If(pred, p, q) => 
-  // }
 
 }
 
@@ -93,6 +71,7 @@ class Z3Impl() extends TypedZ3 {
                                                "TIMEOUT" -> 3000))
   private val solver = cxt.mkSolver
 
+  private val boolSort = cxt.mkBoolSort
   private val pathSort = cxt.mkUninterpretedSort("Path")
   private val fileStateSort = cxt.mkUninterpretedSort("FileState")
   private val fileSystemStateSort = cxt.mkArraySort(pathSort, fileStateSort)
@@ -148,6 +127,10 @@ class Z3Impl() extends TypedZ3 {
 
   def newState(): Z3FileSystemState = {
     cxt.mkFreshConst("FileSystemState", fileSystemStateSort)
+  }
+
+  def newBool(): Z3Bool = {
+    cxt.mkFreshConst("Bool", boolSort)
   }
 
   def testFileState(path: Z3Path, fileState: Z3FileState,
