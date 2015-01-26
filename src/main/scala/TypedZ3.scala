@@ -55,9 +55,20 @@ object Z3Eval {
   val z = new Z3Impl
   import z._
 
-  def evalR(): Boolean = {
-    true
-  }//expr: Expr, s1: Z3FileSystemState): Z3FileSystemState
+  private val cxt = new Z3Context(new Z3Config("MODEL" -> true,
+                                               "TIMEOUT" -> 3000))
+
+  def evalR(expr: Expr, s0: Z3FileSystemState, s1: Z3FileSystemState): Boolean = expr match {
+    case Error => false
+    case Skip => s0 == s1 // This might be wrong, maybe eq(s0, s1) and different sig
+    case Mkdir(dst) => {
+      testFileState(path(dst), doesNotExist, s0) &&
+      testFileState(path(dst.getParent), isDir, s0) &&
+      cxt.mkStore(s0, path(dst), doesNotExist) == cxt.mkStore(s1, path(dst), doesNotExist) &&
+      cxt.mkSelect(s1, isDir)
+    } // Maybe should all use checksat
+    case _ => true
+  }
 
 }
 

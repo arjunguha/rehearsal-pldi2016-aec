@@ -112,7 +112,7 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
   // TODO(kgeffen) Include more tests like excluded middle
 
   test("evalR sanity temp") {
-    evalR()
+    evalR(Skip, newState, newState) == true
   }
 
 }
