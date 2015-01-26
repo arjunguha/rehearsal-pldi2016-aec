@@ -157,9 +157,11 @@ class Z3Impl() extends TypedZ3 {
     res
   }
 
+  val defaultFSS = cxt.mkConstArray(pathSort, doesNotExist)
   def newState(): Z3FileSystemState = {
-    //cxt.mkConstArray(fileSystemStateSort, doesNotExist)
-    cxt.mkFreshConst("FileSystemState", fileSystemStateSort)
+    val res = cxt.mkFreshConst("FileSystemState", fileSystemStateSort)
+    solver.assertCnstr(cxt.mkEq(res, defaultFSS))
+    res
   }
 
   def newBool(): Z3Bool = {

@@ -120,17 +120,20 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
   test("evalR scratch") {
     assertResult(Some(false)) {
       evalR(Skip,
-        cxt.mkStore(newState, path("/"), doesNotExist),
-        cxt.mkStore(newState, path("/"), isDir))
+        newState, //cxt.mkStore(newState, path("/foo"), doesNotExist),
+        cxt.mkStore(newState, path("/foo"), isDir))
       }
 
     // The above assertion does not error, the below error's loudly
     // when run twice even if Mkdir case undefined. (sbt > test > test)
+    // This happens even if path is switched between runs
+    // It appears to be because checkSAT is called on the states, messy error occurs
+    // when checkSAT is only called on 1 state.
 
     // assertResult(Some(true)) {
     // evalR(Mkdir("/foo"),
-    //   cxt.mkStore(newState, path("/foo"), doesNotExist),
-    //   cxt.mkStore(newState, path("/foo"), isDir))
+    //   cxt.mkStore(newState, path("/bar"), doesNotExist),
+    //   cxt.mkStore(newState, path("/bar"), isDir))
     // }
   }
 
