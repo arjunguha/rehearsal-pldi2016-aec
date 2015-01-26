@@ -111,8 +111,18 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
 
   // TODO(kgeffen) Include more tests like excluded middle
 
+  import z3.scala._
+  import z3.scala.dsl._
+  import z3.scala.dsl.Operands._
+  private val cxt = new Z3Context(new Z3Config("MODEL" -> true,
+                                                 "TIMEOUT" -> 3000))
+
   test("evalR sanity temp") {
-    evalR(Skip, newState, newState) == true
+    assertResult(Some(false)) {
+      evalR(Skip,
+        cxt.mkStore(newState, path("/"), doesNotExist),
+        cxt.mkStore(newState, path("/"), isDir))
+      }
   }
 
 }

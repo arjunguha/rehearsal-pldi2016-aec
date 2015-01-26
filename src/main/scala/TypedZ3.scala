@@ -25,7 +25,8 @@ trait TypedZ3 {
   def or(a: Z3Bool, b: Z3Bool): Z3Bool
   def implies(a: Z3Bool, b: Z3Bool): Z3Bool
   def not(a: Z3Bool): Z3Bool
-  def eq(a: Z3FileState, b: Z3FileState): Z3Bool
+
+  // def eq(a: Z3AST, b: Z3AST): Z3Bool // TODO(kgeffen) This might be problematically impl dependent
 
   def checkSAT(formula: Z3Bool): Option[Boolean]
 
@@ -55,19 +56,18 @@ object Z3Eval {
   val z = new Z3Impl
   import z._
 
-  private val cxt = new Z3Context(new Z3Config("MODEL" -> true,
-                                               "TIMEOUT" -> 3000))
-
-  def evalR(expr: Expr, s0: Z3FileSystemState, s1: Z3FileSystemState): Boolean = expr match {
-    case Error => false
-    case Skip => s0 == s1 // This might be wrong, maybe eq(s0, s1) and different sig
-    case Mkdir(dst) => {
-      testFileState(path(dst), doesNotExist, s0) &&
-      testFileState(path(dst.getParent), isDir, s0) &&
-      cxt.mkStore(s0, path(dst), doesNotExist) == cxt.mkStore(s1, path(dst), doesNotExist) &&
-      cxt.mkSelect(s1, isDir)
-    } // Maybe should all use checksat
-    case _ => true
+  def evalR(expr: Expr, s0: Z3FileSystemState, s1: Z3FileSystemState): Option[Boolean] = expr match {
+    case Error => Some(false)
+    case Skip =>  checkSAT(z.eq(s0, s1))
+    //checkSAT(eq(s0, s1)) // This might be wrong, maybe eq(s0, s1) and different sig
+    // case Mkdir(dst) => Some(true)
+    // {
+    //   testFileState(path(dst), doesNotExist, s0) &&
+    //   testFileState(path(dst.getParent), isDir, s0) &&
+    //   cxt.mkStore(s0, path(dst), doesNotExist) == cxt.mkStore(s1, path(dst), doesNotExist) &&
+    //   cxt.mkSelect(s1, isDir)
+    // } // Maybe should all use checksat
+    case _ => Some(false)
   }
 
 }
@@ -121,7 +121,8 @@ class Z3Impl() extends TypedZ3 {
   def or(a: Z3Bool, b: Z3Bool): Z3Bool = cxt.mkOr(a, b)
   def implies(a: Z3Bool, b: Z3Bool): Z3Bool = cxt.mkImplies(a, b)
   def not(a: Z3Bool): Z3Bool = cxt.mkNot(a)
-  def eq(a: Z3FileState, b: Z3FileState) = cxt.mkEq(a, b)
+
+  def eq(a: Z3AST, b: Z3AST) = cxt.mkEq(a, b)
 
   def checkSAT(formula: Z3Bool): Option[Boolean] = {
     solver.push
