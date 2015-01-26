@@ -55,14 +55,27 @@ trait TypedZ3 {
 
 object Z3Eval {
 
-  import Implicits._
-
   val z = new Z3Impl
   import z._
+  import Implicits._ 
+
+  val tmp: Z3Bool = !z3true && false
 
   def evalR(expr: Expr, s0: Z3FileSystemState, s1: Z3FileSystemState): Option[Boolean] = expr match {
     case Error => Some(false)
     case Skip =>  checkSAT(z.eq(s0, s1))
+    // case Mkdir(dst) => {
+    //   val foo = path(dst)
+    //   checkSAT(testFileState(foo, newState, doesNotExist))
+    //   //the above does not error, but also doesnt do what's wanted
+
+    //   // z.checkSAT(
+    //   //   z.testFileState(foo, s0, z.doesNotExist)
+    //   //   )
+    //   // //testFileState(path(dst), isDir, s1) // test nothing else has changed
+    //   // )
+    // }
+    
     //checkSAT(eq(s0, s1)) // This might be wrong, maybe eq(s0, s1) and different sig
     // case Mkdir(dst) => Some(true)
     // {
@@ -145,6 +158,7 @@ class Z3Impl() extends TypedZ3 {
   }
 
   def newState(): Z3FileSystemState = {
+    //cxt.mkConstArray(fileSystemStateSort, doesNotExist)
     cxt.mkFreshConst("FileSystemState", fileSystemStateSort)
   }
 

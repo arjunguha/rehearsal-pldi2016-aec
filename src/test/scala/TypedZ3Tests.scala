@@ -15,12 +15,12 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
 
   test("True is SAT, false is not") {
     assert(checkSAT(true) == Some(true))
-    assert(checkSAT(false) != Some(true))
+    assert(checkSAT(false) == Some(false))
   }
 
   test("Filestates are distinct") {
-    assert(checkSAT(z.eq(isFile, isDir)) != Some(true))
-    assert(checkSAT(z.eq(isFile, doesNotExist)) != Some(true))
+    assert(checkSAT(z.eq(isFile, isDir)) == Some(false))
+    assert(checkSAT(z.eq(isFile, doesNotExist)) == Some(false))
   }
 
   test("And functions correctly for Z3Bools") {
@@ -77,7 +77,7 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
     val p = path("/")
     val fss = newState
 
-    assert(Some(true) !=
+    assert(Some(false) ==
       checkSAT(and(testFileState(p, isDir, fss),
                    testFileState(p, isFile, fss))))
   }
@@ -111,18 +111,24 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
 
   // TODO(kgeffen) Include more tests like excluded middle
 
-  import z3.scala._
-  import z3.scala.dsl._
-  import z3.scala.dsl.Operands._
-  private val cxt = new Z3Context(new Z3Config("MODEL" -> true,
-                                                 "TIMEOUT" -> 3000))
+  // import z3.scala._
+  // import z3.scala.dsl._
+  // import z3.scala.dsl.Operands._
+  // private val cxt = new Z3Context(new Z3Config("MODEL" -> true,
+  //                                                "TIMEOUT" -> 3000))
 
-  test("evalR sanity temp") {
-    assertResult(Some(false)) {
-      evalR(Skip,
-        cxt.mkStore(newState, path("/"), doesNotExist),
-        cxt.mkStore(newState, path("/"), isDir))
-      }
-  }
+  // test("evalR scratch") {
+  //   assertResult(Some(false)) {
+  //     evalR(Skip,
+  //       cxt.mkStore(newState, path("/"), doesNotExist),
+  //       cxt.mkStore(newState, path("/"), isDir))
+  //     }
+
+  //   assertResult(Some(true)) {
+  //   evalR(Mkdir("/foo"),
+  //     cxt.mkStore(newState, path("/foo"), doesNotExist),
+  //     cxt.mkStore(newState, path("/foo"), isDir))
+  //   }
+  // }
 
 }
