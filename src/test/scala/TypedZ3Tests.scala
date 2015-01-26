@@ -73,35 +73,10 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
     assert(checkNot(false))
   }
 
-  test("Given fileSystemState cannot have path be in multiple fileStates") {
-    val p = path("/")
-    val fss = newState
 
-    assert(Some(false) ==
-      checkSAT(and(testFileState(p, isDir, fss),
-                   testFileState(p, isFile, fss))))
-  }
-
-  test("Multiple paths can have same fileState") {
-    val p1 = path("/1")
-    val p2 = path("/2")
-    val fss = newState
-
-    assert(Some(true) == 
-      checkSAT(and(testFileState(p1, isDir, fss),
-                   testFileState(p2, isDir, fss)))
-      )
-  }
-
-  test("Distinct fileSystemStates can have different values for same path") {
-    val p = path("/")
-    val fss1 = newState
-    val fss2 = newState
-
-    assert(Some(true) == 
-      checkSAT(and(testFileState(p, isDir, fss1),
-                   testFileState(p, isFile, fss2)))
-      )
+  test("Default value for files is doesNotExist") {
+    assert(Some(true) ==
+      checkSAT(testFileState(path("/"), doesNotExist, newState)))
   }
 
   test("Excluded middle") {
