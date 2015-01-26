@@ -111,24 +111,27 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
 
   // TODO(kgeffen) Include more tests like excluded middle
 
-  // import z3.scala._
-  // import z3.scala.dsl._
-  // import z3.scala.dsl.Operands._
-  // private val cxt = new Z3Context(new Z3Config("MODEL" -> true,
-  //                                                "TIMEOUT" -> 3000))
+  import z3.scala._
+  import z3.scala.dsl._
+  import z3.scala.dsl.Operands._
+  private val cxt = new Z3Context(new Z3Config("MODEL" -> true,
+                                                 "TIMEOUT" -> 3000))
 
-  // test("evalR scratch") {
-  //   assertResult(Some(false)) {
-  //     evalR(Skip,
-  //       cxt.mkStore(newState, path("/"), doesNotExist),
-  //       cxt.mkStore(newState, path("/"), isDir))
-  //     }
+  test("evalR scratch") {
+    assertResult(Some(false)) {
+      evalR(Skip,
+        cxt.mkStore(newState, path("/"), doesNotExist),
+        cxt.mkStore(newState, path("/"), isDir))
+      }
 
-  //   assertResult(Some(true)) {
-  //   evalR(Mkdir("/foo"),
-  //     cxt.mkStore(newState, path("/foo"), doesNotExist),
-  //     cxt.mkStore(newState, path("/foo"), isDir))
-  //   }
-  // }
+    // The above assertion does not error, the below error's loudly
+    // when run twice even if Mkdir case undefined. (sbt > test > test)
+
+    // assertResult(Some(true)) {
+    // evalR(Mkdir("/foo"),
+    //   cxt.mkStore(newState, path("/foo"), doesNotExist),
+    //   cxt.mkStore(newState, path("/foo"), isDir))
+    // }
+  }
 
 }
