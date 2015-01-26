@@ -48,14 +48,16 @@ trait TypedZ3 {
 
 }
 
-trait Z3Eval extends TypedZ3 {
+object Z3Eval {
 
   import Implicits._
 
   val z = new Z3Impl
   import z._
 
-  def eval(expr: Expr, s1: Z3FileSystemState): Z3FileSystemState
+  def evalR(): Boolean = {
+    true
+  }//expr: Expr, s1: Z3FileSystemState): Z3FileSystemState
 
 }
 

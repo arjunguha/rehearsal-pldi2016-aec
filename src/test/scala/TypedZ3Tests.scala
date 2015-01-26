@@ -3,6 +3,7 @@ package fsmodel
 import java.nio.file.Path
 
 import Implicits._
+import Z3Eval._
 
 class TypedZ3Tests extends org.scalatest.FunSuite {
 
@@ -103,9 +104,15 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
       )
   }
 
-  // test("Excluded middle") {
-  //   val a = newBool
-  //   assert(checkSAT(!(a || !a) == Some(false)))
-  // }
+  test("Excluded middle") {
+    val a = newBool
+    assert(checkSAT(!(a || !a)) == Some(false))
+  }
+
+  // TODO(kgeffen) Include more tests like excluded middle
+
+  test("evalR sanity temp") {
+    evalR()
+  }
 
 }
