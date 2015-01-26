@@ -34,6 +34,9 @@ trait TypedZ3 {
 
   def checkSAT(formula: Z3Bool): Option[Boolean]
 
+  def setFileState(path: Z3Path, fileState: Z3FileState,
+                   fileSystemState: Z3FileSystemState): Z3FileSystemState
+
   object Implicits {
 
     import scala.language.implicitConversions
@@ -62,8 +65,8 @@ object Z3Eval {
   val tmp: Z3Bool = !z3true && false
 
   def evalR(expr: Expr, s0: Z3FileSystemState, s1: Z3FileSystemState): Option[Boolean] = expr match {
-    case Error => Some(false)
-    case Skip =>  checkSAT(z.eq(s0, s1))
+    case Error => checkSAT(false)
+    case Skip => checkSAT(z.eq(s0, s1))
     // case Mkdir(dst) => {
     //   val foo = path(dst)
     //   checkSAT(testFileState(foo, newState, doesNotExist))
@@ -84,7 +87,7 @@ object Z3Eval {
     //   cxt.mkStore(s0, path(dst), doesNotExist) == cxt.mkStore(s1, path(dst), doesNotExist) &&
     //   cxt.mkSelect(s1, isDir)
     // } // Maybe should all use checksat
-    case _ => Some(false)
+    case _ => checkSAT(false) // to avoid error
   }
 
 }
@@ -157,11 +160,8 @@ class Z3Impl() extends TypedZ3 {
     res
   }
 
-  val defaultFSS = cxt.mkConstArray(pathSort, doesNotExist)
   def newState(): Z3FileSystemState = {
-    val res = cxt.mkFreshConst("FileSystemState", fileSystemStateSort)
-    solver.assertCnstr(cxt.mkEq(res, defaultFSS))
-    res
+    cxt.mkConstArray(pathSort, doesNotExist)
   }
 
   def newBool(): Z3Bool = {
@@ -170,9 +170,15 @@ class Z3Impl() extends TypedZ3 {
 
   def testFileState(path: Z3Path, fileState: Z3FileState,
                     fileSystemState: Z3FileSystemState): Z3Bool = {
+    println(fileSystemState)
     eq(fileState,
       cxt.mkSelect(fileSystemState, path)
       )
+  }
+
+  def setFileState(path: Z3Path, fileState: Z3FileState,
+                   fileSystemState: Z3FileSystemState): Z3FileSystemState = {
+    cxt.mkStore(fileSystemState, path, fileState)
   }
 
 }

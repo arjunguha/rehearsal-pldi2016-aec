@@ -86,17 +86,11 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
 
   // TODO(kgeffen) Include more tests like excluded middle
 
-  import z3.scala._
-  import z3.scala.dsl._
-  import z3.scala.dsl.Operands._
-  private val cxt = new Z3Context(new Z3Config("MODEL" -> true,
-                                                 "TIMEOUT" -> 3000))
-
   test("evalR scratch") {
     assertResult(Some(false)) {
       evalR(Skip,
-        newState, //cxt.mkStore(newState, path("/foo"), doesNotExist),
-        cxt.mkStore(newState, path("/foo"), isDir))
+        newState,
+        setFileState(path("/foo"), isDir, newState))
       }
 
     // The above assertion does not error, the below error's loudly
