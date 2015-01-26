@@ -2,10 +2,14 @@ package fsmodel
 
 trait TypedZ3 {
 
-  type Z3Bool
-  type Z3Path
-  type Z3FileState
-  type Z3FileSystemState
+  // NOTE(kgeffen) Used to define equals method which will take any
+  // of the types specified below
+  type Z3Data
+  
+  type Z3Bool <: Z3Data
+  type Z3Path <: Z3Data
+  type Z3FileState <: Z3Data
+  type Z3FileSystemState <: Z3Data
 
   def z3true: Z3Bool
   def z3false: Z3Bool
@@ -26,7 +30,7 @@ trait TypedZ3 {
   def implies(a: Z3Bool, b: Z3Bool): Z3Bool
   def not(a: Z3Bool): Z3Bool
 
-  // def eq(a: Z3AST, b: Z3AST): Z3Bool // TODO(kgeffen) This might be problematically impl dependent
+  def eq(a: Z3Data, b: Z3Data): Z3Bool
 
   def checkSAT(formula: Z3Bool): Option[Boolean]
 
@@ -89,6 +93,7 @@ class Z3Impl() extends TypedZ3 {
   private val fileStateSort = cxt.mkUninterpretedSort("FileState")
   private val fileSystemStateSort = cxt.mkArraySort(pathSort, fileStateSort)
 
+  type Z3Data = Z3AST
   type Z3Bool = Z3AST
   type Z3Path = Z3AST
   type Z3FileState = Z3AST
@@ -122,7 +127,7 @@ class Z3Impl() extends TypedZ3 {
   def implies(a: Z3Bool, b: Z3Bool): Z3Bool = cxt.mkImplies(a, b)
   def not(a: Z3Bool): Z3Bool = cxt.mkNot(a)
 
-  def eq(a: Z3AST, b: Z3AST) = cxt.mkEq(a, b)
+  def eq(a: Z3Data, b: Z3Data) = cxt.mkEq(a, b)
 
   def checkSAT(formula: Z3Bool): Option[Boolean] = {
     solver.push
