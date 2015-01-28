@@ -112,10 +112,8 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
   // TODO(kgeffen) Include more tests like excluded middle
 
   test("evalR scratch") {
-    assertResult(Some(false)) {
-      evalR(Skip,
-        newState,
-        setFileState(path("/foo"), isDir, newState))
+    assertResult(Some(true)) {
+      checkSAT(evalR(Skip, newState, newState))
       }
 
     // The above assertion does not error, the below error's loudly

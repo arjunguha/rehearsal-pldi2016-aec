@@ -5,7 +5,7 @@ trait TypedZ3 {
   // NOTE(kgeffen) Used to define equals method which will take any
   // of the types specified below
   type Z3Data
-  
+
   type Z3Bool <: Z3Data
   type Z3Path <: Z3Data
   type Z3FileState <: Z3Data
@@ -64,9 +64,9 @@ object Z3Eval {
 
   val tmp: Z3Bool = !z3true && false
 
-  def evalR(expr: Expr, s0: Z3FileSystemState, s1: Z3FileSystemState): Option[Boolean] = expr match {
-    case Error => checkSAT(false)
-    case Skip => checkSAT(z.eq(s0, s1))
+  def evalR(expr: Expr, s0: Z3FileSystemState, s1: Z3FileSystemState): Z3Bool = expr match {
+    case Error => z3false
+    case Skip => z.eq(s0, s1)
     // case Mkdir(dst) => {
     //   val foo = path(dst)
     //   checkSAT(testFileState(foo, newState, doesNotExist))
@@ -87,7 +87,7 @@ object Z3Eval {
     //   cxt.mkStore(s0, path(dst), doesNotExist) == cxt.mkStore(s1, path(dst), doesNotExist) &&
     //   cxt.mkSelect(s1, isDir)
     // } // Maybe should all use checksat
-    case _ => checkSAT(false) // to avoid error
+    case _ => z3false
   }
 
 }
@@ -147,7 +147,7 @@ class Z3Impl() extends TypedZ3 {
 
   def checkSAT(formula: Z3Bool): Option[Boolean] = {
     solver.push
-    
+
     // Ensure paths are distinct
     if(!seenPaths.isEmpty) {
       solver.assertCnstr(cxt.mkDistinct(seenPaths.values.toSeq: _*))
