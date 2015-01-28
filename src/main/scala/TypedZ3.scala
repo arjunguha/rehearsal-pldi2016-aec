@@ -161,7 +161,7 @@ class Z3Impl() extends TypedZ3 {
   }
 
   def newState(): Z3FileSystemState = {
-    cxt.mkConstArray(pathSort, doesNotExist)
+    cxt.mkFreshConst("FileSystemState", fileSystemStateSort)
   }
 
   def newBool(): Z3Bool = {
@@ -170,7 +170,6 @@ class Z3Impl() extends TypedZ3 {
 
   def testFileState(path: Z3Path, fileState: Z3FileState,
                     fileSystemState: Z3FileSystemState): Z3Bool = {
-    println(fileSystemState)
     eq(fileState,
       cxt.mkSelect(fileSystemState, path)
       )
