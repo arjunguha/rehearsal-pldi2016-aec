@@ -7,8 +7,8 @@ import Z3Eval._
 
 class TypedZ3Tests extends org.scalatest.FunSuite {
 
-  val z = new Z3Impl
-  import z._
+  //val z = new Z3Impl
+  import Z3Eval.z._
   // NOTE(kgeffen) Implicits must be imported again after contents of z are imported
   // because TypedZ3 implicits are needed
   import Implicits._
@@ -76,7 +76,7 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
   test("Given fileSystemState cannot have path be in multiple fileStates") {
     val p = path("/")
     val fss = newState
-    
+
     assert(Some(false) ==
       checkSAT(and(testFileState(p, isDir, fss),
                    testFileState(p, isFile, fss))))
