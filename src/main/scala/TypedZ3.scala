@@ -65,29 +65,19 @@ object Z3Eval {
   val tmp: Z3Bool = !z3true && false
 
   def evalR(expr: Expr, s0: Z3FileSystemState, s1: Z3FileSystemState): Z3Bool = expr match {
-    case Error => z3false
+    case Error => false
     case Skip => z.eq(s0, s1)
-    // case Mkdir(dst) => {
-    //   val foo = path(dst)
-    //   checkSAT(testFileState(foo, newState, doesNotExist))
-    //   //the above does not error, but also doesnt do what's wanted
-
-    //   // z.checkSAT(
-    //   //   z.testFileState(foo, s0, z.doesNotExist)
-    //   //   )
-    //   // //testFileState(path(dst), isDir, s1) // test nothing else has changed
-    //   // )
-    // }
-    
-    //checkSAT(eq(s0, s1)) // This might be wrong, maybe eq(s0, s1) and different sig
-    // case Mkdir(dst) => Some(true)
-    // {
-    //   testFileState(path(dst), doesNotExist, s0) &&
-    //   testFileState(path(dst.getParent), isDir, s0) &&
-    //   cxt.mkStore(s0, path(dst), doesNotExist) == cxt.mkStore(s1, path(dst), doesNotExist) &&
-    //   cxt.mkSelect(s1, isDir)
-    // } // Maybe should all use checksat
-    case _ => z3false
+    case Mkdir(dst) => true
+    case CreateFile(dst) => true
+    case Cp(src, dst) => true
+    case Mv(src, dst) => true
+    case Rm(dst) => true
+    case Block(p, q) =>  {
+      val sInter = newState
+      evalR(p, s0, sInter) && evalR(q, sInter, s1)
+    }
+    case Alt(p, q) => true
+    case If(pred, p, q) => true
   }
 
 }
