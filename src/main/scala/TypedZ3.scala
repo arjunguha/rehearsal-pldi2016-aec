@@ -67,8 +67,12 @@ object Z3Eval {
   def evalR(expr: Expr, s0: Z3FileSystemState, s1: Z3FileSystemState): Z3Bool = expr match {
     case Error => false
     case Skip => z.eq(s0, s1)
-    case Mkdir(dst) => true
-    case CreateFile(dst) => true
+    case Mkdir(dst) => {
+      testFileState(path(dst), doesNotExist, s0) &&
+      testFileState(path(dst.getParent), isDir, s0) &&
+      z.eq(s1, setFileState(path(dst), isDir, s0))
+    }
+    case CreateFile(dst, hash) => true
     case Cp(src, dst) => true
     case Mv(src, dst) => true
     case Rm(dst) => true
@@ -76,7 +80,7 @@ object Z3Eval {
       val sInter = newState
       evalR(p, s0, sInter) && evalR(q, sInter, s1)
     }
-    case Alt(p, q) => true
+    case Alt(p, q) => evalR(p, s0, s1) || evalR(p, s0, s1)
     case If(pred, p, q) => true
   }
 
