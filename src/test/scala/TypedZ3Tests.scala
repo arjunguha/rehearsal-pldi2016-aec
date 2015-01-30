@@ -140,6 +140,11 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
                      newState,
                      setFileState(path("/"), isDir, newState)))
     }
+
+    assertResult(Some(true)) {
+      checkSAT(evalR(If(False, Error, Skip),
+        newState, newState))
+    }
     // The above assertion does not error, the below error's loudly
     // when run twice even if Mkdir case undefined. (sbt > test > test)
     // This happens even if path is switched between runs

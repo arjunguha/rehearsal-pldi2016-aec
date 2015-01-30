@@ -29,6 +29,7 @@ trait TypedZ3 {
   def or(a: Z3Bool, b: Z3Bool): Z3Bool
   def implies(a: Z3Bool, b: Z3Bool): Z3Bool
   def not(a: Z3Bool): Z3Bool
+  def ite(a: Z3Bool, b: Z3Data, c: Z3Data): Z3Data
 
   def eq(a: Z3Data, b: Z3Data): Z3Bool
 
@@ -97,7 +98,26 @@ object Z3Eval {
       evalR(p, s0, sInter) && evalR(q, sInter, s1)
     }
     case Alt(p, q) => evalR(p, s0, s1) || evalR(p, s0, s1)
-    case If(pred, p, q) => true // TODO(kgeffen)
+    case If(pred, p, q) => {
+      ite(evalPred(pred, s0),
+          evalR(p, s0, s1),
+          evalR(q, s0, s1))
+    }
+  }
+
+  def evalPred(pred: Pred, s: Z3FileSystemState): Z3Bool = pred match {
+    case True => true
+    case False => false
+    case And(a, b) => evalPred(a, s) && evalPred(b, s)
+    case Or(a, b) =>  evalPred(a, s) || evalPred(b, s)
+    case Not(a) => !evalPred(a, s)
+    // TODO(kgeffen) Make this not terrible
+    // As is, FileState and Z3FileState are 2 different things
+    case TestFileState(p, fs) => fs match {
+      case IsDir => testFileState(path(p), isDir, s)
+      case IsFile => testFileState(path(p), isFile, s)
+      case DoesNotExist => testFileState(path(p), doesNotExist, s)
+    }
   }
 
 }
@@ -154,6 +174,7 @@ class Z3Impl() extends TypedZ3 {
   def not(a: Z3Bool): Z3Bool = cxt.mkNot(a)
 
   def eq(a: Z3Data, b: Z3Data) = cxt.mkEq(a, b)
+  def ite(a: Z3Bool, b: Z3Data, c: Z3Data) = cxt.mkITE(a, b, c)
 
   def checkSAT(formula: Z3Bool): Option[Boolean] = {
     solver.push
