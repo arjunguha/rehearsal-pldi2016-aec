@@ -72,16 +72,32 @@ object Z3Eval {
       testFileState(path(dst.getParent), isDir, s0) &&
       z.eq(s1, setFileState(path(dst), isDir, s0))
     }
-    case CreateFile(dst, hash) => true
-    case Cp(src, dst) => true
-    case Mv(src, dst) => true
-    case Rm(dst) => true
+    case CreateFile(dst, hash) => {
+      testFileState(path(dst), doesNotExist, s0) &&
+      testFileState(path(dst.getParent), isDir, s0) &&
+      z.eq(s1, setFileState(path(dst), isFile, s0))
+    }
+    case Cp(src, dst) => {
+      testFileState(path(src), isFile, s0) &&
+      evalR(CreateFile(dst), s0, s1)
+    }
+    case Mv(src, dst) => true // TODO(kgeffen)
+    case Rm(dst) => {
+      // File exists in start state
+      !testFileState(path(dst), doesNotExist, s0) &&
+      // TODO(kgeffen) this will be tricky to translate, maybe cant rm any dir?
+      // !s0.keys.exists(k => k.getParent == path)
+      //
+      // NOT FULLY IMPLEMENTED, occupied dir TEST MUST OCCUR
+      //
+      z.eq(s1, setFileState(path(dst), doesNotExist, s0))
+    }
     case Block(p, q) =>  {
       val sInter = newState
       evalR(p, s0, sInter) && evalR(q, sInter, s1)
     }
     case Alt(p, q) => evalR(p, s0, s1) || evalR(p, s0, s1)
-    case If(pred, p, q) => true
+    case If(pred, p, q) => true // TODO(kgeffen)
   }
 
 }
