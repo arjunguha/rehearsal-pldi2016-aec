@@ -82,7 +82,13 @@ object Z3Eval {
       testFileState(path(src), isFile, s0) &&
       evalR(CreateFile(dst), s0, s1)
     }
-    case Mv(src, dst) => true // TODO(kgeffen)
+    case Mv(src, dst) => {
+      // In this impl, check that dst is not moving into itself is IMPLICIT
+      ite(testFileState(path(src), isFile, s0),
+          evalR(Block(CreateFile(dst), Rm(src)), s0, s1),
+          and(testFileState(path(src), isDir, s0), // technically unnecessary
+              evalR(getMvDirExpr(src, dst), s0, s1)))
+    }
     case Rm(dst) => {
       // File exists in start state
       !testFileState(path(dst), doesNotExist, s0) &&
@@ -118,6 +124,20 @@ object Z3Eval {
       case IsFile => testFileState(path(p), isFile, s)
       case DoesNotExist => testFileState(path(p), doesNotExist, s)
     }
+  }
+
+  // TODO(kgeffen) This same code is also in eval, consider having it
+  // in only 1 place
+  def getMvDirExpr(src: Path, dst: Path): Expr = {
+    // NOTE(kgeffen) Creates dst first, moves all contents of src, then removes src.
+    // Because move is called on all contents, any dirs contained in src will
+    // move all of their children before src is removed. Move works recursively.
+    val mvChildren: Seq[Expr] =
+      s0.keys.filter(k => k.getParent == src).map(
+        k => Mv(k, dst + "/" + k.getFileName)
+        ).toSeq
+    val equivExprs: Seq[Expr] = Mkdir(dst) +: mvChildren :+ Rm(src)
+    Block(equivExprs: _*)
   }
 
 }
