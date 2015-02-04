@@ -19,7 +19,7 @@ object PartialOrderGlue {
       val i = s_list.indexOf(u)
       val j = s_list.indexOf(v)
       
-      // Don't introduce cycles
+      // Don't introduce self-cycles
       if(i != j) { arr(i)(j) = true }
     }})
 
