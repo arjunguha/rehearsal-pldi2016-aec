@@ -192,6 +192,50 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
     }
   }
 
+  test("evalR Alt Skip Error is SAT") {
+    assertResult(Some(true)) {
+      checkSAT(evalR(Alt(Error, Skip), newState, newState))
+    }
+    assertResult(Some(true)) {
+      checkSAT(evalR(Alt(Skip, Error), newState, newState))
+    }
+  }
+
+  test("evalR If acts correctly for true, false") {
+    assertResult(Some(true)) {
+      checkSAT(evalR(If(False, Error, Skip),
+               newState, newState))
+    }
+    assertResult(Some(true)) {
+      checkSAT(evalR(If(True, Skip, Error),
+               newState, newState))
+    }
+  }
+
+  test("newState does not consign paths to states") {
+    assertResult(Some(true)) {
+      checkSAT(evalR(If(TestFileState("/", IsDir),
+                        Error, Skip),
+               newState, newState))
+    }
+    assertResult(Some(true)) {
+      checkSAT(evalR(If(TestFileState("/", IsFile),
+                        Error, Skip),
+               newState, newState))
+    }
+    assertResult(Some(true)) {
+      checkSAT(evalR(If(TestFileState("/", DoesNotExist),
+                        Error, Skip),
+               newState, newState))
+    }
+  }
+
+  // TODO(kgeffen) Add evalR tests for Rm and Mv once their
+  // functionality is better understood/implementation is decided upon
+  // TODO(kgeffen) Add more tests for If to cover all predicates maybe,
+  // or test the evalPred function instead
+
+
 
 
 

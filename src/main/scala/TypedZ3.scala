@@ -107,7 +107,7 @@ object Z3Eval {
       val sInter = newState
       evalR(p, s0, sInter) && evalR(q, sInter, s1)
     }
-    case Alt(p, q) => evalR(p, s0, s1) || evalR(p, s0, s1)
+    case Alt(p, q) => evalR(p, s0, s1) || evalR(q, s0, s1)
     case If(pred, p, q) => {
       ite(evalPred(pred, s0),
           evalR(p, s0, s1),
