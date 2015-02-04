@@ -20,7 +20,12 @@ case class Or(a: Pred, b: Pred) extends Pred
 case class Not(a: Pred) extends Pred
 case class TestFileState(path: Path, s: FileState) extends Pred
 
-sealed trait Expr
+sealed trait Expr {
+
+  def collectPaths(): Set[Path] = CollectPaths.expr(this)
+
+}
+
 case object Error extends Expr
 case object Skip extends Expr
 case class Block(p: Expr, q: Expr) extends Expr // p; q
@@ -53,5 +58,31 @@ object Block {
 object Pred {
 
   def implies(a: Pred, b: Pred): Pred = Or(Not(a), b)
+
+}
+
+object CollectPaths {
+
+  def pred(a: Pred): Set[Path] = a match {
+    case True => Set()
+    case False => Set()
+    case And(a, b) => pred(a) ++ pred(b)
+    case Or(a, b) => pred(a) ++ pred(b)
+    case Not(a) => pred(a)
+    case TestFileState(p, _) => Set(p)
+  }
+
+  def expr(e: Expr): Set[Path] = e match {
+    case Error => Set()
+    case Skip => Set()
+    case Block(e1, e2) => expr(e1) ++ expr(e2)
+    case Alt(e1, e2) => expr(e1) ++ expr(e2)
+    case If(a, e1, e2) => pred(a) ++ expr(e1) ++ expr(e2)
+    case Mkdir(p) => Set(p)
+    case CreateFile(p, _) => Set(p)
+    case Rm(p) => Set(p)
+    case Cp(p1, p2) => Set(p1, p2)
+    case Mv(p1, p2) => Set(p1, p2)
+  }
 
 }
