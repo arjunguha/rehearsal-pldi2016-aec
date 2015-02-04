@@ -111,23 +111,89 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
 
   // TODO(kgeffen) Include more tests like excluded middle
 
-  test("evalR Error is unSAT") {
+  test("evalR Error unSAT") {
     assertResult(Some(false)) {
       checkSAT(evalR(Error, newState, newState))
     }
   }
 
-  test("evalR Skip is SAT") {
+  test("evalR Skip SAT") {
     assertResult(Some(true)) {
       checkSAT(evalR(Skip, newState, newState))
     }
   }
 
-  test("evalR Mkdir is SAT for newStates") {
+  test("evalR Mkdir SAT for newStates") {
     assertResult(Some(true)) {
       checkSAT(evalR(Mkdir("/"), newState, newState))
     }
   }
+
+  test("evalR Mkdir unSAT when dst already exists") {
+    assertResult(Some(false)) {
+      checkSAT(evalR(Block(Mkdir("/"), Mkdir("/")), newState, newState))
+    }
+    assertResult(Some(false)) {
+      checkSAT(evalR(Block(CreateFile("/"), Mkdir("/")), newState, newState))
+    }
+  }
+
+  test("evalR CreateFile SAT for newStates") {
+    assertResult(Some(true)) {
+      checkSAT(evalR(CreateFile("/"), newState, newState))
+    }
+  }
+
+  test("evalR CreateFile unSAT when dst already exists") {
+    assertResult(Some(false)) {
+      checkSAT(evalR(Block(Mkdir("/"), CreateFile("/")), newState, newState))
+    }
+    assertResult(Some(false)) {
+      checkSAT(evalR(Block(CreateFile("/"), CreateFile("/")), newState, newState))
+    }
+  }
+
+  test("evalR Cp SAT for newStates") {
+    assertResult(Some(true)) {
+      checkSAT(evalR(Cp("/src", "/dst"), newState, newState))
+    }
+  }
+
+  test("evalR Cp unSAT when src is dir") {
+    assertResult(Some(false)) {
+      checkSAT(evalR(Block(Mkdir("/src"), Cp("/src", "/dst")),
+                     newState, newState))
+    }
+  }
+
+  test("evalR Cp unSAT when dst already exists") {
+    assertResult(Some(false)) {
+      checkSAT(evalR(Block(CreateFile("/dst"), Cp("/src", "/dst")),
+                     newState, newState))
+    }
+    assertResult(Some(false)) {
+      checkSAT(evalR(Block(Mkdir("/dst"), Cp("/src", "/dst")),
+                     newState, newState))
+    }
+  }
+
+  // TODO(kgeffen) Give better test name
+  test("evalR Mv works for files under right conditions") {
+    assertResult(Some(true)) {
+      checkSAT(
+        evalR(Block(
+          CreateFile("/src"),
+          Mv("/src", "/dst"),
+          If(TestFileState("/src", DoesNotExist) && TestFileState("/dst", IsFile),
+            Skip,
+            Error)),
+        newState, newState)
+        )
+    }
+  }
+
+
+
 
   test("evalR scratch") {
     assertResult(Some(true)) {
