@@ -111,6 +111,24 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
 
   // TODO(kgeffen) Include more tests like excluded middle
 
+  test("evalR Error is unSAT") {
+    assertResult(Some(false)) {
+      checkSAT(evalR(Error, newState, newState))
+    }
+  }
+
+  test("evalR Skip is SAT") {
+    assertResult(Some(true)) {
+      checkSAT(evalR(Skip, newState, newState))
+    }
+  }
+
+  test("evalR Mkdir is SAT for newStates") {
+    assertResult(Some(true)) {
+      checkSAT(evalR(Mkdir("/"), newState, newState))
+    }
+  }
+
   test("evalR scratch") {
     assertResult(Some(true)) {
       checkSAT(evalR(Skip, newState, newState))

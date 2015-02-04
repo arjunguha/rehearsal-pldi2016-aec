@@ -1,5 +1,7 @@
 package fsmodel
 
+import java.nio.file.Path
+
 trait TypedZ3 {
 
   // NOTE(kgeffen) Used to define equals method which will take any
@@ -61,9 +63,7 @@ object Z3Eval {
 
   val z = new Z3Impl
   import z._
-  import Implicits._ 
-
-  val tmp: Z3Bool = !z3true && false
+  import Implicits._
 
   def evalR(expr: Expr, s0: Z3FileSystemState, s1: Z3FileSystemState): Z3Bool = expr match {
     case Error => false
@@ -86,8 +86,12 @@ object Z3Eval {
       // In this impl, check that dst is not moving into itself is IMPLICIT
       ite(testFileState(path(src), isFile, s0),
           evalR(Block(CreateFile(dst), Rm(src)), s0, s1),
+          false)
+          // TODO(kgeffen) Implement mv for dirs
+          /*
           and(testFileState(path(src), isDir, s0), // technically unnecessary
               evalR(getMvDirExpr(src, dst), s0, s1)))
+          */
     }
     case Rm(dst) => {
       // File exists in start state
@@ -126,6 +130,10 @@ object Z3Eval {
     }
   }
 
+  // TODO(kgeffen) Moving children is difficult when the state is a
+  // ast which does not recognize paths as being related.
+  // Possibly filter all (Existant) paths in 'z'
+  /*
   // TODO(kgeffen) This same code is also in eval, consider having it
   // in only 1 place
   def getMvDirExpr(src: Path, dst: Path): Expr = {
@@ -139,6 +147,7 @@ object Z3Eval {
     val equivExprs: Seq[Expr] = Mkdir(dst) +: mvChildren :+ Rm(src)
     Block(equivExprs: _*)
   }
+  */
 
 }
 
