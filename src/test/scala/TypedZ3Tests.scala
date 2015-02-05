@@ -177,21 +177,6 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
     }
   }
 
-  // TODO(kgeffen) Give better test name
-  test("evalR Mv works for files under right conditions") {
-    assertResult(Some(true)) {
-      checkSAT(
-        evalR(Block(
-          CreateFile("/src"),
-          Mv("/src", "/dst"),
-          If(TestFileState("/src", DoesNotExist) && TestFileState("/dst", IsFile),
-            Skip,
-            Error)),
-        newState, newState)
-        )
-    }
-  }
-
   test("evalR Alt Skip Error is SAT") {
     assertResult(Some(true)) {
       checkSAT(evalR(Alt(Error, Skip), newState, newState))

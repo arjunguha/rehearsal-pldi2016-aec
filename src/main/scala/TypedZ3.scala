@@ -65,7 +65,11 @@ object Z3Eval {
   import z._
   import Implicits._
 
-  def evalR(expr: Expr, s0: Z3FileSystemState, s1: Z3FileSystemState): Z3Bool = expr match {
+  def evalR(expr: Expr, s0: Z3FileSystemState, s1: Z3FileSystemState): Z3Bool = {
+    evalRHelper(expr.collectPaths, expr, s0, s1)
+  }
+
+  def evalRHelper(paths: Set[Path], expr: Expr, s0: Z3FileSystemState, s1: Z3FileSystemState): Z3Bool = expr match {
     case Error => false
     case Skip => z.eq(s0, s1)
     case Mkdir(dst) => {
@@ -80,39 +84,36 @@ object Z3Eval {
     }
     case Cp(src, dst) => {
       testFileState(path(src), isFile, s0) &&
-      evalR(CreateFile(dst), s0, s1)
+      evalRHelper(paths, CreateFile(dst), s0, s1)
     }
-    case Mv(src, dst) => {
-      // In this impl, check that dst is not moving into itself is IMPLICIT
-      ite(testFileState(path(src), isFile, s0),
-          evalR(Block(CreateFile(dst), Rm(src)), s0, s1),
-          false)
-          // TODO(kgeffen) Implement mv for dirs
-          /*
-          and(testFileState(path(src), isDir, s0), // technically unnecessary
-              evalR(getMvDirExpr(src, dst), s0, s1)))
-          */
-    }
+    case Mv(src, dst) => false  // Mv is not implemented for z3 (indefinetly)
     case Rm(dst) => {
-      // File exists in start state
-      !testFileState(path(dst), doesNotExist, s0) &&
-      // TODO(kgeffen) this will be tricky to translate, maybe cant rm any dir?
-      // !s0.keys.exists(k => k.getParent == path)
-      //
-      // NOT FULLY IMPLEMENTED, occupied dir TEST MUST OCCUR
-      //
+      // File exists in s0
+      !testFileState(path(dst), doesNotExist, s0) && 
+      // Dst has no children (Therefore no descendents)
+      {
+        val children = paths.filter(p => p.getParent == dst)
+        val noChildren: Seq[Z3Bool] =
+          children.map(c => testFileState(path(c), doesNotExist, s0)).toSeq
+        andHelper(noChildren: _*)
+      } &&
       z.eq(s1, setFileState(path(dst), doesNotExist, s0))
     }
     case Block(p, q) =>  {
       val sInter = newState
-      evalR(p, s0, sInter) && evalR(q, sInter, s1)
+      evalRHelper(paths, p, s0, sInter) && evalRHelper(paths, q, sInter, s1)
     }
-    case Alt(p, q) => evalR(p, s0, s1) || evalR(q, s0, s1)
+    case Alt(p, q) => evalRHelper(paths, p, s0, s1) || evalRHelper(paths, q, s0, s1)
     case If(pred, p, q) => {
       ite(evalPred(pred, s0),
           evalR(p, s0, s1),
           evalR(q, s0, s1))
     }
+  }
+
+  def andHelper(ps: Z3Bool*): Z3Bool = ps match {
+    case Seq() => true
+    case Seq(p, rest @ _ *) => and(p, andHelper(rest : _ *))
   }
 
   def evalPred(pred: Pred, s: Z3FileSystemState): Z3Bool = pred match {
@@ -122,32 +123,13 @@ object Z3Eval {
     case Or(a, b) =>  evalPred(a, s) || evalPred(b, s)
     case Not(a) => !evalPred(a, s)
     // TODO(kgeffen) Make this not terrible
-    // As is, FileState and Z3FileState are 2 different things
+    // As is, IsDir and isDir are 2 different things
     case TestFileState(p, fs) => fs match {
       case IsDir => testFileState(path(p), isDir, s)
       case IsFile => testFileState(path(p), isFile, s)
       case DoesNotExist => testFileState(path(p), doesNotExist, s)
     }
   }
-
-  // TODO(kgeffen) Moving children is difficult when the state is a
-  // ast which does not recognize paths as being related.
-  // Possibly filter all (Existant) paths in 'z'
-  /*
-  // TODO(kgeffen) This same code is also in eval, consider having it
-  // in only 1 place
-  def getMvDirExpr(src: Path, dst: Path): Expr = {
-    // NOTE(kgeffen) Creates dst first, moves all contents of src, then removes src.
-    // Because move is called on all contents, any dirs contained in src will
-    // move all of their children before src is removed. Move works recursively.
-    val mvChildren: Seq[Expr] =
-      s0.keys.filter(k => k.getParent == src).map(
-        k => Mv(k, dst + "/" + k.getFileName)
-        ).toSeq
-    val equivExprs: Seq[Expr] = Mkdir(dst) +: mvChildren :+ Rm(src)
-    Block(equivExprs: _*)
-  }
-  */
 
 }
 
