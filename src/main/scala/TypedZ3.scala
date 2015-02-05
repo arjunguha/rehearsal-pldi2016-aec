@@ -4,10 +4,7 @@ import java.nio.file.Path
 
 trait TypedZ3 {
 
-  // NOTE(kgeffen) Used to define equals method which will take any
-  // of the types specified below
   type Z3Data
-
   type Z3Bool <: Z3Data
   type Z3Path <: Z3Data
   type Z3FileState <: Z3Data
@@ -20,7 +17,7 @@ trait TypedZ3 {
   def isDir: Z3FileState
   def doesNotExist: Z3FileState
 
-  def path(p: java.nio.file.Path): Z3Path
+  def path(p: Path): Z3Path
 
   def newState(): Z3FileSystemState
   def newBool(): Z3Bool
@@ -113,7 +110,7 @@ object Z3Eval {
 
   def andHelper(ps: Z3Bool*): Z3Bool = ps match {
     case Seq() => true
-    case Seq(p, rest @ _ *) => and(p, andHelper(rest : _ *))
+    case Seq(p, rest @ _ *) => and(p, andHelper(rest: _ *))
   }
 
   def evalPred(pred: Pred, s: Z3FileSystemState): Z3Bool = pred match {
@@ -165,10 +162,10 @@ class Z3Impl() extends TypedZ3 {
 
   solver.assertCnstr(cxt.mkDistinct(isFile, isDir, doesNotExist))
 
-  private val seenPaths = collection.mutable.Map[java.nio.file.Path, Z3Path]()
+  private val seenPaths = collection.mutable.Map[Path, Z3Path]()
 
   // NOTE(kgeffen) Paths made distinct in checkSAT, not here
-  def path(p: java.nio.file.Path): Z3Path = {
+  def path(p: Path): Z3Path = {
     seenPaths.get(p) match {
       case Some(z3Path) => z3Path
       case None => {

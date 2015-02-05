@@ -7,7 +7,6 @@ import Z3Eval._
 
 class TypedZ3Tests extends org.scalatest.FunSuite {
 
-  //val z = new Z3Impl
   import Z3Eval.z._
   // NOTE(kgeffen) Implicits must be imported again after contents of z are imported
   // because TypedZ3 implicits are needed
