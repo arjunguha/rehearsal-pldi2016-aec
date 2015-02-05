@@ -215,60 +215,28 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
     }
   }
 
-  // TODO(kgeffen) Add evalR tests for Rm and Mv once their
-  // functionality is better understood/implementation is decided upon
-  // TODO(kgeffen) Add more tests for If to cover all predicates maybe,
-  // or test the evalPred function instead
-
-
-
-
-
-  test("evalR scratch") {
+  test("evalR Rm SAT for newState") {
     assertResult(Some(true)) {
-      checkSAT(evalR(Skip, newState, newState))
+      checkSAT(evalR(Rm("/"), newState, newState))
     }
+  }
 
-    assertResult(Some(true)) {
-      checkSAT(evalR(Block(Skip, Skip),
-               newState, newState))
-    }
-
+  test("evalR Rm unSAT when dst does not exist") {
     assertResult(Some(false)) {
-      checkSAT(evalR(Block(Skip, Skip),
-               setFileState(path("/"), isFile, newState),
-               setFileState(path("/"), isDir, newState)))
+      checkSAT(evalR(Block(Mkdir("/"),
+                           Rm("/"),
+                           Rm("/")),
+                     newState, newState))
     }
+  }
 
-    assertResult(Some(true)) {
-      checkSAT(evalR(Alt(Skip, Error), newState, newState))
-    }
-
+  test("evalR Rm unSAT when dst is filled dir") {
     assertResult(Some(false)) {
-      checkSAT(evalR(Alt(Error, Error), newState, newState))
+      checkSAT(evalR(Block(Mkdir("/parent"),
+                           Mkdir("/parent/child"),
+                           Rm("/parent")),
+                     newState, newState))
     }
-
-    assertResult(Some(true)) {
-      checkSAT(evalR(Mkdir("/"),
-                     newState,
-                     setFileState(path("/"), isDir, newState)))
-    }
-
-    assertResult(Some(true)) {
-      checkSAT(evalR(If(False, Error, Skip),
-        newState, newState))
-    }
-    // The above assertion does not error, the below error's loudly
-    // when run twice even if Mkdir case undefined. (sbt > test > test)
-    // This happens even if path is switched between runs
-    // It appears to be because checkSAT is called on the states, messy error occurs
-    // when checkSAT is only called on 1 state.
-
-    // assertResult(Some(true)) {
-    // evalR(Mkdir("/foo"),
-    //   cxt.mkStore(newState, path("/bar"), doesNotExist),
-    //   cxt.mkStore(newState, path("/bar"), isDir))
-    // }
   }
 
 }
