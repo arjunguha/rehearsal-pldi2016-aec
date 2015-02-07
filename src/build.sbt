@@ -1,6 +1,6 @@
 version in ThisBuild := "0.1"
 
-scalaVersion in ThisBuild := "2.10.3"
+scalaVersion in ThisBuild := "2.11.5"
 
 scalacOptions in ThisBuild ++= Seq(
   "-deprecation",
@@ -11,14 +11,25 @@ scalacOptions in ThisBuild ++= Seq(
 
 resolvers in ThisBuild ++= Seq(
   "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
-  "Typesafe Repository" at "http://repo.akka.io/snapshots/"
+  "Typesafe Repository" at "http://repo.akka.io/snapshots/",
+  "PLASMA" at "https://dl.bintray.com/plasma-umass/maven"
 )
 
-libraryDependencies in ThisBuild ++= Seq(
-  "org.scalatest" %% "scalatest" % "2.1.3" % "test"
+libraryDependencies in ThisBuild ++= {
+  val akkaV = "2.3.4"
+  val graphV = "1.9.0"
+  Seq(
+    "org.scalatest" %% "scalatest" % "2.1.3" % "test",
+    "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
+    "com.assembla.scala-incubator" %% "graph-core" % graphV,
+    "edu.umass.cs" %% "docker" % "0.3-SNAPSHOT",
+    "edu.umass.cs" %% "scala-puppet" % "0.1",
+    "com.typesafe.akka" %% "akka-actor"  % akkaV,
+    "com.typesafe.akka" %% "akka-kernel" % akkaV,
+    "com.typesafe.akka" %% "akka-remote" % akkaV
   )
+}
 
-lazy val compiler = project.dependsOn(common)
 
 lazy val installer = project.dependsOn(common)
 
@@ -30,6 +41,6 @@ lazy val master = project.in(file("verification/master"))
 lazy val worker = project.in(file("verification/worker"))
                          .dependsOn(common)
 
-lazy val equiv = project.dependsOn(compiler)
+lazy val equiv = project.dependsOn(common)
 
-lazy val pipeline = project.dependsOn(compiler, equiv)
+lazy val pipeline = project.dependsOn(equiv)

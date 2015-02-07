@@ -1,14 +1,16 @@
 package pipeline.main
 
-import puppet.common._
-import puppet.core.eval._
+import puppet.syntax._
+import puppet.graph._
+
+import puppet._
+
+import puppet.common.{resource => resrc}
 import puppet.common.toposortperm._
 import equiv.sat._
 import equiv.ast._
 import equiv.desugar._
 import equiv.semantics._
-
-import puppet.driver.{PuppetDriver => driver}
 
 import scala.collection.mutable
 
@@ -22,13 +24,12 @@ import scalax.collection.edge.LDiEdge // labelled directed edge
 import scalax.collection.edge.Implicits._
 
 
-case class ResourceLabel(r: Resource)
+case class ResourceLabel(r: puppet.graph.Resource)
 case class FSKATExprLabel(expr: FSKATExpr)
 
 import scalax.collection.edge.LBase.LEdgeImplicits
 object RImplicit extends LEdgeImplicits[ResourceLabel]
 object FSKATImplicit extends LEdgeImplicits[FSKATExprLabel]
-
 
 object Pipeline {
 
@@ -127,7 +128,7 @@ object Pipeline {
 
     Graph.from(dfa.nodes.map(_.value),
                dfa.edges.map(e=> {
-                 val resource = driver.toCoreResource(e.label.r)
+                 val resource = toCoreResource(e.label.r)
                  val kat_expr = Desugar(Provider(resource).toFSOps)
                  LDiEdge(e.source.value, e.target.value)(FSKATExprLabel(kat_expr))
                }))
@@ -153,7 +154,7 @@ object Pipeline {
           val node = (set + n.value)
           val sink_symb = nextlevel.get(node) getOrElse
             ({id = id + 1; val s = Symbol(id.toString); nextlevel.update(node, s); s })
-          dfa.add(LDiEdge(src_symb, sink_symb)(ResourceLabel(n.value.asInstanceOf[Resource]))) // TODO: Generic
+          dfa.add(LDiEdge(src_symb, sink_symb)(ResourceLabel(n.value.asInstanceOf[puppet.graph.Resource]))) // TODO: Generic
         })
       }}
 
@@ -190,15 +191,15 @@ object Pipeline {
   }
 
   def apply(mainFile: String, modulePath: Option[String] = None) {
-    runPipeline(driver.prepareContent(mainFile, modulePath))
+    runPipeline(puppet.syntax.load(mainFile, modulePath))
   }
 
   def runPipeline(puppetProgram: String) {
 
-    import puppet.driver.{PuppetDriver => driver}
-
-    val im_graph = driver.compile(puppetProgram)
-    driver.printDOTGraph(im_graph)
+    val im_graph = parse(puppetProgram).desugar()
+                                       .asInstanceOf[puppet.core.BlockStmtC]
+                                       .toGraph(main.scala.Facter.run())
+    puppet.graph.printDOTGraph(im_graph)
 
     val dfa = DAGtoDFA(im_graph)
     val dot_str = DFAtoDot(dfa)
@@ -211,5 +212,40 @@ object Pipeline {
     val res = z3.isSatisfiable(fskat_expr)
     println(res)
     println("---------------------- XX --------------------")
+  }
+
+  def dumpDOT(puppetProgram: String) {
+    val im_graph = parse(puppetProgram).desugar()
+                                       .asInstanceOf[puppet.core.BlockStmtC]
+                                       .toGraph(main.scala.Facter.run())
+    puppet.graph.printDOTGraph(im_graph)
+  }
+
+  def toCoreValue(v: Value): resrc.Value = v match {
+    case UndefV => resrc.UndefV
+    case StringV(s) => resrc.StringV(s)
+    case BoolV(b) => resrc.BoolV(b)
+    case RegexV(_) => resrc.UndefV
+    case ASTHashV(_) => resrc.UndefV
+    case ASTArrayV(arr) => resrc.ArrayV(arr.map(toCoreValue(_))) 
+    case ResourceRefV(_, _, _) => resrc.UndefV
+  }
+
+  def toCoreResource(res: puppet.graph.Resource): resrc.Resource = {
+    // Rules to convert to core resource
+    val attrs = res.as.filter((a) => a.value match {
+      case UndefV | StringV(_) | BoolV(_) | ASTArrayV(_) => true
+      case _ => false
+    })
+    .map((a) => (a.name, toCoreValue(a.value))).toMap
+
+    resrc.Resource(attrs)
+  }
+
+  def toSerializable(g: Graph[puppet.graph.Resource, DiEdge]): Graph[resrc.Resource, DiEdge] = {
+    // Convert to serializable Graph
+    val nodes = g.nodes map ((n) => toCoreResource(n.value))
+    val edges = g.edges map ((e) => toCoreResource(e.source.value) ~> toCoreResource(e.target.value))
+    Graph.from(nodes, edges)
   }
 }

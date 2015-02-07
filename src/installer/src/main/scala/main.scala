@@ -27,7 +27,7 @@ class Exec(remote: ActorSelection) extends Actor {
     case resource: Resource =>
       println("Resource received for installation")
       val client = sender()
-      future { 
+      Future { 
         Try(Provider(resource).realize()).map(_ => "success") getOrElse "failure"
       } pipeTo client
     
