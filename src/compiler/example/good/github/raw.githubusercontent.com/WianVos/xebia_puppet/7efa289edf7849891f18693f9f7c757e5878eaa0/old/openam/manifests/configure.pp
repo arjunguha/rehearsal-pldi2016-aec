@@ -1,3 +1,0 @@
-class openam::configure{
-	
-}

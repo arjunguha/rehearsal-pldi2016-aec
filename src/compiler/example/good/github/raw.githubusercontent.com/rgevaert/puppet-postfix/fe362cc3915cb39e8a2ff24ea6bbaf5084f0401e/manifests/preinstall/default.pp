@@ -1,3 +1,0 @@
-class postfix::preinstall::default
-{
-}

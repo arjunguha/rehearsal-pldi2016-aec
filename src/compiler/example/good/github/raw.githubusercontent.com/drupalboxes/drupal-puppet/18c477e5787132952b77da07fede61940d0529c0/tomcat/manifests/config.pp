@@ -1,4 +1,0 @@
-
-class tomcat::config {
-
-}

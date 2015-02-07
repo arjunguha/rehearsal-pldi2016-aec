@@ -1,3 +1,0 @@
-notify {'test':}
-notify {'test':}
-

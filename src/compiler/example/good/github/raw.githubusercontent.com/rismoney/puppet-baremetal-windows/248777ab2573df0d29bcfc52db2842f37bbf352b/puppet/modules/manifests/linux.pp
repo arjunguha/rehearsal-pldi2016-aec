@@ -1,1 +1,0 @@
-class winbuild::linux {}

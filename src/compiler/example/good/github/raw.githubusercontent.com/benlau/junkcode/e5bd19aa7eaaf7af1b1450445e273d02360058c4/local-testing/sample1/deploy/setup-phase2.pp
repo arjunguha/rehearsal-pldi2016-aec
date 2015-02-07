@@ -1,5 +1,0 @@
-package {"nodeload" :
-    provider => "npm",
-}
-
-

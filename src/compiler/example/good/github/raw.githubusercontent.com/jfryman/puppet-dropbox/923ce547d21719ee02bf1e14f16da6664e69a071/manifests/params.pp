@@ -1,3 +1,0 @@
-class dropbox::params {
-
-}

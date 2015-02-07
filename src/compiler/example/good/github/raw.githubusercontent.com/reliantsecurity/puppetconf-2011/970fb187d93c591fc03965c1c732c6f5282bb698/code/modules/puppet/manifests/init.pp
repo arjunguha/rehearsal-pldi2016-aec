@@ -1,5 +1,0 @@
-class puppet {
-	
-	# Nothing here
-
-}

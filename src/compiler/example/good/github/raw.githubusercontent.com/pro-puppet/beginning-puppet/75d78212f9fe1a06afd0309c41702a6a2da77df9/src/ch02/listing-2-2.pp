@@ -1,3 +1,0 @@
-package { 'htop':
-  ensure => 'installed',
-}

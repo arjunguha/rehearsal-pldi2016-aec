@@ -1,1 +1,0 @@
-class chris::lea { }

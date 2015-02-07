@@ -1,4 +1,0 @@
-
-class solr::config {
-
-}

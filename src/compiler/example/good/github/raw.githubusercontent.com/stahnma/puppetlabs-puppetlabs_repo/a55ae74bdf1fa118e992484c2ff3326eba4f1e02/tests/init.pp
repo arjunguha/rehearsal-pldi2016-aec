@@ -1,2 +1,0 @@
-include puppetlabs_repo
-

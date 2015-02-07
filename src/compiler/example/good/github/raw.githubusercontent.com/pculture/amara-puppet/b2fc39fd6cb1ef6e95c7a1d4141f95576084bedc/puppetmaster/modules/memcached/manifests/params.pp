@@ -1,2 +1,0 @@
-class memcached::params {
-}

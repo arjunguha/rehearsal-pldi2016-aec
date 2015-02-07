@@ -1,1 +1,0 @@
-include fedora_packager

@@ -1,2 +1,0 @@
-class tahoe::base {
-}

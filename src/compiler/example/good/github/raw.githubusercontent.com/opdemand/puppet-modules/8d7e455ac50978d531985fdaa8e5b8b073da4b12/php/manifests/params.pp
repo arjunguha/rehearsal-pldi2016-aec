@@ -1,4 +1,0 @@
-class php::params (
-  $packages)
-{
-} 

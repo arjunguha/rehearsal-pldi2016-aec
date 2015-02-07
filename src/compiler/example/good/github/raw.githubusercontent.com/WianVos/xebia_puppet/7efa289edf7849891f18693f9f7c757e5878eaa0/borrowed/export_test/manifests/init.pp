@@ -1,5 +1,0 @@
-class export_test {
-
-	
-
-}

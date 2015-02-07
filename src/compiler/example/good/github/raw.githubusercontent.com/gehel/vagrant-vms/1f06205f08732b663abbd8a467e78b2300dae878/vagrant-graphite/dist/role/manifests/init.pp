@@ -1,3 +1,0 @@
-class role {
-  # dummy class
-}
