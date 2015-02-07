@@ -1,8 +1,5 @@
 package equiv.ast
 
-import z3.scala._
-import equiv.sat._
-
 import java.nio.file.{Path, Paths}
 
 // Surface Verification Language AST nodes
