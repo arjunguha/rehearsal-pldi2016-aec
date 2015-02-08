@@ -6,10 +6,6 @@ import java.nio.file.Path
 
 sealed abstract trait Expr {
 
-  def +(other: Expr) = Alt(this, other)
-  def *(other: Expr) = Concur(this, other)
-  def >>(other: Expr) = Seq(this, other)
-
   def unconcur(): Expr = Compiler.unconcur(this)
   def unatomic(): Expr = Compiler.unatomic(this)
   def pretty(): String = Pretty.pretty(Pretty.AltCxt, this)

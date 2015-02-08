@@ -1,6 +1,7 @@
 package fsmodel.ext
 
 import fsmodel.core
+import Implicits._
 
 private[ext] object Compiler {
 
