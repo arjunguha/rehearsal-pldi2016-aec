@@ -6,10 +6,12 @@ import java.nio.file.Path
 
 sealed abstract trait Expr {
 
-  def unconcur(): Expr = Compiler.unconcur(this)
-  def unatomic(): Expr = Compiler.unatomic(this)
+  def unconcur(): Expr = Unconcur.Naive.unconcur(this)
+  def unconcurOpt(): Expr = Unconcur.Opt.unconcur(this)
+  def unatomic(): Expr = Unatomic.unatomic(this)
   def pretty(): String = Pretty.pretty(Pretty.AltCxt, this)
-  def toCore(): core.Expr = Compiler.toCore(this)
+  def toCore(): core.Expr = ToCore.toCore(this)
+  def commutesWith(other: Expr) = Commutativity.commutes(this, other)
 
 }
 
