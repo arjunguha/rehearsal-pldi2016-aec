@@ -1,4 +1,4 @@
-package fsmodel
+package fsmodel.core
 
 import java.nio.file.Path
 
@@ -105,7 +105,7 @@ object Eval {
         val equivExprs: Seq[Expr] = Mkdir(dst) +: mvChildren :+ Rm(src)
 
         evalR(Block(equivExprs: _*), s0, s1)
-      } 
+      }
       case _ => false
     }
     case Rm(path) => s0.contains(path) &&

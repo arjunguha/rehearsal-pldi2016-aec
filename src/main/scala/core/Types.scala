@@ -1,4 +1,4 @@
-package fsmodel
+package fsmodel.core
 
 import java.nio.file.Path
 

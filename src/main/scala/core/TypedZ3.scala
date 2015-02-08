@@ -1,4 +1,4 @@
-package fsmodel
+package fsmodel.core
 
 import java.nio.file.Path
 
@@ -86,7 +86,7 @@ object Z3Eval {
     case Mv(src, dst) => false  // Mv is not implemented for z3 (indefinetly)
     case Rm(dst) => {
       // File exists in s0
-      !testFileState(path(dst), doesNotExist, s0) && 
+      !testFileState(path(dst), doesNotExist, s0) &&
       // Dst has no children (Therefore no descendents)
       {
         val children = paths.filter(p => p.getParent == dst)
