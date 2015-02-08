@@ -57,21 +57,9 @@ private[ext] object Unconcur {
         val e2 = unconcur(q)
         (e1 >> e2) + (e2 >> e1)
       }
-      case Concur(Mkdir(path), q) => {
+      case Concur(p @ (Mkdir(_)|Rm(_)|CreateFile(_,_)|Cp(_,_)), q) => {
         val e2 = unconcur(q)
-        (Mkdir(path) >> e2) + (e2 >> Mkdir(path))
-      }
-      case Concur(Rm(path), q) => {
-        val e2 = unconcur(q)
-        (Rm(path) >> e2) + (e2 >> Rm(path))
-      }
-      case Concur(CreateFile(path, hash), q) => {
-        val e2 = unconcur(q)
-        (CreateFile(path, hash) >> e2) + (e2 >> CreateFile(path, hash))
-      }
-      case Concur(Cp(src, dst), q) => {
-        val e2 = unconcur(q)
-        (Cp(src, dst) >> e2) + (e2 >> Cp(src, dst))
+        (p >> e2) + (e2 >> p)
       }
       case Seq(p, q) => unconcur(p) >> unconcur(q)
       case Alt(p, q) => unconcur(p) + unconcur(q)
