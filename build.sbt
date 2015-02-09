@@ -12,4 +12,6 @@ resolvers +=   "Sonatype Snapshots" at "https://oss.sonatype.org/content/reposit
 
 libraryDependencies ++=
   Seq("org.scalatest" % "scalatest_2.11" % "2.2.1" % "test",
+      "com.googlecode.kiama" %% "kiama" % "1.8.0",
       "edu.umass.cs" %% "scalaz3" % "2.1-mac")
+
