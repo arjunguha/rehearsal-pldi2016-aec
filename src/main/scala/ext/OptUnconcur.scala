@@ -8,7 +8,7 @@ private[ext] object OptUnconcur {
     // TODO(arjun): When applied recursively, this is a quadratic operation.
     // It will help if object-equality <=> pointer-equality.
     case (Seq(p1, p2), Seq(q1, q2))
-      if (p1 == q2 && p2 == q1 && p1.commutesWith(p2)) => p
+      if ((p1, p2) == (q2, q1) && p1.commutesWith(p2)) => p
     case _ => Alt(p, q)
   }
 
