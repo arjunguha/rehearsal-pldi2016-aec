@@ -66,7 +66,10 @@ object Z3Eval {
     evalRHelper(expr.collectPaths, expr, s0, s1)
   }
 
-  def evalRHelper(paths: Set[Path], expr: Expr, s0: Z3FileSystemState, s1: Z3FileSystemState): Z3Bool = expr match {
+  def evalRHelper(paths: Set[Path],
+                  expr: Expr,
+                  s0: Z3FileSystemState,
+                  s1: Z3FileSystemState): Z3Bool = expr match {
     case Error => false
     case Skip => z.eq(s0, s1)
     case Mkdir(dst) => {
@@ -90,6 +93,7 @@ object Z3Eval {
       // Dst has no children (Therefore no descendents)
       {
         val children = paths.filter(p => p.getParent == dst)
+        // Any children of dst must not exist
         val noChildren: Seq[Z3Bool] =
           children.map(c => testFileState(path(c), doesNotExist, s0)).toSeq
         andHelper(noChildren: _*)
@@ -119,8 +123,7 @@ object Z3Eval {
     case And(a, b) => evalPred(a, s) && evalPred(b, s)
     case Or(a, b) =>  evalPred(a, s) || evalPred(b, s)
     case Not(a) => !evalPred(a, s)
-    // TODO(kgeffen) Make this not terrible
-    // As is, IsDir and isDir are 2 different things
+    // NOTE(kgeffen) IsDir is a FileState, while isDir is a Z3FileState
     case TestFileState(p, fs) => fs match {
       case IsDir => testFileState(path(p), isDir, s)
       case IsFile => testFileState(path(p), isFile, s)

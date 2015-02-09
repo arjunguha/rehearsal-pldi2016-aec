@@ -108,8 +108,6 @@ class TypedZ3Tests extends org.scalatest.FunSuite {
     assert(checkSAT(!(a || !a)) == Some(false))
   }
 
-  // TODO(kgeffen) Include more tests like excluded middle
-
   test("evalR Error unSAT") {
     assertResult(Some(false)) {
       checkSAT(evalR(Error, newState, newState))
