@@ -1,0 +1,57 @@
+
+
+<expr> :: <concat_expr> | undef | bool | <type> | <name> | <regex> | <hash> |
+          <array> | <hash_or_array_access> | <if_else> | <expr> <op> <expr> |
+          "!"<expr> | <func_app> | <filter_expr>
+
+<relationship_expr_operand> :: <hash_or_array_access> | <variable> | <if_else> |
+                               <order_resource> | <resource_decl> | <filter_expr>
+
+<stmt> :: <if_else> | <func_app> | <vardef> | <order_resource> | 
+          <resource_decl> | <filter_expr> | <resource_override> | <class> |
+          <definition>
+
+<block> :: <stmt> | <stmt> <block>
+
+<func_app> :: <name> <args>
+<args> :: <expr> | <expr> <args>
+
+<if_else> :: <expr> <block> <block>
+
+<vardef> :: <variable> "=" <expr> | <variable> "+=" <expr>
+<order_resource> :: <relationship_expr_operand> "to" <relationship_expr_operand>
+<resource_decl> :: <attributes> | <attributes> <resource_decl>
+<filter_expr> :: <expr> <filter_op> <expr> 
+<resource_override> :: <filter_expr> <attribute_overrides>
+<attribute_overrides> :: <attribute_override> | <attribute_override> <attributes_overrides>
+<attribute_override> :: <name> "=" <expr> | <name> "+=" <expr>
+<class> :: <classname> <opt_args> <block> | <classname> <class_args> <parent> <block>
+<definition> :: <definename> <opt_args> <block>
+
+<classname> :: <string>
+<definename> :: <string>
+<opt_args> :: <opt_arg> | <opt_arg> <opt_args>
+<opt_arg> :: <variable> | <variable> <expr>
+<parent> :: <string>
+
+<attributes> :: <attribute> | <attribute> <attributes>
+<attribute> :: <name> <expr>
+
+<hash> :: <hash_key> <expr> | <hash_key> <expr> <hash>
+<array> :: <expr> | <expr> <array>
+<hash_or_array_access> :: <variable> <expr>+
+<concat> :: <string> | <string> <expr> <concat>
+<hash_key> :: <string> | <concat> | <name>
+
+<string> :: string
+<name> :: string
+<type> :: string
+<variable> :: string
+
+<op> :: "||" | "&&" | ">" | ">=" | "<" | "<=" | "!=" | "=" | "<<" | ">>" |
+        "+" | "-" | "/" | "*" | "%" | "~=" | "!~=" | "in"
+
+<filter_op> :: "=" | "!=" | "and" | "or"
+
+
+
