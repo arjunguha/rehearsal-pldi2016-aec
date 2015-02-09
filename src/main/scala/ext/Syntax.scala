@@ -6,8 +6,8 @@ import java.nio.file.Path
 
 sealed abstract trait Expr {
 
-  def unconcur(): Expr = Unconcur.Naive.unconcur(this)
-  def unconcurOpt(): Expr = Unconcur.Opt.unconcur(this)
+  def unconcur(): Expr = SimpleUnconcur.unconcur(this)
+  def unconcurOpt(): Expr = OptUnconcur.unconcur(this)
   def unatomic(): Expr = Unatomic.unatomic(this)
   def pretty(): String = Pretty.pretty(Pretty.AltCxt, this)
   def toCore(): core.Expr = ToCore.toCore(this)
