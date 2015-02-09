@@ -1,4 +1,6 @@
+<start_symbol> :: <block>
 
+<block> :: <stmt> | <stmt> <block>
 
 <expr> :: <concat_expr> | undef | bool | <type> | <name> | <regex> | <hash> |
           <array> | <hash_or_array_access> | <if_else> | <expr> <op> <expr> |
@@ -10,8 +12,6 @@
 <stmt> :: <if_else> | <func_app> | <vardef> | <order_resource> | 
           <resource_decl> | <filter_expr> | <resource_override> | <class> |
           <definition>
-
-<block> :: <stmt> | <stmt> <block>
 
 <func_app> :: <name> <args>
 <args> :: <expr> | <expr> <args>
