@@ -93,11 +93,11 @@ object Provider {
         }
         """
         */
-        case Some("present") => If(And(Exists(p), IsRegularFile(p)), 
-                                   Block(DeleteFile(p), CreateFile(p, c)), // true branch
-                                   If(Not(Exists(p)),
-                                      Block(CreateFile(p, c)),
-                                      Block()))
+        case Some("present") => If(TestFileState(p, IsFile),
+                                   Block(Rm(p), CreateFile(p, c)), // true branch
+                                   If(TestFileState(p, DoesNotExist),
+                                      CreateFile(p, c),
+                                      Skip))
 
         /*
          * Cases 
@@ -116,13 +116,11 @@ object Provider {
          """
          */
 
-        case Some("absent") if force => If(Exists(p),
-                                           If(IsDir(p),
-                                              RmDir(p),
-                                              If(IsLink(p),
-                                                 Unlink(p),
-                                                 DeleteFile(p))),
-                                           Block())
+        case Some("absent") if force => If(TestFileState(p, IsDir),
+                                           Rm(p),
+                                           If(TestFileState(p, IsFile),
+                                              Rm(p),
+                                              Skip)) // TODO(kgeffen) Links not yet covered!
 
          /*
          """
@@ -133,11 +131,9 @@ object Provider {
          }
          """
          */
-        case Some("absent") => If(Exists(p),
-                                  If(IsLink(p),
-                                     Unlink(p),
-                                     If(IsRegularFile(p), DeleteFile(p), Block())),
-                                  Block())
+        case Some("absent") => If(TestFileState(p, IsFile),
+                                  Rm(p),
+                                  Skip) // TODO(kgeffen) Links not yet covered
 
         /* missing: Create a file with content if content present
          * directory: if force is set then remove directory createFile and set content if present else ignore
@@ -154,12 +150,12 @@ object Provider {
         create(p, c)
         """
         */
-        case Some("file") if force => Block(If(Exists(p),
-                                               If(IsDir(p),
-                                                  RmDir(p),
-                                                  If(IsLink(p), Unlink(p), DeleteFile(p))),
-                                               Block()),
-                                            CreateFile(p, c))
+        case Some("file") if force => Block(If(TestFileState(p, IsDir),
+                                               Rm(p),
+                                               If(TestFileState(p, IsFile),
+                                                  Rm(p),
+                                                  Skip)),
+                                            CreateFile(p, c)) // TODO(kgeffen) Links not yet covered
 
        
        /*
@@ -172,12 +168,10 @@ object Provider {
        if(!exists(p)) create(p, c)
        """ 
        */
-       case Some("file") => Block(If(Exists(p),
-                                     If(IsLink(p), Unlink(p),
-                                        If(IsRegularFile(p), DeleteFile(p), Block())),
-                                      Block()),
-                                  If(Not(Exists(p)), CreateFile(p, c), Block()))
-
+       case Some("file") => Block(If(TestFileState(p, IsFile),
+                                     Rm(p),
+                                     Skip),
+                                  CreateFile(p, c)) // TODO(kgeffen) Links not yet covered
 
         /* Missing: Create new directory
          * Directory: Ignore
@@ -194,12 +188,9 @@ object Provider {
         if(!exists(p)) mkdir(p)
         """
         */
-        case Some("directory") => Block(If(Exists(p),
-                                           If(IsRegularFile(p),
-                                              DeleteFile(p),
-                                              If(IsLink(p), Unlink(p), Block())),
-                                           Block()),
-                                         If(Not(Exists(p)), MkDir(p), Block()))
+        case Some("directory") => If(!TestFileState(p, DoesNotExist),
+                                     Block(Rm(p), Mkdir(p)),
+                                     MkDir(Mkdir(p))) // TODO(kgeffen) Links not yet covered
 
         /*
          * Missing: create sym link with target
@@ -217,11 +208,13 @@ object Provider {
          link(p, t)
          """
          */
-        case Some("link") if force => Block(If(Exists(p),
-                                               If(IsDir(p), RmDir(p),
-                                                  If(IsRegularFile(p), DeleteFile(p), Unlink(p))),
-                                               Block()),
-                                            Link(p, t))
+        case Some("link") if force => Skip // TODO(kgeffen) Links not yet covered
+
+        // Block(If(Exists(p),
+        //                                        If(IsDir(p), RmDir(p),
+        //                                           If(IsRegularFile(p), DeleteFile(p), Unlink(p))),
+        //                                        Block()),
+        //                                     Link(p, t))
                                             
 
         /*
@@ -232,11 +225,13 @@ object Provider {
         }
         if(!exists(p)) link(p, t)
         */
-        case Some("link") => Block(If(Exists(p),
-                                      If(IsRegularFile(p), DeleteFile(p),
-                                         If(IsLink(p), Unlink(p), Block())),
-                                      Block()),
-                                   If(Not(Exists(p)), Link(p, t), Block()))
+        case Some("link") => Skip // TODO(kgeffen) Links not yet covered
+
+        // Block(If(Exists(p),
+        //                               If(IsRegularFile(p), DeleteFile(p),
+        //                                  If(IsLink(p), Unlink(p), Block())),
+        //                               Block()),
+        //                            If(Not(Exists(p)), Link(p, t), Block()))
 
 
         case _ => println(name); println(ensure); throw new Exception("One or more required attribute missing")
