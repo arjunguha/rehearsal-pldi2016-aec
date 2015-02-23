@@ -10,7 +10,16 @@ private[ext] object ToOpt {
     case Error => optExt.Error
     case Skip => optExt.Skip
     case Filter(a) => optExt.Filter(a)
-    case Seq(p, q) => optExt.Seq(List(toOpt(p), toOpt(q)))
+    case Seq(p, q) => (toOpt(p), toOpt(q)) match {
+      case (optExt.Skip, q)       => q
+      case (p, optExt.Skip)       => p
+      case (optExt.Error, _)      => optExt.Error
+      case (_, optExt.Error)      => optExt.Error
+      case (optExt.Seq(lst1), optExt.Seq(lst2)) => optExt.Seq(lst1 ::: lst2)
+      case (optExt.Seq(lst1), q)                => optExt.Seq(lst1 :+ q)
+      case (p, optExt.Seq(lst2))                => optExt.Seq(p +: lst2)
+      case (p, q)                               => optExt.Seq(p :: q :: Nil)
+    }
     case Alt(p, q) => optExt.Alt(Set(toOpt(p), toOpt(q)))
     case Mkdir(path) => optExt.Mkdir(path)
     case CreateFile(path, hash) => optExt.CreateFile(path, hash)
