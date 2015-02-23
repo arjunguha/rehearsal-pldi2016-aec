@@ -1,27 +1,25 @@
-// TODO(kgeffen) Make this new package or change to OptExpr to not
-// conflict with ext syntax
-package fsmodel.ext
+package fsmodel.optExt
 
 import fsmodel.core
 import fsmodel.core.Pred
 import java.nio.file.Path
 
 sealed abstract trait Expr {
-
-  def unconcur(): Expr = SimpleUnconcur.unconcur(this)
-  def unconcurOpt(): Expr = OptUnconcur.unconcur(this)
-  def unatomic(): Expr = Unatomic.unatomic(this)
-  def pretty(): String = Pretty.pretty(Pretty.AltCxt, this)
-  def toCore(): core.Expr = ToCore.toCore(this)
-  def commutesWith(other: Expr) = Commutativity.commutes(this, other)
+  // TODO(kgeffen) Implement these methods for opt ext
+  // def unconcur(): Expr = SimpleUnconcur.unconcur(this)
+  // def unconcurOpt(): Expr = OptUnconcur.unconcur(this)
+  // def unatomic(): Expr = Unatomic.unatomic(this)
+  // def pretty(): String = Pretty.pretty(Pretty.AltCxt, this)
+  // def toCore(): core.Expr = ToCore.toCore(this)
+  // def commutesWith(other: Expr) = Commutativity.commutes(this, other)
 
 }
 
 case object Error extends Expr
 case object Skip extends Expr
 case class Filter(a: Pred) extends Expr
-case class Seq(exprList: List[Expr]) extends Expr
-case class Alt(exprSet: Set[Expr]) extends Expr
+case class Seq(lst: List[Expr]) extends Expr
+case class Alt(set: Set[Expr]) extends Expr
 case class Atomic(p: Expr) extends Expr
 case class Concur(p: Expr, q: Expr) extends Expr
 case class Mkdir(path: Path) extends Expr
