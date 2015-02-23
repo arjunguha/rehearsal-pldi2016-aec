@@ -1,11 +1,11 @@
-package main.scala
-
-import java.nio.file._
+package pipeline
 
 // Puppet uses facter to produce an environment of system-specific variables.
 // This module lets us either run Facter or load an environment from a
 // file.
-object Facter {
+private[pipeline] object Facter {
+
+  import java.nio.file._
 
   private val parser = """(?sm)^(\w+) => (.*?)(?=(?:\s^\w+ =>|\z))""".r
 
