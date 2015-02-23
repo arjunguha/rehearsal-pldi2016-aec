@@ -35,6 +35,8 @@ lazy val installer = project.dependsOn(common)
 
 lazy val common = project
 
+lazy val eval = project
+
 lazy val master = project.in(file("verification/master"))
                          .dependsOn(common)
 
@@ -42,5 +44,6 @@ lazy val worker = project.in(file("verification/worker"))
                          .dependsOn(common)
 
 lazy val equiv = project.dependsOn(common)
+                        .dependsOn(eval)
 
 lazy val pipeline = project.dependsOn(equiv)
