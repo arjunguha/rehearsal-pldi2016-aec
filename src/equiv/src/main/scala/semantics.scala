@@ -292,7 +292,7 @@ object Provider {
         case Some("present") | Some("installed") | Some("latest") => {
 
           val somecontent = Content("")
-          val mkdirs = (dirs - root).map(d => If(TestFileState(d, DoesNotExist), MkDir(d), Skip).toList
+          val mkdirs = (dirs - root).map(d => If(TestFileState(d, DoesNotExist), MkDir(d), Skip)).toList
           val createfiles = files.map((f) => CreateFile(f, somecontent))
           val exprs = (mkdirs ++ createfiles)
           Block(exprs: _*)
@@ -390,7 +390,7 @@ object Provider {
                                               Skip),
                                            // TODO : Add to rest of groups
                                            If(TestFileState(h, DoesNotExist), MkDir(h), Skip)),
-                                     Skip))
+                                     Skip)
 
         case ("present", false) => If(TestFileState(u, DoesNotExist),
                                       Block(MkDir(u),
@@ -506,7 +506,7 @@ object Provider {
         }
         """
         */
-        case "present" => If(TestFileState(p, DoesNotExist)), Block(MkDir(p), CreateFile(s, c)), Skip)
+        case "present" => If(TestFileState(p, DoesNotExist), Block(MkDir(p), CreateFile(s, c)), Skip)
 
         /*
         """
