@@ -23,7 +23,7 @@ libraryDependencies in ThisBuild ++= {
     "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
     "com.assembla.scala-incubator" %% "graph-core" % graphV,
     "edu.umass.cs" %% "docker" % "0.3-SNAPSHOT",
-    "edu.umass.cs" %% "scala-puppet" % "0.1",
+    "edu.umass.cs" %% "scala-puppet" % "0.2",
     "com.typesafe.akka" %% "akka-actor"  % akkaV,
     "com.typesafe.akka" %% "akka-kernel" % akkaV,
     "com.typesafe.akka" %% "akka-remote" % akkaV
