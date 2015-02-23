@@ -190,7 +190,7 @@ object Provider {
         */
         case Some("directory") => If(!TestFileState(p, DoesNotExist),
                                      Block(Rm(p), Mkdir(p)),
-                                     MkDir(Mkdir(p))) // TODO(kgeffen) Links not yet covered
+                                     MkDir(p)) // TODO(kgeffen) Links not yet covered
 
         /*
          * Missing: create sym link with target
@@ -292,14 +292,14 @@ object Provider {
         case Some("present") | Some("installed") | Some("latest") => {
 
           val somecontent = Content("")
-          val mkdirs = (dirs - root).map(d => If(Not(Exists(d)), MkDir(d), Block())).toList
+          val mkdirs = (dirs - root).map(d => If(TestFileState(d, DoesNotExist), MkDir(d), Skip).toList
           val createfiles = files.map((f) => CreateFile(f, somecontent))
           val exprs = (mkdirs ++ createfiles)
           Block(exprs: _*)
         }
 
         case Some("absent") | Some("purged") => {
-          val exprs = files.map(DeleteFile(_)).toSeq
+          val exprs = files.map(Rm(_)).toSeq
           Block(exprs: _*)
         }
 
@@ -382,21 +382,25 @@ object Provider {
         """
         */
 
-        case ("present", true) => If(Not(Exists(u)),
+        case ("present", true) => If(TestFileState(u, DoesNotExist),
                                      Block(MkDir(u),
                                            CreateFile(usettings, usettingscontent),
-                                           If(Not(Exists(g)), Block(MkDir(g), CreateFile(gsettings, gsettingscontent)), Block()),
+                                           If(TestFileState(g, DoesNotExist),
+                                              Block(MkDir(g), CreateFile(gsettings, gsettingscontent)),
+                                              Skip),
                                            // TODO : Add to rest of groups
-                                           If(Not(Exists(h)), MkDir(h), Block())),
-                                     Block())
+                                           If(TestFileState(h, DoesNotExist), MkDir(h), Skip)),
+                                     Skip))
 
-        case ("present", false) => If(Not(Exists(u)),
+        case ("present", false) => If(TestFileState(u, DoesNotExist),
                                       Block(MkDir(u),
                                             CreateFile(usettings, usettingscontent),
-                                            If(Not(Exists(g)), Block(MkDir(g), CreateFile(gsettings, gsettingscontent)), Block())
+                                            If(TestFileState(g, DoesNotExist),
+                                               Block(MkDir(g), CreateFile(gsettings, gsettingscontent)),
+                                               Skip)
                                             // tODO: Add to rest of groups
                                             ),
-                                      Block())
+                                      Skip)
 
         /*
         """
@@ -412,11 +416,11 @@ object Provider {
         """
         */
 
-        case ("absent", _) => If(Exists(u),
-                                 Block(RmDir(u),
-                                       If(Exists(g), RmDir(g), Block()),
-                                       If(Exists(h), RmDir(h), Block())),
-                                 Block())
+        case ("absent", _) => If(!TestFileState(u, DoesNotExist),
+                                 Block(Rm(u),
+                                       If(!TestFileState(g, DoesNotExist), Rm(g), Skip),
+                                       If(!TestFileState(h, DoesNotExist), Rm(h), Skip)),
+                                 Skip)
 
         case (_, _) => throw new Exception(s"Unknown value present")
       }
@@ -502,14 +506,14 @@ object Provider {
         }
         """
         */
-        case "present" => If(Not(Exists(p)), Block(MkDir(p), CreateFile(s, c)), Block())
+        case "present" => If(TestFileState(p, DoesNotExist)), Block(MkDir(p), CreateFile(s, c)), Skip)
 
         /*
         """
         if(exists(p)) rmdir(p)
         """
         */
-        case "absent" => If(Exists(p), RmDir(p), Block())
+        case "absent" => If(!TestFileState(p, DoesNotExist), Rm(p), Skip)
 
         case _ => throw new Exception(s"Invalid ensure value: $ensure")
       }
@@ -525,9 +529,11 @@ object Provider {
 
       if(creates.isDefined) {
         val p = Paths.get(creates.get)
-        If(Exists(p), Block(), ShellExec(command))
+        // If(!TestFileState(p, DoesNotExist), Skip, ShellExec(command))
+        // TODO(kgeffen) Add ShellExec
+        Skip
       }
-      else { ShellExec(command) }
+      else { Skip /* ShellExec(command) */ } // TODO(kgeffen) Add ShellExec
     }
   }
 }
