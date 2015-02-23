@@ -23,9 +23,8 @@ package object pipeline {
   def runPipeline(program: String) {
 
     val graph = parse(program).desugar()
-                              .asInstanceOf[BlockStmtC]
                               .toGraph(Facter.run())
-    printDOTGraph(graph)
+    // printDOTGraph(graph)
 
     val fsops_graph = mapGraph(toSerializable(graph),
                                {(r: resrc.Resource) => Provider(r).toFSOps()})
@@ -53,7 +52,6 @@ package object pipeline {
     Graph.from(graph.nodes.map((n) => f(n.value)),
                graph.edges.map((e) => f(e.source.value) ~> f(e.target.value)))
   }
-
 
   def toCoreValue(v: Value): resrc.Value = v match {
     case UndefV => resrc.UndefV
