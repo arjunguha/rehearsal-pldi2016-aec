@@ -1,4 +1,4 @@
-package equiv.semantics
+package pipeline
 
 import puppet.common.util._
 import fsmodel.core._
@@ -10,7 +10,7 @@ import java.nio.file.{Paths, Path}
  *
  * Expresses resources in terms of file system changes
  */
-object Provider {
+private[pipeline] object Provider {
 
   import puppet.common.resource._
   import puppet.common.resource.Extractor._

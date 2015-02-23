@@ -43,7 +43,5 @@ lazy val master = project.in(file("verification/master"))
 lazy val worker = project.in(file("verification/worker"))
                          .dependsOn(common)
 
-lazy val equiv = project.dependsOn(common)
-                        .dependsOn(eval)
-
-lazy val pipeline = project.dependsOn(equiv)
+lazy val pipeline = project.dependsOn(common)
+                           .dependsOn(eval)
