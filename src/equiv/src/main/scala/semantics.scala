@@ -1,7 +1,7 @@
 package equiv.semantics
 
-import equiv.ast._
 import puppet.common.util._
+import fsmodel.core._
 
 import java.nio.file.{Paths, Path}
 
@@ -12,10 +12,30 @@ import java.nio.file.{Paths, Path}
  */
 object Provider {
 
-
   import puppet.common.resource._
   import puppet.common.resource.Extractor._
   import scala.collection.immutable.{Map, List}
+
+  import java.nio.file.Path
+  import scala.annotation.tailrec
+
+  def ancestors(pathSet: Set[Path]): Set[Path] = {
+    @tailrec
+    def loop(p: Path, result: Set[Path]): Set[Path] = {
+      // Check if we have already solved this problem
+      if (!result(p)) {
+        p.getParent match {
+          case null => result
+          case parent: Path => loop(parent, result + p.normalize)
+        }
+      }
+      else {
+        result
+      }
+    }
+
+    pathSet.foldLeft(Set.empty[Path]) { (pathSet, path) => loop(path, pathSet) }
+  }
 
   def apply(r: Resource): Provider = r.typ match {
     case "File" => File(r)
