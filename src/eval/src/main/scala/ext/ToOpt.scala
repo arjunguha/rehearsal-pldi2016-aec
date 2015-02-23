@@ -20,7 +20,14 @@ private[ext] object ToOpt {
       case (p, optExt.Seq(lst2))                => optExt.Seq(p +: lst2)
       case (p, q)                               => optExt.Seq(p :: q :: Nil)
     }
-    case Alt(p, q) => optExt.Alt(Set(toOpt(p), toOpt(q)))
+    case Alt(p, q) => (toOpt(p), toOpt(q)) match {
+      case (optExt.Error, q)                    => q
+      case (p, optExt.Error)                    => p
+      case (optExt.Alt(set1), optExt.Alt(set2)) => optExt.Alt(set1 ++ set2)
+      case (optExt.Alt(set1), q)                => optExt.Alt(set1 + q)
+      case (p, optExt.Alt(set2))                => optExt.Alt(set2 + p)
+      case (p, q)                               => optExt.Alt(Set(p, q))
+    }
     case Mkdir(path) => optExt.Mkdir(path)
     case CreateFile(path, hash) => optExt.CreateFile(path, hash)
     case Rm(path) => optExt.Rm(path)
