@@ -15,6 +15,8 @@ import fsmodel.ext._
 
 package object pipeline {
 
+  import scalax.collection.mutable.{Graph => MGraph}
+
   def run(mainFile: String, modulePath: Option[String] = None) {
     runProgram(load(mainFile, modulePath))
   }
@@ -30,7 +32,12 @@ package object pipeline {
 
     val fsops_graph = mapGraph(toSerializable(graph),
                                {(r: resrc.Resource) => Provider(r).toFSOps()})
-    val ext_expr = toFSExpr(fsops_graph)
+    
+    
+    val mgraph = MGraph.from(fsops_graph.nodes.map(_.value),
+                             fsops_graph.edges.map((e) => e.source.value ~> e.target.value))
+    val ext_expr = toFSExpr(mgraph)
+    
     println(ext_expr.pretty())
     
     val simple_expr = ext_expr.unconcur()
@@ -46,10 +53,12 @@ package object pipeline {
     val states = Eval.eval(opt_expr.toCore(), init_state)
 
     println(s"The given expression can result in ${states.size} final states")
+    // println("here")
+    
   }
 
   // Reduce the graph to a single expression in fsmodel language
-  def toFSExpr(graph: Graph[ext.Expr, DiEdge]): ext.Expr = {
+  def toFSExpr(graph: MGraph[ext.Expr, DiEdge]): ext.Expr = {
     
     import fsmodel.ext.Implicits._
     

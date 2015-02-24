@@ -8,11 +8,11 @@ class BenchmarkTests extends FunSuite {
 
   val benchmarkroot = "../benchmarks"
 
-  val benchmarks = Map("puppet-bind" -> Benchmark("src/tests/server.pp", Some("src/modules")),
-                       "puppet-git" -> Benchmark("src/tests/init.pp", Some("src/modules")),
-                       "puppet-mosh" -> Benchmark("src/tests/init.pp", Some("src/modules")),
-                       "vagrant-cakephp" -> Benchmark("src/manifests/site.pp", Some("src/modules")),
-                       "vagrantpress" -> Benchmark("src/manifests/site.pp", Some("src/modules"))
+  val benchmarks = Map(//"puppet-bind" -> Benchmark("src/tests/server.pp", Some("src/modules")),
+                       //"puppet-git" -> Benchmark("src/tests/init.pp", Some("src/modules")),
+                       // "puppet-mosh" -> Benchmark("src/tests/init.pp", Some("src/modules")),
+                       "vagrant-cakephp" -> Benchmark("src/manifests/site.pp", Some("src/modules"))
+                       // "vagrantpress" -> Benchmark("src/manifests/site.pp", Some("src/modules"))
                        )
 
   for ((name, b) <- benchmarks) {
