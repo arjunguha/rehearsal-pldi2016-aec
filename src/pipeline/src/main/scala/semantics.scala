@@ -23,6 +23,7 @@ private[pipeline] object Provider {
   import java.nio.file.Path
   import scala.annotation.tailrec
 
+  // NOTE(arjun): ancestors and paths in pathSet
   def ancestors(pathSet: Set[Path]): Set[Path] = {
     @tailrec
     def loop(p: Path, result: Set[Path]): Set[Path] = {
@@ -45,7 +46,7 @@ private[pipeline] object Provider {
     Alt(Seq(Filter(p), true_br),
         Seq(Filter(!p), false_br))
 
-  def Block(es: ext.Expr*): ext.Expr = es.reduceRight(Seq(_, _)) 
+  def Block(es: ext.Expr*): ext.Expr = es.reduceRight(Seq(_, _))
 
   def Content(s: String): Array[Byte] = {
     import java.security.MessageDigest
@@ -108,7 +109,7 @@ private[pipeline] object Provider {
 
       _ensure match {
         // Broken symlinks are ignored
-        /* What if content is set 
+        /* What if content is set
          *   - Depends on file type
          *     o For Links, content is ignored
          *     o For normal, content is applied
@@ -135,7 +136,7 @@ private[pipeline] object Provider {
                                       Skip))
 
         /*
-         * Cases 
+         * Cases
          * If already absent then don't do anything
          *  Directory: if force is set then remove otherwise ignore
          *  File: remove if present
@@ -192,7 +193,7 @@ private[pipeline] object Provider {
                                                   Skip)),
                                             CreateFile(p, c)) // TODO(kgeffen) Links not yet covered
 
-       
+
        /*
        """
        if(exists(p)) {
@@ -201,7 +202,7 @@ private[pipeline] object Provider {
        }
 
        if(!exists(p)) create(p, c)
-       """ 
+       """
        */
        case Some("file") => Block(If(TestFileState(p, IsFile),
                                      Rm(p),
@@ -250,7 +251,7 @@ private[pipeline] object Provider {
         //                                           If(IsRegularFile(p), DeleteFile(p), Unlink(p))),
         //                                        Block()),
         //                                     Link(p, t))
-                                            
+
 
         /*
         """
@@ -279,7 +280,7 @@ private[pipeline] object Provider {
     private val validEnsureVals = List("present", "installed", "absent", "purged", "held", "latest")
 
     val ensure = validVal("ensure", validEnsureVals)
-    
+
     /*
     def latest: String = {
 
@@ -320,14 +321,14 @@ private[pipeline] object Provider {
       val orderby = Ordering.by[Path, Int](_.getNameCount)
 
       val root = Paths.get("/")
-      val allpaths = SortedSet[Path]()(orderby) ++ ancestors(files)
+      val allpaths = ancestors(files)
       val dirs = (allpaths -- files)
 
       ensure match {
         case Some("present") | Some("installed") | Some("latest") => {
 
           val somecontent = Content("")
-          val mkdirs = (dirs - root).map(d => If(TestFileState(d, DoesNotExist), Mkdir(d), Skip)).toList
+          val mkdirs = (dirs - root).toSeq.sortBy(_.getNameCount).map(d => If(TestFileState(d, DoesNotExist), Mkdir(d), Skip)).toList
           val createfiles = files.map((f) => CreateFile(f, somecontent))
           val exprs = (mkdirs ++ createfiles)
           Block(exprs: _*)
@@ -352,7 +353,7 @@ private[pipeline] object Provider {
 
     val ensure = validVal("ensure", validEnsureVals) getOrElse "present"
     val gid = r.get[String]("gid")
-    val groups = r.get[Array[Value]]("groups") getOrElse 
+    val groups = r.get[Array[Value]]("groups") getOrElse
                  { r.get[String]("groups").map((g) => Array((StringV(g): Value))) getOrElse
                  Array((UndefV: Value)) }
 
@@ -482,7 +483,7 @@ private[pipeline] object Provider {
     private val validEnableVals = validBoolVal
     private val validHasRestartVals = validBoolVal
     private val validHasStatusVals = validBoolVal
-     
+
     val ensure = validVal("ensure", validEnsureVals) getOrElse (throw new Exception(s"Service $name 'ensure' attribute missing"))
     val binary = r.get[String]("binary") getOrElse name
     val enable = validVal("enable", validEnableVals) getOrElse false // Whether a service should be enabled at boot time.
@@ -523,7 +524,7 @@ private[pipeline] object Provider {
     /* Semantics of Group resource
      *
      * A group name is a directory by the name of the group located at location /etc/groups
-     * Inside every directory there is a file called settings that contains configuration 
+     * Inside every directory there is a file called settings that contains configuration
      * data of every group
      *
      */
