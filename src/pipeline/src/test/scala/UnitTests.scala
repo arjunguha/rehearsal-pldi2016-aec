@@ -1,21 +1,21 @@
-import org.scalatest.FunSuite
+package pipeline
 
-import pipeline.main._
+import org.scalatest.FunSuite
 
 class UnitTestSuite extends FunSuite {
 
   test("single puppet file resource") {
-    Pipeline.runPipeline("""file{"/foo": ensure => present }""")
+    pipeline.runProgram("""file{"/foo": ensure => present }""")
   }
 
   test("single directory") {
-    Pipeline.runPipeline("""file{"/tmp":
+    pipeline.runProgram("""file{"/tmp":
                               ensure => directory
                             }""")
   }
 
   test("file inside a directory") {
-    Pipeline.runPipeline("""file{"/tmp/foo":
+    pipeline.runProgram("""file{"/tmp/foo":
                               ensure => present,
                               require => File['/tmp']
                             }
@@ -25,32 +25,32 @@ class UnitTestSuite extends FunSuite {
   }
 
   test("single puppet file resource with force") {
-    Pipeline.runPipeline("""file{"/foo":
+    pipeline.runProgram("""file{"/foo":
                               ensure => file,
                               force => true
                             }""")
   }
 
   test("delete file resource") {
-    Pipeline.runPipeline("""file{"/foo": ensure => absent }""")
+    pipeline.runProgram("""file{"/foo": ensure => absent }""")
   }
 
   test("delete dir with force") {
-    Pipeline.runPipeline("""file {"/tmp":
+    pipeline.runProgram("""file {"/tmp":
                               ensure => absent,
                               force => true
                             }""")
   }
 
   test("link file") {
-    Pipeline.runPipeline("""file{"/foo":
+    pipeline.runProgram("""file{"/foo":
                               ensure => link,
                               target => "/bar"
                             }""")
   }
 
   test("link file force") {
-    Pipeline.runPipeline("""file{"/foo":
+    pipeline.runProgram("""file{"/foo":
                               ensure => link,
                               target => "/bar",
                               force => true

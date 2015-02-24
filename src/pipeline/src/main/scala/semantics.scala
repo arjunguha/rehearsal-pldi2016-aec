@@ -1,7 +1,11 @@
 package pipeline
 
 import puppet.common.util._
-import fsmodel.core._
+import fsmodel._
+import fsmodel.ext._
+import fsmodel.core.Pred._
+import fsmodel.core.TestFileState
+import fsmodel.core.{IsFile, IsDir, DoesNotExist}
 
 import java.nio.file.{Paths, Path}
 
@@ -37,6 +41,17 @@ private[pipeline] object Provider {
     pathSet.foldLeft(Set.empty[Path]) { (pathSet, path) => loop(path, pathSet) }
   }
 
+  def If(p: core.Pred, true_br: ext.Expr, false_br: ext.Expr): ext.Expr =
+    Alt(Seq(Filter(p), true_br),
+        Seq(Filter(!p), false_br))
+
+  def Block(es: ext.Expr*): ext.Expr = es.reduceRight(Seq(_, _)) 
+
+  def Content(s: String): Array[Byte] = {
+    import java.security.MessageDigest
+    MessageDigest.getInstance("MD5").digest(s.getBytes)
+  }
+
   def apply(r: Resource): Provider = r.typ match {
     case "File" => File(r)
     case "Package" => PuppetPackage(r)
@@ -56,7 +71,7 @@ private[pipeline] object Provider {
                                         (StringV("yes"): Value, true),
                                         (StringV("no"): Value, false)).toMap
 
-    def toFSOps(): Expr
+    def toFSOps(): ext.Expr
 
     protected def validVal[T](property: String, options: Map[Value, T]): Option[T] = {
       r.getRawVal(property).map(options.get(_)).flatten
@@ -81,7 +96,7 @@ private[pipeline] object Provider {
 
     // TODO: Ignoring ownership and permissions for now
     // TODO : Ignoring source attribute
-    def toFSOps: Expr = {
+    def toFSOps: ext.Expr = {
 
        val p = Paths.get(path)
        val c = Content(content getOrElse "")
@@ -210,7 +225,7 @@ private[pipeline] object Provider {
         */
         case Some("directory") => If(!TestFileState(p, DoesNotExist),
                                      Block(Rm(p), Mkdir(p)),
-                                     MkDir(p)) // TODO(kgeffen) Links not yet covered
+                                     Mkdir(p)) // TODO(kgeffen) Links not yet covered
 
         /*
          * Missing: create sym link with target
@@ -297,7 +312,7 @@ private[pipeline] object Provider {
       }
     }
 
-    def toFSOps: Expr = {
+    def toFSOps: ext.Expr = {
 
       import scala.collection.SortedSet
 
@@ -305,14 +320,14 @@ private[pipeline] object Provider {
       val orderby = Ordering.by[Path, Int](_.getNameCount)
 
       val root = Paths.get("/")
-      val allpaths = SortedSet[Path]()(orderby) ++ equiv.ancestors(files)
+      val allpaths = SortedSet[Path]()(orderby) ++ ancestors(files)
       val dirs = (allpaths -- files)
 
       ensure match {
         case Some("present") | Some("installed") | Some("latest") => {
 
           val somecontent = Content("")
-          val mkdirs = (dirs - root).map(d => If(TestFileState(d, DoesNotExist), MkDir(d), Skip)).toList
+          val mkdirs = (dirs - root).map(d => If(TestFileState(d, DoesNotExist), Mkdir(d), Skip)).toList
           val createfiles = files.map((f) => CreateFile(f, somecontent))
           val exprs = (mkdirs ++ createfiles)
           Block(exprs: _*)
@@ -363,7 +378,7 @@ private[pipeline] object Provider {
       (sts == 0)
     }
 
-    def toFSOps (): Expr = {
+    def toFSOps (): ext.Expr = {
 
       val u = Paths.get(s"/etc/users/$name")
       val usettings = Paths.get(s"/etc/users/$name/settings")
@@ -403,20 +418,20 @@ private[pipeline] object Provider {
         */
 
         case ("present", true) => If(TestFileState(u, DoesNotExist),
-                                     Block(MkDir(u),
+                                     Block(Mkdir(u),
                                            CreateFile(usettings, usettingscontent),
                                            If(TestFileState(g, DoesNotExist),
-                                              Block(MkDir(g), CreateFile(gsettings, gsettingscontent)),
+                                              Block(Mkdir(g), CreateFile(gsettings, gsettingscontent)),
                                               Skip),
                                            // TODO : Add to rest of groups
-                                           If(TestFileState(h, DoesNotExist), MkDir(h), Skip)),
+                                           If(TestFileState(h, DoesNotExist), Mkdir(h), Skip)),
                                      Skip)
 
         case ("present", false) => If(TestFileState(u, DoesNotExist),
-                                      Block(MkDir(u),
+                                      Block(Mkdir(u),
                                             CreateFile(usettings, usettingscontent),
                                             If(TestFileState(g, DoesNotExist),
-                                               Block(MkDir(g), CreateFile(gsettings, gsettingscontent)),
+                                               Block(Mkdir(g), CreateFile(gsettings, gsettingscontent)),
                                                Skip)
                                             // tODO: Add to rest of groups
                                             ),
@@ -485,7 +500,7 @@ private[pipeline] object Provider {
     val stop = r.get[String]("stop") getOrElse "stop"
     val status = r.get[String]("status")
 
-    def toFSOps(): Expr = {
+    def toFSOps(): ext.Expr = {
 
       val mode = ensure match {
         case "stopped" => "stop"
@@ -495,7 +510,8 @@ private[pipeline] object Provider {
       }
 
       val command = s"${path}/${binary} ${flags} ${mode}"
-      ShellExec(command)
+      // ShellExec(command)
+      Skip // TODO: Add ShellExec
     }
   }
 
@@ -511,7 +527,7 @@ private[pipeline] object Provider {
      * data of every group
      *
      */
-    def toFSOps (): Expr = {
+    def toFSOps (): ext.Expr = {
 
       val p = Paths.get(s"/etc/groups/$name")
       val s = Paths.get(s"/etc/groups/$name/settings")
@@ -526,7 +542,7 @@ private[pipeline] object Provider {
         }
         """
         */
-        case "present" => If(TestFileState(p, DoesNotExist), Block(MkDir(p), CreateFile(s, c)), Skip)
+        case "present" => If(TestFileState(p, DoesNotExist), Block(Mkdir(p), CreateFile(s, c)), Skip)
 
         /*
         """
@@ -545,7 +561,7 @@ private[pipeline] object Provider {
     val command = r.get[String]("command") getOrElse name
     val creates = r.get[String]("creates")
 
-    def toFSOps (): Expr = {
+    def toFSOps (): ext.Expr = {
 
       if(creates.isDefined) {
         val p = Paths.get(creates.get)

@@ -3,36 +3,49 @@ package pipeline
 import puppet.syntax._
 import puppet.graph._
 
-import puppet.core._
-
 import puppet.common.{resource => resrc}
 
 import scalax.collection.Graph
 import scalax.collection.GraphEdge._
 import scalax.collection.GraphPredef._
+import scalax.collection.edge.Implicits._
 
 import fsmodel._
 import fsmodel.ext._
 
 package object pipeline {
 
-  def apply(mainFile: String, modulePath: Option[String] = None) {
-    runPipeline(load(mainFile, modulePath))
+  def run(mainFile: String, modulePath: Option[String] = None) {
+    runProgram(load(mainFile, modulePath))
   }
 
-  def runPipeline(program: String) {
+  def runProgram(program: String) {
+
+    import fsmodel.core._
+    import java.nio.file.Paths
 
     val graph = parse(program).desugar()
                               .toGraph(Facter.run())
-    // printDOTGraph(graph)
+    printDOTGraph(graph)
 
     val fsops_graph = mapGraph(toSerializable(graph),
                                {(r: resrc.Resource) => Provider(r).toFSOps()})
-    val expr = toFSExpr(fsops_graph).unconcurOpt()
-                                    .unatomic()
-                                    .toCore()
+    val ext_expr = toFSExpr(fsops_graph)
+    println(ext_expr.pretty())
+    
+    val simple_expr = ext_expr.unconcur()
+                              .unatomic()
+    println(simple_expr.pretty())   
+    println()
 
-    // TODO: Evaluate expr on SAT solver, provide state
+    val opt_expr = ext_expr.unconcurOpt()
+                           .unatomic()
+    println(opt_expr.pretty())
+
+    val init_state = Map(Paths.get("/") -> IsDir)
+    val states = Eval.eval(opt_expr.toCore(), init_state)
+
+    println(s"The given expression can result in ${states.size} final states")
   }
 
   // Reduce the graph to a single expression in fsmodel language
@@ -43,11 +56,14 @@ package object pipeline {
     if(graph.isEmpty) Skip
     else {
       val n = graph.nodes.filter(_.inDegree == 0)
-      n.reduce[Expr]((x, y) => Atomic(x.value)*Atomic(y.value)) >> toFSExpr(graph -- n)
+      n.foldLeft(Skip: ext.Expr)((acc, x) => acc*Atomic(x.value)) >> toFSExpr(graph -- n)
     }
   }
 
-  def mapGraph[A,B](graph: Graph[A, DiEdge], f: A=>B): Graph[B, DiEdge] = {
+  import scala.reflect.runtime.universe.TypeTag
+
+  def mapGraph[A,B](graph: Graph[A, DiEdge], f: A=>B)
+                   (implicit tt: TypeTag[DiEdge[B]]): Graph[B, DiEdge] = {
 
     Graph.from(graph.nodes.map((n) => f(n.value)),
                graph.edges.map((e) => f(e.source.value) ~> f(e.target.value)))
