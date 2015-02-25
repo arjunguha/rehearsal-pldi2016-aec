@@ -17,6 +17,19 @@ package object pipeline {
 
   import scalax.collection.mutable.{Graph => MGraph}
 
+  def resourceGraphToExpr(resourceGraph: Graph[puppet.graph.Resource, DiEdge]): ext.Expr = {
+    implicit val toExpr = {
+      (r: puppet.graph.Resource) =>
+        Provider(toCoreResource(r)).toFSOps()
+    }
+
+    val mgraph = MGraph.from(
+      resourceGraph.nodes.map(_.value),
+      resourceGraph.edges.map((e) => e.source.value ~> e.target.value))
+
+    toFSExpr(mgraph)
+  }
+
   def run(mainFile: String, modulePath: Option[String] = None) {
     runProgram(load(mainFile, modulePath))
   }
@@ -28,12 +41,7 @@ package object pipeline {
     val graph = parse(program).desugar()
                               .toGraph(Facter.run())
 
-    implicit val toExpr = {(r: puppet.graph.Resource) => Provider(toCoreResource(r)).toFSOps()}
-
-    val mgraph = MGraph.from(graph.nodes.map(_.value),
-                             graph.edges.map((e) => e.source.value ~> e.target.value))
-
-    val ext_expr = toFSExpr(mgraph)
+    val ext_expr = resourceGraphToExpr(graph)
 
     // TODO(nimish): debug only
     val simple_expr = ext_expr.unconcur()
