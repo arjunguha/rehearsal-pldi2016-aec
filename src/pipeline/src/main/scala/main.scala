@@ -24,63 +24,56 @@ package object pipeline {
   def runProgram(program: String): Int = {
 
     import fsmodel.core._
-    import java.nio.file.Paths
 
     val graph = parse(program).desugar()
                               .toGraph(Facter.run())
 
-    val fsops_graph = mapGraph(toSerializable(graph),
-                               {(r: resrc.Resource) => Provider(r).toFSOps()})
+    implicit val toExpr = {(r: puppet.graph.Resource) => Provider(toCoreResource(r)).toFSOps()}
     
-    
-    val mgraph = MGraph.from(fsops_graph.nodes.map(_.value),
-                             fsops_graph.edges.map((e) => e.source.value ~> e.target.value))
+    val mgraph = MGraph.from(graph.nodes.map(_.value),
+                             graph.edges.map((e) => e.source.value ~> e.target.value))
+
     val ext_expr = toFSExpr(mgraph)
     
-    
+    // TODO(nimish): debug only
     val simple_expr = ext_expr.unconcur()
                               .unatomic()
 
     val opt_expr = ext_expr.unconcurOpt()
                            .unatomic()
 
-    // TODO(nimish): Implicit
-    val init_state = Map(Paths.get("/") -> IsDir)
+    val init_state = Map(paths.root -> IsDir)
     val states = Eval.eval(opt_expr.toCore(), init_state)
 
+    // TODO(nimish): debug only
     if(states.size != 1) {
       printDOTGraph(graph)
+      println()
       println(ext_expr.pretty())
+      println()
       println(simple_expr.pretty())   
+      println()
       println(opt_expr.pretty())
+      println()
+      println()
+      println()
     }
       
     states.size
-
-    // println(s"The given expression can result in ${states.size} final states")
-
   }
 
   // TODO: tail recursive
   // Reduce the graph to a single expression in fsmodel language
-  def toFSExpr(graph: MGraph[ext.Expr, DiEdge]): ext.Expr = {
+  def toFSExpr[A](graph: MGraph[A, DiEdge])
+                 (implicit toExpr: A=>ext.Expr): ext.Expr = {
     
     import fsmodel.ext.Implicits._
     
     if(graph.isEmpty) Skip
     else {
       val roots = graph.nodes.filter(_.inDegree == 0)
-      roots.map((n) => Atomic(n.value)).reduce[ext.Expr](_ * _) >> toFSExpr(graph -- roots)
+      roots.map((n) => Atomic(toExpr(n.value))).reduce[ext.Expr](_ * _) >> toFSExpr(graph -- roots)
     }
-  }
-
-  import scala.reflect.runtime.universe.TypeTag
-
-  def mapGraph[A,B](graph: Graph[A, DiEdge], f: A=>B)
-                   (implicit tt: TypeTag[DiEdge[B]]): Graph[B, DiEdge] = {
-
-    Graph.from(graph.nodes.map((n) => f(n.value)),
-               graph.edges.map((e) => f(e.source.value) ~> f(e.target.value)))
   }
 
   def toCoreValue(v: Value): resrc.Value = v match {
@@ -102,12 +95,5 @@ package object pipeline {
     .map((a) => (a.name, toCoreValue(a.value))).toMap
 
     resrc.Resource(attrs)
-  }
-
-  def toSerializable(g: Graph[puppet.graph.Resource, DiEdge]): Graph[resrc.Resource, DiEdge] = {
-    // Convert to serializable Graph
-    val nodes = g.nodes map ((n) => toCoreResource(n.value))
-    val edges = g.edges map ((e) => toCoreResource(e.source.value) ~> toCoreResource(e.target.value))
-    Graph.from(nodes, edges)
   }
 }

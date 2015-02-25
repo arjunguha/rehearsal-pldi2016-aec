@@ -183,7 +183,7 @@ private[pipeline] object Provider {
     val ensure = validVal("ensure", validEnsureVals) getOrElse "installed"
 
     /* apt-file must be installed and should be updated */
-    private def files: Set[Path] = {
+    private def packageFiles(): Set[Path] = {
 
       import java.nio.file.Paths
 
@@ -201,6 +201,7 @@ private[pipeline] object Provider {
 
         case "present" | "installed" | "latest" => {
 
+          val files = packageFiles()
           val allpaths = paths.allpaths(files)
 
           val dirs = (allpaths -- files)
@@ -216,6 +217,8 @@ private[pipeline] object Provider {
         }
 
         case "absent" | "purged" => {
+
+          val files = packageFiles()
           val exprs = files.map(Rm(_)).toSeq
           Block(exprs: _*)
         }
