@@ -21,14 +21,13 @@ package object pipeline {
     runProgram(load(mainFile, modulePath))
   }
 
-  def runProgram(program: String) {
+  def runProgram(program: String): Int = {
 
     import fsmodel.core._
     import java.nio.file.Paths
 
     val graph = parse(program).desugar()
                               .toGraph(Facter.run())
-    printDOTGraph(graph)
 
     val fsops_graph = mapGraph(toSerializable(graph),
                                {(r: resrc.Resource) => Provider(r).toFSOps()})
@@ -38,25 +37,31 @@ package object pipeline {
                              fsops_graph.edges.map((e) => e.source.value ~> e.target.value))
     val ext_expr = toFSExpr(mgraph)
     
-    println(ext_expr.pretty())
     
     val simple_expr = ext_expr.unconcur()
                               .unatomic()
-    println(simple_expr.pretty())   
-    println()
 
     val opt_expr = ext_expr.unconcurOpt()
                            .unatomic()
-    println(opt_expr.pretty())
 
+    // TODO(nimish): Implicit
     val init_state = Map(Paths.get("/") -> IsDir)
     val states = Eval.eval(opt_expr.toCore(), init_state)
 
-    println(s"The given expression can result in ${states.size} final states")
-    // println("here")
-    
+    if(states.size != 1) {
+      printDOTGraph(graph)
+      println(ext_expr.pretty())
+      println(simple_expr.pretty())   
+      println(opt_expr.pretty())
+    }
+      
+    states.size
+
+    // println(s"The given expression can result in ${states.size} final states")
+
   }
 
+  // TODO: tail recursive
   // Reduce the graph to a single expression in fsmodel language
   def toFSExpr(graph: MGraph[ext.Expr, DiEdge]): ext.Expr = {
     
@@ -64,8 +69,8 @@ package object pipeline {
     
     if(graph.isEmpty) Skip
     else {
-      val n = graph.nodes.filter(_.inDegree == 0)
-      n.foldLeft(Skip: ext.Expr)((acc, x) => acc*Atomic(x.value)) >> toFSExpr(graph -- n)
+      val roots = graph.nodes.filter(_.inDegree == 0)
+      roots.map((n) => Atomic(n.value)).reduce[ext.Expr](_ * _) >> toFSExpr(graph -- roots)
     }
   }
 

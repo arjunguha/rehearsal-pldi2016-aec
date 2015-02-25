@@ -5,6 +5,7 @@ import org.scalatest.FunSuite
 class PackageTestSuite extends FunSuite {
 
   test("single package without attributes") {
-    pipeline.runProgram("""package{"sl": }""")
+    val program = """package{"sl": }"""
+    assert(1 == pipeline.runProgram(program))
   }
 }
