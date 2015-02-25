@@ -3,11 +3,11 @@ package pipeline
 import puppet.common.util._
 import fsmodel._
 import fsmodel.ext._
+
+// TODO:(nimish) Should not use core 
 import fsmodel.core.Pred._
 import fsmodel.core.TestFileState
 import fsmodel.core.{IsFile, IsDir, DoesNotExist}
-
-import java.nio.file.{Paths, Path}
 
 /*
  * Give filesystem semantics to resources
@@ -16,31 +16,13 @@ import java.nio.file.{Paths, Path}
  */
 private[pipeline] object Provider {
 
+  import java.nio.file.Path
+
+  import fsmodel.core.Implicits._
+
   import puppet.common.resource._
   import puppet.common.resource.Extractor._
-  import scala.collection.immutable.{Map, List}
-
-  import java.nio.file.Path
-  import scala.annotation.tailrec
-
-  // NOTE(arjun): ancestors and paths in pathSet
-  def ancestors(pathSet: Set[Path]): Set[Path] = {
-    @tailrec
-    def loop(p: Path, result: Set[Path]): Set[Path] = {
-      // Check if we have already solved this problem
-      if (!result(p)) {
-        p.getParent match {
-          case null => result
-          case parent: Path => loop(parent, result + p.normalize)
-        }
-      }
-      else {
-        result
-      }
-    }
-
-    pathSet.foldLeft(Set.empty[Path]) { (pathSet, path) => loop(path, pathSet) }
-  }
+  // import scala.collection.immutable.{Map, List}
 
   def If(p: core.Pred, true_br: ext.Expr, false_br: ext.Expr): ext.Expr =
     Alt(Seq(Filter(p), true_br),
@@ -99,9 +81,9 @@ private[pipeline] object Provider {
     // TODO : Ignoring source attribute
     def toFSOps: ext.Expr = {
 
-       val p = Paths.get(path)
+       val p = path
        val c = Content(content getOrElse "")
-       val t = Paths.get(target getOrElse "/tmp/")
+       val t = target getOrElse "/tmp/"
 
        val _ensure = if (ensure.isDefined) ensure
                      else if (source.isDefined) Some("file")
@@ -115,20 +97,6 @@ private[pipeline] object Provider {
          *     o For normal, content is applied
          *     o For directory, content is ignored
          */
-
-        /*
-        """
-        if(exists(p)) {
-          if(isregularfile(p)) {
-            delete(p)
-            create(p, c)
-          }
-        }
-        else {
-          create(p, c)
-        }
-        """
-        */
         case Some("present") => If(TestFileState(p, IsFile),
                                    Block(Rm(p), CreateFile(p, c)), // true branch
                                    If(TestFileState(p, DoesNotExist),
@@ -142,50 +110,22 @@ private[pipeline] object Provider {
          *  File: remove if present
          *  Symlink: Remove link (but not the target)
          */
-         /*
-         """
-         if(exists(p)) {
-           if(isdir(p)) rmdir(p) // force param has to be set in resource
-           else if(islink(p)) unlink(p)
-           else delete(p)
-         }
-         """
-         */
-
         case Some("absent") if force => If(TestFileState(p, IsDir),
                                            Rm(p),
                                            If(TestFileState(p, IsFile),
                                               Rm(p),
                                               Skip)) // TODO(kgeffen) Links not yet covered!
 
-         /*
-         """
-         if(exists(p)) {
-           if(islink(p)) unlink(p)
-           else if(regularfile(p)) delete(p)
-           // Ignore directory even if its exists when force is not set
-         }
-         """
-         */
         case Some("absent") => If(TestFileState(p, IsFile),
                                   Rm(p),
                                   Skip) // TODO(kgeffen) Links not yet covered
 
         /* missing: Create a file with content if content present
-         * directory: if force is set then remove directory createFile and set content if present else ignore
+         * directory: if force is set then remove directory createFile
+         *            and set content if present else ignore
          * file: if content set then set content else ignore
          * link: removelink, createfile and set content if present
          */
-         /*
-        """
-        if (exists(p)) {
-          if (isdir(p)) rmdir(p)
-          else if (islink(p)) unlink(p)
-          else delete(p)
-        }
-        create(p, c)
-        """
-        */
         case Some("file") if force => Block(If(TestFileState(p, IsDir),
                                                Rm(p),
                                                If(TestFileState(p, IsFile),
@@ -193,17 +133,6 @@ private[pipeline] object Provider {
                                                   Skip)),
                                             CreateFile(p, c)) // TODO(kgeffen) Links not yet covered
 
-
-       /*
-       """
-       if(exists(p)) {
-         if(isregularfile(p)) delete(p)
-         else if(islink(p)) unlink(p)
-       }
-
-       if(!exists(p)) create(p, c)
-       """
-       */
        case Some("file") => Block(If(TestFileState(p, IsFile),
                                      Rm(p),
                                      Skip),
@@ -214,16 +143,6 @@ private[pipeline] object Provider {
          * File: remove file and create directory
          * link: remove link and create directory
          */
-
-        /*
-        """
-        if(exists(p)) {
-          if(isregularfile(p)) delete(p)
-          else if(islink(p)) unlink(p)
-        }
-        if(!exists(p)) mkdir(p)
-        """
-        */
         case Some("directory") => If(!TestFileState(p, DoesNotExist),
                                      Block(Rm(p), Mkdir(p)),
                                      Mkdir(p)) // TODO(kgeffen) Links not yet covered
@@ -234,16 +153,6 @@ private[pipeline] object Provider {
          * file: delete file and create link
          * link: ignore
          */
-         /*
-         """
-         if (exist(p)) {
-           if (isdir(p)) rmdir(p)
-           else if (isregularfile(p)) delete(p)
-           else unlink(p)
-         }
-         link(p, t)
-         """
-         */
         case Some("link") if force => Skip // TODO(kgeffen) Links not yet covered
 
         // Block(If(Exists(p),
@@ -253,14 +162,6 @@ private[pipeline] object Provider {
         //                                     Link(p, t))
 
 
-        /*
-        """
-        if(exists(p)) {
-          if(isregularfile(p)) delete(p),
-          else if(islink(p)) unlink(p)
-        }
-        if(!exists(p)) link(p, t)
-        */
         case Some("link") => Skip // TODO(kgeffen) Links not yet covered
 
         // Block(If(Exists(p),
@@ -281,55 +182,35 @@ private[pipeline] object Provider {
 
     val ensure = validVal("ensure", validEnsureVals) getOrElse "installed"
 
-    /*
-    def latest: String = {
-
-      import scala.collection.JavaConversions
-      import scala.util.matching.Regex._
-
-      val pattern = """Candidate:\s+(\S+)\s""".r
-      val cmd = "apt-cache policy %s".format(name)
-      val (sts, out, err) = Cmd.exec(cmd)
-      if (0 == sts) {
-        // Parse output for a version and return
-        pattern.findAllIn(out).matchData.map(_.group(1)).toList.head
-      }
-      else {
-        throw new Exception(s"$cmd failed: $err")
-      }
-    }
-    */
-
     /* apt-file must be installed and should be updated */
     private def files: Set[Path] = {
+
+      import java.nio.file.Paths
 
       val cmd = s"apt-file -F list $name"
       val (sts, out, err) = Cmd.exec(cmd)
       if (0 == sts) {
-        out.lines.toList.map((l) => Paths.get(l.split(" ")(1)).normalize).toSet
+        out.lines.toList.map((l) => Paths.get(l.split(" ")(1))).toSet
       }
       else {
         throw new Exception(s"$cmd failed: $err")
       }
     }
 
-    def toFSOps: ext.Expr = {
+    def toFSOps: ext.Expr = ensure match {
 
-      import scala.collection.SortedSet
-
-      // Arrange dirs by closest first
-      val orderby = Ordering.by[Path, Int](_.getNameCount)
-
-      val root = Paths.get("/")
-      val allpaths = ancestors(files)
-      val dirs = (allpaths -- files)
-
-      ensure match {
         case "present" | "installed" | "latest" => {
 
+          val allpaths = paths.allpaths(files)
+
+          val dirs = (allpaths -- files)
+          val mkdirs = (dirs - paths.root).toSeq.sortBy(_.getNameCount)
+                                          .map(d => If(TestFileState(d, DoesNotExist), 
+                                                       Mkdir(d), Skip)).toList
+
           val somecontent = Content("")
-          val mkdirs = (dirs - root).toSeq.sortBy(_.getNameCount).map(d => If(TestFileState(d, DoesNotExist), Mkdir(d), Skip)).toList
           val createfiles = files.map((f) => CreateFile(f, somecontent))
+
           val exprs = (mkdirs ++ createfiles)
           Block(exprs: _*)
         }
@@ -342,7 +223,6 @@ private[pipeline] object Provider {
         case "held"   => throw new Exception("NYI package held") // TODO
         case _ => throw new Exception(s"Invalid value for ensure: ${ensure}")
       }
-    }
   }
 
   case class User(res: Resource) extends Provider(res) {
@@ -391,33 +271,6 @@ private[pipeline] object Provider {
 
       (ensure, managehome) match {
 
-        /*
-        """
-        u = /etc/users/name
-        g = /etc/groups/name
-        if (!exists(u) {
-          mkdir(u)
-          create(u/shadow, c)
-          create(u/passwd, c')
-
-          // Create a group by the name of user if it already does not exists
-          if(!exists(g)) {
-            mkdir(g)
-            createFile(g/settings, c'')
-          }
-
-          // Add user to every group specified
-
-
-          // create home directory if it not already exists
-          if (!exists(h)) {
-            mkdir(h)
-            // Assume a blank home directory
-          }
-        }
-        """
-        */
-
         case ("present", true) => If(TestFileState(u, DoesNotExist),
                                      Block(Mkdir(u),
                                            CreateFile(usettings, usettingscontent),
@@ -437,20 +290,6 @@ private[pipeline] object Provider {
                                             // tODO: Add to rest of groups
                                             ),
                                       Skip)
-
-        /*
-        """
-        if(exists(u)) {
-          rmdir(u)
-          if(exists(g)) {
-            rmdir(g)
-          }
-          if(exists(h)) {
-            rmdir(h)
-          }
-        }
-        """
-        */
 
         case ("absent", _) => If(!TestFileState(u, DoesNotExist),
                                  Block(Rm(u),
@@ -530,26 +369,13 @@ private[pipeline] object Provider {
      */
     def toFSOps (): ext.Expr = {
 
-      val p = Paths.get(s"/etc/groups/$name")
-      val s = Paths.get(s"/etc/groups/$name/settings")
+      val p = s"/etc/groups/$name"
+      val s = s"/etc/groups/$name/settings"
       val c = Content("")
 
       ensure match {
-        /*
-        """
-        if(!exists(p)) {
-          mkdir(p)
-          create(p/settings, c)
-        }
-        """
-        */
         case "present" => If(TestFileState(p, DoesNotExist), Block(Mkdir(p), CreateFile(s, c)), Skip)
 
-        /*
-        """
-        if(exists(p)) rmdir(p)
-        """
-        */
         case "absent" => If(!TestFileState(p, DoesNotExist), Rm(p), Skip)
 
         case _ => throw new Exception(s"Invalid ensure value: $ensure")
@@ -565,7 +391,7 @@ private[pipeline] object Provider {
     def toFSOps (): ext.Expr = {
 
       if(creates.isDefined) {
-        val p = Paths.get(creates.get)
+        val p = creates.get
         // If(!TestFileState(p, DoesNotExist), Skip, ShellExec(command))
         // TODO(kgeffen) Add ShellExec
         Skip
