@@ -22,7 +22,6 @@ private[pipeline] object Provider {
 
   import puppet.common.resource._
   import puppet.common.resource.Extractor._
-  // import scala.collection.immutable.{Map, List}
 
   def If(p: core.Pred, true_br: ext.Expr, false_br: ext.Expr): ext.Expr =
     Alt(Seq(Filter(p), true_br),
@@ -39,7 +38,7 @@ private[pipeline] object Provider {
     case "File" => File(r)
     case "Package" => PuppetPackage(r)
     case "User" => User(r)
-    // case "Notify" => Notify(r)
+    case "Notify" => Notify(r)
     case "Service" => Service(r)
     case "Group" => Group(r)
     case "Exec" => Exec(r)
@@ -219,7 +218,7 @@ private[pipeline] object Provider {
         case "absent" | "purged" => {
 
           val files = packageFiles()
-          val exprs = files.map(Rm(_)).toSeq
+          val exprs = files.map((f) => If(TestFileState(f, DoesNotExist), Skip, Rm(f))).toSeq
           Block(exprs: _*)
         }
 
@@ -305,14 +304,11 @@ private[pipeline] object Provider {
     }
   }
 
-  /*
   case class Notify(res: Resource) extends Provider(res) {
 
     private val msg = r.get[String]("message") getOrElse name
-
-    def realize() { println(msg) }
+    def toFSOps () = Skip
   }
-  */
 
   case class Service(res: Resource) extends Provider(res) {
     private val validEnsureVals = List((StringV("stopped"): Value, "stopped"),

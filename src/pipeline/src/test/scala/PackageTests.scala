@@ -17,9 +17,16 @@ class PackageTestSuite extends FunSuite {
     assert(1 == pipeline.runProgram(program))
   }
 
-  test("2 packages install") {
+  test("2 package concurrent install") {
     val program = """package{["cmatrix",
                               "telnet"]: }"""
+    assert(1 == pipeline.runProgram(program))
+  }
+
+  test("single package remove") {
+    val program = """package{"telnet":
+                       ensure => absent
+                    }"""
     assert(1 == pipeline.runProgram(program))
   }
 
