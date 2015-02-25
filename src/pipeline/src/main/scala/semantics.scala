@@ -28,7 +28,7 @@ private[pipeline] object Provider {
     Alt(Seq(Filter(p), true_br),
         Seq(Filter(!p), false_br))
 
-  def Block(es: ext.Expr*): ext.Expr = es.reduceRight(Seq(_, _))
+  def Block(es: ext.Expr*): ext.Expr = if(0 != es.size) es.reduceRight(Seq(_, _)) else Skip
 
   def Content(s: String): Array[Byte] = {
     import java.security.MessageDigest
