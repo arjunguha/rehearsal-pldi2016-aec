@@ -29,12 +29,12 @@ package object pipeline {
                               .toGraph(Facter.run())
 
     implicit val toExpr = {(r: puppet.graph.Resource) => Provider(toCoreResource(r)).toFSOps()}
-    
+
     val mgraph = MGraph.from(graph.nodes.map(_.value),
                              graph.edges.map((e) => e.source.value ~> e.target.value))
 
     val ext_expr = toFSExpr(mgraph)
-    
+
     // TODO(nimish): debug only
     val simple_expr = ext_expr.unconcur()
                               .unatomic()
@@ -43,7 +43,7 @@ package object pipeline {
                            .unatomic()
 
     val init_state = Map(paths.root -> IsDir)
-    val states = Eval.eval(opt_expr.toCore(), init_state)
+    val states = Eval.eval(opt_expr.toCore(), init_state).toSet
 
     // TODO(nimish): debug only
     if(states.size != 1) {
@@ -51,14 +51,14 @@ package object pipeline {
       println()
       println(ext_expr.pretty())
       println()
-      println(simple_expr.pretty())   
+      println(simple_expr.pretty())
       println()
       println(opt_expr.pretty())
       println()
       println()
       println()
     }
-      
+
     states.size
   }
 
@@ -66,9 +66,9 @@ package object pipeline {
   // Reduce the graph to a single expression in fsmodel language
   def toFSExpr[A](graph: MGraph[A, DiEdge])
                  (implicit toExpr: A=>ext.Expr): ext.Expr = {
-    
+
     import fsmodel.ext.Implicits._
-    
+
     if(graph.isEmpty) Skip
     else {
       val roots = graph.nodes.filter(_.inDegree == 0)
@@ -82,7 +82,7 @@ package object pipeline {
     case BoolV(b) => resrc.BoolV(b)
     case RegexV(_) => resrc.UndefV
     case ASTHashV(_) => resrc.UndefV
-    case ASTArrayV(arr) => resrc.ArrayV(arr.map(toCoreValue(_))) 
+    case ASTArrayV(arr) => resrc.ArrayV(arr.map(toCoreValue(_)))
     case ResourceRefV(_, _, _) => resrc.UndefV
   }
 
