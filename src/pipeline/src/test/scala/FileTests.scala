@@ -2,7 +2,7 @@ package pipeline
 
 import org.scalatest.FunSuite
 
-class UnitTestSuite extends FunSuite {
+class FileTestSuite extends FunSuite {
 
   test("single puppet file resource") {
     pipeline.runProgram("""file{"/foo": ensure => present }""")

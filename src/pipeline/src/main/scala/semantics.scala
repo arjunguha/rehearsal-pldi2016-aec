@@ -279,7 +279,7 @@ private[pipeline] object Provider {
 
     private val validEnsureVals = List("present", "installed", "absent", "purged", "held", "latest")
 
-    val ensure = validVal("ensure", validEnsureVals)
+    val ensure = validVal("ensure", validEnsureVals) getOrElse "installed"
 
     /*
     def latest: String = {
@@ -325,7 +325,7 @@ private[pipeline] object Provider {
       val dirs = (allpaths -- files)
 
       ensure match {
-        case Some("present") | Some("installed") | Some("latest") => {
+        case "present" | "installed" | "latest" => {
 
           val somecontent = Content("")
           val mkdirs = (dirs - root).toSeq.sortBy(_.getNameCount).map(d => If(TestFileState(d, DoesNotExist), Mkdir(d), Skip)).toList
@@ -334,13 +334,13 @@ private[pipeline] object Provider {
           Block(exprs: _*)
         }
 
-        case Some("absent") | Some("purged") => {
+        case "absent" | "purged" => {
           val exprs = files.map(Rm(_)).toSeq
           Block(exprs: _*)
         }
 
-        case Some("held")   => throw new Exception("NYI package held") // TODO
-        case _ => throw new Exception("One or more required attribute is missing")
+        case "held"   => throw new Exception("NYI package held") // TODO
+        case _ => throw new Exception(s"Invalid value for ensure: ${ensure}")
       }
     }
   }
