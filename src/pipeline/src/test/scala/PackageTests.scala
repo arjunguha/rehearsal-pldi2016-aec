@@ -30,12 +30,10 @@ class PackageTestSuite extends FunSuite {
     assert(1 == pipeline.runProgram(program))
   }
 
-  /*
   test("3 packages install") {
     val program = """package{["sl",
                               "cowsay",
                               "fortune"]: }"""
     assert(1 == pipeline.runProgram(program))
   }
-  */
 }
