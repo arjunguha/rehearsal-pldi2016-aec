@@ -278,11 +278,7 @@ private[pipeline] object Provider {
 
       (ensure, managehome) match {
 
-        case ("present", true) => mkdirIdempotent("/etc/") >>
-                                  mkdirIdempotent("/etc/users") >>
-                                  mkdirIdempotent("/etc/groups") >>
-                                  mkdirIdempotent("/home") >>
-                                  If(TestFileState(u, DoesNotExist),
+        case ("present", true) => If(TestFileState(u, DoesNotExist),
                                      Block(Mkdir(u),
                                            CreateFile(usettings, usettingscontent),
                                            If(TestFileState(g, DoesNotExist),
@@ -292,10 +288,7 @@ private[pipeline] object Provider {
                                            If(TestFileState(h, DoesNotExist), Mkdir(h), Skip)),
                                      Skip)
 
-        case ("present", false) => mkdirIdempotent("/etc/") >>
-                                   mkdirIdempotent("/etc/users") >>
-                                   mkdirIdempotent("/etc/groups") >>
-                                      If(TestFileState(u, DoesNotExist),
+        case ("present", false) => If(TestFileState(u, DoesNotExist),
                                       Block(Mkdir(u),
                                             CreateFile(usettings, usettingscontent),
                                             If(TestFileState(g, DoesNotExist),
@@ -385,9 +378,7 @@ private[pipeline] object Provider {
       val c = Content("")
 
       ensure match {
-        case "present" => mkdirIdempotent("/etc/") >>
-                          mkdirIdempotent("/etc/groups") >>
-                          If(TestFileState(p, DoesNotExist), 
+        case "present" => If(TestFileState(p, DoesNotExist), 
                              Mkdir(p) >> CreateFile(s, c),
                              CreateFile(s, c))
 

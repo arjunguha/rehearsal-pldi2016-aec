@@ -4,24 +4,22 @@ import org.scalatest.FunSuite
 
 class BenchmarkTests extends FunSuite {
 
-    case class Benchmark(mainFile: String, modulePath: Option[String] = None)
-
   val benchmarkroot = "../benchmarks"
 
-  val benchmarks = Map(//"puppet-bind" -> Benchmark("src/tests/server.pp", Some("src/modules")),
-                       "puppet-git" -> Benchmark("src/tests/init.pp", Some("src/modules"))
-                       // "puppet-mosh" -> Benchmark("src/tests/init.pp", Some("src/modules")),
-                       //"vagrant-cakephp" -> Benchmark("src/manifests/site.pp", Some("src/modules"))
-                       // "vagrantpress" -> Benchmark("src/manifests/site.pp", Some("src/modules"))
+  val benchmarks = Map("puppet-bind" -> ("src/tests/server.pp", Some("src/modules")),
+                       "puppet-git" -> ("src/tests/init.pp", Some("src/modules")),
+                       "puppet-mosh" -> ("src/tests/init.pp", Some("src/modules"))
+                       // "vagrant-cakephp" -> ("src/manifests/site.pp", Some("src/modules"))
+                       // "vagrantpress" -> ("src/manifests/site.pp", Some("src/modules"))
                        )
 
   for ((name, b) <- benchmarks) {
 
     test(s"benchmark: $name") {
-      val mainFilePath = s"${benchmarkroot}/${name}/${b.mainFile}"
-      val modulePath = b.modulePath.map((p) => s"${benchmarkroot}/${name}/${p}")
+      val mainFilePath = s"${benchmarkroot}/${name}/${b._1}"
+      val modulePath = b._2.map((p) => s"${benchmarkroot}/${name}/${p}")
 
-      pipeline.run(mainFilePath, modulePath)
+      assert(1 == pipeline.run(mainFilePath, modulePath, Ubuntu.fs_state))
     }
   }
 }

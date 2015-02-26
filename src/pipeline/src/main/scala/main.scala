@@ -18,10 +18,7 @@ package object pipeline {
   import scalax.collection.mutable.{Graph => MGraph}
 
   def resourceGraphToExpr(resourceGraph: Graph[puppet.graph.Resource, DiEdge]): ext.Expr = {
-    implicit val toExpr = {
-      (r: puppet.graph.Resource) =>
-        Provider(toCoreResource(r)).toFSOps()
-    }
+    implicit val toExpr = toCoreResource _ andThen { Provider(_).toFSOps() }
 
     val mgraph = MGraph.from(
       resourceGraph.nodes.map(_.value),
@@ -30,11 +27,13 @@ package object pipeline {
     toFSExpr(mgraph)
   }
 
-  def run(mainFile: String, modulePath: Option[String] = None) {
-    runProgram(load(mainFile, modulePath))
+  type State = core.Eval.State
+
+  def run(mainFile: String, modulePath: Option[String], fs_state: State): Int = {
+    runProgram(load(mainFile, modulePath), fs_state)
   }
 
-  def runProgram(program: String): Int = {
+  def runProgram(program: String, fs_state: State): Int = {
 
     import fsmodel.core._
 
@@ -50,8 +49,7 @@ package object pipeline {
     val opt_expr = ext_expr.unconcurOpt()
                            .unatomic()
 
-    val init_state = Map(paths.root -> IsDir)
-    val states = Eval.eval(opt_expr.toCore(), init_state).toSet
+    val states = Eval.eval(opt_expr.toCore(), fs_state).toSet
 
     // TODO(nimish): debug only
     if(states.size != 1) {
@@ -70,7 +68,7 @@ package object pipeline {
     states.size
   }
 
-  // TODO: tail recursive
+  // TODO(nimish): tail recursive
   // Reduce the graph to a single expression in fsmodel language
   def toFSExpr[A](graph: MGraph[A, DiEdge])
                  (implicit toExpr: A=>ext.Expr): ext.Expr = {
@@ -80,6 +78,7 @@ package object pipeline {
     if(graph.isEmpty) Skip
     else {
       val roots = graph.nodes.filter(_.inDegree == 0)
+      // TODO(nimish): "--" could be a expensive operation!
       roots.map((n) => Atomic(toExpr(n.value))).reduce[ext.Expr](_ * _) >> toFSExpr(graph -- roots)
     }
   }
