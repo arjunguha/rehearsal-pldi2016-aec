@@ -20,19 +20,24 @@ private[pipeline] object Provider {
 
   import fsmodel.core.Implicits._
 
+  import fsmodel.ext.Implicits._
+
   import puppet.common.resource._
   import puppet.common.resource.Extractor._
 
   def If(p: core.Pred, true_br: ext.Expr, false_br: ext.Expr): ext.Expr =
-    Alt(Seq(Filter(p), true_br),
-        Seq(Filter(!p), false_br))
+    (Filter(p) >> true_br) + (Filter(!p) >> false_br)
 
-  def Block(es: ext.Expr*): ext.Expr = if(0 != es.size) es.reduceRight(Seq(_, _)) else Skip
+  def Block(es: ext.Expr*): ext.Expr =
+    if(0 != es.size) es.reduceRight(Seq(_, _)) else Skip
 
   def Content(s: String): Array[Byte] = {
     import java.security.MessageDigest
     MessageDigest.getInstance("MD5").digest(s.getBytes)
   }
+
+  def mkdirIdempotent(path: Path): ext.Expr =
+    If(TestFileState(path, DoesNotExist), Mkdir(path), Skip)
 
   def apply(r: Resource): Provider = r.typ match {
     case "File" => File(r)
@@ -273,7 +278,11 @@ private[pipeline] object Provider {
 
       (ensure, managehome) match {
 
-        case ("present", true) => If(TestFileState(u, DoesNotExist),
+        case ("present", true) => mkdirIdempotent("/etc/") >>
+                                  mkdirIdempotent("/etc/users") >>
+                                  mkdirIdempotent("/etc/groups") >>
+                                  mkdirIdempotent("/home") >>
+                                  If(TestFileState(u, DoesNotExist),
                                      Block(Mkdir(u),
                                            CreateFile(usettings, usettingscontent),
                                            If(TestFileState(g, DoesNotExist),
@@ -283,7 +292,10 @@ private[pipeline] object Provider {
                                            If(TestFileState(h, DoesNotExist), Mkdir(h), Skip)),
                                      Skip)
 
-        case ("present", false) => If(TestFileState(u, DoesNotExist),
+        case ("present", false) => mkdirIdempotent("/etc/") >>
+                                   mkdirIdempotent("/etc/users") >>
+                                   mkdirIdempotent("/etc/groups") >>
+                                      If(TestFileState(u, DoesNotExist),
                                       Block(Mkdir(u),
                                             CreateFile(usettings, usettingscontent),
                                             If(TestFileState(g, DoesNotExist),
@@ -373,7 +385,11 @@ private[pipeline] object Provider {
       val c = Content("")
 
       ensure match {
-        case "present" => If(TestFileState(p, DoesNotExist), Block(Mkdir(p), CreateFile(s, c)), Skip)
+        case "present" => mkdirIdempotent("/etc/") >>
+                          mkdirIdempotent("/etc/groups") >>
+                          If(TestFileState(p, DoesNotExist), 
+                             Mkdir(p) >> CreateFile(s, c),
+                             CreateFile(s, c))
 
         case "absent" => If(!TestFileState(p, DoesNotExist), Rm(p), Skip)
 
