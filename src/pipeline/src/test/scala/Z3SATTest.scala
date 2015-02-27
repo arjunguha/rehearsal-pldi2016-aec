@@ -35,13 +35,27 @@ class Z3SATTest extends FunSuite {
     runTest(program)
   }
 
+  test("2 package install") {
+    val program = """package{["cmatrix",
+                              "telnet"]: }"""
+    runTest(program)
+  }
+
+  // Takes 13 mins
+  test("3 package install") {
+    val program = """package{["sl",
+                              "cowsay",
+                              "fortune"]: }"""
+    runTest(program)
+  }
+
   def runTest(program: String) {
     val graph = parse(program).desugar()
                               .toGraph(Map[String, String]())
 
     val ext_expr = pipeline.resourceGraphToExpr(graph)
     info(ext_expr.pretty())
-    
+
     val core_expr = ext_expr.unconcurOpt()
                            .unatomic()
                            .toCore()
@@ -53,29 +67,4 @@ class Z3SATTest extends FunSuite {
                                   newState),
                      newState)))
   }
-
-  /*
-  test("2 package dependent install") {
-    val program = """package{"sl": }
-                     package{"cmatrix":
-                       require => Package['sl']
-                     }"""
-    assert(1 == pipeline.runProgram(program))
-  }
-
-  test("2 packages install") {
-    val program = """package{["cmatrix",
-                              "telnet"]: }"""
-    assert(1 == pipeline.runProgram(program))
-  }
-  */
-
-  /*
-  test("3 packages install") {
-    val program = """package{["sl",
-                              "cowsay",
-                              "fortune"]: }"""
-    assert(1 == pipeline.runProgram(program))
-  }
-  */
 }
