@@ -15,16 +15,9 @@ import fsmodel.ext._
 
 package object pipeline {
 
-  import scalax.collection.mutable.{Graph => MGraph}
-
   def resourceGraphToExpr(resourceGraph: Graph[puppet.graph.Resource, DiEdge]): ext.Expr = {
-    implicit val toExpr = toCoreResource _ andThen { Provider(_).toFSOps() }
-
-    val mgraph = MGraph.from(
-      resourceGraph.nodes.map(_.value),
-      resourceGraph.edges.map((e) => e.source.value ~> e.target.value))
-
-    toFSExpr(mgraph)
+    val toExpr = toCoreResource _ andThen { Provider(_).toFSOps() }
+    reduceGraph(resourceGraph, toExpr)
   }
 
   type State = core.Eval.State
@@ -68,19 +61,23 @@ package object pipeline {
     states.size
   }
 
-  // TODO(nimish): tail recursive
   // Reduce the graph to a single expression in fsmodel language
-  def toFSExpr[A](graph: MGraph[A, DiEdge])
-                 (implicit toExpr: A=>ext.Expr): ext.Expr = {
+  def reduceGraph[A](graph: Graph[A, DiEdge], toExpr: A=>ext.Expr): ext.Expr = {
 
     import fsmodel.ext.Implicits._
+    import scala.annotation.tailrec
 
-    if(graph.isEmpty) Skip
-    else {
-      val roots = graph.nodes.filter(_.inDegree == 0)
-      // TODO(nimish): "--" could be a expensive operation!
-      roots.map((n) => Atomic(toExpr(n.value))).reduce[ext.Expr](_ * _) >> toFSExpr(graph -- roots)
-    }
+    @tailrec
+    def loop(graph: Graph[A, DiEdge], acc: ext.Expr): ext.Expr =
+      if(graph.isEmpty) acc
+      else {
+        val roots = graph.nodes.filter(_.inDegree == 0)
+        loop(graph -- roots,
+             acc >> roots.map((n) => Atomic(toExpr(n.value)))
+                         .reduce[ext.Expr](_ * _))
+      }
+
+    loop(graph, Skip)
   }
 
   def toCoreValue(v: Value): resrc.Value = v match {

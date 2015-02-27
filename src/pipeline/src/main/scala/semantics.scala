@@ -209,6 +209,17 @@ private[pipeline] object Provider {
           val allpaths = paths.allpaths(files)
 
           val dirs = (allpaths -- files)
+          /*
+           * TODO(nimish) : Bucket sort below but unreadable!
+          val mkdirs = (dirs - paths.root).groupBy(_.getNameCount)
+                                          .mapValues(_.toSeq)
+                                          .toSeq
+                                          .sortBy(_._1)
+                                          .unzip._2
+                                          .flatten
+                                          .map(d => If(TestFileState(d, DoesNotExist), 
+                                                       Mkdir(d), Skip)).toList
+          */
           val mkdirs = (dirs - paths.root).toSeq.sortBy(_.getNameCount)
                                           .map(d => If(TestFileState(d, DoesNotExist), 
                                                        Mkdir(d), Skip)).toList
