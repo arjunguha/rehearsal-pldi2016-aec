@@ -32,7 +32,8 @@ class packages {
             "autoconf",
             "facter",
             "oracle-java8-installer",
-            "sbt" ]
+            "sbt",
+            "apt-file" ]
 
   package{$pkgs:
     ensure => latest,
@@ -50,6 +51,9 @@ include repositories
 include packages
 Class['repositories'] ~> exec{'/usr/bin/apt-get update -q': } ~> Class['packages']
 
+exec{"/usr/bin/apt-file update":
+  require => Package['apt-file']
+}
 
 # cd src
 # git clone --depth=1 https://github.com/epfl-lara/ScalaZ3.git
