@@ -69,7 +69,7 @@ package object pipeline {
 
     @tailrec
     def loop(graph: Graph[A, DiEdge], acc: ext.Expr): ext.Expr =
-      if(graph.isEmpty) Skip
+      if(graph.isEmpty) acc
       else {
         val roots = graph.nodes.filter(_.inDegree == 0)
         loop(graph -- roots,
