@@ -20,15 +20,28 @@ import fsmodel.core.Z3Eval._
 import fsmodel.core.Z3Eval.z._
 import java.nio.file.Paths
 
-class PackageZ3TestSuite extends FunSuite {
+class Z3SATTest extends FunSuite {
 
   test("single package without attributes") {
     val program = """package{"sl": }"""
+    runTest(program)
+  }
 
+  test("2 package dependent install") {
+    val program = """package{"sl": }
+                     package{"cmatrix":
+                       require => Package['sl']
+                     }"""
+    runTest(program)
+  }
+
+  def runTest(program: String) {
     val graph = parse(program).desugar()
-                              .toGraph(Facter.run())
-    val ext_expr = pipeline.resourceGraphToExpr(graph)
+                              .toGraph(Map[String, String]())
 
+    val ext_expr = pipeline.resourceGraphToExpr(graph)
+    info(ext_expr.pretty())
+    
     val core_expr = ext_expr.unconcurOpt()
                            .unatomic()
                            .toCore()
@@ -37,7 +50,7 @@ class PackageZ3TestSuite extends FunSuite {
       checkSAT(evalR(core_expr,
                      setFileState(path(Paths.get("/")),
                                   isDir,
-                                  newState), // TODO(kgeffen) Set root to isDir
+                                  newState),
                      newState)))
   }
 

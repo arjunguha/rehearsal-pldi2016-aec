@@ -12,4 +12,4 @@ resolvers +=   "Sonatype Snapshots" at "https://oss.sonatype.org/content/reposit
 
 libraryDependencies ++=
   Seq("org.scalatest" % "scalatest_2.11" % "2.2.1" % "test",
-      "edu.umass.cs" %% "scalaz3" % "2.1-mac")
+      "edu.umass.cs" %% "scalaz3" % "2.1-SNAPSHOT")

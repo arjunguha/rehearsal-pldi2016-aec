@@ -142,7 +142,7 @@ class Z3Impl() extends TypedZ3 {
   import Implicits._
 
   private val cxt = new Z3Context(new Z3Config("MODEL" -> true,
-                                               "TIMEOUT" -> 3000))
+                                               "TIMEOUT" -> 50000))
   private val solver = cxt.mkSolver
 
   private val boolSort = cxt.mkBoolSort
