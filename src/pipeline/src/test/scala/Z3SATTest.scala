@@ -45,7 +45,7 @@ class Z3SATTest extends FunSuite {
   test("3 package install") {
     val program = """package{["sl",
                               "cowsay",
-                              "fortune"]: }"""
+                              "cmatrix"]: }"""
     runTest(program)
   }
 

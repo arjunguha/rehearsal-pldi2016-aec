@@ -22,16 +22,20 @@ package object pipeline {
 
   type State = core.Eval.State
 
-  def run(mainFile: String, modulePath: Option[String], fs_state: State): Int = {
-    runProgram(load(mainFile, modulePath), fs_state)
+  def run(mainFile: String, modulePath: Option[String],
+          env: Map[String, String],
+          fs: State): Int = {
+    runProgram(load(mainFile, modulePath), env, fs)
   }
 
-  def runProgram(program: String, fs_state: State): Int = {
+  def runProgram(program: String,
+                 env: Map[String, String],
+                 fs: State): Int = {
 
     import fsmodel.core._
 
     val graph = parse(program).desugar()
-                              .toGraph(Facter.run())
+                              .toGraph(env)
 
     val ext_expr = resourceGraphToExpr(graph)
 
@@ -42,7 +46,7 @@ package object pipeline {
     val opt_expr = ext_expr.unconcurOpt()
                            .unatomic()
 
-    val states = Eval.eval(opt_expr.toCore(), fs_state).toSet
+    val states = Eval.eval(opt_expr.toCore(), fs).toSet
 
     // TODO(nimish): debug only
     if(states.size != 1) {

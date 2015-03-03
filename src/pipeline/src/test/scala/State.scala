@@ -22,8 +22,8 @@ object Ubuntu {
                             "/boot" -> IsDir,
                             "/dev/" -> IsDir,
                             "/etc/" -> IsDir,
-                            "/etc/users/" -> IsDir,
-                            "/etc/groups/" -> IsDir,
+                            "/etc/users/" -> IsDir, // non-standard
+                            "/etc/groups/" -> IsDir, // non-standard
                             "/home/" -> IsDir,
                             "/lib/" -> IsDir,
                             "/media/" -> IsDir,

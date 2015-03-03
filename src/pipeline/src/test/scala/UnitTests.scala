@@ -32,7 +32,6 @@ class UnitTestSuite extends FunSuite {
     val b = Filter(core.False)
 
     val reduced_exp = pipeline.reduceGraph(Graph(a, b), toExpr)
-    println(reduced_exp.pretty())
 
     // both are semantically equivalent but not syntactically
     assert(((Skip >> (Atomic(a) * Atomic(b))) == reduced_exp) ||

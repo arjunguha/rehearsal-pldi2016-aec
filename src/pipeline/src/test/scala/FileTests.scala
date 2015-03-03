@@ -4,16 +4,19 @@ import org.scalatest.FunSuite
 
 class FileTestSuite extends FunSuite {
 
+  val env = Facter.emptyEnv
+  val fs = Ubuntu.lightweight_fs
+
   test("single puppet file resource") {
     val program = """file{"/foo": ensure => present }"""
-    assert(1 == pipeline.runProgram(program, Ubuntu.lightweight_fs))
+    assert(1 == pipeline.runProgram(program, env, fs))
   }
 
   test("single directory") {
     val program = """file{"/tmp":
                               ensure => directory
                             }"""
-    assert(1 == pipeline.runProgram(program, Ubuntu.lightweight_fs))
+    assert(1 == pipeline.runProgram(program, env, fs))
   }
 
   test("file inside a directory") {
@@ -24,7 +27,7 @@ class FileTestSuite extends FunSuite {
                      file{"/tmp":
                        ensure => directory
                      }"""
-    assert(1 == pipeline.runProgram(program, Ubuntu.lightweight_fs))
+    assert(1 == pipeline.runProgram(program, env, fs))
   }
 
   test("single puppet file resource with force") {
@@ -32,12 +35,12 @@ class FileTestSuite extends FunSuite {
                        ensure => file,
                        force => true
                      }"""
-    assert(1 == pipeline.runProgram(program, Ubuntu.lightweight_fs))
+    assert(1 == pipeline.runProgram(program, env, fs))
   }
 
   test("delete file resource") {
     val program = """file{"/foo": ensure => absent }"""
-    assert(1 == pipeline.runProgram(program, Ubuntu.lightweight_fs))
+    assert(1 == pipeline.runProgram(program, env, fs))
   }
 
   test("delete dir with force") {
@@ -45,7 +48,7 @@ class FileTestSuite extends FunSuite {
                        ensure => absent,
                        force => true
                      }"""
-    assert(1 == pipeline.runProgram(program, Ubuntu.lightweight_fs))
+    assert(1 == pipeline.runProgram(program, env, fs))
   }
 
   test("link file") {
@@ -53,7 +56,7 @@ class FileTestSuite extends FunSuite {
                        ensure => link,
                        target => "/bar"
                      }"""
-    assert(1 == pipeline.runProgram(program, Ubuntu.lightweight_fs))
+    assert(1 == pipeline.runProgram(program, env, fs))
   }
 
   test("link file force") {
@@ -62,6 +65,6 @@ class FileTestSuite extends FunSuite {
                        target => "/bar",
                        force => true
                      }"""
-    assert(1 == pipeline.runProgram(program, Ubuntu.lightweight_fs))
+    assert(1 == pipeline.runProgram(program, env, fs))
   }
 }

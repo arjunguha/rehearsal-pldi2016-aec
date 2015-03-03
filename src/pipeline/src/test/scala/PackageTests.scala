@@ -1,12 +1,15 @@
 package pipeline
 
-import org.scalatest.FunSuite 
+import org.scalatest.FunSuite
 
 class PackageTestSuite extends FunSuite {
 
+  val env = Facter.emptyEnv
+  val fs = Ubuntu.lightweight_fs
+
   test("single package without attributes") {
     val program = """package{"sl": }"""
-    assert(1 == pipeline.runProgram(program, Ubuntu.lightweight_fs))
+    assert(1 == pipeline.runProgram(program, env, fs))
   }
 
   test("2 package dependent install") {
@@ -14,26 +17,26 @@ class PackageTestSuite extends FunSuite {
                      package{"cmatrix":
                        require => Package['sl']
                      }"""
-    assert(1 == pipeline.runProgram(program, Ubuntu.lightweight_fs))
+    assert(1 == pipeline.runProgram(program, env, fs))
   }
 
   test("2 package concurrent install") {
     val program = """package{["cmatrix",
                               "telnet"]: }"""
-    assert(1 == pipeline.runProgram(program, Ubuntu.lightweight_fs))
+    assert(1 == pipeline.runProgram(program, env, fs))
   }
 
   test("single package remove") {
     val program = """package{"telnet":
                        ensure => absent
                     }"""
-    assert(1 == pipeline.runProgram(program, Ubuntu.lightweight_fs))
+    assert(1 == pipeline.runProgram(program, env, fs))
   }
 
   test("3 packages install") {
     val program = """package{["sl",
                               "cowsay",
-                              "fortune"]: }"""
-    assert(1 == pipeline.runProgram(program, Ubuntu.lightweight_fs))
+                              "cmatrix"]: }"""
+    assert(1 == pipeline.runProgram(program, env, fs))
   }
 }
