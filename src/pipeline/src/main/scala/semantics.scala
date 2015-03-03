@@ -182,23 +182,16 @@ private[pipeline] object Provider {
 
   case class PuppetPackage(res: Resource) extends Provider(res) {
 
+    val pkgcache = new PackageCache("/tmp/rehearsal/pkgs/")
+
     private val validEnsureVals = List("present", "installed", "absent", "purged", "held", "latest")
 
     val ensure = validVal("ensure", validEnsureVals) getOrElse "installed"
 
     /* apt-file must be installed and should be updated */
     private def packageFiles(): Set[Path] = {
-
-      import java.nio.file.Paths
-
-      val cmd = s"apt-file -F list $name"
-      val (sts, out, err) = Cmd.exec(cmd)
-      if (0 == sts) {
-        out.lines.toList.map((l) => Paths.get(l.split(" ")(1))).toSet
-      }
-      else {
-        throw new Exception(s"$cmd failed: $err")
-      }
+      pkgcache.files(name) getOrElse
+      (throw new Exception(s"Package not found: $name"))
     }
 
     def toFSOps: ext.Expr = ensure match {
