@@ -1,7 +1,5 @@
 name := "pipeline"
 
-excludeFilter in unmanagedSources := "Tractable.scala"
-
 parallelExecution in Test := false
 
 /*
