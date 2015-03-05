@@ -75,11 +75,13 @@ private[pipeline] object Provider {
 
     val path = r.get[String]("path") getOrElse name
     val source = r.get[String]("source")
-    val ensure = validVal("ensure", validEnsureVals)
+    val content = r.get[String]("content")
+    val ensure = validVal("ensure", validEnsureVals) orElse {
+      if(content.isDefined) Some("present") else None
+    }
     val force = validVal("force", validBoolVals) getOrElse false
     val purge = validVal("purge", validBoolVals) getOrElse false
     val target = r.get[String]("target")
-    val content = r.get[String]("content")
 
     // TODO: Ignoring ownership and permissions for now
     // TODO : Ignoring source attribute

@@ -7,6 +7,13 @@ class FileTestSuite extends FunSuite {
   val env = Facter.emptyEnv
   val fs = Ubuntu.lightweight_fs
 
+  test("file without ensure with content should succeed") {
+    val program = """file{"/foo": 
+                       content => "some contents"
+                     }"""
+    assert(1 == pipeline.runProgram(program, env, fs))
+  }
+
   test("single puppet file resource") {
     val program = """file{"/foo": ensure => present }"""
     assert(1 == pipeline.runProgram(program, env, fs))
