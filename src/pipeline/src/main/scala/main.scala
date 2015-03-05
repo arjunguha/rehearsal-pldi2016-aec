@@ -39,9 +39,11 @@ package object pipeline {
 
     val ext_expr = resourceGraphToExpr(graph)
 
+    /*
     // TODO(nimish): debug only
     val simple_expr = ext_expr.unconcur()
                               .unatomic()
+    */
 
     val opt_expr = ext_expr.unconcurOpt()
                            .unatomic()
@@ -54,8 +56,8 @@ package object pipeline {
       println()
       println(ext_expr.pretty())
       println()
-      println(simple_expr.pretty())
-      println()
+      // println(simple_expr.pretty())
+      // println()
       println(opt_expr.pretty())
       println()
       println()
