@@ -1,0 +1,2 @@
+[1;31mWarning: Setting templatedir is deprecated. See http://links.puppetlabs.com/env-settings-deprecations
+   (at /usr/lib/ruby/vendor_ruby/puppet/settings.rb:1071:in `each')[0m

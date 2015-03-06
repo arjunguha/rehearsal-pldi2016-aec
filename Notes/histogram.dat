@@ -1,0 +1,10 @@
+#BenchmarkName NumResources AntiChainLength
+puppet-mosh 4 3
+puppet-monit 5 3
+vagrant-cakephp 14 3
+devbox 72 33
+vagrantpress 46 39
+puppet-bind 3 1
+puppet-sudo 5 4
+puppet-rbenv 11 9
+puppet-git 3 3

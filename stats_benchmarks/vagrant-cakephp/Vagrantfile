@@ -1,0 +1,49 @@
+Vagrant.require_version ">= 1.5.0", "< 1.6.0"
+
+$master = <<SCRIPT
+
+source /vagrant/provision-common.sh
+
+sudo apt-get install -y -qq puppetmaster
+
+sudo cp /vagrant/master-puppet.conf /etc/puppet/puppet.conf
+sudo cp /vagrant/autosign.conf /etc/puppet/autosign.conf
+
+sudo service puppetmaster restart -R 30 # since puppet.conf changed
+
+SCRIPT
+
+$agent = <<SCRIPT
+
+source /vagrant/provision-common.sh
+
+sudo apt-get install -y -qq puppet software-properties-common
+
+sudo cp /vagrant/agent-puppet.conf /etc/puppet/puppet.conf
+sudo sed -i "s/START=no/START=yes/" /etc/default/puppet 
+sudo service puppet stop # why is this needed?
+# sudo service puppet start
+sudo puppet agent --test
+
+SCRIPT
+
+Vagrant.configure("2") do |config|
+
+  config.vm.box = "mayflower/trusty64-puppet3"
+  config.vm.synced_folder ".", "/vagrant"
+
+  config.vm.define "master", primary: true do |master|
+    master.vm.provision "shell", inline: $master, :privileged => false
+    master.vm.network :private_network, ip: "192.168.50.10"
+    master.vm.hostname = "master"
+    master.vm.synced_folder "./src/manifests", "/etc/puppet/manifests"
+    master.vm.synced_folder "./src/modules", "/etc/puppet/modules"
+  end
+
+  config.vm.define "agent" do |agent|
+    agent.vm.provision "shell", inline: $agent, :privileged => false
+    agent.vm.network :private_network, ip: "192.168.50.11"
+    agent.vm.hostname = "agent"
+  end
+
+end

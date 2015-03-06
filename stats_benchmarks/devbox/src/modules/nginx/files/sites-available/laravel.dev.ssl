@@ -1,0 +1,27 @@
+server {
+    listen          443;
+    server_name     *.dev;
+    root            /var/www/$host/public;
+
+    ssl                         on;
+    ssl_certificate             /usr/share/nginx/certs/server.crt;
+    ssl_certificate_key         /usr/share/nginx/certs/server.key;
+    ssl_session_timeout         5m;
+    ssl_session_cache           shared:ssl_cache:5m;
+    ssl_prefer_server_ciphers   on;
+    ssl_protocols               SSLv2 SSLv3 TLSv1;
+    ssl_ciphers                 HIGH:!aNULL:!MD5;
+    
+    location / {
+        index       index.html index.htm index.php;
+        try_files   $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass    unix:/var/run/php5-fpm.sock;
+        fastcgi_index   index.php;
+        fastcgi_param   SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+        fastcgi_param   HTTPS on; 
+        include         fastcgi_params;
+    }
+}
