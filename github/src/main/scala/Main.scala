@@ -28,9 +28,13 @@ object Main extends App with LazyLogging {
   }
 
   args match {
-    case Array() => Await.result(puppetFiles(BasicClient), Duration.Inf)
+    case Array() => {
+      println("No OAuth token provided on the command line.")
+      println("Search will be faster if you authenticate.")
+      Await.result(puppetFiles(BasicClient), Duration.Inf)
+    }
     case Array(token) =>
-    Await.result(puppetFiles(new OAuthClient(token)), Duration.Inf)
+      Await.result(puppetFiles(new OAuthClient(token)), Duration.Inf)
   }
 
 }
