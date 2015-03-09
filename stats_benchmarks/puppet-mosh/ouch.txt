@@ -1,1 +1,0 @@
-works for ubuntu-precise but not for ubuntu-trusty as one of the custom repos is not available for ubuntu-trusty

@@ -1,7 +1,0 @@
-VAGRANTFILE_API_VERSION = "2"
-
-Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  config.vm.box = "mayflower/trusty64-puppet3"
-  config.vm.synced_folder ".", "/vagrant"
-  config.vm.provision "shell", inline: "sudo puppet apply /vagrant/src/tests/init.pp --modulepath=/vagrant/src/tests/modules --debug --verbose" 
-end
