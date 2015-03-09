@@ -30,3 +30,15 @@ percona-cluster 11 7
 puppet-haproxy 3 2
 puppetlabs-xinetd 4 3
 puppet-rvm 19 18
+puppet-vim 3 2
+tomas-edwardsson 85 74
+vagrant-dev-apache 28 16
+vagrant-dev-default 14 12
+vagrant-dev-nginx 27 15
+vagrant-kitabu 23 3
+vagrant-lemonstand 35 23
+vagrant-percona-client 25 13
+vagrant-percona-mha-manager 36 13
+vagrant-percona-mha-node 35 17
+vagrant-percona-server 33 18
+vagrant-percona-pxc 35 15
