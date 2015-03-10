@@ -2,9 +2,11 @@ package fsmodel.ext
 
 import fsmodel.core
 import fsmodel.core.Pred
+import fsmodel.optExt
 import java.nio.file.Path
 
 sealed abstract trait Expr {
+  def toOpt(): optExt.Expr = ToOpt.toOpt(this)
 
   def unconcur(): Expr = SimpleUnconcur.unconcur(this)
   def unconcurOpt(): Expr = OptUnconcur.unconcur(this)
