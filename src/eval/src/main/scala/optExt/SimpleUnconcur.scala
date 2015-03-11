@@ -14,7 +14,10 @@ private[optExt] object SimpleUnconcur {
       val e2 = unconcur(q)
       (Filter(a) >> e2) + (e2 >> Filter(a))
     }
-    case Concur(Seq(p +: ps), r) => {
+    case Concur(Seq(Nil), r) => {
+      unconcur(r)
+    }
+    case Concur(Seq(p :: ps), r) => {
       unconcur((p * r) >> Seq(ps)) + unconcur(p >> (Concur(Seq(ps), r)))
     }
     case Concur(Alt(set), r) => {
@@ -32,7 +35,8 @@ private[optExt] object SimpleUnconcur {
       val e2 = unconcur(q)
       (p >> e2) + (e2 >> p)
     }
-    case Seq(p +: ps) => unconcur(p) >> unconcur(Seq(ps))
+    case Seq(Nil) => Skip
+    case Seq(p :: ps) => unconcur(p) >> unconcur(Seq(ps))
     case Alt(set) => Alt(set.map(unconcur(_)))
     case Error | Skip | Mkdir(_) | CreateFile(_, _) | Rm(_) | Cp(_, _) => expr
     case Filter(_) => {
