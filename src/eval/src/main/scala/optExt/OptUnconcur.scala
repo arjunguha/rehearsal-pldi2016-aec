@@ -1,12 +1,8 @@
 package fsmodel.optExt
 
-import fsmodel.core
 import fsmodel.optExt.Implicits._
 
-// NOTE(kgeffen) This is a very simple function
-// It will generate core exprs with Skips throughout in many cases
-
-private[optExt] object SimpleUnconcur {
+private[optExt] object OptUnconcur {
 
   def unconcur(expr: Expr): Expr = expr match {
     case Atomic(p) => Atomic(unconcur(p))
@@ -17,15 +13,20 @@ private[optExt] object SimpleUnconcur {
       val e2 = unconcur(q)
       (Filter(a) >> e2) + (e2 >> Filter(a))
     }
-    case Concur(Seq(Nil), r) => {
-      unconcur(r)
-    }
+    case Concur(Seq(Nil), r) => unconcur(r)
+    case Concur(Seq(p :: Nil), r) => unconcur(Concur(p, r))
     case Concur(Seq(p :: ps), r) => {
-      unconcur((p * r) >> Seq(ps)) + unconcur(p >> (Concur(Seq(ps), r)))
+      // NOTE(kgeffen) Cover one side each recursion instead of covering each
+      // case twice (p1 * r >> p2 and p1 >> p2 * r share p1 >> r >> p2)
+      // On last recursion, second side is covered since
+      // case Con(Seq(p :: Nil), r) calls unc(Concur(p, r)) which has 2 terms
+      val r_unc = unconcur(r)
+      val p_unc = unconcur(p)
+      val first = r_unc >> p_unc >> unconcur(Seq(ps))
+      val rest = p_unc >> unconcur(Concur(Seq(ps), r_unc))
+      first + rest
     }
     case Concur(Alt(set), r) => {
-      // TODO(kgeffen) We talked about not commiting to ordering too early.
-      // Might be relevant here
       Alt(set.map(p => unconcur(Concur(p, r))))
     }
     case Concur(Concur(p, q), r) => unconcur(unconcur(p * q) * r)
@@ -38,8 +39,8 @@ private[optExt] object SimpleUnconcur {
       val e2 = unconcur(q)
       (p >> e2) + (e2 >> p)
     }
-    case Seq(Nil) => Skip
-    case Seq(p :: ps) => unconcur(p) >> unconcur(Seq(ps))
+    // TODO(kgeffen) Optimize for when error is a part of sequence
+    case Seq(list) => Seq(list.map(unconcur(_)))
     case Alt(set) => Alt(set.map(unconcur(_)))
     case Error | Skip | Mkdir(_) | CreateFile(_, _) | Rm(_) | Cp(_, _) => expr
     case Filter(_) => {

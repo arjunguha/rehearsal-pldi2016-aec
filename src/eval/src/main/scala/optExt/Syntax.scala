@@ -7,7 +7,7 @@ import java.nio.file.Path
 sealed abstract trait Expr {
   // TODO(kgeffen) Implement these methods for opt ext
   def unconcur(): Expr = SimpleUnconcur.unconcur(this)
-  // def unconcurOpt(): Expr = OptUnconcur.unconcur(this)
+  def unconcurOpt(): Expr = OptUnconcur.unconcur(this)
   // def unatomic(): Expr = Unatomic.unatomic(this)
   def pretty(): String = Pretty.pretty(Pretty.AltCxt, this)
   // def toCore(): core.Expr = ToCore.toCore(this)
