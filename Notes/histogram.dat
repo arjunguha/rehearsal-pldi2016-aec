@@ -42,3 +42,6 @@ vagrant-percona-mha-manager 36 13
 vagrant-percona-mha-node 35 17
 vagrant-percona-server 33 18
 vagrant-percona-pxc 35 15
+yoxos 43 22
+redis-multinode 31 13
+yorrick 32 27
