@@ -13,6 +13,7 @@ private[ext] object Pretty {
     case Error => "error"
     case Skip => "skip"
     case Filter(a) => a.toString
+    case If(a, p, q) => s"If($a, ${pretty(cxt, p)}, ${pretty(cxt, q)})"
     case Seq(p, q) => pretty(SeqCxt, p) + " >> " + pretty(SeqCxt, q)
     case Concur(p, q) => {
       val str = pretty(ConcurCxt, p) + " * " + pretty(ConcurCxt, q)

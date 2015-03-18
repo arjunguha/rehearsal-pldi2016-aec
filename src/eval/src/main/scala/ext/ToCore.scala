@@ -9,6 +9,7 @@ private[ext] object ToCore {
     case Error => core.Error
     case Skip => core.Skip
     case Filter(a) => core.If(a, core.Skip, core.Error)
+    case If(a, p, q) => core.If(a, toCore(p), toCore(q))
     case Seq(p, q) => core.Block(toCore(p), toCore(q))
     case Alt(p, q) => core.Alt(toCore(p), toCore(q))
     case Mkdir(path) => core.Mkdir(path)

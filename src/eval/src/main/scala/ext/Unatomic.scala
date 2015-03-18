@@ -6,6 +6,7 @@ import Implicits._
 private[ext] object Unatomic {
 
   def unatomic(expr: Expr): Expr = expr match {
+    case If(a, p, q) => If(a, unatomic(p), unatomic(q))
     case Seq(p, q) => unatomic(p) >> unatomic(q)
     case Alt(p, q) => unatomic(p) + unatomic(q)
     case Atomic(p) => unatomic(p)

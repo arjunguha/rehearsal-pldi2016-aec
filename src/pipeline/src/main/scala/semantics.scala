@@ -25,9 +25,6 @@ private[pipeline] object Provider {
   import puppet.common.resource._
   import puppet.common.resource.Extractor._
 
-  def If(p: core.Pred, true_br: ext.Expr, false_br: ext.Expr): ext.Expr =
-    (Filter(p) >> true_br) + (Filter(!p) >> false_br)
-
   def Block(es: ext.Expr*): ext.Expr =
     if(0 != es.size) es.reduceRight(Seq(_, _)) else Skip
 

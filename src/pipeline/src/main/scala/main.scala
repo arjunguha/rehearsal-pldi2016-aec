@@ -45,7 +45,7 @@ package object pipeline {
                               .unatomic()
     */
 
-    val opt_expr = ext_expr/*.toOpt*/.unconcurOpt()
+    val opt_expr = ext_expr.toOpt.unconcurOpt()
                                  .unatomic()
 
     val states = Eval.eval(opt_expr.toCore(), fs).toSet

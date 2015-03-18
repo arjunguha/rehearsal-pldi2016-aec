@@ -27,6 +27,10 @@ private[ext] object OptUnconcur {
       val e2 = unconcur(q)
       (Filter(a) >> e2) + (e2 >> Filter(a))
     }
+    case Concur(If(a, p, q), r) => {
+      (unconcur(r) >> If(a, unconcur(p), unconcur(q))) +
+      (If(a, unconcur(p * r), unconcur(q * r)))
+    }
     case Concur(Seq(p, q), r) => unconcur((p * r) >> q) + unconcur(p >> (q * r))
     case Concur(Alt(p, q), r) => unconcur(p * r) + unconcur(q * r)
     case Concur(Concur(p, q), r) => unconcur(unconcur(p * q) * r)
@@ -39,6 +43,7 @@ private[ext] object OptUnconcur {
       val e2 = unconcur(q)
       (p >> e2) + (e2 >> p)
     }
+    case If(a, p, q) => If(a, unconcur(p), unconcur(q))
     case Seq(p, q) => unconcur(p) >> unconcur(q)
     case Alt(p, q) => unconcur(p) + unconcur(q)
     case Error | Skip | Mkdir(_) | CreateFile(_, _) | Rm(_) | Cp(_, _) => expr

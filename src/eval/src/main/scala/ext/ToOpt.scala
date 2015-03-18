@@ -10,6 +10,7 @@ private[ext] object ToOpt {
     case Error => optExt.Error
     case Skip => optExt.Skip
     case Filter(a) => optExt.Filter(a)
+    case If(a, p, q) => throw new Exception()
     case Seq(p, q) => (p.toOpt(), q.toOpt()) match {
       case (optExt.Skip, q)       => q
       case (p, optExt.Skip)       => p

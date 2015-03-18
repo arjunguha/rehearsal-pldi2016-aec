@@ -36,6 +36,10 @@ object Ample {
         List(st -> Error)
       }
     }
+    case If(a, p, q) => evalPred(a, st) match {
+      case true => d(st, p)
+      case false => d(st, q)
+    }
     case Mkdir(f) => (st.get(f.getParent), st.get(f)) match {
       case (Some(IsDir), None) => List((st + (f -> IsDir), Skip))
       case _ => List(st -> Error)
@@ -44,13 +48,23 @@ object Ample {
       case (Some(IsDir), None) => List((st + (f -> IsFile)) -> Skip)
       case _ => List(st -> Error)
     }
-    case Cp(_, _) => throw new Exception()
-    case Rm(_) => throw new Exception()
+    case Cp(src, dst) => throw new Exception()
+    case Rm(f) => throw new Exception()
+    // st.get(f) match {
+    //   case None => List(st -> Error)
+    //   case Some(true) => st.keys.exists(k => k.getParent == f) match {
+    //     case true => List(st -> Error)
+    //     case false => List(st - f, Skip)
+    //   }
+    // }
     case Alt(p, q) => d(st, p) ++ d(st, q)
     case Seq(Skip, q) => d(st, q)
-    case Seq(p, q) => for {
-      (st1, p1) <- d(st, p)
-    } yield (st1, Seq(p1, q))
+    case Seq(p, q) => d(st, p) match {
+      case Nil => d(st, q)
+      case d1 => for {
+        (st1, p1) <- d1
+      } yield (st1, Seq(p1, q))
+    }
     case Atomic(p) => d(st, p)
     case (Concur(p, q)) => {
       if (Commutativity.commutes(p, q)) {
