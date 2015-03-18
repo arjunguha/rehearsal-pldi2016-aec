@@ -88,17 +88,28 @@ object Ample {
     }
   }
 
-  def makeGraphHelper(g: MyGraph, n1: Node): Unit = {
+  def getBranchingState(g: MyGraph, n: Node): Node = {
+    d(n.state, n.expr) match {
+      case List() => n
+      case List(n2) => getBranchingState(g, n2)
+      case _ => n
+    }
+  }
+
+  def dfs(g: MyGraph, n1: Node): Unit = {
     if (n1.visited) {
       return
     }
 
     n1.visited = true
 
-    for (node <- d(n1.state, n1.expr)) {
+    val nBranch = getBranchingState(g, n1)
+    g.add(DiEdge(n1, nBranch))
+
+    for (node <- d(nBranch.state, nBranch.expr)) {
       val n2 = g.addAndGet(node)
-      g.add(DiEdge(n1, n2.value))
-      makeGraphHelper(g, n2.value)
+      g.add(DiEdge(nBranch, n2.value))
+      dfs(g, n2.value)
     }
   }
 
@@ -106,7 +117,7 @@ object Ample {
     val g: MyGraph = Graph.empty
     val node = Node(state, expr)
     g.add(node)
-    makeGraphHelper(g, node)
+    dfs(g, node)
     g
   }
 

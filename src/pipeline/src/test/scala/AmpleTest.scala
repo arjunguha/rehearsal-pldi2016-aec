@@ -73,7 +73,7 @@ class AmpleTest extends FunSuite {
   }
 
   runBenchmark("puppet-mosh")
-  runBenchmark("vagrantpress")
+  //runBenchmark("vagrantpress")
 
   def runTest(filename: String, program: String) {
     val graph = parse(program).desugar()
