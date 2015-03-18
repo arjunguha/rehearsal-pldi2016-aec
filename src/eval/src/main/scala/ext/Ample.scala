@@ -7,6 +7,7 @@ import scalax.collection.edge.{LDiEdge}
 import scalax.collection.GraphEdge.DiEdge
 import scalax.collection.mutable.Graph
 
+import Implicits._
 
 object Ample {
 
@@ -69,15 +70,15 @@ object Ample {
       case Nil => d(st, q)
       case d1 => for {
         Node(st1, p1) <- d1
-      } yield Node(st1, Seq(p1, q))
+      } yield Node(st1, p1 >> q)
     }
     case Atomic(p) => d(st, p)
     case (Concur(p, q)) => {
       if (Commutativity.commutes(p, q)) {
-        d(st, Seq(p, q))
+        d(st, p >> q)
       }
       else if (isAtomic(p) && isAtomic(q)) {
-        d(st, Alt(Seq(p, q), Seq(q, p)))
+        d(st,  (p >> q) + (q >> p))
       }
       else {
         val sts1 = for (Node(st1, p1) <- d(st, p)) yield Node(st1, Concur(p1, q))

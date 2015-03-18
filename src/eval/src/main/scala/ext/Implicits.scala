@@ -2,11 +2,23 @@ package fsmodel.ext
 
 object Implicits {
 
-  implicit class RichExpr(expr: Expr) {
+  implicit class RichExpr(e1: Expr) {
 
-    def +(other: Expr) = Alt(expr, other)
-    def *(other: Expr) = Concur(expr, other)
-    def >>(other: Expr) = Seq(expr, other)
+    def +(e2: Expr) = (e1, e2) match {
+      case (Error, _) => e2
+      case (_, Error) => e1
+      case _ => Alt(e1, e2)
+    }
+
+    def *(e2: Expr) = Concur(e1, e2)
+
+    def >>(e2: Expr) = (e1, e2) match {
+      case (Skip, _) => e2
+      case (_, Skip) => e1
+      case (Error, _) => Error
+      case (_, Error) => Error
+      case _ => Seq(e1, e2)
+    }
 
   }
 

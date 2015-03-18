@@ -58,16 +58,22 @@ class AmpleTest extends FunSuite {
   }
 
 
-  test("benchmark") {
-    println("Generating resource graph")
-    val resourceGraph = BenchmarkLoader.benchmarks("vagrantpress").toGraph(Facter.emptyEnv)
-    println("Generating expression")
-    val expr = pipeline.resourceGraphToExpr(resourceGraph)
-    println("Generating graph")
-    val evalGraph = Ample.makeGraph(Ample.initState, expr)
-    val finalStates = getFinalStates(evalGraph)
-    info(s"Graph has ${evalGraph.nodes.size} nodes and ${finalStates.size} final states")
+  def runBenchmark(name: String) {
+    test(name) {
+      println("Generating resource graph")
+      val resourceGraph = BenchmarkLoader.benchmarks(name).toGraph(Facter.emptyEnv)
+      println("Generating expression")
+      val expr = pipeline.resourceGraphToExpr(resourceGraph)
+      println(s"Expression size is ${expr.size}")
+      println("Generating graph")
+      val evalGraph = Ample.makeGraph(Ample.initState, expr)
+      val finalStates = getFinalStates(evalGraph)
+      info(s"Graph has ${evalGraph.nodes.size} nodes and ${finalStates.size} final states")
+    }
   }
+
+  runBenchmark("puppet-mosh")
+  runBenchmark("vagrantpress")
 
   def runTest(filename: String, program: String) {
     val graph = parse(program).desugar()

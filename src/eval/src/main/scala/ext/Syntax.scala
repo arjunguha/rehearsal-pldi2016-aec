@@ -12,20 +12,51 @@ sealed abstract trait Expr {
   def toCore(): core.Expr = ToCore.toCore(this)
   def commutesWith(other: Expr) = Commutativity.commutes(this, other)
 
+  def size(): Int
+
 }
 
-case object Error extends Expr
-case object Skip extends Expr
-case class Filter(a: Pred) extends Expr
-case class If(a: Pred, p: Expr, q: Expr) extends Expr
-case class Seq(p: Expr, q: Expr) extends Expr
-case class Alt(p: Expr, q: Expr) extends Expr
-case class Atomic(p: Expr) extends Expr
-case class Concur(p: Expr, q: Expr) extends Expr
-case class Mkdir(path: Path) extends Expr
+case object Error extends Expr {
+  val size = 1
+}
+case object Skip extends Expr {
+  val size = 1
+}
+case class Filter(a: Pred) extends Expr {
+  val size = 1
+}
+case class If(a: Pred, p: Expr, q: Expr) extends Expr {
+  def size() = p.size + q.size
+}
+case class Seq(p: Expr, q: Expr) extends Expr {
+  def size() = p.size + q.size
+}
+
+case class Alt(p: Expr, q: Expr) extends Expr {
+  def size() = p.size + q.size
+}
+
+case class Atomic(p: Expr) extends Expr {
+  def size() = p.size + 1
+}
+
+case class Concur(p: Expr, q: Expr) extends Expr {
+  def size() = p.size + q.size
+}
+
+case class Mkdir(path: Path) extends Expr {
+  val size = 1
+}
+
 case class CreateFile(path: Path, hash: Array[Byte]) extends Expr {
   require(hash.length == 16,
           s"hashcode must be 16 bytes long (got ${hash.length})")
+  val size = 1
+
 }
-case class Rm(path: Path) extends Expr
-case class Cp(src: Path, dst: Path) extends Expr
+case class Rm(path: Path) extends Expr {
+  val size = 1
+}
+case class Cp(src: Path, dst: Path) extends Expr {
+  val size = 1
+}
