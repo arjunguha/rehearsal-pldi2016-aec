@@ -3,7 +3,7 @@ package pipeline
 // Puppet uses facter to produce an environment of system-specific variables.
 // This module lets us either run Facter or load an environment from a
 // file.
-private[pipeline] object Facter {
+object Facter {
 
   import java.nio.file._
   import scala.util.Try

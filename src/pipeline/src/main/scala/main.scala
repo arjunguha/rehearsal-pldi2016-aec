@@ -45,10 +45,8 @@ package object pipeline {
                               .unatomic()
     */
 
-    val opt_expr = ext_expr.toOpt.unconcurOpt()
-                                 .unatomic()
 
-    val states = Eval.eval(opt_expr.toCore(), fs).toSet
+    val states = Eval.eval(ext_expr.toCore(), fs).toSet
 
     // TODO(nimish): debug only
     if(states.size != 1) {
@@ -58,7 +56,6 @@ package object pipeline {
       println()
       // println(simple_expr.pretty())
       // println()
-      println(opt_expr.pretty())
       println()
       println()
       println()

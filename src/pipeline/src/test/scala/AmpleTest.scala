@@ -1,10 +1,8 @@
-package pipeline
+import pipeline._
 
 // TODO(kgeffen) prune
 import puppet.syntax._
 import puppet.graph._
-
-import puppet.common.{resource => resrc}
 
 import fsmodel._
 import fsmodel.ext._
@@ -52,12 +50,23 @@ class AmpleTest extends FunSuite {
     runTest("3.dot", program)
   }
 
-  // Takes 13 mins
   test("3 package install") {
     val program = """package{["sl",
                               "cowsay",
                               "cmatrix"]: }"""
     runTest("4.dot", program)
+  }
+
+
+  test("benchmark") {
+    println("Generating resource graph")
+    val resourceGraph = BenchmarkLoader.benchmarks("vagrantpress").toGraph(Facter.emptyEnv)
+    println("Generating expression")
+    val expr = pipeline.resourceGraphToExpr(resourceGraph)
+    println("Generating graph")
+    val evalGraph = Ample.makeGraph(Ample.initState, expr)
+    val finalStates = getFinalStates(evalGraph)
+    info(s"Graph has ${evalGraph.nodes.size} nodes and ${finalStates.size} final states")
   }
 
   def runTest(filename: String, program: String) {
