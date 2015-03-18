@@ -27,7 +27,7 @@ class AmpleTest extends FunSuite {
   }
 
   def getFinalStates(g: Ample.MyGraph): scala.collection.mutable.Set[State] = {
-    g.nodes.filter(n => n.outDegree == 0).map(_.value._1)
+    g.nodes.filter(n => n.outDegree == 0).map(_.value.state)
   }
 
   test("single package without attributes") {

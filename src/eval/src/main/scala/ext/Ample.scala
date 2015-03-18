@@ -10,7 +10,13 @@ import scalax.collection.mutable.Graph
 
 object Ample {
 
-  type Node = (State, Expr)
+  case class Node(state: State, expr: Expr) {
+    // Equality and hash-code only consider the elements in the product.
+    // http://stackoverflow.com/a/5867037
+    var visited = false
+  }
+
+
   type MyGraph = Graph[Node, DiEdge]
 
   def isAtomic(e: Expr): Boolean = e match {
@@ -30,10 +36,10 @@ object Ample {
     case Skip => List()
     case Filter(a) => {
       if (evalPred(a, st)) {
-        List(st -> Skip)
+        List(Node(st, Skip))
       }
       else {
-        List(st -> Error)
+        List(Node(st, Error))
       }
     }
     case If(a, p, q) => evalPred(a, st) match {
@@ -41,12 +47,12 @@ object Ample {
       case false => d(st, q)
     }
     case Mkdir(f) => (st.get(f.getParent), st.get(f)) match {
-      case (Some(IsDir), None) => List((st + (f -> IsDir), Skip))
-      case _ => List(st -> Error)
+      case (Some(IsDir), None) => List(Node(st + (f -> IsDir), Skip))
+      case _ => List(Node(st, Error))
     }
     case CreateFile(f, _) => (st.get(f.getParent), st.get(f)) match {
-      case (Some(IsDir), None) => List((st + (f -> IsFile)) -> Skip)
-      case _ => List(st -> Error)
+      case (Some(IsDir), None) => List(Node(st + (f -> IsFile), Skip))
+      case _ => List(Node(st, Error))
     }
     case Cp(src, dst) => throw new Exception()
     case Rm(f) => throw new Exception()
@@ -62,8 +68,8 @@ object Ample {
     case Seq(p, q) => d(st, p) match {
       case Nil => d(st, q)
       case d1 => for {
-        (st1, p1) <- d1
-      } yield (st1, Seq(p1, q))
+        Node(st1, p1) <- d1
+      } yield Node(st1, Seq(p1, q))
     }
     case Atomic(p) => d(st, p)
     case (Concur(p, q)) => {
@@ -74,36 +80,38 @@ object Ample {
         d(st, Alt(Seq(p, q), Seq(q, p)))
       }
       else {
-        val sts1 = for ((st1, p1) <- d(st, p)) yield (st1, Concur(p1, q))
-        val sts2 = for ((st1, q1) <- d(st, q)) yield (st1, Concur(p, q1))
+        val sts1 = for (Node(st1, p1) <- d(st, p)) yield Node(st1, Concur(p1, q))
+        val sts2 = for (Node(st1, q1) <- d(st, q)) yield Node(st1, Concur(p, q1))
         sts1 ++ sts2
       }
     }
   }
 
-  def makeGraphHelper(g: MyGraph, st: State, e: Expr): Unit = {
-    val n1 = st -> e
-    assert(g.nodes.contains(n1))
+  def makeGraphHelper(g: MyGraph, n1: Node): Unit = {
+    if (n1.visited) {
+      return
+    }
 
-    for (n2 <- d(st, e)) {
-      val isCreated = g.add(DiEdge(n1, n2))
-      if (isCreated) {
-        val (st1, e1) = n2
-        makeGraphHelper(g, st1, e1)
-      }
+    n1.visited = true
+
+    for (node <- d(n1.state, n1.expr)) {
+      val n2 = g.addAndGet(node)
+      g.add(DiEdge(n1, n2.value))
+      makeGraphHelper(g, n2.value)
     }
   }
 
   def makeGraph(state: State, expr: Expr): MyGraph = {
     val g: MyGraph = Graph.empty
-    g.add(state -> expr)
-    makeGraphHelper(g, state, expr)
+    val node = Node(state, expr)
+    g.add(node)
+    makeGraphHelper(g, node)
     g
   }
 
   def finalStates(init: State, expr: Expr): scala.collection.mutable.Set[State] = {
     val g = makeGraph(init, expr)
-    g.nodes.filter(n => n.outDegree == 0).map(_.value._1)
+    g.nodes.filter(n => n.outDegree == 0).map(_.value.state)
   }
 
   val initState = Map(java.nio.file.Paths.get("/") -> IsDir)
