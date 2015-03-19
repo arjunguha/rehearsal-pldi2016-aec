@@ -17,7 +17,6 @@ object Ample {
     var visited = false
   }
 
-
   type MyGraph = Graph[Node, DiEdge]
 
   def isAtomic(e: Expr): Boolean = e match {
@@ -80,6 +79,18 @@ object Ample {
       else if (isAtomic(p) && isAtomic(q)) {
         d(st,  (p >> q) + (q >> p))
       }
+      else if (isAtomic(p)) {
+        // whole of p has to interleave at any point in q
+        val sts1 = d(st, p >> q)
+        val sts2 = for(Node(st1, q1) <- d(st, q)) yield Node(st1, Concur(p, q1))
+        sts1 ++ sts2
+      }
+      else if (isAtomic(q)) {
+        // whole of q has to interleave at any point in p
+        val sts1 = d(st, q >> p)
+        val sts2 = for(Node(st1, p1) <- d(st, p)) yield Node(st1, Concur(p1, q))
+        sts1 ++ sts2
+      }
       else {
         val sts1 = for (Node(st1, p1) <- d(st, p)) yield Node(st1, Concur(p1, q))
         val sts2 = for (Node(st1, q1) <- d(st, q)) yield Node(st1, Concur(p, q1))
@@ -104,7 +115,10 @@ object Ample {
     n1.visited = true
 
     val nBranch = getBranchingState(g, n1)
-    g.add(DiEdge(n1, nBranch))
+    // Don't introduce self edges
+    if (n1 != nBranch) {
+      g.add(DiEdge(n1, nBranch))
+    }
 
     for (node <- d(nBranch.state, nBranch.expr)) {
       val n2 = g.addAndGet(node)
@@ -147,9 +161,5 @@ object Ample {
 
     val immutableG = scalax.collection.Graph.from[Node, DiEdge](g.nodes, g.edges)
     immutableG.toDot(root, edgeTransformer, None, None, Some(nodeTransformer))
-
-
   }
-
-
 }
