@@ -31,6 +31,11 @@ object Ample {
     case _ => false
   }
 
+  def isTerminal(e: Expr): Boolean = e match {
+    case Skip => true
+    case _ => false
+  }
+
   def d(st: State, e: Expr): List[Node] = e match {
     case Error => List()
     case Skip => List()
@@ -71,38 +76,42 @@ object Ample {
         Node(st1, p1) <- d1
       } yield Node(st1, p1 >> q)
     }
-    case Atomic(p) => d(st, p)
+    /* Since we are dealing with atomic, immediate states should
+     * not be visible to outside world
+     */
+    case Atomic(p) => {
+
+      val next_nodes =  d(st, p)
+
+      def getTerminalNodes(nodes: List[Node],
+                           terminals: List[Node]): List[Node] = nodes match {
+        case Nil => terminals
+        case _ => {
+          val (terms, intermediates) = nodes.partition((n) => isTerminal(n.expr))
+          val new_nodes = intermediates.map((n) => d(n.state, n.expr)).flatten
+          getTerminalNodes(new_nodes, terms ::: terminals)
+        }
+      }
+
+      getTerminalNodes(next_nodes, List.empty[Node])
+    }
+
     case (Concur(p, q)) => {
       if (Commutativity.commutes(p, q)) {
         d(st, p >> q)
       }
-      else if (isAtomic(p) && isAtomic(q)) {
-        d(st,  (p >> q) + (q >> p))
-      }
-      else if (isAtomic(p)) {
-        // whole of p has to interleave at any point in q
-        val sts1 = d(st, p >> q)
-        val sts2 = for(Node(st1, q1) <- d(st, q)) yield Node(st1, Concur(p, q1))
-        sts1 ++ sts2
-      }
-      else if (isAtomic(q)) {
-        // whole of q has to interleave at any point in p
-        val sts1 = d(st, q >> p)
-        val sts2 = for(Node(st1, p1) <- d(st, p)) yield Node(st1, Concur(p1, q))
-        sts1 ++ sts2
-      }
       else {
-        val sts1 = for (Node(st1, p1) <- d(st, p)) yield Node(st1, Concur(p1, q))
-        val sts2 = for (Node(st1, q1) <- d(st, q)) yield Node(st1, Concur(p, q1))
+        val sts1 = for (Node(st1, p1) <- d(st, p)) yield Node(st1, p1 * q)
+        val sts2 = for (Node(st1, q1) <- d(st, q)) yield Node(st1, p * q1)
         sts1 ++ sts2
       }
     }
   }
 
-  def getBranchingState(g: MyGraph, n: Node): Node = {
+  def getBranchingState(n: Node): Node = {
     d(n.state, n.expr) match {
       case List() => n
-      case List(n2) => getBranchingState(g, n2)
+      case List(n2) => getBranchingState(n2)
       case _ => n
     }
   }
@@ -114,7 +123,7 @@ object Ample {
 
     n1.visited = true
 
-    val nBranch = getBranchingState(g, n1)
+    val nBranch = getBranchingState(n1)
     // Don't introduce self edges
     if (n1 != nBranch) {
       g.add(DiEdge(n1, nBranch))
