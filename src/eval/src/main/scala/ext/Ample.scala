@@ -37,7 +37,7 @@ object Ample {
   }
 
   def d(st: State, e: Expr): List[Node] = e match {
-    case Error => List()
+    case Error => throw new Exception("Error encountered")
     case Skip => List()
     case Filter(a) => {
       if (evalPred(a, st)) {
@@ -60,14 +60,12 @@ object Ample {
       case _ => List(Node(st, Error))
     }
     case Cp(src, dst) => throw new Exception()
-    case Rm(f) => throw new Exception()
-    // st.get(f) match {
-    //   case None => List(st -> Error)
-    //   case Some(true) => st.keys.exists(k => k.getParent == f) match {
-    //     case true => List(st -> Error)
-    //     case false => List(st - f, Skip)
-    //   }
-    // }
+    case Rm(f) if st.contains(f) => st(f) match {
+      case IsDir if st.keys.exists(_.getParent == f) => List(Node(st, Error)) // Dir should be empty to delete
+      case IsFile | IsDir => List(Node(st - f, Skip))
+      case _ => throw new Exception("Invalid state")
+    }
+    case Rm(_) => List(Node(st, Error))
     case Alt(p, q) => d(st, p) ++ d(st, q)
     case Seq(Skip, q) => d(st, q)
     case Seq(p, q) => d(st, p) match {

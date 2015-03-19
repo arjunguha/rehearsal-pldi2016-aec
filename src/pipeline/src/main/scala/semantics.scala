@@ -19,22 +19,18 @@ private[pipeline] object Provider {
   import java.nio.file.Path
 
   import fsmodel.core.Implicits._
-
   import fsmodel.ext.Implicits._
 
   import puppet.common.resource._
   import puppet.common.resource.Extractor._
 
   def Block(es: ext.Expr*): ext.Expr =
-    if(0 != es.size) es.reduceRight(Seq(_, _)) else Skip
+    es.foldRight(Skip: ext.Expr)((e, expr) => e >> expr)
 
   def Content(s: String): Array[Byte] = {
     import java.security.MessageDigest
     MessageDigest.getInstance("MD5").digest(s.getBytes)
   }
-
-  def mkdirIdempotent(path: Path): ext.Expr =
-    If(TestFileState(path, DoesNotExist), Mkdir(path), Skip)
 
   def apply(r: Resource): Provider = r.typ match {
     case "File" => File(r)
