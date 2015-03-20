@@ -10,6 +10,7 @@ sealed abstract trait Expr {
   def unatomic(): Expr = Unatomic.unatomic(this)
   def pretty(): String = Pretty.pretty(Pretty.AltCxt, this)
   def toCore(): core.Expr = ToCore.toCore(this)
+  def commutesWith(other: Expr) = Commutativity.commutes(this, other)
 
   def size(): Int
   def readSet(): Stream[Path]
