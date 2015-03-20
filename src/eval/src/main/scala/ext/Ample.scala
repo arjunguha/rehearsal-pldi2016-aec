@@ -98,7 +98,7 @@ object Ample {
         case Nil => terminals
         case _ => {
           val (terms, intermediates) = nodes.partition((n) => isTerminal(n.expr))
-          val new_nodes = intermediates.map((n) => d(n.state, n.expr)).flatten
+          val new_nodes = intermediates.flatMap((n) => d(n.state, n.expr))
           getTerminalNodes(new_nodes, terms ::: terminals)
         }
       }
@@ -118,11 +118,11 @@ object Ample {
     }
   }
 
-  def getBranchingState(n: Node): Node = {
+  def getBranchingState(n: Node): (Node, List[Node]) = {
     d(n.state, n.expr) match {
-      case List() => n
+      case List() => (n, Nil)
       case List(n2) => getBranchingState(n2)
-      case _ => n
+      case branches => (n, branches)
     }
   }
 
@@ -133,13 +133,14 @@ object Ample {
 
     n1.visited = true
 
-    val nBranch = getBranchingState(n1)
-    // Don't introduce self edges
+    val (nBranch, branches) = getBranchingState(n1)
+
     if (n1 != nBranch) {
+      nBranch.visited = true
       g.add(DiEdge(n1, nBranch))
     }
 
-    for (node <- d(nBranch.state, nBranch.expr)) {
+    for (node <- branches) {
       val n2 = g.addAndGet(node)
       g.add(DiEdge(nBranch, n2.value))
       dfs(g, n2.value)

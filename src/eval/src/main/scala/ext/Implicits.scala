@@ -7,6 +7,7 @@ object Implicits {
     def +(e2: Expr) = (e1, e2) match {
       case (Error, _) => e2
       case (_, Error) => e1
+      case _ if e1 == e2 => e1 
       case _ => Alt(e1, e2)
     }
 
