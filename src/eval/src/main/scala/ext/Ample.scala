@@ -37,7 +37,10 @@ object Ample {
   }
 
   def d(st: State, e: Expr): List[Node] = e match {
-    case Error => throw new Exception("Error encountered")
+    case Error => {
+      // throw new Exception("Error encountered")
+      List()
+    }
     case Skip => List()
     case Filter(a) => {
       if (evalPred(a, st)) {
@@ -53,11 +56,17 @@ object Ample {
     }
     case Mkdir(f) => (st.get(f.getParent), st.get(f)) match {
       case (Some(IsDir), None) => List(Node(st + (f -> IsDir), Skip))
-      case _ => List(Node(st, Error))
+      case _ => {
+        // println(s"Mkdir error: ${f.toString}")
+        List(Node(st, Error))
+      }
     }
     case CreateFile(f, _) => (st.get(f.getParent), st.get(f)) match {
       case (Some(IsDir), None) => List(Node(st + (f -> IsFile), Skip))
-      case _ => List(Node(st, Error))
+      case _ => {
+        // println(s"create file error: ${f.toString}")
+        List(Node(st, Error))
+      }
     }
     case Cp(src, dst) => throw new Exception()
     case Rm(f) if st.contains(f) => st(f) match {
@@ -65,7 +74,10 @@ object Ample {
       case IsFile | IsDir => List(Node(st - f, Skip))
       case _ => throw new Exception("Invalid state")
     }
-    case Rm(_) => List(Node(st, Error))
+    case Rm(_) => {
+      // println(s"Rm error")
+      List(Node(st, Error))
+    }
     case Alt(p, q) => d(st, p) ++ d(st, q)
     case Seq(Skip, q) => d(st, q)
     case Seq(p, q) => d(st, p) match {
@@ -94,8 +106,8 @@ object Ample {
       getTerminalNodes(next_nodes, List.empty[Node])
     }
 
-    case (Concur(p, q)) => {
-      if (Commutativity.commutes(p, q)) {
+    case ce @Concur(p, q) => {
+      if (ce.commutes) {
         d(st, p >> q)
       }
       else {

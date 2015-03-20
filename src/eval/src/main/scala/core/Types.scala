@@ -11,14 +11,29 @@ sealed trait Pred {
   def &&(other: Pred): Pred = And(this, other)
   def ||(other: Pred): Pred = Or(this, other)
   def unary_!(): Pred = Not(this)
+
+  def readSet(): Stream[Path]
+  def writeSet(): Stream[Path] = Stream()
 }
 
-case object True extends Pred
-case object False extends Pred
-case class And(a: Pred, b: Pred) extends Pred
-case class Or(a: Pred, b: Pred) extends Pred
-case class Not(a: Pred) extends Pred
-case class TestFileState(path: Path, s: FileState) extends Pred
+case object True extends Pred {
+  lazy val readSet = Stream[Path]()
+}
+case object False extends Pred {
+  lazy val readSet = Stream[Path]()
+}
+case class And(a: Pred, b: Pred) extends Pred {
+  lazy val readSet = a.readSet union b.readSet
+}
+case class Or(a: Pred, b: Pred) extends Pred {
+  lazy val readSet = a.readSet union b.readSet
+}
+case class Not(a: Pred) extends Pred {
+  lazy val readSet = a.readSet
+}
+case class TestFileState(path: Path, s: FileState) extends Pred {
+  lazy val readSet = Stream(path)
+}
 
 sealed trait Expr {
 
