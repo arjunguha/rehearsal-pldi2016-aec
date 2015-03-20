@@ -15,6 +15,10 @@ object Ample {
     // Equality and hash-code only consider the elements in the product.
     // http://stackoverflow.com/a/5867037
     var visited = false
+
+    // Cache hash code for performance reasons
+    override lazy val hashCode: Int =
+      runtime.ScalaRunTime._hashCode(this)
   }
 
   type MyGraph = Graph[Node, DiEdge]

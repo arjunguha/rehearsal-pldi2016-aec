@@ -4,7 +4,7 @@ import fsmodel.core
 import fsmodel.core.Pred
 import java.nio.file.Path
 
-sealed abstract trait Expr {
+sealed abstract trait Expr extends Product {
   def unconcur(): Expr = SimpleUnconcur.unconcur(this)
   def unconcurOpt(): Expr = OptUnconcur.unconcur(this)
   def unatomic(): Expr = Unatomic.unatomic(this)
@@ -15,6 +15,9 @@ sealed abstract trait Expr {
   def size(): Int
   def readSet(): Stream[Path]
   def writeSet(): Stream[Path]
+
+  override lazy val hashCode: Int =
+    runtime.ScalaRunTime._hashCode(this)
 }
 
 case object Error extends Expr {
@@ -79,7 +82,6 @@ case class CreateFile(path: Path, hash: Array[Byte]) extends Expr {
   val size = 1
   lazy val readSet = Stream[Path]()
   lazy val writeSet = Stream(path)
-
 }
 case class Rm(path: Path) extends Expr {
   val size = 1
