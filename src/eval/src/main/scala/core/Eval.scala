@@ -4,9 +4,62 @@ import java.nio.file.Path
 
 import Implicits._
 
+import scala.collection.mutable.{ Builder, MapBuilder }
+
+class PerfMap[A, +B](map: Map[A, B], hash: Int) extends scala.collection.MapLike[A, B, PerfMap[A, B]]
+                                                with Map[A, B] {
+
+  def get(key: A) = map.get(key)
+  def iterator = map.iterator
+  def +[B1 >: B](kv: (A, B1)) = {
+    /*
+    val (key, value) = kv
+    if (map.contains(key)) {
+      val old_kv = map(key)
+      val newMap = map + kv
+      new PerfMap(newMap, hashCode - old_kv.hashCode + kv.hashCode) // TODO(nimish): Check
+    }
+    else {
+    */
+//      val (key, value) = kv
+//      assert(!map.contains(key))
+      val newMap = map + kv
+      new PerfMap(newMap, hashCode + kv.hashCode)
+    // }
+  }
+
+  def -(key: A) = {
+//    if (map.contains(key)) {
+//      assert(map.contains(key))
+      val kv = map(key)
+      val newMap = map - key
+      new PerfMap(newMap, hashCode - kv.hashCode) // TODO(nimish): Check
+//    }
+//    else {
+//      this
+//    }
+  }
+
+  override val size = map.size
+//  override def foreach[U](f: ((A, B)) => U): Unit  = map.foreach(f)
+
+  override def empty = new PerfMap(Map.empty, 0)
+  override protected[this] def newBuilder = new MapBuilder[A, B, PerfMap[A, B]](empty)
+
+  override val hashCode = hash
+}
+
+object PerfMap {
+  def apply[A, B](map: Map[A, B]) = {
+    val hash = map.foldLeft(0)((acc, kv) => acc + kv.hashCode())
+    new PerfMap(map, hash)
+  }
+}
+
 object Eval {
 
-  type State = Map[Path, FileState]
+  // type State = Map[Path, FileState]
+  type State = PerfMap[Path, FileState]
 
   def eval(expr: Expr, s: State): List[State] = expr match {
     case Error => List()

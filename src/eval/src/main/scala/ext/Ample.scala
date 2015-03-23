@@ -7,6 +7,8 @@ import scalax.collection.edge.{LDiEdge}
 import scalax.collection.GraphEdge.DiEdge
 import scalax.collection.mutable.Graph
 
+import fsmodel.core.Implicits._
+
 import Implicits._
 
 object Ample {
@@ -90,7 +92,7 @@ object Ample {
         Node(st1, p1) <- d1
       } yield Node(st1, p1 >> q)
     }
-    /* Since we are dealing with atomic, immediate states should
+    /* Since we are dealing with atomic, intermediate states should
      * not be visible to outside world
      */
     case Atomic(p) => {
@@ -107,7 +109,7 @@ object Ample {
         }
       }
 
-      getTerminalNodes(next_nodes, List.empty[Node])
+      getTerminalNodes(next_nodes, List.empty)
     }
 
     case ce @Concur(p, q) => {

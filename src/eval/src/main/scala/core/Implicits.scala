@@ -10,8 +10,9 @@ object Implicits {
   implicit class RichString(str: String) {
 
     def toPath = Paths.get(str)
-
   }
 
+  implicit def MapToPerfMap(map: Map[Path, FileState]): PerfMap[Path, FileState] = {
+    PerfMap(map)
+  }
 }
-
