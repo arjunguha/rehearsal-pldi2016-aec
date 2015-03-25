@@ -40,18 +40,6 @@ class PerfMap[A, +B](map: Map[A, B], hash: Int) extends scala.collection.MapLike
 //    }
   }
 
-  override def canEqual(other: Any): Boolean =
-    other.isInstanceOf[PerfMap[_, _]]
-
-  override def equals(other: Any): Boolean = other match {
-    case that: PerfMap[_, _] => (that canEqual this) &&
-                                (that.size == this.size) &&
-                                (that.hashCode == this.hashCode) &&
-                                // super.equals(that)
-                                that.getMap == this.map
-    case _ => false
-  }
-
   override val size = map.size
 //  override def foreach[U](f: ((A, B)) => U): Unit  = map.foreach(f)
 
@@ -59,8 +47,6 @@ class PerfMap[A, +B](map: Map[A, B], hash: Int) extends scala.collection.MapLike
   override protected[this] def newBuilder = new MapBuilder[A, B, PerfMap[A, B]](empty)
 
   override val hashCode = hash
-
-  def getMap = map
 }
 
 object PerfMap {
