@@ -12,16 +12,16 @@ class PerfMap[A, +B](map: Map[A, B], hash: Int) extends scala.collection.MapLike
     /*
     val (key, value) = kv
     if (map.contains(key)) {
-      val old_kv = map(key)
+      val old_kv = (key, map(key))
       val newMap = map + kv
-      new PerfMap(newMap, hashCode - old_kv.hashCode + kv.hashCode) // TODO(nimish): Check
+      new PerfMap(newMap, hashCode - old_kv.hashCode + kv.hashCode)
     }
     else {
     */
 //      val (key, value) = kv
 //      assert(!map.contains(key))
       val newMap = map + kv
-      new PerfMap(newMap, hashCode + (kv.hashCode % PerfMap.modbase))
+      new PerfMap(newMap, hashCode + kv.hashCode)
     // }
   }
 
@@ -30,7 +30,7 @@ class PerfMap[A, +B](map: Map[A, B], hash: Int) extends scala.collection.MapLike
 //      assert(map.contains(key))
       val kv = (key, map(key))
       val newMap = map - key
-      new PerfMap(newMap, hashCode - (kv.hashCode % PerfMap.modbase))
+      new PerfMap(newMap, hashCode - kv.hashCode)
 //    }
 //    else {
 //      this
@@ -43,30 +43,56 @@ class PerfMap[A, +B](map: Map[A, B], hash: Int) extends scala.collection.MapLike
   override def empty = new PerfMap(Map.empty, PerfMap.seed)
   override protected[this] def newBuilder = new MapBuilder[A, B, PerfMap[A, B]](empty)
 
-  override val hashCode = hash % PerfMap.modbase
+  override val hashCode = hash
+
+/*
+  override def canEqual(other: Any): Boolean =
+    other.isInstanceOf[PerfMap[_, _]]
+
+  override def equals(other: Any): Boolean = other match {
+    case that: PerfMap[_, _] => {
+      val hashEqual = that.hashCode == this.hashCode
+      val mapEqual = that.getMap == this.map
+      if (hashEqual && !mapEqual) {
+        println("Collision detected")
+      }
+      else if (!hashEqual && mapEqual) {
+        println(s"Error detected, hashes are not equal even though maps are equal: ${that.hashCode} ${this.hashCode}")
+        that.getMap.foreach({ case (k, v) => println(s"""("${k}", $v),""") })
+        println()
+        println()
+        println()
+        println()
+        println()
+        this.map.foreach(println(_))
+        throw new Exception("Aborting..")
+      }
+      
+      (that canEqual this) &&
+      (that.size == this.size) &&
+      hashEqual &&
+      // super.equals(that)
+       mapEqual
+    }
+                                
+    case _ => false
+  }
+
+  def getMap = map
+*/
 }
 
 object PerfMap {
 
-//  val modbase = Int.MaxValue
-
-  /*
-   * http://www.wolframalpha.com/input/?i=prime+number+near+2%5E30
-   *
-   * modbase is chosen to be a prime number less than 2^30-2,
-   * Upper bound is 2^30-2 so that sum of two number module modbase does
-   * not overflow (i.e sum is always <= Int.MaxValue)
-   */
-  val modbase = 1073741789
   val seed = 0
 
   def apply[A, B](map: Map[A, B]) = {
-    val hash = map.foldLeft(seed)((acc, kv) => (acc + (kv.hashCode % modbase)) % modbase)
+    val hash = map.foldLeft(seed)((acc, kv) => acc + kv.hashCode)
     new PerfMap(map, hash)
   }
 
   def apply[A, B](xs: (A,B)*) = {
-    val hash = xs.foldLeft(seed)((acc, kv) => (acc + (kv.hashCode % modbase)) % modbase)
+    val hash = xs.foldLeft(seed)((acc, kv) => acc + kv.hashCode)
     new PerfMap(Map(xs:_*), hash)
   }
 

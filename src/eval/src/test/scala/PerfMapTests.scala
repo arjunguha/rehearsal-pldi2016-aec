@@ -74,4 +74,20 @@ class PerfMapTests extends org.scalatest.FunSuite {
 
     assert(basemap.hashCode == basemapDelAdd.hashCode)
   }
+
+  val additions = List[(Path, FileState)](
+    ("/usr", IsDir),
+    ("/home", IsDir),
+    ("/usr/share/cowsay/cows/pony.cow", IsFile),
+    ("/boot", IsDir)
+  )
+  
+  test("order of insertion should not affect hash code") {
+
+    val map1: State = PerfMap((additions.toSeq: _*))
+    val cnt = additions.permutations.take(1000)
+             .map((p) => PerfMap((p.toSeq: _*)).hashCode)
+             .count(_ != map1.hashCode)
+    assert(0 == cnt)
+  }
 }
