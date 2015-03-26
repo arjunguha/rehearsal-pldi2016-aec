@@ -39,29 +39,7 @@ package object pipeline {
 
     val ext_expr = resourceGraphToExpr(graph)
 
-    /*
-    // TODO(nimish): debug only
-    val simple_expr = ext_expr.unconcur()
-                              .unatomic()
-    */
-
-
-    val states = Eval.eval(ext_expr.toCore(), fs).toSet
-
-    // TODO(nimish): debug only
-    if(states.size != 1) {
-      printDOTGraph(graph)
-      println()
-      println(ext_expr.pretty())
-      println()
-      // println(simple_expr.pretty())
-      // println()
-      println()
-      println()
-      println()
-    }
-
-    states.size
+    0
   }
 
   // Reduce the graph to a single expression in fsmodel language

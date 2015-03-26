@@ -7,9 +7,7 @@ import java.nio.file.Path
 sealed abstract trait Expr extends Product {
   def unconcur(): Expr = SimpleUnconcur.unconcur(this)
   def unconcurOpt(): Expr = OptUnconcur.unconcur(this)
-  def unatomic(): Expr = Unatomic.unatomic(this)
   def pretty(): String = Pretty.pretty(Pretty.AltCxt, this)
-  def toCore(): core.Expr = ToCore.toCore(this)
   def commutesWith(other: Expr) = Commutativity.commutes(this, other)
 
   def size(): Int
