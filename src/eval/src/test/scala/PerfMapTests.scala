@@ -1,9 +1,9 @@
-import fsmodel.core._
-import Implicits._
-
-import java.nio.file.{Path, Paths}
+import eval._
 
 class PerfMapTests extends org.scalatest.FunSuite {
+
+  import Implicits._
+  import java.nio.file.{Path, Paths}
 
   type State = PerfMap[Path, FileState]
 

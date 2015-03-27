@@ -1,17 +1,16 @@
-package fsmodel.ext
-
-import fsmodel.core.Eval.{evalPred, State}
-import fsmodel.core.{FileState, IsFile, IsDir, Pred}
+package eval
 
 import scalax.collection.edge.{LDiEdge}
 import scalax.collection.GraphEdge.DiEdge
 import scalax.collection.mutable.Graph
 
-import fsmodel.core.Implicits._
-
 import Implicits._
 
 object Ample {
+
+  import java.nio.file.Path
+
+  type State = PerfMap[Path, FileState]
 
   case class Node(state: State, expr: Expr) {
     // Equality and hash-code only consider the elements in the product.
@@ -24,6 +23,18 @@ object Ample {
   }
 
   type MyGraph = Graph[Node, DiEdge]
+
+  def evalPred(pred: Pred, s: State): Boolean = pred match {
+    case True => true
+    case False => false
+    case And(a, b) => evalPred(a, s) && evalPred(b, s)
+    case Or(a, b) =>  evalPred(a, s) || evalPred(b, s)
+    case Not(a) => !evalPred(a, s)
+    case TestFileState(path, expectedFileState) => s.get(path) match {
+      case None => expectedFileState == DoesNotExist
+      case Some(fileState) => expectedFileState == fileState
+    }
+  }
 
   def isAtomic(e: Expr): Boolean = e match {
     case Skip => true

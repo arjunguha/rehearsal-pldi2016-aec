@@ -1,12 +1,10 @@
-package fsmodel.ext
+package eval
 
 import java.nio.file.Path
-import fsmodel.core.Pred
 
-private[ext] object Commutativity {
+private[eval] object Commutativity {
 
   def predReadSet(pred: Pred): Set[Path] = {
-    import fsmodel.core._
     pred match {
       case True | False => Set()
       case And(a, b) => predReadSet(a) ++ predReadSet(b)

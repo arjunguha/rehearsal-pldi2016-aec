@@ -7,9 +7,11 @@ object Ubuntu {
   import scala.io.Source._
   import scala.collection.immutable.HashMap
 
-  import fsmodel.core._
-  import Implicits._
-  import Eval._
+  import eval._
+  import eval.Implicits._
+
+  type State = Ample.State
+
 
   import scala.language.implicitConversions
   implicit def toPathState(elem: (String, FileState)) = (Paths.get(elem._1), elem._2)

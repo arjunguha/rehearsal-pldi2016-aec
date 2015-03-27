@@ -1,6 +1,20 @@
-package fsmodel.ext
+package eval
 
 object Implicits {
+
+  import  scala.language.implicitConversions
+  import java.nio.file.{Path, Paths}
+
+  implicit def stringToPath(str: String): Path = Paths.get(str)
+
+  implicit class RichString(str: String) {
+
+    def toPath = Paths.get(str)
+  }
+
+  implicit def MapToPerfMap(map: Map[Path, FileState]): PerfMap[Path, FileState] = {
+    PerfMap(map)
+  }
 
   implicit class RichExpr(e1: Expr) {
 
@@ -26,7 +40,5 @@ object Implicits {
       case (_, Error) => Error
       case _ => Seq(e1, e2)
     }
-
   }
-
 }

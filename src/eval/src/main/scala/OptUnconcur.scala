@@ -1,9 +1,20 @@
-package fsmodel.ext
+package eval
 
-import fsmodel.core
-import fsmodel.ext.Implicits._
+private[eval] object OptUnconcur {
 
-private[ext] object SimpleUnconcur {
+  def alt(p: Expr, q: Expr): Expr = (p, q) match {
+    // TODO(arjun): When applied recursively, this is a quadratic operation.
+    // It will help if object-equality <=> pointer-equality.
+    case (Seq(p1, p2), Seq(q1, q2))
+      if ((p1, p2) == (q2, q1) && p1.commutesWith(p2)) => p
+    case _ => Alt(p, q)
+  }
+
+  implicit class RichExpr(expr: Expr) {
+    def +(other: Expr) = alt(expr, other)
+    def *(other: Expr) = Concur(expr, other)
+    def >>(other: Expr) = Seq(expr, other)
+  }
 
   def unconcur(expr: Expr): Expr = expr match {
     case Atomic(p) => Atomic(unconcur(p))

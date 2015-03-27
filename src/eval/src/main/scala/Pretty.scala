@@ -1,8 +1,6 @@
-package fsmodel.ext
+package eval
 
-import fsmodel.core
-
-private[ext] object Pretty {
+private[eval] object Pretty {
 
   sealed abstract trait Cxt
   case object SeqCxt extends Cxt

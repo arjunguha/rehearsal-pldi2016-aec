@@ -1,6 +1,5 @@
-import fsmodel.ext._
-import fsmodel.ext.Implicits._
-import fsmodel.core.Implicits._
+import eval._
+import eval.Implicits._
 
 class ExtTests extends org.scalatest.FunSuite {
 

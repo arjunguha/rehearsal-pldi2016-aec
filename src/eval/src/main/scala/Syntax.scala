@@ -1,8 +1,46 @@
-package fsmodel.ext
+package eval
 
-import fsmodel.core
-import fsmodel.core.Pred
 import java.nio.file.Path
+
+sealed trait FileState
+case object IsFile extends FileState
+case object IsDir extends FileState
+case object DoesNotExist extends FileState
+
+sealed trait Pred {
+  def &&(other: Pred): Pred = And(this, other)
+  def ||(other: Pred): Pred = Or(this, other)
+  def unary_!(): Pred = Not(this)
+
+  def readSet(): Stream[Path]
+  def writeSet(): Stream[Path] = Stream()
+}
+
+case object True extends Pred {
+  lazy val readSet = Stream[Path]()
+}
+case object False extends Pred {
+  lazy val readSet = Stream[Path]()
+}
+case class And(a: Pred, b: Pred) extends Pred {
+  lazy val readSet = a.readSet union b.readSet
+}
+case class Or(a: Pred, b: Pred) extends Pred {
+  lazy val readSet = a.readSet union b.readSet
+}
+case class Not(a: Pred) extends Pred {
+  lazy val readSet = a.readSet
+}
+case class TestFileState(path: Path, s: FileState) extends Pred {
+  lazy val readSet = Stream(path)
+}
+
+object Pred {
+
+  def implies(a: Pred, b: Pred): Pred = Or(Not(a), b)
+
+}
+
 
 sealed abstract trait Expr extends Product {
   def unconcur(): Expr = SimpleUnconcur.unconcur(this)

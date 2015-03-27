@@ -1,15 +1,14 @@
-package pipeline
-
 import org.scalatest.FunSuite
+
+import pipeline._
 
 import scalax.collection.Graph
 import scalax.collection.GraphEdge._
 import scalax.collection.GraphPredef._
 import scalax.collection.edge.Implicits._
 
-import fsmodel._
-import fsmodel.ext._
-import fsmodel.ext.Implicits._
+import eval._
+import eval.Implicits._
 
 class UnitTestSuite extends FunSuite {
 
@@ -20,16 +19,15 @@ class UnitTestSuite extends FunSuite {
   }
 
   test("reduce graph with one topological ordering") {
-    val a = Filter(core.True)
-    val b = Filter(core.False)
-    assert(Skip >> a >> b == 
-           pipeline.reduceGraph(Graph(a ~> b), toExpr).unconcur()
-                                                      .unatomic())
+    val a = Filter(True)
+    val b = Filter(False)
+    assert(Skip >> Atomic(a) >> Atomic(b) == 
+           pipeline.reduceGraph(Graph(a ~> b), toExpr).unconcur())
   }
 
   test("reduce graph with concurrent operations") {
-    val a = Filter(core.True)
-    val b = Filter(core.False)
+    val a = Filter(True)
+    val b = Filter(False)
 
     val reduced_exp = pipeline.reduceGraph(Graph(a, b), toExpr)
 

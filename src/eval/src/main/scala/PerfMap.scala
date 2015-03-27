@@ -1,4 +1,4 @@
-package fsmodel.core
+package eval
 
 import scala.collection.mutable.{ Builder, MapBuilder }
 
@@ -10,42 +10,42 @@ class PerfMap[A, +B](map: Map[A, B], hash: Int) extends scala.collection.MapLike
   def iterator = map.iterator
   def +[B1 >: B](kv: (A, B1)) = {
     /*
-    val (key, value) = kv
-    if (map.contains(key)) {
-      val old_kv = (key, map(key))
-      val newMap = map + kv
-      new PerfMap(newMap, hashCode - old_kv.hashCode + kv.hashCode)
-    }
-    else {
-    */
-//      val (key, value) = kv
-//      assert(!map.contains(key))
+       val (key, value) = kv
+       if (map.contains(key)) {
+       val old_kv = (key, map(key))
+       val newMap = map + kv
+       new PerfMap(newMap, hashCode - old_kv.hashCode + kv.hashCode)
+       }
+       else {
+     */
+      //      val (key, value) = kv
+      //      assert(!map.contains(key))
       val newMap = map + kv
       new PerfMap(newMap, hashCode + kv.hashCode)
-    // }
-  }
+      // }
+    }
 
   def -(key: A) = {
-//    if (map.contains(key)) {
-//      assert(map.contains(key))
-      val kv = (key, map(key))
-      val newMap = map - key
-      new PerfMap(newMap, hashCode - kv.hashCode)
-//    }
-//    else {
-//      this
-//    }
+    //    if (map.contains(key)) {
+    //      assert(map.contains(key))
+    val kv = (key, map(key))
+    val newMap = map - key
+    new PerfMap(newMap, hashCode - kv.hashCode)
+    //    }
+    //    else {
+    //      this
+    //    }
   }
 
   override val size = map.size
-//  override def foreach[U](f: ((A, B)) => U): Unit  = map.foreach(f)
+  //  override def foreach[U](f: ((A, B)) => U): Unit  = map.foreach(f)
 
   override def empty = new PerfMap(Map.empty, PerfMap.seed)
   override protected[this] def newBuilder = new MapBuilder[A, B, PerfMap[A, B]](empty)
 
   override val hashCode = hash
 
-/*
+  /*
   override def canEqual(other: Any): Boolean =
     other.isInstanceOf[PerfMap[_, _]]
 
@@ -67,19 +67,19 @@ class PerfMap[A, +B](map: Map[A, B], hash: Int) extends scala.collection.MapLike
         this.map.foreach(println(_))
         throw new Exception("Aborting..")
       }
-      
+
       (that canEqual this) &&
       (that.size == this.size) &&
       hashEqual &&
       // super.equals(that)
-       mapEqual
+      mapEqual
     }
-                                
+
     case _ => false
   }
 
   def getMap = map
-*/
+  */
 }
 
 object PerfMap {

@@ -4,15 +4,12 @@ import pipeline._
 import puppet.syntax._
 import puppet.graph._
 
-import fsmodel._
-import fsmodel.ext._
-import fsmodel.core.Eval.State
+import eval._
+import eval.Implicits._
 
-import org.scalatest.FunSuite
 import java.nio.file._
 
-import Implicits._
-import fsmodel.core.Implicits._
+import org.scalatest.FunSuite
 
 class AmpleTest extends FunSuite {
 
@@ -26,7 +23,7 @@ class AmpleTest extends FunSuite {
     assert(finalStates.forall(s => s.keys.exists(_ == a)))
   }
 
-  def getFinalStates(g: Ample.MyGraph): scala.collection.mutable.Set[State] = {
+  def getFinalStates(g: Ample.MyGraph): scala.collection.mutable.Set[Ample.State] = {
     g.nodes.filter(n => n.outDegree == 0).map(_.value.state)
   }
 

@@ -10,17 +10,17 @@ import scalax.collection.GraphEdge._
 import scalax.collection.GraphPredef._
 import scalax.collection.edge.Implicits._
 
-import fsmodel._
-import fsmodel.ext._
+import eval._
+import eval.Implicits._
 
 package object pipeline {
 
-  def resourceGraphToExpr(resourceGraph: Graph[puppet.graph.Resource, DiEdge]): ext.Expr = {
+  def resourceGraphToExpr(resourceGraph: Graph[puppet.graph.Resource, DiEdge]): eval.Expr = {
     val toExpr = toCoreResource _ andThen { Provider(_).toFSOps() }
     reduceGraph(resourceGraph, toExpr)
   }
 
-  type State = core.Eval.State
+  type State = Ample.State
 
   def run(mainFile: String, modulePath: Option[String],
           env: Map[String, String],
@@ -32,30 +32,27 @@ package object pipeline {
                  env: Map[String, String],
                  fs: State): Int = {
 
-    import fsmodel.core._
-
     val graph = parse(program).desugar()
                               .toGraph(env)
 
-    val ext_expr = resourceGraphToExpr(graph)
+    val expr = resourceGraphToExpr(graph)
 
     0
   }
 
   // Reduce the graph to a single expression in fsmodel language
-  def reduceGraph[A](graph: Graph[A, DiEdge], toExpr: A=>ext.Expr): ext.Expr = {
+  def reduceGraph[A](graph: Graph[A, DiEdge], toExpr: A=>eval.Expr): eval.Expr = {
 
-    import fsmodel.ext.Implicits._
     import scala.annotation.tailrec
 
     @tailrec
-    def loop(graph: Graph[A, DiEdge], acc: ext.Expr): ext.Expr =
+    def loop(graph: Graph[A, DiEdge], acc: eval.Expr): eval.Expr =
       if(graph.isEmpty) acc
       else {
         val roots = graph.nodes.filter(_.inDegree == 0)
         loop(graph -- roots,
              acc >> roots.map((n) => Atomic(toExpr(n.value)))
-                         .reduce[ext.Expr](_ * _))
+                         .reduce[eval.Expr](_ * _))
       }
 
     loop(graph, Skip)

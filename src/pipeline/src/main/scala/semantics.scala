@@ -1,13 +1,8 @@
 package pipeline
 
 import puppet.common.util._
-import fsmodel._
-import fsmodel.ext._
-
-// TODO:(nimish) Should not use core 
-import fsmodel.core.Pred._
-import fsmodel.core.TestFileState
-import fsmodel.core.{IsFile, IsDir, DoesNotExist}
+import eval._
+import eval.Implicits._
 
 /*
  * Give filesystem semantics to resources
@@ -18,14 +13,11 @@ private[pipeline] object Provider {
 
   import java.nio.file.Path
 
-  import fsmodel.core.Implicits._
-  import fsmodel.ext.Implicits._
-
   import puppet.common.resource._
   import puppet.common.resource.Extractor._
 
-  def Block(es: ext.Expr*): ext.Expr =
-    es.foldRight(Skip: ext.Expr)((e, expr) => e >> expr)
+  def Block(es: Expr*): Expr =
+    es.foldRight(Skip: eval.Expr)((e, expr) => e >> expr)
 
   def Content(s: String): Array[Byte] = {
     import java.security.MessageDigest
@@ -51,7 +43,7 @@ private[pipeline] object Provider {
                                         (StringV("yes"): Value, true),
                                         (StringV("no"): Value, false)).toMap
 
-    def toFSOps(): ext.Expr
+    def toFSOps(): Expr
 
     protected def validVal[T](property: String, options: Map[Value, T]): Option[T] = {
       r.getRawVal(property).map(options.get(_)).flatten
@@ -78,7 +70,7 @@ private[pipeline] object Provider {
 
     // TODO: Ignoring ownership and permissions for now
     // TODO : Ignoring source attribute
-    def toFSOps: ext.Expr = {
+    def toFSOps: Expr = {
 
        val p = path
        val c = Content(content getOrElse "")
@@ -189,7 +181,7 @@ private[pipeline] object Provider {
       (throw new Exception(s"Package not found: $name"))
     }
 
-    def toFSOps: ext.Expr = ensure match {
+    def toFSOps: Expr = ensure match {
 
         case "present" | "installed" | "latest" => {
 
@@ -265,7 +257,7 @@ private[pipeline] object Provider {
       (sts == 0)
     }
 
-    def toFSOps (): ext.Expr = {
+    def toFSOps (): Expr = {
 
       val u = Paths.get(s"/etc/users/$name")
       val usettings = Paths.get(s"/etc/users/$name/settings")
@@ -343,7 +335,7 @@ private[pipeline] object Provider {
     val stop = r.get[String]("stop") getOrElse "stop"
     val status = r.get[String]("status")
 
-    def toFSOps(): ext.Expr = {
+    def toFSOps(): Expr = {
 
       val mode = ensure match {
         case "stopped" => "stop"
@@ -370,7 +362,7 @@ private[pipeline] object Provider {
      * data of every group
      *
      */
-    def toFSOps (): ext.Expr = {
+    def toFSOps (): Expr = {
 
       val p = s"/etc/groups/$name"
       val s = s"/etc/groups/$name/settings"
@@ -393,7 +385,7 @@ private[pipeline] object Provider {
     val command = r.get[String]("command") getOrElse name
     val creates = r.get[String]("creates")
 
-    def toFSOps (): ext.Expr = {
+    def toFSOps (): Expr = {
 
       if(creates.isDefined) {
         val p = creates.get
