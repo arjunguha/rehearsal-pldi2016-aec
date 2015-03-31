@@ -179,6 +179,10 @@ object Ample {
 
   val initState = Map(java.nio.file.Paths.get("/") -> IsDir)
 
+  def finalStates(g: MyGraph): Set[State] = {
+    g.nodes.filter(n => n.outDegree == 0).map(_.value.state).toSet
+  }
+
   def drawGraph(expr: Expr) = {
     import scalax.collection.io.dot._
     import scala.language.existentials
