@@ -1,7 +1,5 @@
 import pipeline._
 
-
-
 object BenchmarkLoader {
 
   private val facterEnv = Facter.run() getOrElse

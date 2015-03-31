@@ -1,14 +1,13 @@
 package eval
 
+import java.nio.file.Path
 import scalax.collection.edge.{LDiEdge}
 import scalax.collection.GraphEdge.DiEdge
 import scalax.collection.mutable.Graph
-
 import Implicits._
 
 object Ample {
 
-  import java.nio.file.Path
 
   type State = PerfMap[Path, FileState]
 
@@ -186,8 +185,6 @@ object Ample {
   def drawGraph(expr: Expr) = {
     import scalax.collection.io.dot._
     import scala.language.existentials
-
-    //port implicits.
 
     val g = makeGraph(Map(java.nio.file.Paths.get("/") -> IsDir), expr)
     val root = DotRootGraph(directed=true, id =Some("Program"))
