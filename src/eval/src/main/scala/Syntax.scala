@@ -52,6 +52,8 @@ sealed abstract trait Expr extends Product {
 
   override lazy val hashCode: Int =
     runtime.ScalaRunTime._hashCode(this)
+
+  override def toString(): String = this.pretty()
 }
 
 case object Error extends Expr {
