@@ -20,26 +20,6 @@ package object pipeline {
     reduceGraph(resourceGraph, toExpr)
   }
 
-  type State = Ample.State
-
-  def run(mainFile: String, modulePath: Option[String],
-          env: Map[String, String],
-          fs: State): Int = {
-    runProgram(load(mainFile, modulePath), env, fs)
-  }
-
-  def runProgram(program: String,
-                 env: Map[String, String],
-                 fs: State): Int = {
-
-    val graph = parse(program).desugar()
-                              .toGraph(env)
-
-    val expr = resourceGraphToExpr(graph)
-
-    0
-  }
-
   // Reduce the graph to a single expression in fsmodel language
   def reduceGraph[A](graph: Graph[A, DiEdge], toExpr: A=>eval.Expr): eval.Expr = {
 
