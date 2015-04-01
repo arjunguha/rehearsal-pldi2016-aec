@@ -23,9 +23,9 @@ class CountFinalTests extends org.scalatest.FunSuite {
 
     // Below, the LHS writes /a and reads /b and the RHS writes /b and reads
     // /a, so the two sides do not (syntactically) commute. Naively,
-    // we would generate the five interleavings:
+    // we would generate the six interleavings:
     //
-    //   pqrs, prqs, prsq, rpsq, rspq, rpsq
+    //   pqrs, prqs, prsq, rpsq, rspq, rpqs
     //
     // However, note that p and r commute and q and s commute. Therefore, the
     // following identities hold:
@@ -42,8 +42,38 @@ class CountFinalTests extends org.scalatest.FunSuite {
 
     println(drawGraph(e))
     assert(g.nodes.size == 2)
+  }
 
+  test("p * q * r") {
+    val p = Atomic(If(TestFileState("/parent", IsDir), Skip, Mkdir("/parent")) >>
+                   Mkdir("/parent/a"))
+    val q = Atomic(If(TestFileState("/parent", IsDir), Skip, Mkdir("/parent")) >>
+                   Mkdir("/parent/b"))
+    val r = Atomic(If(TestFileState("/parent", IsDir), Skip, Mkdir("/parent")) >>
+                   Mkdir("/parent/c"))
+    val e = (p * q * r)
+    val g = makeGraph(initState, e)
 
+    println(drawGraph(e))
+    assert(g.nodes.size == 2)
+  }
+
+  // unatomic version of above test p*q*r
+  test("(p>>q) * (r>>s) * (u>>v") {
+    val p = Atomic(If(TestFileState("/p", IsDir), Skip, Mkdir("/p")))
+    val q = Mkdir("/p/q")
+
+    val r = p
+    val s = Mkdir("/p/s")
+
+    val u = p
+    val v = Mkdir("/p/v")
+
+    val e = (p >> q) * (r >> s) * (u >> v)
+    val g = makeGraph(initState, e)
+    
+    println(drawGraph(e))
+    assert(g.nodes.size == 2)
   }
 
   test("nested stars") {
