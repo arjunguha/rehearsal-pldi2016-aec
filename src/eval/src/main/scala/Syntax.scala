@@ -43,8 +43,6 @@ object Pred {
 
 
 sealed abstract trait Expr extends Product {
-  def unconcur(): Expr = SimpleUnconcur.unconcur(this)
-  def unconcurOpt(): Expr = OptUnconcur.unconcur(this)
   def pretty(): String = Pretty.pretty(Pretty.AltCxt, this)
   def commutesWith(other: Expr) = Commutativity.commutes(this, other)
 

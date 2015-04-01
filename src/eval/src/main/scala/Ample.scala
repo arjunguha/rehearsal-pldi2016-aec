@@ -8,7 +8,6 @@ import Implicits._
 
 object Ample {
 
-
   type State = PerfMap[Path, FileState]
 
   case class Node(state: State, expr: Expr) {
@@ -180,24 +179,5 @@ object Ample {
 
   def finalStates(g: MyGraph): Set[State] = {
     g.nodes.filter(n => n.outDegree == 0).map(_.value.state).toSet
-  }
-
-  def drawGraph(expr: Expr) = {
-    import scalax.collection.io.dot._
-    import scala.language.existentials
-
-    val g = makeGraph(Map(java.nio.file.Paths.get("/") -> IsDir), expr)
-    val root = DotRootGraph(directed=true, id =Some("Program"))
-
-    def edgeTransformer(edge : scalax.collection.Graph[Node, DiEdge]#EdgeT) = {
-      Some(root, DotEdgeStmt(edge.edge.from.toString, edge.edge.to.toString, Nil))
-    }
-
-    def nodeTransformer(node: scalax.collection.Graph[Node, DiEdge]#NodeT) = {
-      Some(root, DotNodeStmt(node.toString, Nil))
-    }
-
-    val immutableG = scalax.collection.Graph.from[Node, DiEdge](g.nodes, g.edges)
-    immutableG.toDot(root, edgeTransformer, None, None, Some(nodeTransformer))
   }
 }

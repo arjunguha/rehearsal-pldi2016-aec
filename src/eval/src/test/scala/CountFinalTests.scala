@@ -39,8 +39,7 @@ class CountFinalTests extends org.scalatest.FunSuite {
     // Perhaps we only need to generate three paths?
     val e = (p >> q) * (r >> s)
     val g = makeGraph(initState, e)
-
-    println(drawGraph(e))
+    g.saveDotFile("p-q-concur-r-s.dot")
     assert(g.nodes.size == 2)
   }
 
@@ -53,8 +52,7 @@ class CountFinalTests extends org.scalatest.FunSuite {
                    Mkdir("/parent/c"))
     val e = (p * q * r)
     val g = makeGraph(initState, e)
-
-    println(drawGraph(e))
+    g.saveDotFile("concur-p-q-r.dot")
     assert(g.nodes.size == 2)
   }
 
@@ -71,8 +69,7 @@ class CountFinalTests extends org.scalatest.FunSuite {
 
     val e = (p >> q) * (r >> s) * (u >> v)
     val g = makeGraph(initState, e)
-    
-    println(drawGraph(e))
+    g.saveDotFile("unatomic-concur-p-q-r.dot")
     assert(g.nodes.size == 2)
   }
 
