@@ -63,6 +63,15 @@ object Implicits {
 
       val dot = g.toDot(root, edgeT, None, None, Some(nodeT))
       Files.write(path, dot.toString.getBytes)
+
+      // Converts to PDF if the dot tool is installed.
+      if (Files.isRegularFile(Paths.get("/usr/bin/dot"))) {
+        import scala.sys.process._
+        val pdf = path.resolveSibling(s"${path.getFileName}.pdf")
+        val proc = scala.collection.Seq("/usr/bin/dot", "-Tpdf", path.toString) #> pdf.toFile
+        assert (proc.! == 0)
+      }
+
     }
 
   }
