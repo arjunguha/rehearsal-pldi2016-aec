@@ -45,3 +45,6 @@ lazy val worker = project.in(file("verification/worker"))
 
 lazy val pipeline = project.dependsOn(common)
                            .dependsOn(eval)
+
+lazy val root = project.in(file("."))
+  .aggregate(pipeline, eval)
