@@ -40,7 +40,7 @@ class CountFinalTests extends org.scalatest.FunSuite {
     val e = (p >> q) * (r >> s)
     val g = makeGraph(initState, e)
     g.saveDotFile("p-q-concur-r-s.dot")
-    assert(g.nodes.size == 2)
+    assert(g.nodes.size == 4)
   }
 
   test("p * q * r") {
@@ -56,26 +56,26 @@ class CountFinalTests extends org.scalatest.FunSuite {
     assert(g.nodes.size == 2)
   }
 
-  // unatomic version of above test p*q*r
-  test("(p>>q) * (r>>s) * (u>>v") {
-    val p = Atomic(If(TestFileState("/p", IsDir), Skip, Mkdir("/p")))
-    val q = Mkdir("/p/q")
+  // // unatomic version of above test p*q*r
+  // test("(p>>q) * (r>>s) * (u>>v") {
+  //   val p = Atomic(If(TestFileState("/p", IsDir), Skip, Mkdir("/p")))
+  //   val q = Mkdir("/p/q")
 
-    val r = p
-    val s = Mkdir("/p/s")
+  //   val r = p
+  //   val s = Mkdir("/p/s")
 
-    val u = p
-    val v = Mkdir("/p/v")
+  //   val u = p
+  //   val v = Mkdir("/p/v")
 
-    val e = (p >> q) * (r >> s) * (u >> v)
-    val g = makeGraph(initState, e)
-    g.saveDotFile("unatomic-concur-p-q-r.dot")
-    assert(g.nodes.size == 2)
-  }
+  //   val e = (p >> q) * (r >> s) * (u >> v)
+  //   val g = makeGraph(initState, e)
+  //   g.saveDotFile("unatomic-concur-p-q-r.dot")
+  //   assert(g.nodes.size == 2)
+  // }
 
-  test("nested stars") {
-    val e = (Mkdir("/a") * Mkdir("/b")) * Mkdir("/c")
-    assert(finalStates(makeGraph(initState, e)).size == 1)
-  }
+  // test("nested stars") {
+  //   val e = (Mkdir("/a") * Mkdir("/b")) * Mkdir("/c")
+  //   assert(finalStates(makeGraph(initState, e)).size == 1)
+  // }
 
 }

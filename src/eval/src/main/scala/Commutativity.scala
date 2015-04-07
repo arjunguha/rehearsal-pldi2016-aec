@@ -15,6 +15,14 @@ private[eval] object Commutativity {
   }
 
   def exprReadSet(expr: Expr): Set[Path] = expr match {
+    case If(TestFileState(d1, IsDir), Skip, Mkdir(d2)) => {
+      if (d1 == d2) { Set() }
+      else { Set(d1) }
+    }
+    case If(TestFileState(d1, DoesNotExist), Mkdir(d2), Skip) => {
+      if (d1 == d2) { Set() }
+      else { Set(d1) }
+    }
     case Error => Set()
     case Skip => Set()
     case Filter(a) => predReadSet(a)
@@ -30,6 +38,14 @@ private[eval] object Commutativity {
   }
 
   def exprWriteSet(expr: Expr): Set[Path] = expr match {
+    case If(TestFileState(d1, IsDir), Skip, Mkdir(d2)) => {
+      if (d1 == d2) { Set() }
+      else { Set(d2) }
+    }
+    case If(TestFileState(d1, DoesNotExist), Mkdir(d2), Skip) => {
+      if (d1 == d2) { Set() }
+      else { Set(d2) }
+    }
     case Error => Set()
     case Skip => Set()
     case Filter(_) => Set()
@@ -45,6 +61,7 @@ private[eval] object Commutativity {
   }
 
   def commutes(p: Expr, q: Expr): Boolean = {
+
     val pr = exprReadSet(p)
     val pw = exprWriteSet(p)
     val qr = exprReadSet(q)
