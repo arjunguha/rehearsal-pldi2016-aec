@@ -18,13 +18,6 @@ class UnitTestSuite extends FunSuite {
     assert(Skip == pipeline.reduceGraph(Graph.empty[Expr, DiEdge], toExpr))
   }
 
-  test("reduce graph with one topological ordering") {
-    val a = Filter(True)
-    val b = Filter(False)
-    assert(Skip >> Atomic(a) >> Atomic(b) == 
-           pipeline.reduceGraph(Graph(a ~> b), toExpr).unconcur())
-  }
-
   test("reduce graph with concurrent operations") {
     val a = Filter(True)
     val b = Filter(False)
