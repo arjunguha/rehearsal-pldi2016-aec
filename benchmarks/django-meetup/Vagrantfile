@@ -1,8 +1,0 @@
-VAGRANTFILE_API_VERSION = "2"
-
-Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  config.vm.box = "mayflower/trusty64-puppet3"
-  config.vm.synced_folder ".", "/vagrant"
-  config.vm.synced_folder "./src/vagrant/puppet_manifests/django/files", "/tmp/vagrant-puppet/manifests/files"
-  config.vm.provision "shell", inline: "sudo puppet apply /vagrant/src/vagrant/puppet_manifests/django/apply.pp --debug --verbose" 
-end
