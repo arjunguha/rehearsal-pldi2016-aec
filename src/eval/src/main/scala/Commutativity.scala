@@ -60,17 +60,30 @@ private[eval] object Commutativity {
     case Cp(_, dst) => Set(dst)
   }
 
+  def isIdempotent(expr: Expr) = expr match {
+    case If(TestFileState(d1, IsDir), Skip, Mkdir(d2)) => true
+    case _ => false
+  }
+
+  def exprIdemSet(expr: Expr): Set[Path] =
+    if(isIdempotent(expr)) expr.readSet union expr.writeSet
+    else Set()
+
   def commutes(p: Expr, q: Expr): Boolean = {
 
     val pr = exprReadSet(p)
     val pw = exprWriteSet(p)
     val qr = exprReadSet(q)
     val qw = exprWriteSet(q)
+    val pi = exprIdemSet(p)
+    val qi = exprIdemSet(q)
 
     // no write-write conflicts
     (pw intersect qw).isEmpty &&
     // no read-write conflicts
-    (pr intersect qw).isEmpty && (pw intersect qr).isEmpty
+    (pr intersect qw).isEmpty && (pw intersect qr).isEmpty &&
+    // no conflicts with idempotent operations
+    (pi intersect qr).isEmpty && (pi intersect qw).isEmpty &&
+    (pr intersect qi).isEmpty && (pw intersect qi).isEmpty
   }
-
 }
