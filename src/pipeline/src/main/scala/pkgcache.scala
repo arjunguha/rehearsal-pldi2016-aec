@@ -12,7 +12,8 @@ import scala.util.Try
 private[pipeline] class PackageCache(cacheroot: Path) {
 
   val root = cacheroot.normalize().toAbsolutePath()
-  require(Files.exists(root) && Files.isDirectory(root))
+  require(Files.exists(root) && Files.isDirectory(root),
+          s"Directory ${root} missing")
 
   val newline = sys.props("line.separator")
 
@@ -28,7 +29,7 @@ private[pipeline] class PackageCache(cacheroot: Path) {
     Try(scala.io.Source.fromFile(cachepath).getLines
                        .map((p) => Paths.get(p)).toSet).toOption
   }
-  
+
   def aptfile(pkg: String): Option[Set[Path]] = {
     val cmd = s"apt-file -F list $pkg"
     val (sts, out, err) = Cmd.exec(cmd)
