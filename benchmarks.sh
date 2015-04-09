@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function help {
-  echo <<EOF
+  cat <<EOF
 benchmarks.sh - a tool to manage our suite of Puppet benchmarks
 
 benchmarks.sh upload:
