@@ -1,13 +1,13 @@
-#BenchmarkName NumResources AntiChainLength
-puppet-mosh 4 3
-puppet-monit 5 3
-vagrant-cakephp 14 3
-devbox 72 33
-vagrantpress 46 39
-puppet-bind 3 1
-puppet-sudo 5 4
-puppet-rbenv 11 9
-puppet-git 3 3
+#BenchmarkName Provenance NumResources AntiChainLength
+puppet-mosh github.com/garthk/puppet-mosh 4 3
+puppet-monit github.com/dhoppe/puppet-monit 5 3
+vagrant-cakephp github.com/jordanyaker/vagrant-cakephp 14 3
+devbox-vagrant github.com/sstutz/devbox-vagrant 72 33
+vagrantpress github.com/onyxedgestudios/vagrantpress 46 39
+puppet-bind github.com/thias/puppet-bind 3 1
+puppet-sudo github.com/dhoppe/puppet-sudo 5 4
+puppet-rbenv github.com/justindowning/puppet-rbenv 11 9
+puppet-git github.com/nesi/puppet-git 3 3
 shiny-server-on-ubuntu 23 9
 puppet-manifests 44 13
 aws-ec2-mysql-webserver 164 161
