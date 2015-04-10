@@ -34,11 +34,8 @@ sealed abstract trait Expr extends Product {
   def commutesWith(other: Expr) = Commutativity.commutes(this, other)
 
   def size(): Int
-  lazy val readSet = Commutativity.exprReadSet(this)
 
-  lazy val writeSet = Commutativity.exprWriteSet(this)
-  
-  lazy val idemSet = Commutativity.exprIdemSet(this)
+  val (readSet, writeSet, idemSet) = Commutativity.exprFileSets(this)
 
   override lazy val hashCode: Int =
     runtime.ScalaRunTime._hashCode(this)
@@ -84,19 +81,7 @@ case class Concur(p: Expr, q: Expr) extends Expr {
   def size() = p.size + q.size
   val isSequential = false
 
-  lazy val commutes: Boolean = {
-    (p.writeSet intersect q.writeSet).isEmpty &&
-    (p.readSet intersect q.writeSet).isEmpty &&
-    (p.writeSet intersect q.readSet).isEmpty &&
-    /* its ok to have same paths in idemSets for p and q
-     * but any path in p expr's idemSet should not occur
-     * in read and write set of q expr and vice versa.
-     */
-    (p.idemSet intersect q.readSet).isEmpty &&
-    (p.idemSet intersect q.writeSet).isEmpty &&
-    (p.readSet intersect q.idemSet).isEmpty &&
-    (p.writeSet intersect q.idemSet).isEmpty
-  }
+  lazy val commutes = p.commutesWith(q)
 }
 
 case class Mkdir(path: Path) extends Expr {
