@@ -3,6 +3,7 @@ import pipeline._
 // TODO(kgeffen) prune
 import puppet.syntax._
 import puppet.graph._
+import puppet.Facter
 
 import eval._
 import eval.Implicits._

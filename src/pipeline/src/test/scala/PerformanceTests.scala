@@ -4,6 +4,7 @@ import pipeline._
 import eval._
 import puppet.syntax._
 import puppet.graph._
+import puppet.Facter
 
 class PerformanceTests extends FunSuite {
 

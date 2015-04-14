@@ -1,5 +1,6 @@
 import pipeline._
 import eval._
+import puppet.Facter
 
 import org.scalatest.FunSuite
 

@@ -2,7 +2,7 @@ package pipeline.stats
 
 import puppet.syntax._
 import puppet.graph._
-import pipeline.Facter
+import puppet.Facter
 
 object CollectData {
 
