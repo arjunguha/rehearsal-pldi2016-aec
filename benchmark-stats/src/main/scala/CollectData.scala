@@ -4,7 +4,7 @@ import puppet.syntax._
 import puppet.graph._
 import puppet.Facter
 
-object CollectData {
+object CollectData extends App {
 
   val env = Facter.run() getOrElse
             (throw new Exception("Facter environment required"))
@@ -27,15 +27,13 @@ object CollectData {
         // "aventurella" -> ("puppet-vagrant/src/manifests/site.pp", Some("puppet-vagrant/src/modules"))
        )
 
-  def run() {
 
-    for((name, b) <- benchmarks) {
+  for((name, b) <- benchmarks) {
 
-      val mainFilePath = s"${benchmarkroot}/${name}/${b._1}"
-      val modulePath = b._2.map((p) => s"${benchmarkroot}/${name}/${p}")
+    val mainFilePath = s"${benchmarkroot}/${name}/${b._1}"
+    val modulePath = b._2.map((p) => s"${benchmarkroot}/${name}/${p}")
 
-      stats(name, mainFilePath, modulePath, env)
-    }
+    stats(name, mainFilePath, modulePath, env)
   }
 
   def stats(name: String,

@@ -64,9 +64,9 @@ class BipartiteMatching (bpGraph: Array [Array [Boolean]])
 } // BipartiteMatching class
 
 
+/*
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-/** The 'BipartiteMatchingTest' object is used to test `BipartiteMatching` class.
- */
+// The 'BipartiteMatchingTest' object is used to test `BipartiteMatching` class.
 object BipartiteMatchingTest extends App
 {
   val bpGraph = Array (Array (false, true,  true,  false, false, false),
@@ -80,3 +80,4 @@ object BipartiteMatchingTest extends App
     println ("Maximum number of applicants that can get job is " +  bpMatch.maxBPM () )
 
 } // BipartiteMatchingTest
+*/
