@@ -8,10 +8,16 @@ private[eval] object Commutativity {
   type WriteSet = Set[Path]
   type IdemSet = Set[Path]
 
-  // Take in approx file sets and return exact files sets
-  def exprFileSets(readSet: ReadSet,
-                   writeSet: WriteSet,
-                   idemSet: IdemSet): (ReadSet, WriteSet, IdemSet) = {
+  /*
+   * Take in approx file sets and return exact files sets
+   *
+   * If there is an overlap between read-write and idempotent
+   * set of an expr, then the idempotent op on the intersecting
+   * path is not idempotent
+   */
+  def refinedFileSets(readSet: ReadSet,
+                      writeSet: WriteSet,
+                      idemSet: IdemSet): (ReadSet, WriteSet, IdemSet) = {
     val intersection = idemSet intersect (readSet ++ writeSet)
     (readSet ++ intersection,
      writeSet ++ intersection,
@@ -25,18 +31,18 @@ private[eval] object Commutativity {
     case Filter(a) => (a.readSet, Set.empty, Set.empty)
     case If(TestFileState(d1, IsDir), Skip, Mkdir(d2)) if d1 == d2 => (Set.empty, Set.empty, Set(d1))
     case If(TestFileState(d1, DoesNotExist), Mkdir(d2), Skip) if d1 == d2 => (Set.empty, Set.empty, Set(d1))
-    case If(a, p, q) => exprFileSets(a.readSet ++ p.readSet ++ q.readSet,
-                                     p.writeSet ++ q.writeSet,
-                                     p.idemSet ++ q.idemSet)
-    case Concur(p, q) => exprFileSets(p.readSet ++ q.readSet,
+    case If(a, p, q) => refinedFileSets(a.readSet ++ p.readSet ++ q.readSet,
+                                        p.writeSet ++ q.writeSet,
+                                        p.idemSet ++ q.idemSet)
+    case Concur(p, q) => refinedFileSets(p.readSet ++ q.readSet,
+                                         p.writeSet ++ q.writeSet,
+                                         p.idemSet ++ q.idemSet)  
+    case Seq(p, q) => refinedFileSets(p.readSet ++ q.readSet,
                                       p.writeSet ++ q.writeSet,
-                                      p.idemSet ++ q.idemSet)  
-    case Seq(p, q) => exprFileSets(p.readSet ++ q.readSet,
-                                   p.writeSet ++ q.writeSet,
-                                   p.idemSet ++ q.idemSet)
-    case Alt(p, q) => exprFileSets(p.readSet ++ q.readSet,
-                                   p.writeSet ++ q.writeSet,
-                                   p.idemSet ++ q.idemSet)
+                                      p.idemSet ++ q.idemSet)
+    case Alt(p, q) => refinedFileSets(p.readSet ++ q.readSet,
+                                      p.writeSet ++ q.writeSet,
+                                      p.idemSet ++ q.idemSet)
     case Atomic(p) => (p.readSet, p.writeSet, p.idemSet)
     case Mkdir(path) => (Set.empty, Set(path), Set.empty)
     case CreateFile(path, _) => (Set.empty, Set(path), Set.empty)
