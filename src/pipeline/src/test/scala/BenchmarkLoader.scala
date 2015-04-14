@@ -2,8 +2,7 @@ import pipeline._
 
 object BenchmarkLoader {
 
-  private val facterEnv = Facter.run() getOrElse
-                            (throw new Exception("Facter environment required"))
+  private val facterEnv = Map()
 
   // TODO(arjun): Should be in scala-puppet
   private def loadBenchmark(bench: (String, Option[String])): puppet.core.BlockStmtC = {

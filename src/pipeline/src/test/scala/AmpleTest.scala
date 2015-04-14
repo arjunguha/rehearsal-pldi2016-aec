@@ -58,7 +58,8 @@ class AmpleTest extends FunSuite {
   def runBenchmark(name: String) {
     test(name) {
       println("Generating resource graph")
-      val resourceGraph = BenchmarkLoader.benchmarks(name).toGraph(Facter.emptyEnv)
+      val resourceGraph = BenchmarkLoader.benchmarks(name)
+        .toGraph(Facter.emptyEnv).head._2
       println("Generating expression")
       val expr = pipeline.resourceGraphToExpr(resourceGraph)
       println(s"Expression size is ${expr.size}")
@@ -75,7 +76,7 @@ class AmpleTest extends FunSuite {
   def runTest(filename: String, program: String) {
     val graph = parse(program).desugar()
                               .toGraph(Map[String, String]())
-
+                              .head._2
     val extExpr = pipeline.resourceGraphToExpr(graph)
     // info(extExpr.pretty())
     val evalGraph = Ample.makeGraph(Ample.initState, extExpr)

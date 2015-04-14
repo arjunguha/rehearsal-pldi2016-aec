@@ -18,7 +18,7 @@ class PerformanceTests extends FunSuite {
       val url = getClass.getResource(manifest)
       val path = url.getPath()
       val program = parse(load(path, None))
-      val graph = program.desugar().toGraph(env)
+      val graph = program.desugar().toGraph(env).head._2
       val expr = pipeline.resourceGraphToExpr(graph)
       val finalStates = Ample.finalStates(fs, expr)
       assert(1 == finalStates.size)

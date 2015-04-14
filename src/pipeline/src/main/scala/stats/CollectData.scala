@@ -11,7 +11,7 @@ object CollectData {
 
   val benchmarkroot = "../stats_benchmarks"
 
-  val benchmarks = 
+  val benchmarks =
     Map("puppet-bind" -> ("src/tests/server.pp", Some("src/modules")),
         "puppet-git" -> ("src/tests/init.pp", Some("src/modules")),
         "puppet-mosh" -> ("src/tests/init.pp", Some("src/modules")),
@@ -47,7 +47,7 @@ object CollectData {
   def stats(name: String,
             program: String,
             env: Map[String, String]): Int = {
-    val graph = parse(program).desugar().toGraph(env)
+    val graph = parse(program).desugar().toGraph(env).head._2
     // printDOTGraph(graph)
     val nresources = graph.nodes.size
     val antichainlength = AntiChainLength(graph)

@@ -12,7 +12,7 @@ abstract class SemanticTestSuite extends FunSuite {
 
   def runTest(program: String) {
     val graph = parse(program).desugar()
-                              .toGraph(env)
+                              .toGraph(env).head._2
     val expr = pipeline.resourceGraphToExpr(graph)
     val finalStates = Ample.finalStates(fs, expr)
     assert(1 == finalStates.size)
@@ -22,7 +22,7 @@ abstract class SemanticTestSuite extends FunSuite {
 class FileTestSuite extends SemanticTestSuite {
 
   test("file without ensure with content should succeed") {
-    val program = """file{"/foo": 
+    val program = """file{"/foo":
                        content => "some contents"
                      }"""
     runTest(program)
