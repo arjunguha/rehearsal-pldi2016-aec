@@ -16,7 +16,7 @@ import eval.Implicits._
 package object pipeline {
 
   def resourceGraphToExpr(resourceGraph: Graph[puppet.graph.Resource, DiEdge]): eval.Expr = {
-    val toExpr = toCoreResource _ andThen { Provider(_).toFSOps() }
+    val toExpr = toCoreResource _ andThen { ResourceToExpr(_) }
     reduceGraph(resourceGraph, toExpr)
   }
 
