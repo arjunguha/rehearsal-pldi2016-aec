@@ -56,9 +56,10 @@ private[pipeline] object ResourceToExpr {
     val force = validVal(r, "force", validBoolVals) getOrElse false
     val purge = validVal(r, "purge", validBoolVals) getOrElse false
     val target = r.get[String]("target")
+    val owner = r.get[String]("owner")
+    val provider = r.get[String]("provider")
+    val mode = r.get[String]("mode")
 
-    // TODO: Ignoring ownership and permissions for now
-    // TODO : Ignoring source attribute
     val p = path
     val c = Content(content getOrElse "")
 //     val t = target getOrElse "/tmp/"
@@ -66,6 +67,23 @@ private[pipeline] object ResourceToExpr {
     val _ensure = if (ensure.isDefined) ensure
                   else if (source.isDefined) Some("file")
                   else None
+
+    if(_ensure.isDefined && _ensure.get == "link") {
+      throw new Exception(s"""file(${r.name}): "${_ensure.get}" ensure not supported""")
+    }
+
+    if(source.isDefined) {
+      throw new Exception(s"""file(${r.name}): source attribute not supported""")
+    }
+    if(provider.isDefined && provider.get != "posix") {
+      throw new Exception(s"""file(${r.name}): "${provider.get}" provider not supported""")
+    }
+    if(mode.isDefined) {
+      throw new Exception(s"""file(${r.name}): "mode" attribute not supported""")
+    }
+    if(owner.isDefined) {
+      throw new Exception(s"""file(${r.name}): "owner" attribute not supported""")
+    }
 
     _ensure match {
       // Broken symlinks are ignored
@@ -92,11 +110,11 @@ private[pipeline] object ResourceToExpr {
                                          Rm(p),
                                          If(TestFileState(p, IsFile),
                                             Rm(p),
-                                            Skip)) // TODO(kgeffen) Links not yet covered!
+                                            Skip))
 
       case Some("absent") => If(TestFileState(p, IsFile),
                                 Rm(p),
-                                Skip) // TODO(kgeffen) Links not yet covered
+                                Skip)
 
       /* missing: Create a file with content if content present
        * directory: if force is set then remove directory createFile
@@ -109,45 +127,21 @@ private[pipeline] object ResourceToExpr {
                                              If(TestFileState(p, IsFile),
                                                 Rm(p),
                                                 Skip)),
-                                          CreateFile(p, c)) // TODO(kgeffen) Links not yet covered
+                                          CreateFile(p, c))
 
       case Some("file") => Block(If(TestFileState(p, IsFile),
                                     Rm(p),
                                     Skip),
-                                 CreateFile(p, c)) // TODO(kgeffen) Links not yet covered
+                                 CreateFile(p, c))
 
       /* Missing: Create new directory
        * Directory: Ignore
        * File: remove file and create directory
        * link: remove link and create directory
        */
-      case Some("directory") => If(!TestFileState(p, DoesNotExist),
-                                   Block(Rm(p), Mkdir(p)),
-                                   Mkdir(p)) // TODO(kgeffen) Links not yet covered
-
-      /*
-       * Missing: create sym link with target
-       * directory: if(force) removedir andThen createlink else ignore
-       * file: delete file and create link
-       * link: ignore
-       */
-      case Some("link") if force => Skip // TODO(kgeffen) Links not yet covered
-
-        // Block(If(Exists(p),
-        //                                        If(IsDir(p), RmDir(p),
-        //                                           If(IsRegularFile(p), DeleteFile(p), Unlink(p))),
-        //                                        Block()),
-        //                                     Link(p, t))
-
-
-      case Some("link") => Skip // TODO(kgeffen) Links not yet covered
-
-        // Block(If(Exists(p),
-        //                               If(IsRegularFile(p), DeleteFile(p),
-        //                                  If(IsLink(p), Unlink(p), Block())),
-        //                               Block()),
-        //                            If(Not(Exists(p)), Link(p, t), Block()))
-
+      case Some("directory") => If(TestFileState(p, IsDir), Skip,
+                                   If(TestFileState(p, IsFile),
+                                      Rm(p) >> Mkdir(p), Mkdir(p)))
 
       case _ => throw new Exception(s"ensure attribute missing for file ${r.name}")
     }
@@ -159,11 +153,10 @@ private[pipeline] object ResourceToExpr {
     val validEnsureVals = List("present", "installed", "absent", "purged", "held", "latest")
 
     val ensure = validVal(r, "ensure", validEnsureVals) getOrElse "installed"
+    val provider = r.get[String]("provider")
 
-    /* apt-file must be installed and should be updated */
-    def packageFiles(): Set[Path] = {
-      pkgcache.files(r.name) getOrElse
-      (throw new Exception(s"Package not found: ${r.name}"))
+    if(provider.isDefined && provider.get != "apt") {
+      throw new Exception(s"""package(${r.name}): "${provider.get}" provider not supported""")
     }
 
     ensure match {
@@ -203,7 +196,8 @@ private[pipeline] object ResourceToExpr {
         val files = pkgcache.files(r.name) getOrElse
           (throw new Exception(s"Package not found: ${r.name}"))
 
-        val exprs = files.map((f) => If(TestFileState(f, DoesNotExist), Skip, Rm(f))).toSeq
+        val exprs = files.map((f) => If(TestFileState(f, DoesNotExist),
+                                        Skip, Rm(f))).toSeq
         Block(exprs: _*)
       }
 
@@ -220,9 +214,11 @@ private[pipeline] object ResourceToExpr {
 
     val ensure = validVal(r, "ensure", validEnsureVals) getOrElse "present"
     val gid = r.get[String]("gid")
-    val groups = r.get[Array[Value]]("groups") getOrElse
-                 { r.get[String]("groups").map((g) => Array((StringV(g): Value))) getOrElse
-                 Array((UndefV: Value)) }
+    val groups = r.get[Array[Value]]("groups") getOrElse {
+      r.get[String]("groups").map((g) => Array((StringV(g): Value))) getOrElse {
+        Array((UndefV: Value))
+      }
+    }
 
     val shell = r.get[String]("shell")
     val uid = r.get[String]("uid").map(_.toInt)
@@ -235,6 +231,7 @@ private[pipeline] object ResourceToExpr {
     val allowdupe = validVal(r, "allowdupe", validBoolVals) getOrElse false
     val managehome = validVal(r, "managehome", validBoolVals) getOrElse false
     val system = validVal(r, "system", validBoolVals) getOrElse false
+    val provider = r.get[String]("provider")
 
     def userExists(user: String): Boolean = {
       val (sts, _, _) = Cmd.exec(s"id -u $user")
@@ -244,6 +241,10 @@ private[pipeline] object ResourceToExpr {
     def gidExists(gid: String): Boolean = {
       val (sts, _, _) = Cmd.exec(s"getent group $gid")
       (sts == 0)
+    }
+
+    if(provider.isDefined && provider.get != "useradd") {
+      throw new Exception(s"""user(${r.name}): "${provider.get}" provider not supported""")
     }
 
     val u = Paths.get(s"/etc/users/${r.name}")
@@ -294,11 +295,17 @@ private[pipeline] object ResourceToExpr {
     val ensure = validVal(r, "ensure", validEnsureVals) getOrElse
       (throw new Exception(s"Group ${r.name} 'ensure' attribute missing"))
 
+    val provider = r.get[String]("provider")
+
+    if(provider.isDefined && provider.get != "groupadd") {
+      throw new Exception(s"""group(${r.name}): "${provider.get}" provider not supported""")
+    }
+
     /* Semantics of Group resource
      *
-     * A group name is a directory by the name of the group located at location /etc/groups
-     * Inside every directory there is a file called settings that contains configuration
-     * data of every group
+     * A group name is a directory by the name of the group located at
+     * location /etc/groups. Inside every directory there is a file called
+     * settings that contains configuration data of every group
      *
      */
     val p = s"/etc/groups/${r.name}"
@@ -321,52 +328,74 @@ private[pipeline] object ResourceToExpr {
      
     val command = r.get[String]("command") getOrElse r.name
     val creates = r.get[String]("creates")
+    val provider = r.get[String]("provider")
+
+    if(provider.isDefined && provider.get == "windows") {
+      throw new Exception(s"exec(${r.name}): windows command execution not supported")
+    }
 
     if(creates.isDefined) {
       val p = creates.get
-      // If(!TestFileState(p, DoesNotExist), Skip, ShellExec(command))
-      // TODO(kgeffen) Add ShellExec
-      Skip
+      /* TODO(nimish): Semantics of shell*/
+      If(!TestFileState(p, DoesNotExist), Skip, Skip)
     }
-    else { Skip /* ShellExec(command) */ } // TODO(kgeffen) Add ShellExec
+    else { Skip /* TODO(nimish): Semantics of shell */ } 
   }
 
   def Service(r: Resource): Expr = {
 
-    val validEnsureVals = List((StringV("stopped"): Value, "stopped"),
-                               (BoolV(false): Value, "stopped"),
-                               (StringV("running"): Value, "running"),
-                               (BoolV(true): Value, "running"),
-                               (UndefV: Value, "undef")).toMap
-    val validBoolVal = List((StringV("true"): Value, true),
-                            (StringV("false"): Value, false)).toMap
-    val validEnableVals = validBoolVal
+    val validEnsureVals: Map[Value, String] = Map(
+      StringV("stopped") -> "stopped",
+      BoolV(false) -> "stopped",
+      StringV("running") -> "running",
+      BoolV(true) -> "running",
+      UndefV -> "undef"
+    )
+    val validBoolVal: Map[Value, Boolean] = Map(
+      StringV("true") -> true,
+      StringV("false") -> false
+    )
+    val validEnableVals = List("true", "false", "manual")
     val validHasRestartVals = validBoolVal
     val validHasStatusVals = validBoolVal
 
     val ensure = validVal(r, "ensure", validEnsureVals) getOrElse
       (throw new Exception(s"Service ${r.name} 'ensure' attribute missing"))
     val binary = r.get[String]("binary") getOrElse r.name
-    val enable = validVal(r, "enable", validEnableVals) getOrElse false // Whether a service should be enabled at boot time.
+    // Decides whether a service should be enabled at boot time
+    val enable = validVal(r, "enable", validEnableVals)
     val flags  = r.get[String]("flags") getOrElse ""
     val hasrestart = validVal(r, "hasrestart", validHasRestartVals) getOrElse false
     // if a service's init script has a functional status command,
     val hasstatus = validVal(r, "hasstatus", validHasStatusVals) getOrElse true
     val path = r.get[String]("path") getOrElse "/etc/init.d/"
-    /* pattern to search for in process table, used for stopping services that do not support init scripts
-     * Also used for determining service status on those service whose init scripts do not include a status command
+    /* pattern to search for in process table, used for stopping services
+     * that do not support init scripts
+     *
+     * Also used for determining service status on those service whose init
+     * scripts do not include a status command
      */
     val pattern = r.get[String]("pattern") getOrElse binary
-    val restart = r.get[String]("restart") // If not provided then service will be first stopped and then started
+    // If not provided then service will be first stopped and then started
+    val restart = r.get[String]("restart")
     val start = r.get[String]("start") getOrElse "start"
     val stop = r.get[String]("stop") getOrElse "stop"
     val status = r.get[String]("status")
+    val provider = r.get[String]("provider")
+
+    if (enable.isDefined && enable.get == "manual") {
+      throw new Exception(s"""service(${r.name}): "manual" enable defined only for windows based system""")
+    }
+
+    if(provider.isDefined && provider.get != "upstart") {
+      throw new Exception(s"""service(${r.name}: ${provider.get} unsupported on Ubuntu""")
+    }
 
     val mode = ensure match {
       case "stopped" => "stop"
       case "running" => "start"
       case "undef" => "start"
-      case _ => throw new Exception(s"Invalid value $ensure for a service provider for ${r.name}")
+      case _ => throw new Exception(s"service(${r.name}): Invalid value $ensure")
     }
 
     val command = s"${path}/${binary} ${flags} ${mode}"

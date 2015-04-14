@@ -73,6 +73,7 @@ class FileTestSuite extends SemanticTestSuite {
     runTest(program)
   }
 
+  /*
   test("link file") {
     val program = """file{"/foo":
                        ensure => link,
@@ -89,6 +90,7 @@ class FileTestSuite extends SemanticTestSuite {
                      }"""
     runTest(program)
   }
+  */
 }
 
 class PackageTestSuite extends SemanticTestSuite {
