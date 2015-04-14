@@ -28,6 +28,9 @@
 <attribute_override> :: <name> "=" <expr> | <name> "+=" <expr>
 <class> :: string string? (<variable> <expr>?)* <block>
 <definition> :: string (<variable> <expr>?)* <block>
+<node> :: <hostname>+ <block>
+
+<hostname> :: "default" | <string> | <regex>
 
 <attribute> :: <name> <expr>
 
