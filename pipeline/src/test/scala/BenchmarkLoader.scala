@@ -12,8 +12,8 @@ object BenchmarkLoader {
 
   private def fixPaths(benchWithName: ((String, (String, Option[String])))) = {
     val (name, (mainFile, modulePath)) = benchWithName
-    val mainFileFixed = s"../benchmarks/$name/$mainFile"
-    val modulePathFixed = modulePath.map(p => s"../benchmarks/$name/$p")
+    val mainFileFixed = s"benchmarks/$name/$mainFile"
+    val modulePathFixed = modulePath.map(p => s"benchmarks/$name/$p")
     name -> (mainFileFixed -> modulePathFixed)
   }
 
