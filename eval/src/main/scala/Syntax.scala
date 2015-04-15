@@ -8,10 +8,6 @@ case object IsDir extends FileState
 case object DoesNotExist extends FileState
 
 sealed trait Pred {
-  def &&(other: Pred): Pred = And(this, other)
-  def ||(other: Pred): Pred = Or(this, other)
-  def unary_!(): Pred = Not(this)
-
   lazy val readSet = Commutativity.predReadSet(this)
 }
 
@@ -21,12 +17,6 @@ case class And(a: Pred, b: Pred) extends Pred
 case class Or(a: Pred, b: Pred) extends Pred
 case class Not(a: Pred) extends Pred
 case class TestFileState(path: Path, s: FileState) extends Pred
-
-object Pred {
-
-  def implies(a: Pred, b: Pred): Pred = Or(Not(a), b)
-
-}
 
 
 sealed abstract trait Expr extends Product {

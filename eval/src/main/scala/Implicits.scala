@@ -18,6 +18,13 @@ object Implicits {
     PerfMap(map)
   }
 
+  implicit class RichPred(a: Pred) {
+
+    def &&(b: Pred): Pred = And(a, b)
+    def ||(b: Pred): Pred = Or(a, b)
+    def unary_!(): Pred = Not(a)
+  }
+
   implicit class RichExpr(e1: Expr) {
 
     def +(e2: Expr) = (e1, e2) match {
