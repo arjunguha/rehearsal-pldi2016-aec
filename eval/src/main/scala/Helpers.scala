@@ -1,9 +1,9 @@
 package eval
 
-object Helpers {
+private[eval] object Helpers {
 
   // True if there are no concurrent expressions nested within this expression.
-  private[eval] def isSequential(expr: Expr): Boolean = expr match {
+  def isSequential(expr: Expr): Boolean = expr match {
     case Error => true
     case Skip => true
     case Filter(_) => true
@@ -19,7 +19,7 @@ object Helpers {
   }
 
   // Gives all predicates size 0
-  private[eval] def size(expr: Expr): Int = expr match {
+  def size(expr: Expr): Int = expr match {
     case Error => 1
     case Skip => 1
     case Filter(_) => 1
