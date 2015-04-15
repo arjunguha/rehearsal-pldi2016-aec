@@ -11,12 +11,22 @@ import eval.Implicits._
  */
 private[pipeline] object ResourceToExpr {
 
-  import java.nio.file.Path
+  import java.nio.file.{Path, Files, Paths}
 
   import puppet.common.resource._
   import puppet.common.resource.Extractor._
 
-  val pkgcache = new PackageCache("/tmp/rehearsal/pkgs/")
+  val pkgcache = {
+    val benchmarksDir = Paths.get("benchmarks")
+    if (!Files.isDirectory(benchmarksDir)) {
+      Files.createDirectory(benchmarksDir)
+    }
+    val pkgcacheDir = benchmarksDir.resolve("pkgcache")
+    if (!Files.isDirectory(pkgcacheDir)) {
+      Files.createDirectory(pkgcacheDir)
+    }
+    new PackageCache(pkgcacheDir.toString)
+  }
 
   def Block(es: Expr*): Expr =
     es.foldRight(Skip: eval.Expr)((e, expr) => e >> expr)
@@ -177,11 +187,11 @@ private[pipeline] object ResourceToExpr {
                                         .sortBy(_._1)
                                         .unzip._2
                                         .flatten
-                                        .map(d => If(TestFileState(d, DoesNotExist), 
+                                        .map(d => If(TestFileState(d, DoesNotExist),
                                                      Mkdir(d), Skip)).toList
         */
         val mkdirs = (dirs - paths.root).toSeq.sortBy(_.getNameCount)
-                                        .map(d => If(TestFileState(d, DoesNotExist), 
+                                        .map(d => If(TestFileState(d, DoesNotExist),
                                                      Mkdir(d), Skip)).toList
 
         val somecontent = Content("")
@@ -313,7 +323,7 @@ private[pipeline] object ResourceToExpr {
     val c = Content("")
 
     ensure match {
-      case "present" => If(TestFileState(p, DoesNotExist), 
+      case "present" => If(TestFileState(p, DoesNotExist),
                            Mkdir(p) >> CreateFile(s, c),
                            CreateFile(s, c))
 
@@ -323,9 +333,9 @@ private[pipeline] object ResourceToExpr {
     }
   }
 
-  
+
   def Exec(r: Resource): Expr = {
-     
+
     val command = r.get[String]("command") getOrElse r.name
     val creates = r.get[String]("creates")
     val provider = r.get[String]("provider")
@@ -339,7 +349,7 @@ private[pipeline] object ResourceToExpr {
       /* TODO(nimish): Semantics of shell*/
       If(!TestFileState(p, DoesNotExist), Skip, Skip)
     }
-    else { Skip /* TODO(nimish): Semantics of shell */ } 
+    else { Skip /* TODO(nimish): Semantics of shell */ }
   }
 
   def Service(r: Resource): Expr = {
@@ -404,7 +414,7 @@ private[pipeline] object ResourceToExpr {
   }
 
 
-  def Notify(r: Resource): Expr = { 
+  def Notify(r: Resource): Expr = {
 
     val msg = r.get[String]("message") getOrElse r.name
     Skip
