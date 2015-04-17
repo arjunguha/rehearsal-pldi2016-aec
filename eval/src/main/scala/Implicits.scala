@@ -20,6 +20,25 @@ object Implicits {
 
   implicit class RichPred(a: Pred) {
 
+    def nnf(): Pred = a match {
+      case Not(And(a, b)) => Or(Not(a).nnf(), Not(b).nnf())
+      case Not(Or(a, b)) => And(Not(a).nnf(), Not(b).nnf())
+      case Not(Not(a)) => a.nnf()
+      case And(a, b) => And(a.nnf(), b.nnf())
+      case Or(a, b) => Or(a.nnf(), b.nnf())
+      case Not(a) => Not(a.nnf())
+      case _ => a
+    }
+
+    def cnf(): Pred = a.nnf() match {
+      case Or(a, And(b, c)) => And(Or(a, b), Or(a, c)).cnf()
+      case Or(And(b, c), a) => And(Or(b, a), Or(c, a)).cnf()
+      case And(a, b) => And(a.cnf(), b.cnf())
+      case Or(a, b) => Or(a.cnf(), b.cnf())
+      case Not(a) => Not(a.cnf())
+      case _ => a
+    }
+    
     def &&(b: Pred): Pred = And(a, b)
     def ||(b: Pred): Pred = Or(a, b)
     def unary_!(): Pred = Not(a)
