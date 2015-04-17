@@ -6,9 +6,13 @@ object Implicits {
   import java.nio.file.{Path, Paths, Files}
   import scalax.collection.Graph
   import scalax.collection.GraphEdge.DiEdge
+  import java.security.MessageDigest
 
   implicit def stringToPath(str: String): Path = Paths.get(str)
 
+  implicit def contentToHash(content: String): Array[Byte] =
+    MessageDigest.getInstance("MD5").digest(content.getBytes)
+    
   implicit class RichString(str: String) {
 
     def toPath = Paths.get(str)

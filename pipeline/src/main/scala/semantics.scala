@@ -28,15 +28,6 @@ private[pipeline] object ResourceToExpr {
     new PackageCache(pkgcacheDir.toString)
   }
 
-  def Block(es: Expr*): Expr =
-    es.foldRight(Skip: eval.Expr)((e, expr) => e >> expr)
-
-  def Content(s: String): Array[Byte] = {
-    import java.security.MessageDigest
-    MessageDigest.getInstance("MD5").digest(s.getBytes)
-  }
-
-
   val validBoolVals = List ((BoolV(true): Value, true),
                             (BoolV(false): Value, false),
                             (StringV("yes"): Value, true),
@@ -71,7 +62,8 @@ private[pipeline] object ResourceToExpr {
     val mode = r.get[String]("mode")
 
     val p = path
-    val c = Content(content getOrElse "")
+//     val c = Content(content getOrElse "")
+    val c = content getOrElse ""
 //     val t = target getOrElse "/tmp/"
 
     val _ensure = if (ensure.isDefined) ensure
@@ -194,7 +186,8 @@ private[pipeline] object ResourceToExpr {
                                         .map(d => If(TestFileState(d, DoesNotExist),
                                                      Mkdir(d), Skip)).toList
 
-        val somecontent = Content("")
+//         val somecontent = Content("")
+        val somecontent = ""
         val createfiles = files.map((f) => CreateFile(f, somecontent))
 
         val exprs = (mkdirs ++ createfiles)
@@ -259,10 +252,12 @@ private[pipeline] object ResourceToExpr {
 
     val u = Paths.get(s"/etc/users/${r.name}")
     val usettings = Paths.get(s"/etc/users/${r.name}/settings")
-    val usettingscontent = Content("")
+//    val usettingscontent = Content("")
+    val usettingscontent = ""
     val g = Paths.get(s"/etc/groups/${r.name}")
     val gsettings = Paths.get(s"/etc/groups/${r.name}/settings")
-    val gsettingscontent = Content("")
+//    val gsettingscontent = Content("")
+    val gsettingscontent = ""
     val h = Paths.get(home getOrElse s"/home/${r.name}")
 
     (ensure, managehome) match {
@@ -320,7 +315,8 @@ private[pipeline] object ResourceToExpr {
      */
     val p = s"/etc/groups/${r.name}"
     val s = s"/etc/groups/${r.name}/settings"
-    val c = Content("")
+//    val c = Content("")
+    val c = ""
 
     ensure match {
       case "present" => If(TestFileState(p, DoesNotExist),

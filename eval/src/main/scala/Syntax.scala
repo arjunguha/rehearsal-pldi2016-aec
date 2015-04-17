@@ -54,3 +54,11 @@ case class CreateFile(path: Path, hash: Array[Byte]) extends Expr {
 }
 case class Rm(path: Path) extends Expr
 case class Cp(src: Path, dst: Path) extends Expr
+
+object Block {
+
+  import Implicits._
+
+  def apply(es: Expr*): Expr =
+    es.foldRight(Skip: eval.Expr)((e, expr) => e >> expr)
+}
