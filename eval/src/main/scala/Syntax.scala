@@ -35,7 +35,6 @@ sealed abstract trait Expr extends Product {
 
 case object Error extends Expr
 case object Skip extends Expr
-case class Filter(a: Pred) extends Expr
 case class If(a: Pred, p: Expr, q: Expr) extends Expr
 case class Seq(p: Expr, q: Expr) extends Expr
 case class Alt(p: Expr, q: Expr) extends Expr

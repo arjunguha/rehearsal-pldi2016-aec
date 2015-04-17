@@ -37,7 +37,6 @@ object Ample {
   def isAtomic(e: Expr): Boolean = e match {
     case Skip => true
     case Error => true
-    case Filter(_) => true
     case Atomic(_) =>  true
     case Cp(_, _) => true
     case Mkdir(_) => true
@@ -57,14 +56,6 @@ object Ample {
       List()
     }
     case Skip => List()
-    case Filter(a) => {
-      if (evalPred(a, st)) {
-        List(Node(st, Skip))
-      }
-      else {
-        List(Node(st, Error))
-      }
-    }
     case If(a, p, q) => evalPred(a, st) match {
       case true => d(st, p)
       case false => d(st, q)

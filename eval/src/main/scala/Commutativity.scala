@@ -28,7 +28,6 @@ private[eval] object Commutativity {
   def exprFileSets(expr: Expr): (ReadSet, WriteSet, IdemSet) = expr match {
     case Error => (Set.empty, Set.empty, Set.empty)
     case Skip => (Set.empty, Set.empty, Set.empty)
-    case Filter(a) => (a.readSet, Set.empty, Set.empty)
     case If(TestFileState(d1, IsDir), Skip, Mkdir(d2)) if d1 == d2 => (Set.empty, Set.empty, Set(d1))
     case If(TestFileState(d1, DoesNotExist), Mkdir(d2), Skip) if d1 == d2 => (Set.empty, Set.empty, Set(d1))
     case If(a, p, q) => refinedFileSets(a.readSet ++ p.readSet ++ q.readSet,
@@ -36,7 +35,7 @@ private[eval] object Commutativity {
                                         p.idemSet ++ q.idemSet)
     case Concur(p, q) => refinedFileSets(p.readSet ++ q.readSet,
                                          p.writeSet ++ q.writeSet,
-                                         p.idemSet ++ q.idemSet)  
+                                         p.idemSet ++ q.idemSet)
     case Seq(p, q) => refinedFileSets(p.readSet ++ q.readSet,
                                       p.writeSet ++ q.writeSet,
                                       p.idemSet ++ q.idemSet)

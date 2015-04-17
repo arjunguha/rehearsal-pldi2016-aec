@@ -10,7 +10,6 @@ private[eval] object Pretty {
   def pretty(cxt: Cxt, expr: Expr): String = expr match {
     case Error => "error"
     case Skip => "skip"
-    case Filter(a) => a.toString
     case If(a, p, q) => s"If($a, ${pretty(cxt, p)}, ${pretty(cxt, q)})"
     case Seq(p, q) => pretty(SeqCxt, p) + " >> " + pretty(SeqCxt, q)
     case Concur(p, q) => {

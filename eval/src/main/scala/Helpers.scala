@@ -6,7 +6,6 @@ private[eval] object Helpers {
   def isSequential(expr: Expr): Boolean = expr match {
     case Error => true
     case Skip => true
-    case Filter(_) => true
     case If(_, p, q) => p.isSequential && q.isSequential
     case Seq(p, q) => p.isSequential && q.isSequential
     case Alt(p, q) => p.isSequential && q.isSequential
@@ -22,7 +21,6 @@ private[eval] object Helpers {
   def size(expr: Expr): Int = expr match {
     case Error => 1
     case Skip => 1
-    case Filter(_) => 1
     case If(_, p, q) => 1 + p.size + q.size
     case Seq(p, q) => 1 + p.size + q.size
     case Alt(p, q) => 1 + p.size + q.size
