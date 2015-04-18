@@ -12,8 +12,7 @@ class PredConversionTests extends org.scalatest.FunSuite {
     assert(Or(And(True, True), False).cnf() == And(Or(True, False), Or(True, False)))
     assert(And(True, Or(False, And(True, True))).cnf() == And(True, And(Or(False, True), 
                                                                         Or(False, True))))
-
-    println(Or(True, And(Or(True, False), False)).cnf())
-  
+    assert(Or(True, And(Or(True, False), False)).cnf() == And(Or(True, Or(True,False)), 
+                                                              Or(True,False)))
   }
 }
