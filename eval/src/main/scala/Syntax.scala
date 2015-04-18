@@ -8,6 +8,9 @@ case object IsDir extends FileState
 case object DoesNotExist extends FileState
 
 sealed trait Pred {
+  def nnf(): Pred = Helpers.nnf(this)
+  def cnf(): Pred = Helpers.cnf(this)
+
   lazy val readSet = Commutativity.predReadSet(this)
 }
 

@@ -1,5 +1,4 @@
 import eval._
-import eval.Implicits._
 
 class PredConversionTests extends org.scalatest.FunSuite {
   test("negation normal form (nnf)") {

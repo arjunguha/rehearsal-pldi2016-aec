@@ -32,4 +32,27 @@ private[eval] object Helpers {
     case Cp(_, _) => 1
   }
 
+  // Converts predicates to negation normal form
+  def nnf(pred: Pred): Pred = pred match {
+    case Not(And(a, b)) => Or(nnf(Not(a)), nnf(Not(b)))
+    case Not(Or(a, b)) => And(nnf(Not(a)), nnf(Not(b)))
+    case Not(Not(a)) => nnf(a)
+    case And(a, b) => And(nnf(a), nnf(b))
+    case Or(a, b) => Or(nnf(a), nnf(b))
+    case Not(a) => Not(nnf(a))
+    case _ => pred
+  }
+
+  // Converts predicates from negation normal form to conjunctive normal form
+  def cnf_from_nnf(pred: Pred): Pred = pred match {
+    case Or(a, And(b, c)) => cnf_from_nnf(And(Or(a, b), Or(a, c)))
+    case Or(And(b, c), a) => cnf_from_nnf(And(Or(b, a), Or(c, a)))
+    case And(a, b) => And(cnf_from_nnf(a), cnf_from_nnf(b))
+    case Or(a, b) => Or(cnf_from_nnf(a), cnf_from_nnf(b))
+    case Not(a) => Not(cnf_from_nnf(a))
+    case _ => pred
+  }
+
+  // Converts predicates to conjunctive normal form
+  def cnf(pred: Pred): Pred = cnf_from_nnf(nnf(pred))
 }
