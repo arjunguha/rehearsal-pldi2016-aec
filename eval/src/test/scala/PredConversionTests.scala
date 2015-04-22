@@ -25,4 +25,15 @@ class PredConversionTests extends org.scalatest.FunSuite {
     val isdir = TestFileState(FileSystems.getDefault().getPath("/home"), IsDir)
     assert(And(True, isdir).replace(isdir, False) == And(True, False))
   }
+
+  test("weakest precondition (wp)") {
+    val hash = (for (i <- 0 until 16) yield 0.toByte).toArray
+    val root = FileSystems.getDefault().getPath("/")
+    val home = FileSystems.getDefault().getPath("/home")
+    assert(Mkdir(home).wp(TestFileState(home, IsDir)) ==
+           And(True, And(TestFileState(home, DoesNotExist), TestFileState(root, IsDir))))
+    assert(CreateFile(home, hash).wp(TestFileState(home, IsDir)) ==
+           And(False, And(TestFileState(home, DoesNotExist), TestFileState(root, IsDir))))
+    assert(Seq(Skip, Skip).wp(True) == True)
+  }
 }

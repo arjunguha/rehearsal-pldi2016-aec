@@ -64,4 +64,29 @@ private[eval] object Helpers {
     case Not(x) => Not(replace(x, a, b))
     case _ => pred
   }
+
+  // Calculates the weakest-precondition for an expression yielding the desired postcondition.
+  def wp(expr: Expr, post: Pred): Pred = expr match {
+    case Error => False
+    case Skip => post
+    case If(a, p, q) => And(Or(Not(a), wp(p, post)), Or(a, wp(q, post)))
+    case Seq(p, q) => wp(p, wp(q, post))
+    case Alt(p, q) => And(wp(p, post), wp(q, post))
+    case Atomic(p) => wp(p, post)
+    case Concur(p, q) => And(wp(p, post), wp(q, post))
+    case Mkdir(f) => And(post.replace(TestFileState(f, IsDir), True)
+      .replace(TestFileState(f, DoesNotExist), False).replace(TestFileState(f, IsFile), False),
+      And(TestFileState(f, DoesNotExist), TestFileState(f.getParent(), IsDir)))
+    case CreateFile(f, _) => And(post.replace(TestFileState(f, IsDir), False)
+      .replace(TestFileState(f, DoesNotExist), False).replace(TestFileState(f, IsFile), True),
+      And(TestFileState(f, DoesNotExist), TestFileState(f.getParent(), IsDir)))
+    case Rm(f) => And(post.replace(TestFileState(f, IsDir), False)
+      .replace(TestFileState(f, DoesNotExist), True).replace(TestFileState(f, IsFile), False),
+      Or(TestFileState(f, IsFile), TestFileState(f, IsDir))) // But the dir also needs to be empty?
+    case Cp(f, g) => And(post.replace(TestFileState(g, DoesNotExist), False)
+      .replace(TestFileState(g, IsFile), TestFileState(f, IsFile))
+      .replace(TestFileState(g, IsDir), TestFileState(f, IsDir)),
+      And(TestFileState(g, DoesNotExist), Not(TestFileState(f, DoesNotExist))))
+    case _ => False
+  }
 }
