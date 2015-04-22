@@ -55,4 +55,13 @@ private[eval] object Helpers {
 
   // Converts predicates to conjunctive normal form
   def cnf(pred: Pred): Pred = cnf_from_nnf(nnf(pred))
+
+  // Replaces a with b in pred.
+  def replace(pred: Pred, a: Pred, b: Pred): Pred = pred match {
+    case x if (a == x) => b
+    case Or(x, y) => Or(replace(x, a, b), replace(y, a, b))
+    case And(x, y) => And(replace(x, a, b), replace(y, a, b))
+    case Not(x) => Not(replace(x, a, b))
+    case _ => pred
+  }
 }

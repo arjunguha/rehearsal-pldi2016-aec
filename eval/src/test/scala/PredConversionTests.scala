@@ -1,5 +1,7 @@
 import eval._
 
+import java.nio.file.FileSystems
+
 class PredConversionTests extends org.scalatest.FunSuite {
   test("negation normal form (nnf)") {
     assert(Not(And(True, False)).nnf() == Or(Not(True), Not(False)))
@@ -14,5 +16,13 @@ class PredConversionTests extends org.scalatest.FunSuite {
                                                                         Or(False, True))))
     assert(Or(True, And(Or(True, False), False)).cnf() == And(Or(True, Or(True,False)), 
                                                               Or(True,False)))
+  }
+
+  test("predicate replace") {
+    assert(And(False, False).replace(False, True) == And(True, True))
+    assert(And(Or(False, True), Or(False, False)).replace(Or(False, False), False) ==
+           And(Or(False, True), False))
+    val isdir = TestFileState(FileSystems.getDefault().getPath("/home"), IsDir)
+    assert(And(True, isdir).replace(isdir, False) == And(True, False))
   }
 }
