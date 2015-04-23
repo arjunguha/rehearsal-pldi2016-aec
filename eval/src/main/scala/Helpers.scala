@@ -82,7 +82,7 @@ private[eval] object Helpers {
       And(TestFileState(f, DoesNotExist), TestFileState(f.getParent(), IsDir)))
     case Rm(f) => And(post.replace(TestFileState(f, IsDir), False)
       .replace(TestFileState(f, DoesNotExist), True).replace(TestFileState(f, IsFile), False),
-      Or(TestFileState(f, IsFile), TestFileState(f, IsDir))) // But the dir also needs to be empty?
+      TestFileState(f, IsFile))
     case Cp(f, g) => And(post.replace(TestFileState(g, DoesNotExist), False)
       .replace(TestFileState(g, IsFile), TestFileState(f, IsFile))
       .replace(TestFileState(g, IsDir), TestFileState(f, IsDir)),
