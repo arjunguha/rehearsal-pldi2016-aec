@@ -12,9 +12,10 @@ class repositories {
     ensure => 'directory'
   }
 
-  file{'/etc/apt/trusted.gpg.d/webupd8team-java.gpg':
-    source => '/vagrant/vm/webupd8team-java.gpg'
-  }
+
+#  file{'/etc/apt/trusted.gpg.d/webupd8team-java.gpg':
+#    source => '/vagrant/vm/webupd8team-java.gpg'
+#  }
 
   exec{'accept-oracle-license':
     command => '/bin/echo debconf shared/accepted-oracle-license-v1-1 select true | debconf-set-selections'

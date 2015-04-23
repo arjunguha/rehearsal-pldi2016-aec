@@ -14,8 +14,7 @@ abstract class SemanticTestSuite extends FunSuite {
   def runTest(program: String) {
     val graph = parse(program).desugar()
                               .toGraph(env).head._2
-    val expr = pipeline.resourceGraphToExpr(graph)
-    val finalStates = Ample.finalStates(fs, expr)
+    val finalStates = AmpleGraph.finalStates(fs, graph)(pipeline.GraphResourceToExpr)
     assert(1 == finalStates.size)
   }
 }

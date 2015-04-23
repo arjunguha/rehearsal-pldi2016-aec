@@ -20,6 +20,8 @@ package object pipeline {
     reduceGraph(resourceGraph, toExpr)
   }
 
+  def GraphResourceToExpr = toCoreResource _ andThen { ResourceToExpr(_) }
+
   // Reduce the graph to a single expression in fsmodel language
   def reduceGraph[A](graph: Graph[A, DiEdge], toExpr: A=>eval.Expr): eval.Expr = {
 
