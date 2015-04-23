@@ -22,18 +22,6 @@ object Ample {
 
   type MyGraph = Graph[Node, DiEdge]
 
-  def evalPred(pred: Pred, s: State): Boolean = pred match {
-    case True => true
-    case False => false
-    case And(a, b) => evalPred(a, s) && evalPred(b, s)
-    case Or(a, b) =>  evalPred(a, s) || evalPred(b, s)
-    case Not(a) => !evalPred(a, s)
-    case TestFileState(path, expectedFileState) => s.get(path) match {
-      case None => expectedFileState == DoesNotExist
-      case Some(fileState) => expectedFileState == fileState
-    }
-  }
-
   def isAtomic(e: Expr): Boolean = e match {
     case Skip => true
     case Error => true
@@ -56,7 +44,7 @@ object Ample {
       List()
     }
     case Skip => List()
-    case If(a, p, q) => evalPred(a, st) match {
+    case If(a, p, q) => Eval.evalPred(a, st) match {
       case true => d(st, p)
       case false => d(st, q)
     }
