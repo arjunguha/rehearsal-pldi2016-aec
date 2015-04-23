@@ -1,5 +1,7 @@
 package eval
 
+import Implicits._
+
 private[eval] object Helpers {
 
   // True if there are no concurrent expressions nested within this expression.
@@ -69,24 +71,24 @@ private[eval] object Helpers {
   def wp(expr: Expr, post: Pred): Pred = expr match {
     case Error => False
     case Skip => post
-    case If(a, p, q) => And(Or(Not(a), wp(p, post)), Or(a, wp(q, post)))
+    case If(a, p, q) => (!a || wp(p, post)) && (a || wp(q, post))
     case Seq(p, q) => wp(p, wp(q, post))
-    case Alt(p, q) => And(wp(p, post), wp(q, post))
+    case Alt(p, q) => wp(p, post) && wp(q, post)
     case Atomic(p) => wp(p, post)
-    case Concur(p, q) => And(wp(p, post), wp(q, post))
-    case Mkdir(f) => And(post.replace(TestFileState(f, IsDir), True)
-      .replace(TestFileState(f, DoesNotExist), False).replace(TestFileState(f, IsFile), False),
-      And(TestFileState(f, DoesNotExist), TestFileState(f.getParent(), IsDir)))
-    case CreateFile(f, _) => And(post.replace(TestFileState(f, IsDir), False)
-      .replace(TestFileState(f, DoesNotExist), False).replace(TestFileState(f, IsFile), True),
-      And(TestFileState(f, DoesNotExist), TestFileState(f.getParent(), IsDir)))
-    case Rm(f) => And(post.replace(TestFileState(f, IsDir), False)
-      .replace(TestFileState(f, DoesNotExist), True).replace(TestFileState(f, IsFile), False),
-      TestFileState(f, IsFile))
-    case Cp(f, g) => And(post.replace(TestFileState(g, DoesNotExist), False)
+    case Concur(p, q) => wp(p, post) && wp(q, post)
+    case Mkdir(f) => post.replace(TestFileState(f, IsDir), True)
+      .replace(TestFileState(f, DoesNotExist), False).replace(TestFileState(f, IsFile), False) &&
+      (TestFileState(f, DoesNotExist) && TestFileState(f.getParent(), IsDir))
+    case CreateFile(f, _) => post.replace(TestFileState(f, IsDir), False)
+      .replace(TestFileState(f, DoesNotExist), False).replace(TestFileState(f, IsFile), True) &&
+      (TestFileState(f, DoesNotExist) && TestFileState(f.getParent(), IsDir))
+    case Rm(f) => post.replace(TestFileState(f, IsDir), False)
+      .replace(TestFileState(f, DoesNotExist), True).replace(TestFileState(f, IsFile), False) &&
+      TestFileState(f, IsFile)
+    case Cp(f, g) => post.replace(TestFileState(g, DoesNotExist), False)
       .replace(TestFileState(g, IsFile), TestFileState(f, IsFile))
-      .replace(TestFileState(g, IsDir), TestFileState(f, IsDir)),
-      And(TestFileState(g, DoesNotExist), Not(TestFileState(f, DoesNotExist))))
+      .replace(TestFileState(g, IsDir), TestFileState(f, IsDir)) &&
+      (TestFileState(g, DoesNotExist) && !TestFileState(f, DoesNotExist))
     case _ => False
   }
 }
