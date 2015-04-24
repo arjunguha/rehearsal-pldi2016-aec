@@ -16,6 +16,10 @@ abstract class SemanticTestSuite extends FunSuite {
                               .toGraph(env).head._2
     val finalStates = AmpleGraph.finalStates(fs, graph)(pipeline.GraphResourceToExpr)
     assert(1 == finalStates.size)
+
+    val pre = eval.WeakestPreconditions.wpGraph(pipeline.toFileScriptGraph(graph), True)
+    info(s"Precondition is ${pre}")
+
   }
 }
 

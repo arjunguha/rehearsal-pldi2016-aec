@@ -25,7 +25,7 @@ case class TestFileState(path: Path, s: FileState) extends Pred
 sealed abstract trait Expr extends Product {
   def pretty(): String = Pretty.pretty(Pretty.SeqCxt, this)
   def commutesWith(other: Expr) = Commutativity.commutes(this, other)
-  def wp(post: Pred): Pred = Helpers.wp(this, post)
+  def wp(post: Pred): Pred = WeakestPreconditions.wp(this, post)
 
   val size = Helpers.size(this)
 
@@ -55,4 +55,12 @@ object Block {
 
   def apply(es: Expr*): Expr =
     es.foldRight(Skip: eval.Expr)((e, expr) => e >> expr)
+}
+
+object And {
+
+  def apply(preds: Pred*): Pred = {
+    preds.foldRight[Pred](True) { (x, y) => And(x, y) }
+  }
+
 }

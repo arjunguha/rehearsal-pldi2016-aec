@@ -80,20 +80,11 @@ class AmpleGraphTest extends FunSuite {
     val graph = parse(program).desugar()
                               .toGraph(Map[String, String]())
                               .head._2
-    // val extExpr = pipeline.resourceGraphToExpr(graph)
-    // info(extExpr.pretty())
+
     val evalGraph = AmpleGraph.makeGraph(Ample.initState, graph)(pipeline.GraphResourceToExpr)
     info(s"Graph has ${evalGraph.nodes.size} nodes")
     val finalStates = getFinalStates(evalGraph)
-    // for (p <- finalStates) {
-    //   info(p.toString)
-    // }
-    //l finalStates = Ample.finalStates(Ample.initState, extExpr)
+
     info(finalStates.size.toString)
-    // for(st <- finalStates) {
-    //   info(st.toString)
-    // }
-    //fo(finalStates.toString)
-    // Files.write(Paths.get(filename), AmpleGraph.drawGraph(extExpr).getBytes)
   }
 }
