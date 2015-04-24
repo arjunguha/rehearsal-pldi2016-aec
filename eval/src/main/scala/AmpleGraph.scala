@@ -1,11 +1,13 @@
 package eval
 
 import java.nio.file.Path
-import scalax.collection.edge.{LDiEdge}
+import scalax.collection.edge.LDiEdge
+import scalax.collection.edge.Implicits._
 import scalax.collection.GraphEdge.DiEdge
 import scalax.collection.mutable.Graph
 import Implicits._
 import puppet.graph.ResourceGraph
+import scala.collection.{Seq => ScalaSeq}
 
 object AmpleGraph {
 
@@ -25,24 +27,33 @@ object AmpleGraph {
       runtime.ScalaRunTime._hashCode(this)
   }
 
-  type MyGraph = Graph[Node, DiEdge]
+  case class MyGraphLabel(p: ScalaSeq[R])
+
+  type MyGraph = Graph[Node, LDiEdge]
+
+  import scalax.collection.edge.LBase.LEdgeImplicits
+  object MyGraphLabelImplicit extends LEdgeImplicits[MyGraphLabel]
+  import MyGraphLabelImplicit._
 
 
   def d(st: State, g: ResourceGraph)
-       (implicit toExpr: R => Expr): List[Node] = {
+       (implicit toExpr: R => Expr): List[(Node, R)] = {
     val roots = g.nodes.filter(_.inDegree == 0).toList
     for {
       node <- roots
       s <- Eval.eval(toExpr(node.value), st)
-    } yield Node(s, g - node)
+    } yield (Node(s, g - node), node.value)
   }
 
-  def getBranchingState(n: Node)
-                       (implicit toExpr: R=>Expr): (Node, List[Node]) = {
+  import scala.annotation.tailrec
+  
+  @tailrec
+  def getBranchingState(n: Node, trace: ScalaSeq[R] = ScalaSeq.empty)
+                       (implicit toExpr: R=>Expr): (Node, List[(Node, R)], ScalaSeq[R]) = {
     d(n.state, n.graph) match {
-      case List() => (n, Nil)
-      case List(n2) => getBranchingState(n2)
-      case branches => (n, branches)
+      case List() => (n, List(), trace)
+      case List(n2) => getBranchingState(n2._1, trace :+ n2._2)
+      case branches => (n, branches, trace)
     }
   }
 
@@ -54,16 +65,16 @@ object AmpleGraph {
 
     n1.visited = true
 
-    val (nBranch, branches) = getBranchingState(n1)
+    val (nBranch, branches, trace) = getBranchingState(n1)
 
     if (n1 != nBranch) {
       nBranch.visited = true
-      g.add(DiEdge(n1, nBranch))
+      g.add((LDiEdge(n1, nBranch)(MyGraphLabel(trace))))
     }
 
     for (node <- branches) {
-      val n2 = g.addAndGet(node)
-      g.add(DiEdge(nBranch, n2.value))
+      val n2 = g.addAndGet(node._1)
+      g.add(LDiEdge(nBranch, n2.value)(node._2))
       dfs(g, n2.value)
     }
   }

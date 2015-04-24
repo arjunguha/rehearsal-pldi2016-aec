@@ -86,5 +86,7 @@ class AmpleGraphTest extends FunSuite {
     val finalStates = getFinalStates(evalGraph)
 
     info(finalStates.size.toString)
+    evalGraph.saveDotFile(filename)
+    
   }
 }
