@@ -4,8 +4,8 @@ import java.nio.file.Path
 import scalax.collection.edge.{LDiEdge}
 import scalax.collection.GraphEdge.DiEdge
 import scalax.collection.mutable.Graph
-import scalax.collection.{Graph => IMGraph}
 import Implicits._
+import puppet.graph.ResourceGraph
 
 object AmpleGraph {
 
@@ -13,10 +13,9 @@ object AmpleGraph {
 
   // TODO(nimish) : Remove coupling on Resource Type. Type Params?
   type R = puppet.graph.Resource
-  type ResourceGraph = IMGraph[R, DiEdge]
   type RGNode = ResourceGraph#NodeT
 
-  case class Node(state: State, graph: IMGraph[R, DiEdge]) {
+  case class Node(state: State, graph: ResourceGraph) {
     // Equality and hash-code only consider the elements in the product.
     // http://stackoverflow.com/a/5867037
     var visited = false
@@ -69,7 +68,7 @@ object AmpleGraph {
     }
   }
 
-  def makeGraph(state: State, graph: IMGraph[R, DiEdge])
+  def makeGraph(state: State, graph: ResourceGraph)
                (implicit toExpr: R=>Expr): MyGraph = {
     val g: MyGraph = Graph.empty
     val node = Node(state, graph)
@@ -78,7 +77,7 @@ object AmpleGraph {
     g
   }
 
-  def finalStates(init: State, graph: IMGraph[R, DiEdge])
+  def finalStates(init: State, graph: ResourceGraph)
                  (implicit toExpr: R=>Expr): scala.collection.mutable.Set[State] = {
     val g = makeGraph(init, graph)
     g.nodes.filter(n => n.outDegree == 0).map(_.value.state)
