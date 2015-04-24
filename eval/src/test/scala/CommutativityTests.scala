@@ -18,6 +18,7 @@ class CommutativityTests extends org.scalatest.FunSuite {
     assert(p.writeSet.size == 1)
   }
 
+  /*
   test("read(a) * idempotent_mkdir(a) is not idempotent") {
     val p = If(TestFileState("/a", IsDir) && !TestFileState("/a/b", DoesNotExist),
                Mkdir("/a/b"), Skip)
@@ -27,27 +28,13 @@ class CommutativityTests extends org.scalatest.FunSuite {
     assert(expr.writeSet.contains("/a"))
     assert(expr.readSet.contains("/a"))
   }
+  */
 
-  test("non-idempotent unatomic ops should not commute") {
-    val p = If(TestFileState("/a", IsDir), Skip, Mkdir("/a")) >>
-            Rm("/a")
+  test("non-idempotent ops should not commute") {
+    val p = If(TestFileState("/a", IsDir), Skip, Mkdir("/a")) >> Rm("/a")
     val q = If(TestFileState("/a", DoesNotExist), Mkdir("/a"), Skip)
 
     assert(false == p.commutesWith(q))
-  }
-
-  test("non-idempotent atomic ops should not commute") {
-    val p = Atomic(If(TestFileState("/a", IsDir), Skip, Mkdir("/a")) >>
-                   Rm("/a"))
-    val q = Atomic(If(TestFileState("/a", DoesNotExist), Mkdir("/a"), Skip))
-
-    assert(false == p.commutesWith(q))
-  }
-
-  test("Atomic idempotent ops should commute") {
-    val p = Atomic(If(TestFileState("/a", IsDir), Skip, Mkdir("/a")) >> Mkdir("/b"))
-    val q = Atomic(Mkdir("/c") >> If(TestFileState("/a", DoesNotExist), Mkdir("/a"), Skip))
-    assert(p.commutesWith(q))
   }
 
   test("idempotent ops should commute") {

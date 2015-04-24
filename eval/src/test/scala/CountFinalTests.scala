@@ -5,16 +5,21 @@ import Ample._
 class CountFinalTests extends org.scalatest.FunSuite {
 
   // TODO(arjun): I'm not sure how to properly test unconcur
+  /*
   test("atomic * atomic") {
     val e = Mkdir("/a") * Mkdir("/b")
     assert(finalStates(makeGraph(initState, e)).size == 1)
   }
+  */
 
+  /*
   test(">> * atomic") {
     val e = (Mkdir("/a") >> Mkdir("/b")) * Mkdir("/c")
     assert(makeGraph(initState, e).nodes.size == 2)
   }
+  */
 
+  /*
   test("(p>>q) * (r>>s)") {
     val p = Mkdir("/a")
     val r = Mkdir("/b")
@@ -42,7 +47,9 @@ class CountFinalTests extends org.scalatest.FunSuite {
     g.saveDotFile("p-q-concur-r-s.dot")
     assert(g.nodes.size == 4)
   }
+  */
 
+  /*
   test("p * q * r") {
     val p = Atomic(If(TestFileState("/parent", IsDir), Skip, Mkdir("/parent")) >>
                    Mkdir("/parent/a"))
@@ -55,6 +62,7 @@ class CountFinalTests extends org.scalatest.FunSuite {
     g.saveDotFile("concur-p-q-r.dot")
     assert(g.nodes.size == 2)
   }
+  */
 
   // // unatomic version of above test p*q*r
   // test("(p>>q) * (r>>s) * (u>>v") {

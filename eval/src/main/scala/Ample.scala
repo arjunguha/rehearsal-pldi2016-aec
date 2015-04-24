@@ -22,17 +22,6 @@ object Ample {
 
   type MyGraph = Graph[Node, DiEdge]
 
-  def isAtomic(e: Expr): Boolean = e match {
-    case Skip => true
-    case Error => true
-    case Atomic(_) =>  true
-    case Cp(_, _) => true
-    case Mkdir(_) => true
-    case CreateFile(_, _) => true
-    case Rm(_) => true
-    case _ => false
-  }
-
   def isTerminal(e: Expr): Boolean = e match {
     case Skip => true
     case _ => false
@@ -72,43 +61,12 @@ object Ample {
       // println(s"Rm error")
       List(Node(st, Error))
     }
-    case Alt(p, q) => d(st, p) ++ d(st, q)
     case Seq(Skip, q) => d(st, q)
     case Seq(p, q) => d(st, p) match {
       case Nil => d(st, q)
       case d1 => for {
         Node(st1, p1) <- d1
       } yield Node(st1, p1 >> q)
-    }
-    /* Since we are dealing with atomic, intermediate states should
-     * not be visible to outside world
-     */
-    case Atomic(p) => {
-
-      val next_nodes =  d(st, p)
-
-      def getTerminalNodes(nodes: List[Node],
-                           terminals: List[Node]): List[Node] = nodes match {
-        case Nil => terminals
-        case _ => {
-          val (terms, intermediates) = nodes.partition((n) => isTerminal(n.expr))
-          val new_nodes = intermediates.flatMap((n) => d(n.state, n.expr))
-          getTerminalNodes(new_nodes, terms ::: terminals)
-        }
-      }
-
-      getTerminalNodes(next_nodes, List.empty)
-    }
-
-    case ce @Concur(p, q) => {
-      if (ce.commutes) {
-        d(st, p >> q)
-      }
-      else {
-        val sts1 = for (Node(st1, p1) <- d(st, p)) yield Node(st1, p1 * q)
-        val sts2 = for (Node(st1, q1) <- d(st, q)) yield Node(st1, p * q1)
-        sts1 ++ sts2
-      }
     }
   }
 

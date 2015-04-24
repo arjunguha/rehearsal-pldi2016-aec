@@ -5,9 +5,10 @@ import java.nio.file.Path
 import Implicits._
 
 object Eval {
-  
+
   type State = PerfMap[Path, FileState]
 
+  // TODO(arjun): Deterministic, so should return Option[State]
   def eval(expr: Expr, s: State): List[State] = expr match {
     case Error => List()
     case Skip => List(s)
@@ -36,16 +37,10 @@ object Eval {
     case Seq(p, q) => {
       eval(p, s).flatMap(newState => eval(q, newState))
     }
-    case Alt(p, q) => {
-      eval(p, s) ++ eval(q, s)
-    }
     case If(pred, p, q) => evalPred(pred, s) match {
       case true => eval(p, s)
       case false => eval(q, s)
     }
-    case Atomic(p) => eval(p, s)
-    case Concur(p, q) if p.commutesWith(q) => eval(Seq(p, q), s)
-    case Concur(p, q) => eval(Seq(p, q), s) ::: eval(Seq(q, p), s)
   }
 
   def evalPred(pred: Pred, s: State): Boolean = pred match {

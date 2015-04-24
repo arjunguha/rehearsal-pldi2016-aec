@@ -33,16 +33,9 @@ private[eval] object Commutativity {
     case If(a, p, q) => refinedFileSets(a.readSet ++ p.readSet ++ q.readSet,
                                         p.writeSet ++ q.writeSet,
                                         p.idemSet ++ q.idemSet)
-    case Concur(p, q) => refinedFileSets(p.readSet ++ q.readSet,
-                                         p.writeSet ++ q.writeSet,
-                                         p.idemSet ++ q.idemSet)
     case Seq(p, q) => refinedFileSets(p.readSet ++ q.readSet,
                                       p.writeSet ++ q.writeSet,
                                       p.idemSet ++ q.idemSet)
-    case Alt(p, q) => refinedFileSets(p.readSet ++ q.readSet,
-                                      p.writeSet ++ q.writeSet,
-                                      p.idemSet ++ q.idemSet)
-    case Atomic(p) => (p.readSet, p.writeSet, p.idemSet)
     case Mkdir(path) => (Set.empty, Set(path), Set.empty)
     case CreateFile(path, _) => (Set.empty, Set(path), Set.empty)
     case Rm(path) => (Set.empty, Set(path), Set.empty)

@@ -15,30 +15,7 @@ import eval.Implicits._
 
 package object pipeline {
 
-  def resourceGraphToExpr(resourceGraph: Graph[puppet.graph.Resource, DiEdge]): eval.Expr = {
-    val toExpr = toCoreResource _ andThen { ResourceToExpr(_) }
-    reduceGraph(resourceGraph, toExpr)
-  }
-
   def GraphResourceToExpr = toCoreResource _ andThen { ResourceToExpr(_) }
-
-  // Reduce the graph to a single expression in fsmodel language
-  def reduceGraph[A](graph: Graph[A, DiEdge], toExpr: A=>eval.Expr): eval.Expr = {
-
-    import scala.annotation.tailrec
-
-    @tailrec
-    def loop(graph: Graph[A, DiEdge], acc: eval.Expr): eval.Expr =
-      if(graph.isEmpty) acc
-      else {
-        val roots = graph.nodes.filter(_.inDegree == 0)
-        loop(graph -- roots,
-             acc >> roots.map((n) => Atomic(toExpr(n.value)))
-                         .reduce[eval.Expr](_ * _))
-      }
-
-    loop(graph, Skip)
-  }
 
   def toCoreValue(v: Value): resrc.Value = v match {
     case UndefV => resrc.UndefV
