@@ -27,14 +27,7 @@ object AmpleGraph {
       runtime.ScalaRunTime._hashCode(this)
   }
 
-  case class MyGraphLabel(p: ScalaSeq[R])
-
   type MyGraph = Graph[Node, LDiEdge]
-
-  import scalax.collection.edge.LBase.LEdgeImplicits
-  object MyGraphLabelImplicit extends LEdgeImplicits[MyGraphLabel]
-  import MyGraphLabelImplicit._
-
 
   def d(st: State, g: ResourceGraph)
        (implicit toExpr: R => Expr): List[(Node, R)] = {
@@ -45,9 +38,6 @@ object AmpleGraph {
     } yield (Node(s, g - node), node.value)
   }
 
-  import scala.annotation.tailrec
-  
-  @tailrec
   def getBranchingState(n: Node, trace: ScalaSeq[R] = ScalaSeq.empty)
                        (implicit toExpr: R=>Expr): (Node, List[(Node, R)], ScalaSeq[R]) = {
     d(n.state, n.graph) match {
@@ -69,7 +59,7 @@ object AmpleGraph {
 
     if (n1 != nBranch) {
       nBranch.visited = true
-      g.add((LDiEdge(n1, nBranch)(MyGraphLabel(trace))))
+      g.add((LDiEdge(n1, nBranch)(trace)))
     }
 
     for (node <- branches) {

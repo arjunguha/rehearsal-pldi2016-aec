@@ -57,6 +57,30 @@ class AmpleGraphTest extends FunSuite {
     runTest("4.dot", program)
   }
 
+  test("4 resource") {
+    val program = """
+      file{'/A': ensure => directory}
+
+      file{'/A/AA':
+        ensure => directory,
+        require => File['/A']
+      }
+
+      file{'/A/AA/1': 
+        ensure => file,
+        require => File['/A/AA']
+      }
+
+      file{'/A/AA/2':
+        ensure => file,
+        require => [File['/A/AA'], File['/3']]
+      }
+
+      file{'/3': ensure => file}
+    """
+    runTest("5.dot", program)
+  }
+
 
   def runBenchmark(name: String) {
     test(name) {
@@ -80,6 +104,7 @@ class AmpleGraphTest extends FunSuite {
     val graph = parse(program).desugar()
                               .toGraph(Map[String, String]())
                               .head._2
+    info(s"Resource Graph has ${graph.nodes.size} nodes")
 
     val evalGraph = AmpleGraph.makeGraph(Ample.initState, graph)(pipeline.GraphResourceToExpr)
     info(s"Graph has ${evalGraph.nodes.size} nodes")
