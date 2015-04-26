@@ -5,22 +5,22 @@ import java.nio.file.FileSystems
 
 class PredConversionTests extends org.scalatest.FunSuite {
   test("negation normal form (nnf)") {
-    assert((!(True && False)).nnf() == (!True || !False))
-    assert((!(True || False)).nnf() == (!True && !False))
-    assert((!(True || !False)).nnf() == (!True && False))
+    val in = TestFileState(FileSystems.getDefault().getPath("/"), IsDir)
+    assert((!(in && in)).nnf() == (!in || !in))
+    assert((!(in || in)).nnf() == (!in && !in))
+    assert((!(in || !in)).nnf() == (!in && in))
   }
 
   test("conjunctive normal form (cnf)") {
-    assert((!(True || False)).cnf() == (!True && !False))
-    assert((True && True || False).cnf() == ((True || False) && (True || False)))
-    assert((True && (False || (True && True))).cnf() == (True && ((False || True) &&
-                                                         (False || True))))
-    assert((True || ((True || False) && False)).cnf() == ((True || (True || False)) &&
-                                                          (True || False)))
+    val in = TestFileState(FileSystems.getDefault().getPath("/"), IsDir)
+    assert((!(in || in)).cnf() == (!in && !in))
+    assert((in && in || in).cnf() == ((in || in) && (in || in)))
+    assert((in && (in || (in && in))).cnf() == (in && ((in || in) && (in || in))))
+    assert((in || ((in || in) && in)).cnf() == ((in || (in || in)) && (in || in)))
   }
 
   test("predicate replace") {
-    assert((False && False).replace(False, True) == (True && True))
+    assert((And(False, False)).replace(False, True) == (And(True, True)))
     assert(((False || True) && (False || False)).replace((False || False), False) ==
            ((False || True) && False))
     val isdir = TestFileState(FileSystems.getDefault().getPath("/home"), IsDir)
