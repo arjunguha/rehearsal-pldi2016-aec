@@ -50,4 +50,21 @@ private[eval] object Helpers {
     case _ => pred
   }
 
+  // Simplifies a predicate using boolean identities.
+  def simplify(pred: Pred): Pred = pred match {
+    case Or(True, _) => True
+    case Or(_, True) => True
+    case And(False, _) => False
+    case And(_, False) => False
+    case Or(False, p) => simplify(p)
+    case Or(p, False) => simplify(p)
+    case And(True, p) => simplify(p)
+    case And(p, True) => simplify(p)
+    case Not(p) => !simplify(p)
+    case And(a, b) if (a == b) => simplify(a)
+    case Or(a, b) if (a == b) => simplify(a)
+    case And(a, b) => simplify(a) && simplify(b)
+    case Or(a, b) => simplify(a) || simplify(b)
+    case _ => pred
+  }
 }
