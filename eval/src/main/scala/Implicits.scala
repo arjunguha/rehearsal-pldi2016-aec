@@ -25,9 +25,30 @@ object Implicits {
 
   implicit class RichPred(a: Pred) {
 
-    def &&(b: Pred): Pred = And(a, b)
-    def ||(b: Pred): Pred = Or(a, b)
-    def unary_!(): Pred = Not(a)
+    def &&(b: Pred): Pred = a match {
+      case True => b
+      case _ => b match {
+        case True => a
+        case _ => And(a, b)
+      }
+    }
+
+    def ||(b: Pred): Pred = a match {
+      case True => True
+      case False => b
+      case _ => b match {
+        case True => True
+        case False => a
+        case _ => Or(a, b)
+      }
+    }
+    
+    def unary_!(): Pred = a match {
+      case Not(True) => False
+      case Not(False) => True
+      case Not(a) => a
+      case _ => Not(a)
+    }
   }
 
   implicit class RichExpr(e1: Expr) {
