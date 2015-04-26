@@ -42,11 +42,9 @@ object WeakestPreconditions {
     }
     else {
       val pres = for (node <- finalNodes) yield {
-        wpGraph(g - node, wp(node, post))
+        wpGraph(g - node, wp(node, Helpers.simplify(post)))
       }
-      And(pres: _*)
+      Helpers.simplify(And(pres: _*))
     }
   }
-
-
 }
