@@ -28,10 +28,8 @@ object WeakestPreconditions {
     case CreateFile(f, _) => withFileState(post, f, IsFile) && (TestFileState(f, DoesNotExist) &&
                                                                 TestFileState(f.getParent(), IsDir))
     case Rm(f) => withFileState(post, f, DoesNotExist) && TestFileState(f, IsFile)
-    case Cp(f, g) => post.replace(TestFileState(g, DoesNotExist), False)
-      .replace(TestFileState(g, IsFile), TestFileState(f, IsFile))
-      .replace(TestFileState(g, IsDir), TestFileState(f, IsDir)) &&
-      (TestFileState(g, DoesNotExist) && !TestFileState(f, DoesNotExist))
+    case Cp(f, g) => withFileState(post, g, IsFile) && (TestFileState(g, DoesNotExist) && 
+                                                        TestFileState(f, IsFile))
     case _ => False
   }
 
