@@ -18,12 +18,23 @@ abstract class SemanticTestSuite extends FunSuite {
     assert(1 == finalStates.size)
 
     val pre = eval.WeakestPreconditions.wpGraph(pipeline.toFileScriptGraph(graph), True)
-    info(s"Precondition is ${pre}")
+    info(s"Precondition size is ${pre.size}")
 
   }
 }
 
 class FileTestSuite extends SemanticTestSuite {
+
+  test("several sibling directories") {
+    val program = """
+      file{"/a": ensure => directory }
+      file{"/b": ensure => directory }
+      file{"/c": ensure => directory }
+      file{"/d": ensure => directory }
+    """
+    runTest(program)
+  }
+
 
   test("file without ensure with content should succeed") {
     val program = """file{"/foo":
