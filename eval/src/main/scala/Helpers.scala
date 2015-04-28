@@ -5,11 +5,19 @@ import Implicits._
 
 private[eval] object Helpers {
 
-  // Gives all predicates size 0
+  def predSize(pred: Pred): Int = pred match {
+    case Not(a) => 1 + a.size
+    case And(a, b) => 1 + a.size + b.size
+    case Or(a, b) => 1 + a.size + b.size
+    case TestFileState(_, _) => 1
+    case True => 1
+    case False => 1
+  }
+
   def size(expr: Expr): Int = expr match {
     case Error => 1
     case Skip => 1
-    case If(_, p, q) => 1 + p.size + q.size
+    case If(a, p, q) => 1 + a.size + p.size + q.size
     case Seq(p, q) => 1 + p.size + q.size
     case Mkdir(_) => 1
     case CreateFile(_, _) => 1
