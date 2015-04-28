@@ -37,8 +37,10 @@ object WeakestPreconditions {
     val finalNodes = g.nodes.filter(_.outDegree == 0).toList
     if (finalNodes.length == 0) {
       post
-    }
-    else {
+    } else if (finalNodes.combinations(2).forall { case List(a, b) => a.commutesWith(b) }) {
+      val pred = finalNodes.foldRight(post){ (node, pred) => wp(node, Helpers.simplify(pred)) } 
+      Helpers.simplify(wpGraph(g -- finalNodes, pred))
+    } else {
       val pres = for (node <- finalNodes) yield {
         wpGraph(g - node, wp(node, Helpers.simplify(post)))
       }
