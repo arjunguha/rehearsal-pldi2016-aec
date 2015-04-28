@@ -42,10 +42,10 @@ object Implicits {
         case _ => Or(a, b)
       }
     }
-    
+
     def unary_!(): Pred = a match {
-      case Not(True) => False
-      case Not(False) => True
+      case True => False
+      case False => True
       case Not(a) => a
       case _ => Not(a)
     }
