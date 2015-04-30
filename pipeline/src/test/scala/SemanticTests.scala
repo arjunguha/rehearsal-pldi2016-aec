@@ -11,7 +11,7 @@ abstract class SemanticTestSuite extends FunSuite {
   val env = Facter.emptyEnv
   val fs = Ubuntu.lightweight_fs
 
-  def runTest(program: String) {
+  def runTest(program: String, print: Boolean = false) {
     val graph = parse(program).desugar()
                               .toGraph(env).head._2
     val finalStates = AmpleGraph.finalStates(fs, graph)(pipeline.GraphResourceToExpr)
@@ -19,6 +19,9 @@ abstract class SemanticTestSuite extends FunSuite {
 
     val pre = eval.WeakestPreconditions.wpGraph(pipeline.toFileScriptGraph(graph), True)
     info(s"Precondition size is ${pre.size}")
+    if (print) {
+      info(pre.toString)
+    }
 
   }
 }
@@ -28,11 +31,8 @@ class FileTestSuite extends SemanticTestSuite {
   test("several sibling directories") {
     val program = """
       file{"/a": ensure => directory }
-      file{"/b": ensure => directory }
-      file{"/c": ensure => directory }
-      file{"/d": ensure => directory }
     """
-    runTest(program)
+    runTest(program, true)
   }
 
 
