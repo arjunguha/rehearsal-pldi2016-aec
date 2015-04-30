@@ -69,6 +69,10 @@ private[eval] object Helpers {
     case And(True, p) => simplify(p)
     case And(p, True) => simplify(p)
     case Not(p) => !simplify(p)
+    case Or(Not(x), y) if (x == y) => True
+    case Or(x, Not(y)) if (x == y) => True
+    case And(Not(x), y) if (x == y) => False
+    case And(x, Not(y)) if (x == y) => False
     case And(a, b) if (a == b) => simplify(a)
     case Or(a, b) if (a == b) => simplify(a)
     case And(a, b) => simplify(a) && simplify(b)
