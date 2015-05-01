@@ -37,6 +37,8 @@ lazy val common = project
 
 lazy val eval = project
 
+lazy val bdd = project
+
 lazy val master = project.in(file("verification/master"))
                          .dependsOn(common)
 
