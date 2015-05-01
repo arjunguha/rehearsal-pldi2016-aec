@@ -8,6 +8,7 @@ trait Bdd[X] {
 
   val bddTrue: Node
   val bddFalse: Node
+  def bddVar(x: X): Node
   def bddApply(op: (Boolean, Boolean) => Boolean, lhs: Node, rhs: Node): Node
 
   object Implicits {
@@ -43,7 +44,6 @@ private class BddImpl[X](varLT : (X, X) => Boolean) extends Bdd[X] {
   val bddTrue = bddToNode(Leaf(true))
   val bddFalse = bddToNode(Leaf(false))
 
-
   def bddToNode(bdd: Bdd): Node = {
     h.get(bdd) match {
       case Some(n) => n
@@ -67,6 +67,8 @@ private class BddImpl[X](varLT : (X, X) => Boolean) extends Bdd[X] {
       bddToNode(Branch(i, lo, hi))
     }
   }
+
+  def bddVar(x: X): Node = bddToNode(Branch(x, bddFalse, bddTrue))
 
   def bddApply(op: (Boolean, Boolean) => Boolean, lhs: Node, rhs: Node): Node = {
     (nodeToBdd(lhs), nodeToBdd(rhs)) match {
