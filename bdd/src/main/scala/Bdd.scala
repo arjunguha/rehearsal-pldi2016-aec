@@ -11,7 +11,7 @@ trait Bdd[X] {
   def bddVar(x: X): Node
   def bddApply(op: (Boolean, Boolean) => Boolean, lhs: Node, rhs: Node): Node
   def bddRestrict(node: Node, variable: X, value: Boolean): Node
-  def bddRestrictAll(node: Node, pairs: Seq[(X, Boolean)]): Node = pairs.foldRight(node){ 
+  def bddRestrictAll(node: Node, pairs: Seq[(X, Boolean)]): Node = pairs.foldRight(node){
     case ((x, b), acc) => bddRestrict(acc, x, b)
   }
 
@@ -26,6 +26,8 @@ trait Bdd[X] {
     }
 
   }
+
+  def cacheSize: Int
 
 }
 
@@ -48,6 +50,8 @@ private class BddImpl[X](varLT : (X, X) => Boolean) extends Bdd[X] {
   val h: Map[Bdd, Node] = Map()
   val bddTrue = bddToNode(Leaf(true))
   val bddFalse = bddToNode(Leaf(false))
+
+  def cacheSize = t.size
 
   def bddToNode(bdd: Bdd): Node = {
     h.get(bdd) match {
@@ -105,7 +109,7 @@ private class BddImpl[X](varLT : (X, X) => Boolean) extends Bdd[X] {
       } else if (varLT(x, variable)) {
         mk(x, res(lo), res(hi))
       } else if (value) {
-        hi 
+        hi
       } else {
         lo
       }

@@ -17,11 +17,11 @@ abstract class SemanticTestSuite extends FunSuite {
     val finalStates = AmpleGraph.finalStates(fs, graph)(pipeline.GraphResourceToExpr)
     assert(1 == finalStates.size)
 
-    val pre = eval.WeakestPreconditions.wpGraph(pipeline.toFileScriptGraph(graph), True)
-    info(s"Precondition size is ${pre.size}")
-    if (print) {
-      info(pre.toString)
-    }
+    val myBdd = bdd.Bdd[TestFileState]((x, y) => (x, y) match {
+      case (TestFileState(f, _), TestFileState(g, _)) => f.toString < g.toString
+    })
+    val pre = eval.WeakestPreconditions.wpGraphBdd(myBdd)(pipeline.toFileScriptGraph(graph), myBdd.bddTrue)
+    info(s"BDD nodes allocated: ${myBdd.cacheSize}")
 
   }
 }
