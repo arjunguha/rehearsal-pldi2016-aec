@@ -35,7 +35,7 @@ lazy val installer = project.dependsOn(common)
 
 lazy val common = project
 
-lazy val eval = project
+lazy val eval = project.dependsOn(bdd)
 
 lazy val bdd = project
 

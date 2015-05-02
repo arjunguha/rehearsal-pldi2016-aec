@@ -3,6 +3,8 @@ package eval
 import java.nio.file.Path
 import Implicits._
 
+import bdd._
+
 object WeakestPreconditions {
 
   def withFileState(pred: Pred, f: Path, s: FileState): Pred = s match {
@@ -15,6 +17,43 @@ object WeakestPreconditions {
     case DoesNotExist => pred.replace(TestFileState(f, DoesNotExist), True)
                              .replace(TestFileState(f, IsDir), False)
                              .replace(TestFileState(f, IsFile), False)
+  }
+
+  def bddWithFileState(bdd: Bdd[TestFileState])(pred: bdd.Node, f: Path, s: FileState): bdd.Node = {
+    import bdd._
+    s match {
+      case IsFile => bddRestrictAll(pred, List((TestFileState(f, IsFile), true),
+                                               (TestFileState(f, IsDir), false),
+                                               (TestFileState(f, DoesNotExist), false)))
+      case IsDir => bddRestrictAll(pred, List((TestFileState(f, IsDir), true),
+                                              (TestFileState(f, IsFile), false),
+                                              (TestFileState(f, DoesNotExist), false)))
+      case DoesNotExist => bddRestrictAll(pred, List((TestFileState(f, DoesNotExist), true),
+                                                     (TestFileState(f, IsDir), false),
+                                                     (TestFileState(f, IsFile), false)))
+    }
+  }
+
+  def wpBdd(bdd: Bdd[TestFileState])(expr: Expr, post: bdd.Node): bdd.Node = {
+    import bdd._
+    import Implicits._
+    expr match {
+      case Error => bddFalse
+      case Skip => post
+      case If(a, p, q) => bddFalse/*bddApply((m, n) => !m || n, bddVar(a), wpBdd(bdd)(p, post)) && 
+                          (bddVar(a) || wpBdd(bdd)(q, post))*/
+      case Seq(p, q) => wpBdd(bdd)(p, wpBdd(bdd)(q, post))
+      case Mkdir(f) => bddWithFileState(bdd)(post, f, IsDir) && 
+                       bddVar(TestFileState(f, DoesNotExist)) && 
+                       bddVar(TestFileState(f.getParent(), IsDir))
+      case CreateFile(f, _) => bddWithFileState(bdd)(post, f, IsFile) && 
+                               bddVar(TestFileState(f, DoesNotExist)) && 
+                               bddVar(TestFileState(f.getParent(), IsDir))
+      case Rm(f) => bddWithFileState(bdd)(post, f, DoesNotExist) && bddVar(TestFileState(f, IsFile))
+      case Cp(f, g) => bddWithFileState(bdd)(post, g, IsFile) && 
+                       bddVar(TestFileState(g, DoesNotExist)) && bddVar(TestFileState(f, IsFile))
+      case _ => bddFalse
+    }
   }
 
   // Calculates the weakest-precondition for an expression yielding the desired postcondition.
