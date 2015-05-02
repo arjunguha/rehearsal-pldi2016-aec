@@ -10,6 +10,7 @@ trait Bdd[X] {
   val bddFalse: Node
   def bddVar(x: X): Node
   def bddApply(op: (Boolean, Boolean) => Boolean, lhs: Node, rhs: Node): Node
+  def bddRestrict(node: Node, variable: X, value: Boolean): Node
 
   object Implicits {
 
@@ -91,6 +92,22 @@ private class BddImpl[X](varLT : (X, X) => Boolean) extends Bdd[X] {
         }
       }
     }
+  }
+
+  def bddRestrict(node: Node, variable: X, value: Boolean): Node = {
+    def res(n: Node): Node = nodeToBdd(n) match {
+      case Branch(x, lo, hi) => if (varLT(variable, x)) {
+        n
+      } else if (varLT(x, variable)) {
+        mk(x, res(lo), res(hi))
+      } else if (value) {
+        hi 
+      } else {
+        lo
+      }
+      case _ => n
+    }
+    res(node)
   }
 
 }

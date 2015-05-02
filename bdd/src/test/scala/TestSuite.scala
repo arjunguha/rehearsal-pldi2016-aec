@@ -2,7 +2,7 @@ import bdd.Bdd
 
 class TestSuite extends org.scalatest.FunSuite {
 
-  test("basic bdd usage") {
+  test("basic bdd creation") {
     val bdd = Bdd[String]((x, y) => x < y)
     import bdd._
     import Implicits._
@@ -17,5 +17,13 @@ class TestSuite extends org.scalatest.FunSuite {
     assert(z == (bddVar("a") && (bddVar("b") || bddVar("c"))))
   }
 
+  test("bddRestrict tests") {
+    val bdd = Bdd[String]((x, y) => x < y)
+    import bdd._
+    import Implicits._
+
+    assert(bddRestrict(bddVar("a") && bddVar("b"), "a", false) == bddFalse)
+    assert(bddRestrict(bddVar("a") || bddVar("b"), "b", true) == bddTrue)
+  }
 
 }
