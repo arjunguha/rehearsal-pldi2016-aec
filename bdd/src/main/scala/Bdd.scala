@@ -21,6 +21,7 @@ trait Bdd[X] {
 
       def &&(other: Node): Node = bddApply((x, y) => x && y, node, other)
       def ||(other: Node): Node = bddApply((x, y) => x || y, node, other)
+      def unary_!(): Node = bddApply((x, y) => !(x && y), node, bddTrue)
 
     }
 
