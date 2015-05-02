@@ -11,6 +11,9 @@ trait Bdd[X] {
   def bddVar(x: X): Node
   def bddApply(op: (Boolean, Boolean) => Boolean, lhs: Node, rhs: Node): Node
   def bddRestrict(node: Node, variable: X, value: Boolean): Node
+  def bddRestrictAll(node: Node, pairs: Seq[(X, Boolean)]): Node = pairs.foldRight(node){ 
+    case ((x, b), acc) => bddRestrict(acc, x, b)
+  }
 
   object Implicits {
 
