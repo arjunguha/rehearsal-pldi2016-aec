@@ -28,5 +28,12 @@ class TestSuite extends org.scalatest.FunSuite {
     assert(bddRestrictAll(x, List(("a", true), ("b", true))) == bddVar("c"))
     assert(bddRestrictAll(x, List(("a", false), ("b", true))) == bddFalse)
   }
+  
+  test("bddFold") {
+    val bdd = Bdd[String]((x, y) => x < y)
+    import bdd._
+    import Implicits._
+    assert(bddFold("")(bddVar("a") && bddVar("b") || bddVar("c"), (a, b) => a + b) == "acbc")
+  }
 
 }

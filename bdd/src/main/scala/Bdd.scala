@@ -14,6 +14,7 @@ trait Bdd[X] {
   def bddRestrictAll(node: Node, pairs: Seq[(X, Boolean)]): Node = pairs.foldRight(node){
     case ((x, b), acc) => bddRestrict(acc, x, b)
   }
+  def bddFold[B](acc: B)(node: Node, op: (B, X) => B): B
 
   object Implicits {
 
@@ -116,6 +117,11 @@ private class BddImpl[X](varLT : (X, X) => Boolean) extends Bdd[X] {
       case _ => n
     }
     res(node)
+  }
+
+  def bddFold[B](acc: B)(node: Node, op: (B, X) => B): B = nodeToBdd(node) match {
+    case Branch(x, lo, hi) => bddFold(bddFold(op(acc, x))(lo, op))(hi, op)
+    case Leaf(_) => acc
   }
 
 }
