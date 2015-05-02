@@ -34,14 +34,29 @@ object WeakestPreconditions {
     }
   }
 
+  def predToBdd(bdd: Bdd[TestFileState])(pred: Pred): bdd.Node = {
+    import bdd._
+    import Implicits._
+    pred match {
+      case True => bddTrue
+      case False => bddFalse
+      case TestFileState(f, s) => bddVar(TestFileState(f, s))
+      case And(a, b) => predToBdd(bdd)(a) && predToBdd(bdd)(b)
+      case Or(a, b) => predToBdd(bdd)(a) || predToBdd(bdd)(b)
+      case Not(a) => !predToBdd(bdd)(a)
+    }
+  }
+
   def wpBdd(bdd: Bdd[TestFileState])(expr: Expr, post: bdd.Node): bdd.Node = {
     import bdd._
     import Implicits._
     expr match {
       case Error => bddFalse
       case Skip => post
-      case If(a, p, q) => bddFalse/*bddApply((m, n) => !m || n, bddVar(a), wpBdd(bdd)(p, post)) && 
-                          (bddVar(a) || wpBdd(bdd)(q, post))*/
+      case If(a, p, q) => {
+        val bddA = predToBdd(bdd)(a)
+        (!bddA || wpBdd(bdd)(p, post)) && (bddA || wpBdd(bdd)(q, post))
+      }
       case Seq(p, q) => wpBdd(bdd)(p, wpBdd(bdd)(q, post))
       case Mkdir(f) => bddWithFileState(bdd)(post, f, IsDir) && 
                        bddVar(TestFileState(f, DoesNotExist)) && 
