@@ -87,6 +87,22 @@ object WeakestPreconditions {
     case _ => False
   }
 
+  def wpGraphBdd(bdd: Bdd[TestFileState])(g: FileScriptGraph, post: bdd.Node): bdd.Node = {
+    import bdd.Implicits._
+    val finalNodes = g.nodes.filter(_.outDegree == 0).toList
+    if (finalNodes.length == 0) {
+      post
+    } else if (finalNodes.combinations(2).forall { case List(a, b) => a.commutesWith(b) }) {
+      val pred = finalNodes.foldRight(post){ (node, pred) => wpBdd(bdd)(node, pred) }
+      wpGraphBdd(bdd)(g -- finalNodes, pred)
+    } else {
+      val preds = for (node <- finalNodes) yield {
+        wpGraphBdd(bdd)(g - node, wpBdd(bdd)(node, post))
+      }
+      preds.foldRight[bdd.Node](bdd.bddTrue) { (x, y) => x && y }
+    }
+  }
+
   def wpGraph(g: FileScriptGraph, post: Pred): Pred = {
     val finalNodes = g.nodes.filter(_.outDegree == 0).toList
     if (finalNodes.length == 0) {
