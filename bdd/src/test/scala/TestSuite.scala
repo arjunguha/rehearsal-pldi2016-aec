@@ -33,7 +33,8 @@ class TestSuite extends org.scalatest.FunSuite {
     val bdd = Bdd[String]((x, y) => x < y)
     import bdd._
     import Implicits._
-    assert(bddFold("")(bddVar("a") && bddVar("b") || bddVar("c"), (a, b) => a + b) == "acbc")
+    assert(bddFold("", "")(bddVar("a") && bddVar("b") || bddVar("c"), (a, b, c) => b + a + c) ==
+           "acbc")
   }
 
 }
