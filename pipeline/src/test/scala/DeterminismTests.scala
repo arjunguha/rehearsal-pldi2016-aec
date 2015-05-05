@@ -16,4 +16,14 @@ class DeterminismTestSuite extends InlineTestSuite {
     assert(Z3Evaluator.isDeterministic(pre, fileScriptGraph))
   }
 
+  test("trivial program with non-deterministic error") {
+    import scalax.collection.Graph
+    import Implicits._
+    val fileScriptGraph: FileScriptGraph = Graph(Mkdir("/foo"), Mkdir("/foo/bar"))
+    val pre = WeakestPreconditions.wpGraph(fileScriptGraph, True)
+    println("Trivial")
+    println(pre)
+    assert(Z3Evaluator.isDeterministic(pre, fileScriptGraph))
+  }
+
 }
