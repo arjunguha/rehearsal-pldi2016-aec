@@ -51,6 +51,8 @@ object WeakestPreconditions {
   def ite(a: Pred, b: Pred, c: Pred): Pred = (a, b, c) match {
     case (a, True, False) => a
     case (a, False, True) => Not(a)
+    case (a, True, c) => a || c
+    case (a, False, b) => !a && b
     case (a, b, False) => a && b
     case _ => ITE(a, b, c)
   }
