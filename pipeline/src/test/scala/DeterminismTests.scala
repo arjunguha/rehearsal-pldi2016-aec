@@ -21,8 +21,16 @@ class DeterminismTestSuite extends InlineTestSuite {
     import Implicits._
     val fileScriptGraph: FileScriptGraph = Graph(Mkdir("/foo"), Mkdir("/foo/bar"))
     val pre = WeakestPreconditions.wpGraph(fileScriptGraph, True)
-    println("Trivial")
-    println(pre)
+    assert(Z3Evaluator.isDeterministic(pre, fileScriptGraph))
+  }
+
+  test("trivial program with non-deterministic output") {
+    import scalax.collection.Graph
+    import Implicits._
+    val fileScriptGraph: FileScriptGraph = Graph(
+      Mkdir("/foo"),
+      If(TestFileState("/foo", IsDir), Mkdir("/bar"), Skip))
+    val pre = WeakestPreconditions.wpGraph(fileScriptGraph, True)
     assert(Z3Evaluator.isDeterministic(pre, fileScriptGraph))
   }
 
