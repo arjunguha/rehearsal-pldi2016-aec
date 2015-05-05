@@ -23,6 +23,7 @@ case class And(a: Pred, b: Pred) extends Pred
 case class Or(a: Pred, b: Pred) extends Pred
 case class Not(a: Pred) extends Pred
 case class TestFileState(path: Path, s: FileState) extends Pred
+case class ITE(a: Pred, b: Pred, c: Pred) extends Pred
 
 sealed abstract trait Expr extends Product {
   def pretty(): String = Pretty.pretty(Pretty.SeqCxt, this)

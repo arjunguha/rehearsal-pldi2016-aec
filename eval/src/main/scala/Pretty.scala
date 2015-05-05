@@ -31,6 +31,12 @@ private[eval] object Pretty {
         case OrCxt | NotCxt => s"$pStr || $qStr"
       }
     }
+    case ITE(a, b, c) => {
+      val aStr = prettyPred(NotCxt, a)
+      val bStr = prettyPred(NotCxt, b)
+      val cStr = prettyPred(NotCxt, c)
+      s"if ($aStr) { $bStr } else { $cStr }"
+    }
   }
 
   sealed abstract trait Cxt

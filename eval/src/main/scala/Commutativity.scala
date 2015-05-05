@@ -48,6 +48,7 @@ private[eval] object Commutativity {
     case Or(a, b) => a.readSet ++ b.readSet
     case Not(a) => a.readSet
     case TestFileState(path, _) => Set(path)
+    case ITE(a, b, c) => a.readSet ++ b.readSet ++ c.readSet
   }
 
   def commutes(p: Expr, q: Expr): Boolean = {

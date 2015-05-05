@@ -44,11 +44,19 @@ object WeakestPreconditions {
       case And(a, b) => predToBdd(bdd)(a) && predToBdd(bdd)(b)
       case Or(a, b) => predToBdd(bdd)(a) || predToBdd(bdd)(b)
       case Not(a) => !predToBdd(bdd)(a)
+      case ITE(a, b, c) => (predToBdd(bdd)(a) && predToBdd(bdd)(b)) || (!predToBdd(bdd)(a) && predToBdd(bdd)(c))
     }
   }
 
+  def ite(a: Pred, b: Pred, c: Pred): Pred = (a, b, c) match {
+    case (a, True, False) => a
+    case (a, False, True) => Not(a)
+    case (a, b, False) => a && b
+    case _ => ITE(a, b, c)
+  }
+
   def bddToPred(bdd: Bdd[TestFileState])(node: bdd.Node): Pred = {
-    bdd.bddFold[Pred](True, False)(node, { (l, x, r) => (x && r) || (!x && l) })
+    bdd.bddFold[Pred](True, False)(node, { (l, x, r) => ite(x, l, r) })
   }
 
   def wpBdd(bdd: Bdd[TestFileState])(expr: Expr, post: bdd.Node): bdd.Node = {

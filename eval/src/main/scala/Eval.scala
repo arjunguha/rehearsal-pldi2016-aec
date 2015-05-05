@@ -46,6 +46,7 @@ object Eval {
   def evalPred(pred: Pred, s: State): Boolean = pred match {
     case True => true
     case False => false
+    case ITE(a, b, c) => if (evalPred(a, s)) { evalPred(b, s) } else { evalPred(c, s) }
     case And(a, b) => evalPred(a, s) && evalPred(b, s)
     case Or(a, b) =>  evalPred(a, s) || evalPred(b, s)
     case Not(a) => !evalPred(a, s)

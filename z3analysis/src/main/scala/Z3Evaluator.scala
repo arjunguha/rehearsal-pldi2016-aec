@@ -34,6 +34,7 @@ object Z3Evaluator {
     case And(a, b) => predPaths(a) union predPaths(b)
     case Or(a, b) => predPaths(a) union predPaths(b)
     case TestFileState(f, _) => ancestors(f)
+    case ITE(a, b, c) => predPaths(a) union predPaths(b) union predPaths(c)
   }
 
   def graphPaths(graph: FileScriptGraph): Set[Path] = {
@@ -86,6 +87,10 @@ class Z3Evaluator(pre: Pred, graph: FileScriptGraph) {
     case TestFileState(f, fileState) => {
       cxt.mkEq(fileStateMap(fileState), cxt.mkSelect(fs, pathMap(f)))
     }
+    case ITE(a, b, c) => cxt.mkITE(checkPred(fs, a),
+                                   checkPred(fs, b),
+                                   checkPred(fs, c)).asInstanceOf[z3.BoolExpr]
+
   }
 
   def ifOK(inState: z3.Expr, outState: z3.Expr)
