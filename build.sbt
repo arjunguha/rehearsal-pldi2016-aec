@@ -22,7 +22,6 @@ libraryDependencies in ThisBuild ++= {
     "org.scalatest" %% "scalatest" % "2.2.1" % "test",
     "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
     "com.assembla.scala-incubator" %% "graph-core" % graphV,
-    "edu.umass.cs" %% "docker" % "0.3-SNAPSHOT",
     "edu.umass.cs" %% "scala-puppet" % "0.2.2",
     "com.typesafe.akka" %% "akka-actor"  % akkaV,
     "com.typesafe.akka" %% "akka-kernel" % akkaV,
@@ -39,14 +38,10 @@ lazy val eval = project.dependsOn(bdd)
 
 lazy val bdd = project
 
-lazy val master = project.in(file("verification/master"))
-                         .dependsOn(common)
-
-lazy val worker = project.in(file("verification/worker"))
-                         .dependsOn(common)
-
 lazy val pipeline = project.dependsOn(common)
                            .dependsOn(eval)
 
 lazy val root = project.in(file("."))
   .aggregate(pipeline, eval)
+
+lazy val z3analysis = project.dependsOn(eval)
