@@ -14,6 +14,7 @@ You do not have a license to use this software.
        cd build
        make
        sudo make install
+
 - On MacOS X
   + Move `/Library/lib/com.microsoft.z3.jar` to `z3analysis/lib`
   + Move `/Library/lib/libz3java.dylib` to `/usr/lib/java`
