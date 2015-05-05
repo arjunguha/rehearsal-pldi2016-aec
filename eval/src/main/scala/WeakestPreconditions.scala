@@ -47,6 +47,10 @@ object WeakestPreconditions {
     }
   }
 
+  def bddToPred(bdd: Bdd[TestFileState])(node: bdd.Node): Pred = {
+    bdd.bddFold[Pred](True, False)(node, { (l, x, r) => (x && r) || (!x && r) })
+  }
+
   def wpBdd(bdd: Bdd[TestFileState])(expr: Expr, post: bdd.Node): bdd.Node = {
     import bdd._
     import Implicits._
@@ -58,14 +62,14 @@ object WeakestPreconditions {
         (!bddA || wpBdd(bdd)(p, post)) && (bddA || wpBdd(bdd)(q, post))
       }
       case Seq(p, q) => wpBdd(bdd)(p, wpBdd(bdd)(q, post))
-      case Mkdir(f) => bddWithFileState(bdd)(post, f, IsDir) && 
-                       bddVar(TestFileState(f, DoesNotExist)) && 
+      case Mkdir(f) => bddWithFileState(bdd)(post, f, IsDir) &&
+                       bddVar(TestFileState(f, DoesNotExist)) &&
                        bddVar(TestFileState(f.getParent(), IsDir))
-      case CreateFile(f, _) => bddWithFileState(bdd)(post, f, IsFile) && 
-                               bddVar(TestFileState(f, DoesNotExist)) && 
+      case CreateFile(f, _) => bddWithFileState(bdd)(post, f, IsFile) &&
+                               bddVar(TestFileState(f, DoesNotExist)) &&
                                bddVar(TestFileState(f.getParent(), IsDir))
       case Rm(f) => bddWithFileState(bdd)(post, f, DoesNotExist) && bddVar(TestFileState(f, IsFile))
-      case Cp(f, g) => bddWithFileState(bdd)(post, g, IsFile) && 
+      case Cp(f, g) => bddWithFileState(bdd)(post, g, IsFile) &&
                        bddVar(TestFileState(g, DoesNotExist)) && bddVar(TestFileState(f, IsFile))
       case _ => bddFalse
     }
@@ -82,7 +86,7 @@ object WeakestPreconditions {
     case CreateFile(f, _) => withFileState(post, f, IsFile) && (TestFileState(f, DoesNotExist) &&
                                                                 TestFileState(f.getParent(), IsDir))
     case Rm(f) => withFileState(post, f, DoesNotExist) && TestFileState(f, IsFile)
-    case Cp(f, g) => withFileState(post, g, IsFile) && (TestFileState(g, DoesNotExist) && 
+    case Cp(f, g) => withFileState(post, g, IsFile) && (TestFileState(g, DoesNotExist) &&
                                                         TestFileState(f, IsFile))
     case _ => False
   }
@@ -104,17 +108,10 @@ object WeakestPreconditions {
   }
 
   def wpGraph(g: FileScriptGraph, post: Pred): Pred = {
-    val finalNodes = g.nodes.filter(_.outDegree == 0).toList
-    if (finalNodes.length == 0) {
-      post
-    } else if (finalNodes.combinations(2).forall { case List(a, b) => a.commutesWith(b) }) {
-      val pred = finalNodes.foldRight(post){ (node, pred) => wp(node, Helpers.simplify(pred)) } 
-      Helpers.simplify(wpGraph(g -- finalNodes, pred))
-    } else {
-      val pres = for (node <- finalNodes) yield {
-        wpGraph(g - node, wp(node, Helpers.simplify(post)))
-      }
-      Helpers.simplify(And(pres: _*))
-    }
+    val myBdd = bdd.Bdd[TestFileState]((x, y) => (x, y) match {
+      case (TestFileState(f, _), TestFileState(g, _)) => f.toString < g.toString
+    })
+    bddToPred(myBdd)(wpGraphBdd(myBdd)(g, predToBdd(myBdd)(post)))
   }
+
 }
