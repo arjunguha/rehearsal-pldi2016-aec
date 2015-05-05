@@ -1,5 +1,6 @@
 package z3analysis
 
+import com.microsoft.z3.{ArrayExpr, Sort}
 import eval._
 
 import java.nio.file.Path
@@ -68,6 +69,14 @@ class Z3Evaluator(pre: Pred, graph: FileScriptGraph) {
 
   val fsSort = cxt.mkArraySort(pathSort, statSort)
 
+  val error_ctor = cxt.mkConstructor("error", "is_error", null, null, null)
+  val ok_ctor = cxt.mkConstructor("ok", "is_ok", Array[String]("ok_state"),
+                                  Array[Sort](fsSort), Array(0))
+  val stateSort = cxt.mkDatatypeSort("State", Array(error_ctor, ok_ctor))
+
+  val error = cxt.mkConst(error_ctor.ConstructorDecl())
+  val okDecl = ok_ctor.ConstructorDecl()
+
   def checkPred(fs: z3.ArrayExpr, pred: Pred): z3.BoolExpr = pred match {
     case True => cxt.mkTrue()
     case False => cxt.mkFalse()
@@ -79,35 +88,55 @@ class Z3Evaluator(pre: Pred, graph: FileScriptGraph) {
     }
   }
 
-  def evalR(fsIn: z3.ArrayExpr, fsOut: z3.ArrayExpr, expr: Expr): z3.BoolExpr = expr match {
-    case Skip => cxt.mkEq(fsIn, fsOut)
-    case Error => cxt.mkBool(true) // TODO(arjun): ?
+  def ifOK(inState: z3.Expr, outState: z3.Expr)
+          (f: z3.ArrayExpr => z3.BoolExpr): z3.BoolExpr = {
+    val fsIn = cxt.mkFreshConst("fs", fsSort).asInstanceOf[z3.ArrayExpr]
+    cxt.mkOr(cxt.mkAnd(cxt.mkEq(inState, error), cxt.mkEq(outState, error)),
+             cxt.mkAnd(cxt.mkEq(inState, cxt.mkApp(okDecl, fsIn)),
+                       f(fsIn)))
+  }
+
+  def evalR(inState: z3.Expr, outState: z3.Expr, expr: Expr): z3.BoolExpr = expr match {
+    case Skip => cxt.mkEq(inState, outState)
+    case Error => cxt.mkEq(outState, error)
     case Seq(p, q) => {
-      val fsInter = cxt.mkFreshConst("fs", fsSort).asInstanceOf[z3.ArrayExpr]
-      cxt.mkAnd(evalR(fsIn, fsInter, p), evalR(fsInter, fsOut, q))
+      val interState = cxt.mkFreshConst("fs", stateSort)
+      cxt.mkAnd(evalR(inState, interState, p), evalR(interState, outState, q))
     }
     case If(a, p, q) => {
-      cxt.mkITE(checkPred(fsIn, a),
-                evalR(fsIn, fsOut, p),
-                evalR(fsIn, fsOut, q)).asInstanceOf[z3.BoolExpr]
+      ifOK(inState, outState) { fsIn =>
+        cxt.mkITE(checkPred(fsIn, a),
+                  evalR(inState, outState, p),
+                  evalR(inState, outState, q)).asInstanceOf[z3.BoolExpr]
+      }
     }
     case Cp(_, _) => throw new IllegalArgumentException("not implemented")
     case Mkdir(f) =>
-      cxt.mkAnd(cxt.mkEq(cxt.mkSelect(fsIn, pathMap(f.getParent)), isDir),
-                cxt.mkEq(cxt.mkSelect(fsIn, pathMap(f)), doesNotExist),
-                cxt.mkEq(fsOut, cxt.mkStore(fsIn, pathMap(f), isDir)))
+      ifOK(inState, outState) { fsIn =>
+        cxt.mkITE(cxt.mkAnd(cxt.mkEq(cxt.mkSelect(fsIn, pathMap(f.getParent)), isDir),
+                            cxt.mkEq(cxt.mkSelect(fsIn, pathMap(f)), doesNotExist)),
+                  cxt.mkEq(outState, cxt.mkApp(okDecl, cxt.mkStore(fsIn, pathMap(f), isDir))),
+                  cxt.mkEq(outState, error)).asInstanceOf[z3.BoolExpr]
+      }
     case CreateFile(f, _) =>
-      cxt.mkAnd(cxt.mkEq(cxt.mkSelect(fsIn, pathMap(f)), doesNotExist),
-                cxt.mkEq(fsOut, cxt.mkStore(fsIn, pathMap(f), isFile)))
-    case Rm(f) => cxt.mkAnd(cxt.mkEq(cxt.mkSelect(fsIn, pathMap(f)), isFile),
-                            cxt.mkEq(fsOut, cxt.mkStore(fsIn, pathMap(f), doesNotExist)))
+      ifOK(inState, outState) { fsIn =>
+        cxt.mkITE(cxt.mkEq(cxt.mkSelect(fsIn, pathMap(f)), doesNotExist),
+                  cxt.mkEq(outState, cxt.mkApp(okDecl, cxt.mkStore(fsIn, pathMap(f), isFile))),
+                  cxt.mkEq(outState, error)).asInstanceOf[z3.BoolExpr]
+      }
+    case Rm(f) =>
+      ifOK(inState, outState) { fsIn =>
+        cxt.mkITE(cxt.mkEq(cxt.mkSelect(fsIn, pathMap(f)), isFile),
+                  cxt.mkEq(outState, cxt.mkApp(okDecl, cxt.mkStore(fsIn, pathMap(f), doesNotExist))),
+                  cxt.mkEq(outState, error)).asInstanceOf[z3.BoolExpr]
+      }
   }
 
-  def graphR(fsIn: z3.ArrayExpr, fsOut: z3.ArrayExpr,
+  def graphR(inState: z3.Expr, outState: z3.Expr,
              graph: FileScriptGraph): z3.BoolExpr = {
     val fringe = graph.nodes.filter(_.outDegree == 0).toList
     if (fringe.length == 0) {
-      cxt.mkEq(fsIn, fsOut)
+      cxt.mkEq(inState, outState)
     }
     else if (fringe.combinations(2).forall {
                case List(a, b) => a.commutesWith(b)
@@ -116,15 +145,15 @@ class Z3Evaluator(pre: Pred, graph: FileScriptGraph) {
       // which is just the identity function, is a hack to coerce the
       // inner nodes to outer nodes in ScalaGraph.
       val p = Block(fringe.foldRight(List[Expr]()) { (n, lst) => n :: lst }: _*)
-      val fsInter = cxt.mkFreshConst("fs", fsSort).asInstanceOf[z3.ArrayExpr]
-      cxt.mkAnd(evalR(fsIn, fsInter, p),
-               graphR(fsInter, fsOut, graph -- fringe))
+      val interState = cxt.mkFreshConst("fs", stateSort)
+      cxt.mkAnd(evalR(inState, interState, p),
+               graphR(interState, outState, graph -- fringe))
     }
     else {
-      val fsInter = cxt.mkFreshConst("fs", fsSort).asInstanceOf[z3.ArrayExpr]
+      val interState = cxt.mkFreshConst("fs", stateSort)
       val exprs = for (p <- fringe) yield {
-        cxt.mkAnd(evalR(fsIn, fsInter, p),
-                 graphR(fsInter, fsOut, graph - p))
+        cxt.mkAnd(evalR(inState, interState, p),
+                 graphR(interState, outState, graph - p))
       }
       cxt.mkOr(exprs: _*)
     }
@@ -133,13 +162,17 @@ class Z3Evaluator(pre: Pred, graph: FileScriptGraph) {
   lazy val isDeterministic: Boolean = {
     val fsIn = cxt.mkFreshConst("fs", fsSort).asInstanceOf[z3.ArrayExpr]
     solver.add(checkPred(fsIn, pre))
-    val fsOut1 = cxt.mkFreshConst("fs", fsSort).asInstanceOf[z3.ArrayExpr]
-    val fsOut2 = cxt.mkFreshConst("fs", fsSort).asInstanceOf[z3.ArrayExpr]
+    assert(solver.check() == z3.Status.SATISFIABLE,
+           s"precondition unsatisfiable: $pre")
+    val inState = cxt.mkApp(okDecl, fsIn)
+    val fsOut1 = cxt.mkFreshConst("fs", stateSort)
+    val fsOut2 = cxt.mkFreshConst("fs", stateSort)
     println("Building first formula")
-    solver.add(graphR(fsIn, fsOut1, graph))
+    solver.add(graphR(inState, fsOut1, graph))
     println("Building second formula")
-    solver.add(graphR(fsIn, fsOut2, graph))
+    solver.add(graphR(inState, fsOut2, graph))
     println("Checking formula")
+
     solver.add(cxt.mkNot(cxt.mkEq(fsOut1, fsOut2)))
     solver.check() == z3.Status.UNSATISFIABLE
   }

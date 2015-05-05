@@ -133,6 +133,14 @@ trait InlineTestSuite extends org.scalatest.FunSuite {
     runTest(program)
   }
 
+  test("two directories (missing dependency)") {
+    runTest("""
+      file{"/foo": ensure => directory}
+      file{"/foo/bar": ensure => directory}
+      """)
+  }
+
+
 }
 
 
