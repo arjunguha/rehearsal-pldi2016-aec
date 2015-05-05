@@ -11,6 +11,9 @@ class WeakestPreconditionTests extends InlineTestSuite {
                         fileScriptGraph: FileScriptGraph): Unit = {
     val pre = WeakestPreconditions.wpGraph(fileScriptGraph, True)
     info (s"Predicate has size ${pre.size}")
+    if (pre.size < 30) {
+      info(s"${pre}")
+    }
   }
 
 }
