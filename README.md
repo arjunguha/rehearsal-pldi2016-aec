@@ -10,10 +10,12 @@ You do not have a license to use this software.
 - Checkout Z3 from [https://github.com/Z3Prover/z3]
 - Build as follows:
 
-       python scripts/mk_make.py --java
-       cd build
-       make
-       sudo make install
+  ```
+  python scripts/mk_make.py --java
+  cd build
+  make
+  sudo make install
+  ```
 
 - On MacOS X
   + Move `/Library/lib/com.microsoft.z3.jar` to `z3analysis/lib`
