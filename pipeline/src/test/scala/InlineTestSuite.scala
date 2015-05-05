@@ -1,40 +1,26 @@
-import org.scalatest.FunSuite
-
-import pipeline._
 import puppet.syntax._
 import puppet.graph._
 import eval._
 import puppet.Facter
+import pipeline._
 
-abstract class SemanticTestSuite extends FunSuite {
+trait InlineTestSuite extends org.scalatest.FunSuite {
 
-  val env = Facter.emptyEnv
-  val fs = Ubuntu.lightweight_fs
+  def genericTestRunner(resourceGraph: ResourceGraph,
+                        fileScriptGraph: FileScriptGraph): Unit
 
-  def runTest(program: String, print: Boolean = false) {
-    val graph = parse(program).desugar()
-                              .toGraph(env).head._2
-    val finalStates = AmpleGraph.finalStates(fs, graph)(pipeline.GraphResourceToExpr)
-    assert(1 == finalStates.size)
-
-    val myBdd = bdd.Bdd[TestFileState]((x, y) => (x, y) match {
-      case (TestFileState(f, _), TestFileState(g, _)) => f.toString < g.toString
-    })
-    val pre = eval.WeakestPreconditions.wpGraphBdd(myBdd)(pipeline.toFileScriptGraph(graph), myBdd.bddTrue)
-    info(s"BDD nodes allocated: ${myBdd.cacheSize}")
-
+  private def runTest(program: String): Unit = {
+    val resourceGraph = parse(program).desugar()
+                          .toGraph(Facter.emptyEnv).head._2
+    val fileScriptGraph = pipeline.toFileScriptGraph(resourceGraph)
+    genericTestRunner(resourceGraph, fileScriptGraph)
   }
-}
 
-class FileTestSuite extends SemanticTestSuite {
-
-  test("several sibling directories") {
-    val program = """
+  test("one directory") {
+    runTest("""
       file{"/a": ensure => directory }
-    """
-    runTest(program, true)
+    """)
   }
-
 
   test("file without ensure with content should succeed") {
     val program = """file{"/foo":
@@ -87,28 +73,6 @@ class FileTestSuite extends SemanticTestSuite {
     runTest(program)
   }
 
-  /*
-  test("link file") {
-    val program = """file{"/foo":
-                       ensure => link,
-                       target => "/bar"
-                     }"""
-    runTest(program)
-  }
-
-  test("link file force") {
-    val program = """file{"/foo":
-                       ensure => link,
-                       target => "/bar",
-                       force => true
-                     }"""
-    runTest(program)
-  }
-  */
-}
-
-class PackageTestSuite extends SemanticTestSuite {
-
   test("single package without attributes") {
     val program = """package{"sl": }"""
     runTest(program)
@@ -141,11 +105,8 @@ class PackageTestSuite extends SemanticTestSuite {
                               "cmatrix"]: }"""
     runTest(program)
   }
-}
 
-class UserTestSuite extends SemanticTestSuite {
-
-  test("single group creation") {
+ test("single group creation") {
     val program = """group{"thegroup": ensure => present }"""
     runTest(program)
   }
@@ -171,4 +132,7 @@ class UserTestSuite extends SemanticTestSuite {
                     }"""
     runTest(program)
   }
+
 }
+
+

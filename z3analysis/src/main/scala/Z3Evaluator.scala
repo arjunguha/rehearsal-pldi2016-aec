@@ -99,7 +99,8 @@ class Z3Evaluator(graph: FileScriptGraph) {
     case CreateFile(f, _) =>
       cxt.mkAnd(cxt.mkEq(cxt.mkSelect(fsIn, pathMap(f)), doesNotExist),
                 cxt.mkEq(fsOut, cxt.mkStore(fsIn, pathMap(f), isFile)))
-    case Rm(_) => throw new IllegalArgumentException("Not implmemented")
+    case Rm(f) => cxt.mkAnd(cxt.mkEq(cxt.mkSelect(fsIn, pathMap(f)), isFile),
+                            cxt.mkEq(fsOut, cxt.mkStore(fsIn, pathMap(f), doesNotExist)))
   }
 
   def graphR(fsIn: z3.ArrayExpr, fsOut: z3.ArrayExpr,
@@ -133,8 +134,11 @@ class Z3Evaluator(graph: FileScriptGraph) {
     val fsIn = cxt.mkFreshConst("fs", fsSort).asInstanceOf[z3.ArrayExpr]
     val fsOut1 = cxt.mkFreshConst("fs", fsSort).asInstanceOf[z3.ArrayExpr]
     val fsOut2 = cxt.mkFreshConst("fs", fsSort).asInstanceOf[z3.ArrayExpr]
+    println("Building first formula")
     solver.add(graphR(fsIn, fsOut1, graph))
+    println("Building second formula")
     solver.add(graphR(fsIn, fsOut2, graph))
+    println("Checking formula")
     solver.add(cxt.mkNot(cxt.mkEq(fsOut1, fsOut2)))
     solver.check() == z3.Status.UNSATISFIABLE
   }
