@@ -12,7 +12,7 @@ class DeterminismTestSuite extends InlineTestSuite {
   def genericTestRunner(resourceGraph: ResourceGraph,
                         fileScriptGraph: FileScriptGraph): Unit = {
     val pre = WeakestPreconditions.wpGraph(fileScriptGraph, True)
-    Z3Evaluator.isDeterministic(fileScriptGraph)
+    assert(Z3Evaluator.isDeterministic(pre, fileScriptGraph))
   }
 
 }

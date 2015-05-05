@@ -39,13 +39,13 @@ object Z3Evaluator {
     graph.nodes.map(p => exprPaths(p)).flatten.toSet
   }
 
-  def isDeterministic(graph: FileScriptGraph): Boolean = {
-    (new Z3Evaluator(graph)).isDeterministic
+  def isDeterministic(pre: Pred, graph: FileScriptGraph): Boolean = {
+    (new Z3Evaluator(pre, graph)).isDeterministic
   }
 
 }
 
-class Z3Evaluator(graph: FileScriptGraph) {
+class Z3Evaluator(pre: Pred, graph: FileScriptGraph) {
 
   import Z3Evaluator._
   import com.microsoft.z3
@@ -132,6 +132,7 @@ class Z3Evaluator(graph: FileScriptGraph) {
 
   lazy val isDeterministic: Boolean = {
     val fsIn = cxt.mkFreshConst("fs", fsSort).asInstanceOf[z3.ArrayExpr]
+    solver.add(checkPred(fsIn, pre))
     val fsOut1 = cxt.mkFreshConst("fs", fsSort).asInstanceOf[z3.ArrayExpr]
     val fsOut2 = cxt.mkFreshConst("fs", fsSort).asInstanceOf[z3.ArrayExpr]
     println("Building first formula")
