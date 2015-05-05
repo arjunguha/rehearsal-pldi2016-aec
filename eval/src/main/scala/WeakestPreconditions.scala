@@ -48,7 +48,7 @@ object WeakestPreconditions {
   }
 
   def bddToPred(bdd: Bdd[TestFileState])(node: bdd.Node): Pred = {
-    bdd.bddFold[Pred](True, False)(node, { (l, x, r) => (x && r) || (!x && r) })
+    bdd.bddFold[Pred](True, False)(node, { (l, x, r) => (x && r) || (!x && l) })
   }
 
   def wpBdd(bdd: Bdd[TestFileState])(expr: Expr, post: bdd.Node): bdd.Node = {
