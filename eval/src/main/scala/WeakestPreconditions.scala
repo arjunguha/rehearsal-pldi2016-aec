@@ -71,12 +71,9 @@ object WeakestPreconditions {
         (!bddA || wpBdd(bdd)(p, post)) && (bddA || wpBdd(bdd)(q, post))
       }
       case Seq(p, q) => wpBdd(bdd)(p, wpBdd(bdd)(q, post))
-      case Mkdir(f) => {
-        println(s"${bddToPred(bdd)(bddWithFileState(bdd)(post, f, IsDir))}")
-        bddWithFileState(bdd)(post, f, IsDir) &&
+      case Mkdir(f) => bddWithFileState(bdd)(post, f, IsDir) &&
                        bddVar(TestFileState(f, DoesNotExist)) &&
                        bddVar(TestFileState(f.getParent(), IsDir))
-      }
       case CreateFile(f, _) => bddWithFileState(bdd)(post, f, IsFile) &&
                                bddVar(TestFileState(f, DoesNotExist)) &&
                                bddVar(TestFileState(f.getParent(), IsDir))
