@@ -85,19 +85,11 @@ object WeakestPreconditions {
   }
 
   // Calculates the weakest-precondition for an expression yielding the desired postcondition.
-  def wp(expr: Expr, post: Pred): Pred = expr match {
-    case Error => False
-    case Skip => post
-    case If(a, p, q) => (!a || wp(p, post)) && (a || wp(q, post))
-    case Seq(p, q) => wp(p, wp(q, post))
-    case Mkdir(f) => withFileState(post, f, IsDir) && (TestFileState(f, DoesNotExist) &&
-                                                       TestFileState(f.getParent(), IsDir))
-    case CreateFile(f, _) => withFileState(post, f, IsFile) && (TestFileState(f, DoesNotExist) &&
-                                                                TestFileState(f.getParent(), IsDir))
-    case Rm(f) => withFileState(post, f, DoesNotExist) && TestFileState(f, IsFile)
-    case Cp(f, g) => withFileState(post, g, IsFile) && (TestFileState(g, DoesNotExist) &&
-                                                        TestFileState(f, IsFile))
-    case _ => False
+  def wp(expr: Expr, post: Pred): Pred = {
+    val myBdd = bdd.Bdd[TestFileState]((x, y) => (x, y) match {
+      case (TestFileState(f, _), TestFileState(g, _)) => f.toString < g.toString
+    })
+    bddToPred(myBdd)(wpBdd(myBdd)(expr, predToBdd(myBdd)(post)))
   }
 
   def wpGraphBdd(bdd: Bdd[TestFileState])(g: FileScriptGraph, post: bdd.Node): bdd.Node = {

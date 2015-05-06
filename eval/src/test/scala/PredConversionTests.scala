@@ -40,14 +40,4 @@ class PredConversionTests extends org.scalatest.FunSuite {
     assert(Seq(Skip, Skip).wp(True) == True)
   }
 
-  test("weakest precondition with BDDs (wpBdd)") {
-    val f = FileSystems.getDefault().getPath("/foo")
-    val bdd = Bdd[TestFileState]((x, y) => (x, y) match {
-      case (TestFileState(f, _), TestFileState(g, _)) => f.toString < g.toString
-    })
-    import bdd._
-    import Implicits._
-    assert(wpBdd(bdd)(Mkdir(f), bddTrue) == (bddVar(TestFileState(f, DoesNotExist)) && 
-                                             bddVar(TestFileState(f.getParent(), IsDir))))
-  }
 }
