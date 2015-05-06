@@ -35,7 +35,7 @@ class WeakestPreconditionTests extends WeakestPreconditionsTestSuite {
 
   test("one mkdir") { arg =>
     import arg._
-    println(wp(Mkdir("/foo"), True))
+
     checkBdd(wp(Mkdir("/foo"), True),
              TestFileState("/foo", DoesNotExist) && TestFileState("/", IsDir))
   }
@@ -45,4 +45,11 @@ class WeakestPreconditionTests extends WeakestPreconditionsTestSuite {
     checkBdd(wp(Mkdir("/foo") >> Mkdir("/foo/bar"), True),
              TestFileState("/foo", DoesNotExist) && TestFileState("/", IsDir))
   }
+
+  test("mkdir with a strong postcondition") { arg =>
+    import arg._
+    checkBdd(wp(Mkdir("/foo"), TestFileState("/foo", IsDir)),
+             TestFileState("/foo", DoesNotExist) && TestFileState("/", IsDir))
+  }
+
 }
