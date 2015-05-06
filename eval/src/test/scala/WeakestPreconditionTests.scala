@@ -20,9 +20,7 @@ trait WeakestPreconditionsTestSuite extends org.scalatest.fixture.FunSuite {
   }
 
   def withFixture(test: OneArgTest) = {
-    val myBdd = bdd.Bdd[TestFileState]((x, y) => (x, y) match {
-      case (TestFileState(f, _), TestFileState(g, _)) => f.toString < g.toString
-    })
+    val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
     val theFixture = FixtureParam(myBdd)
     withFixture(test.toNoArgTest(theFixture))
   }
@@ -43,7 +41,8 @@ class WeakestPreconditionTests extends WeakestPreconditionsTestSuite {
   test("nested mkdir") { arg =>
     import arg._
     checkBdd(wp(Mkdir("/foo") >> Mkdir("/foo/bar"), True),
-             TestFileState("/foo", DoesNotExist) && TestFileState("/", IsDir))
+             TestFileState("/foo/bar", DoesNotExist) && TestFileState("/foo", DoesNotExist) &&
+             TestFileState("/", IsDir))
   }
 
   test("mkdir with a strong postcondition") { arg =>

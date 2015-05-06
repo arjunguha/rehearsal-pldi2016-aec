@@ -2,7 +2,15 @@ package eval
 
 import java.nio.file.Path
 
-sealed trait FileState
+sealed trait FileState {
+  def <(s: FileState): Boolean = (this, s) match {
+    case (IsFile, IsDir) => true
+    case (IsFile, DoesNotExist) => true
+    case (IsDir, DoesNotExist) => true
+    case _ => false
+  }
+}
+
 case object IsFile extends FileState
 case object IsDir extends FileState
 case object DoesNotExist extends FileState
@@ -22,7 +30,15 @@ case object False extends Pred
 case class And(a: Pred, b: Pred) extends Pred
 case class Or(a: Pred, b: Pred) extends Pred
 case class Not(a: Pred) extends Pred
-case class TestFileState(path: Path, s: FileState) extends Pred
+case class TestFileState(path: Path, s: FileState) extends Pred {
+  def <(tfs: TestFileState): Boolean = (this, tfs) match {
+    case (TestFileState(f, x), TestFileState(g, y)) => if (f.toString == g.toString) {
+      x < y
+    } else {
+    f.toString < g.toString
+    }
+  }
+}
 case class ITE(a: Pred, b: Pred, c: Pred) extends Pred
 
 sealed abstract trait Expr extends Product {
