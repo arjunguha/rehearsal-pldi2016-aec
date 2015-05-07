@@ -5,6 +5,11 @@ import scala.collection.mutable.Map
 trait Bdd[X] {
 
   type Node
+  sealed trait Rep
+  case class Branch(x: X, lo: Node, hi: Node) extends Rep
+  case class Leaf(b: Boolean) extends Rep
+
+  def toRep(n: Node): Rep
 
   val bddTrue: Node
   val bddFalse: Node
@@ -42,19 +47,15 @@ private class BddImpl[X](varLT : (X, X) => Boolean) extends Bdd[X] {
 
   type Node = Int
 
-  sealed trait Bdd
-  case class Branch(x: X, lo: Node, hi: Node) extends Bdd
-  case class Leaf(b: Boolean) extends Bdd
-
   var nextIndex = 0
-  val t: Map[Node, Bdd] = Map()
-  val h: Map[Bdd, Node] = Map()
+  val t: Map[Node, Rep] = Map()
+  val h: Map[Rep, Node] = Map()
   val bddTrue = bddToNode(Leaf(true))
   val bddFalse = bddToNode(Leaf(false))
 
   def cacheSize = t.size
 
-  def bddToNode(bdd: Bdd): Node = {
+  def bddToNode(bdd: Rep): Node = {
     h.get(bdd) match {
       case Some(n) => n
       case None => {
@@ -67,7 +68,7 @@ private class BddImpl[X](varLT : (X, X) => Boolean) extends Bdd[X] {
     }
   }
 
-  def nodeToBdd(n: Node): Bdd = t(n)
+  def toRep(n: Node): Rep = t(n)
 
   def mk(i: X, lo: Node, hi: Node): Node = {
     if (lo == hi) {
@@ -81,7 +82,7 @@ private class BddImpl[X](varLT : (X, X) => Boolean) extends Bdd[X] {
   def bddVar(x: X): Node = bddToNode(Branch(x, bddFalse, bddTrue))
 
   def bddApply(op: (Boolean, Boolean) => Boolean, lhs: Node, rhs: Node): Node = {
-    (nodeToBdd(lhs), nodeToBdd(rhs)) match {
+    (toRep(lhs), toRep(rhs)) match {
       case (Leaf(b1), Leaf(b2)) => bddToNode(Leaf(op(b1, b2)))
       case (Leaf(_), Branch(x, lo, hi)) => {
         mk(x, bddApply(op, lhs, lo), bddApply(op, lhs, hi))
@@ -104,7 +105,7 @@ private class BddImpl[X](varLT : (X, X) => Boolean) extends Bdd[X] {
   }
 
   def bddRestrict(node: Node, variable: X, value: Boolean): Node = {
-    def res(n: Node): Node = nodeToBdd(n) match {
+    def res(n: Node): Node = toRep(n) match {
       case Branch(x, lo, hi) => if (varLT(variable, x)) {
         n
       } else if (varLT(x, variable)) {
@@ -119,7 +120,7 @@ private class BddImpl[X](varLT : (X, X) => Boolean) extends Bdd[X] {
     res(node)
   }
 
-  def bddFold[B](trueAcc: B, falseAcc: B)(node: Node, op: (B, X, B) => B): B = nodeToBdd(node) match {
+  def bddFold[B](trueAcc: B, falseAcc: B)(node: Node, op: (B, X, B) => B): B = toRep(node) match {
     case Branch(x, lo, hi) => {
       val fold = bddFold(trueAcc, falseAcc)_
       op(fold(lo, op), x, fold(hi, op))

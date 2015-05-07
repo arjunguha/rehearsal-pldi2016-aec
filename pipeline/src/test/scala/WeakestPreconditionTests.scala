@@ -9,11 +9,11 @@ class WeakestPreconditionTests extends InlineTestSuite {
 
   def genericTestRunner(resourceGraph: ResourceGraph,
                         fileScriptGraph: FileScriptGraph): Unit = {
-    val pre = WeakestPreconditions.wpGraph(fileScriptGraph, True)
-    info (s"Predicate has size ${pre.size}")
-    if (pre.size < 30) {
-      info(s"${pre}")
-    }
+    val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
+    val predBdd = WeakestPreconditions.wpGraphBdd(myBdd)(fileScriptGraph, myBdd.bddTrue)
+    val pred = WeakestPreconditions.bddToPred(myBdd)(predBdd)
+    info (s"Predicate has size ${pred.size} and cache has size ${myBdd.cacheSize}")
   }
+
 
 }

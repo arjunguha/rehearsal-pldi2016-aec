@@ -43,4 +43,4 @@ lazy val pipeline = project.dependsOn(common, eval, z3analysis)
 lazy val root = project.in(file("."))
   .aggregate(pipeline, eval)
 
-lazy val z3analysis = project.dependsOn(eval)
+lazy val z3analysis = project.dependsOn(eval, bdd)

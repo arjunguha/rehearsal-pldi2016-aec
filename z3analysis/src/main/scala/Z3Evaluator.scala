@@ -2,6 +2,7 @@ package z3analysis
 
 import com.microsoft.z3.{ArrayExpr, Sort}
 import eval._
+import bdd.Bdd
 
 import java.nio.file.Path
 
@@ -12,7 +13,8 @@ object Z3Evaluator {
       Set(path)
     }
     else {
-      ancestors(path.getParent) + path
+      Set(path, path.getParent)
+      // ancestors(path.getParent) + path
     }
   }
 
@@ -41,13 +43,14 @@ object Z3Evaluator {
     graph.nodes.map(p => exprPaths(p)).flatten.toSet
   }
 
-  def isDeterministic(pre: Pred, graph: FileScriptGraph): Boolean = {
-    (new Z3Evaluator(pre, graph)).isDeterministic
+  def isDeterministic(bdd: Bdd[TestFileState])
+    (pre: bdd.Node, graph: FileScriptGraph): Boolean = {
+    (new Z3Evaluator(graph)).isDeterministic(bdd)(pre)
   }
 
 }
 
-class Z3Evaluator(pre: Pred, graph: FileScriptGraph) {
+class Z3Evaluator(graph: FileScriptGraph) {
 
   import Z3Evaluator._
   import com.microsoft.z3
@@ -55,9 +58,12 @@ class Z3Evaluator(pre: Pred, graph: FileScriptGraph) {
   val cxt = new com.microsoft.z3.Context()
   val solver = cxt.mkSolver()
 
+  val allPaths = graphPaths(graph).toList
+  println(allPaths.length)
   val pathSort = cxt.mkUninterpretedSort("Path")
+
   val pathMap: Map[Path, com.microsoft.z3.Expr] =
-    graphPaths(graph).toList.map { path =>
+    allPaths.map { case path =>
       path -> cxt.mkConst(path.toString, pathSort)
     }.toMap
 
@@ -93,19 +99,23 @@ class Z3Evaluator(pre: Pred, graph: FileScriptGraph) {
 
   }
 
+  var n = 0
   def ifOK(inState: z3.Expr, outState: z3.Expr)
           (f: z3.ArrayExpr => z3.BoolExpr): z3.BoolExpr = {
     val fsIn = cxt.mkFreshConst("fs", fsSort).asInstanceOf[z3.ArrayExpr]
-    cxt.mkOr(cxt.mkAnd(cxt.mkEq(inState, error), cxt.mkEq(outState, error)),
-             cxt.mkAnd(cxt.mkEq(inState, cxt.mkApp(okDecl, fsIn)),
-                       f(fsIn)))
+    n = n + 1
+    cxt.mkITE(cxt.mkEq(inState, error),
+              cxt.mkEq(outState, error),
+              cxt.mkAnd(cxt.mkEq(inState, cxt.mkApp(okDecl, fsIn)),
+                        f(fsIn))).asInstanceOf[z3.BoolExpr]
   }
-
+  
   def evalR(inState: z3.Expr, outState: z3.Expr, expr: Expr): z3.BoolExpr = expr match {
     case Skip => cxt.mkEq(inState, outState)
     case Error => cxt.mkEq(outState, error)
     case Seq(p, q) => {
       val interState = cxt.mkFreshConst("fs", stateSort)
+      n = n + 1
       cxt.mkAnd(evalR(inState, interState, p), evalR(interState, outState, q))
     }
     case If(a, p, q) => {
@@ -164,22 +174,51 @@ class Z3Evaluator(pre: Pred, graph: FileScriptGraph) {
     }
   }
 
-  lazy val isDeterministic: Boolean = {
+  def bddToZ3Pred(myBdd: Bdd[TestFileState])(node: myBdd.Node, fs: z3.ArrayExpr): Unit = {
+    import myBdd._
+    val nodeToExpr = collection.mutable.Map[Node, z3.BoolExpr]()
+    def helper(node: Node): z3.BoolExpr = nodeToExpr.get(node) match {
+      case Some(z3Expr) => z3Expr
+      case None => {
+        val z3Expr = toRep(node) match {
+          case Leaf(true) => cxt.mkTrue()
+          case Leaf(false) => cxt.mkFalse()
+          case Branch(TestFileState(f, fileState), lo, hi) => {
+            cxt.mkITE(cxt.mkEq(fileStateMap(fileState), cxt.mkSelect(fs, pathMap(f))),
+                      helper(hi), helper(lo))
+          }
+        }
+        val x = cxt.mkFreshConst("fs", cxt.getBoolSort).asInstanceOf[z3.BoolExpr]
+        solver.add(cxt.mkEq(x, z3Expr))
+        nodeToExpr += (node -> x)
+        x
+      }
+    }
+    helper(node)
+    solver.add(nodeToExpr(node))
+    println(s"Precondition has size ${nodeToExpr.size}")
+  }
+
+  def isDeterministic(myBdd: Bdd[TestFileState])(pre: myBdd.Node): Boolean = {
     val fsIn = cxt.mkFreshConst("fs", fsSort).asInstanceOf[z3.ArrayExpr]
-    solver.add(checkPred(fsIn, pre))
+    bddToZ3Pred(myBdd)(pre, fsIn)
     assert(solver.check() == z3.Status.SATISFIABLE,
            s"precondition unsatisfiable: $pre")
     val inState = cxt.mkApp(okDecl, fsIn)
     val fsOut1 = cxt.mkFreshConst("fs", stateSort)
     val fsOut2 = cxt.mkFreshConst("fs", stateSort)
-    println("Building first formula")
     solver.add(graphR(inState, fsOut1, graph))
-    println("Building second formula")
     solver.add(graphR(inState, fsOut2, graph))
-    println("Checking formula")
 
     solver.add(cxt.mkNot(cxt.mkEq(fsOut1, fsOut2)))
-    solver.check() == z3.Status.UNSATISFIABLE
+    println(s"Checking formula ($n states and ${pathMap.size} paths)...")
+
+
+    val r = solver.check()
+    // if (r == z3.Status.SATISFIABLE) {
+    //   println(solver.getModel)
+    // }
+    r == z3.Status.UNSATISFIABLE
   }
 
 }
