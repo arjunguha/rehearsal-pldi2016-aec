@@ -6,19 +6,6 @@ import Implicits._
 import bdd._
 
 object WeakestPreconditions {
-
-  def withFileState(pred: Pred, f: Path, s: FileState): Pred = s match {
-    case IsFile => pred.replace(TestFileState(f, IsFile), True)
-                       .replace(TestFileState(f, IsDir), False)
-                       .replace(TestFileState(f, DoesNotExist), False)
-    case IsDir => pred.replace(TestFileState(f, IsDir), True)
-                      .replace(TestFileState(f, IsFile), False)
-                      .replace(TestFileState(f, DoesNotExist), False)
-    case DoesNotExist => pred.replace(TestFileState(f, DoesNotExist), True)
-                             .replace(TestFileState(f, IsDir), False)
-                             .replace(TestFileState(f, IsFile), False)
-  }
-
   def bddWithFileState(bdd: Bdd[TestFileState])(pred: bdd.Node, f: Path, s: FileState): bdd.Node = {
     import bdd._
     s match {
@@ -44,7 +31,8 @@ object WeakestPreconditions {
       case And(a, b) => predToBdd(bdd)(a) && predToBdd(bdd)(b)
       case Or(a, b) => predToBdd(bdd)(a) || predToBdd(bdd)(b)
       case Not(a) => !predToBdd(bdd)(a)
-      case ITE(a, b, c) => (predToBdd(bdd)(a) && predToBdd(bdd)(b)) || (!predToBdd(bdd)(a) && predToBdd(bdd)(c))
+      case ITE(a, b, c) => (predToBdd(bdd)(a) && predToBdd(bdd)(b)) || 
+                           (!predToBdd(bdd)(a) && predToBdd(bdd)(c))
     }
   }
 
@@ -56,9 +44,8 @@ object WeakestPreconditions {
     case _ => ITE(a, b, c)
   }
 
-  def bddToPred(bdd: Bdd[TestFileState])(node: bdd.Node): Pred = {
+  def bddToPred(bdd: Bdd[TestFileState])(node: bdd.Node): Pred = 
     bdd.bddFold[Pred](True, False)(node, { (l, x, r) => ite(x, r, l) })
-  }
 
   def wpBdd(bdd: Bdd[TestFileState])(expr: Expr, post: bdd.Node): bdd.Node = {
     import bdd._
@@ -84,12 +71,6 @@ object WeakestPreconditions {
     }
   }
 
-  // Calculates the weakest-precondition for an expression yielding the desired postcondition.
-  def wp(expr: Expr, post: Pred): Pred = {
-    val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
-    bddToPred(myBdd)(wpBdd(myBdd)(expr, predToBdd(myBdd)(post)))
-  }
-
   def wpGraphBdd(bdd: Bdd[TestFileState])(g: FileScriptGraph, post: bdd.Node): bdd.Node = {
     import bdd.Implicits._
     val finalNodes = g.nodes.filter(_.outDegree == 0).toList
@@ -106,9 +87,13 @@ object WeakestPreconditions {
     }
   }
 
+  def wp(expr: Expr, post: Pred): Pred = {
+    val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
+    bddToPred(myBdd)(wpBdd(myBdd)(expr, predToBdd(myBdd)(post)))
+  }
+
   def wpGraph(g: FileScriptGraph, post: Pred): Pred = {
     val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
     bddToPred(myBdd)(wpGraphBdd(myBdd)(g, predToBdd(myBdd)(post)))
   }
-
 }
