@@ -42,7 +42,7 @@ case class TestFileState(path: Path, s: FileState) extends Pred {
 case class ITE(a: Pred, b: Pred, c: Pred) extends Pred
 
 sealed abstract trait Expr extends Product {
-  def pretty(): String = Pretty.pretty(Pretty.SeqCxt, this)
+  def pretty(): String = Pretty.pretty(this)
   def commutesWith(other: Expr) = Commutativity.commutes(this, other)
   def wp(post: Pred): Pred = WeakestPreconditions.wp(this, post)
 
