@@ -85,23 +85,43 @@ private[pipeline] object PostCondition {
 
         And(preds: _*)
       }
-
       case "absent" | "purged" => {
         val files = pkgcache.files(r.name) getOrElse
           (throw new Exception(s"Package not found: ${r.name}"))
 
         And(files.toSeq.map(TestFileState(_, DoesNotExist)): _*)
       }
-
-      case "held"   => throw new Exception("NYI package held") // TODO
       case _ => throw new Exception(s"Invalid value for ensure: ${ensure}")
     }
   }
 
+  def Group(r: Resource): Pred = {
+    val validEnsureVals = List("present", "absent")
+
+    val ensure = validVal(r, "ensure", validEnsureVals) getOrElse
+      (throw new Exception(s"Group ${r.name} 'ensure' attribute missing"))
+
+    /* Semantics of Group resource
+     *
+     * A group name is a directory by the name of the group located at
+     * location /etc/groups. Inside every directory there is a file called
+     * settings that contains configuration data of every group
+     *
+     */
+    val p = s"/etc/groups/${r.name}"
+    val s = s"/etc/groups/${r.name}/settings"
+
+    ensure match {
+      case "present" => TestFileState(p, IsDir) && TestFileState(s, IsFile)
+      case "absent" => TestFileState(p, DoesNotExist) && TestFileState(s, DoesNotExist)
+      case _ => throw new Exception(s"Invalid ensure value: $ensure")
+    }
+  }
 
   def apply(r: Resource): Pred = r.typ match {
     case "File" => File(r)
     case "Package" => PuppetPackage(r)
+    case "Group" => Group(r)
     case _ => throw new Exception("Resource type \"%s\" not supported yet".format(r.typ))
   } 
 }
