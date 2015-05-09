@@ -26,7 +26,6 @@ private[eval] object Helpers {
     case Cp(_, _) => 1
   }
 
-  // Converts predicates to negation normal form
   def nnf(pred: Pred): Pred = pred match {
     case Not(And(a, b)) => Or(nnf(Not(a)), nnf(Not(b)))
     case Not(Or(a, b)) => And(nnf(Not(a)), nnf(Not(b)))
@@ -37,20 +36,18 @@ private[eval] object Helpers {
     case _ => pred
   }
 
-  // Converts predicates from negation normal form to conjunctive normal form
-  def cnfFromNnf(pred: Pred): Pred = pred match {
-    case Or(a, And(b, c)) => cnfFromNnf(And(Or(a, b), Or(a, c)))
-    case Or(And(b, c), a) => cnfFromNnf(And(Or(b, a), Or(c, a)))
-    case And(a, b) => And(cnfFromNnf(a), cnfFromNnf(b))
-    case Or(a, b) => Or(cnfFromNnf(a), cnfFromNnf(b))
-    case Not(a) => Not(cnfFromNnf(a))
-    case _ => pred
+  def cnf(pred: Pred): Pred = {
+    def cnfFromNnf(pred: Pred): Pred = pred match {
+      case Or(a, And(b, c)) => cnfFromNnf(And(Or(a, b), Or(a, c)))
+      case Or(And(b, c), a) => cnfFromNnf(And(Or(b, a), Or(c, a)))
+      case And(a, b) => And(cnfFromNnf(a), cnfFromNnf(b))
+      case Or(a, b) => Or(cnfFromNnf(a), cnfFromNnf(b))
+      case Not(a) => Not(cnfFromNnf(a))
+      case _ => pred
+    }
+    cnfFromNnf(nnf(pred))
   }
 
-  // Converts predicates to conjunctive normal form
-  def cnf(pred: Pred): Pred = cnfFromNnf(nnf(pred))
-
-  // Replaces a with b in pred.
   def replace(pred: Pred, a: Pred, b: Pred): Pred = pred match {
     case x if (a == x) => b
     case Or(x, y) => Or(replace(x, a, b), replace(y, a, b))
@@ -59,7 +56,6 @@ private[eval] object Helpers {
     case _ => pred
   }
 
-  // Simplifies a predicate using boolean identities.
   def simplify(pred: Pred): Pred = pred match {
     case Or(True, _) => True
     case Or(_, True) => True
