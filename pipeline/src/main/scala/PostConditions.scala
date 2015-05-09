@@ -66,7 +66,7 @@ private[pipeline] object PostCondition {
     val ensure = validVal(r, "ensure", validEnsureVals) getOrElse "installed"
     val provider = r.get[String]("provider")
 
-    if(provider.isDefined && provider.get != "apt") {
+    if (provider.isDefined && provider.get != "apt") {
       throw new Exception(s"""package(${r.name}): "${provider.get}" provider not supported""")
     }
 
@@ -92,6 +92,32 @@ private[pipeline] object PostCondition {
         And(files.toSeq.map(TestFileState(_, DoesNotExist)): _*)
       }
       case _ => throw new Exception(s"Invalid value for ensure: ${ensure}")
+    }
+  }
+
+  def User(r: Resource): Pred = {
+    val validEnsureVals = List("present", "absent", "role")
+
+    val ensure = validVal(r, "ensure", validEnsureVals) getOrElse "present"
+    val home = r.get[String]("home")
+    val managehome = validVal(r, "managehome", validBoolVals) getOrElse false
+
+    val u = Paths.get(s"/etc/users/${r.name}")
+    val usets = Paths.get(s"/etc/users/${r.name}/settings")
+    val g = Paths.get(s"/etc/groups/${r.name}")
+    val gsets = Paths.get(s"/etc/groups/${r.name}/settings")
+    val h = Paths.get(home getOrElse s"/home/${r.name}")
+
+    (ensure, managehome) match {
+      case ("present", true) => TestFileState(u, IsDir) && TestFileState(g, IsDir) &&
+                                TestFileState(h, IsDir) && TestFileState(usets, IsFile) &&
+                                TestFileState(gsets, IsFile)
+      case ("present", false) => TestFileState(u, IsDir) && TestFileState(g, IsDir) &&
+                                 TestFileState(usets, IsFile) && TestFileState(gsets, IsFile)
+      case ("absent", _) => TestFileState(u, DoesNotExist) && TestFileState(usets, DoesNotExist) &&
+                            TestFileState(g, DoesNotExist) && TestFileState(gsets, DoesNotExist) &&
+                            TestFileState(h, DoesNotExist)
+      case (_, _) => throw new Exception(s"Unknown value for ensure: ${ensure}")
     }
   }
 
@@ -121,6 +147,7 @@ private[pipeline] object PostCondition {
   def apply(r: Resource): Pred = r.typ match {
     case "File" => File(r)
     case "Package" => PuppetPackage(r)
+    case "User" => User(r)
     case "Group" => Group(r)
     case _ => throw new Exception("Resource type \"%s\" not supported yet".format(r.typ))
   } 
