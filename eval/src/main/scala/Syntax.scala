@@ -35,7 +35,7 @@ case class TestFileState(path: Path, s: FileState) extends Pred {
     case (TestFileState(f, x), TestFileState(g, y)) => if (f.toString == g.toString) {
       x < y
     } else {
-    f.toString < g.toString
+      f.toString < g.toString
     }
   }
 }
@@ -69,17 +69,10 @@ case class Rm(path: Path) extends Expr
 case class Cp(src: Path, dst: Path) extends Expr
 
 object Block {
-
   import Implicits._
-
-  def apply(es: Expr*): Expr =
-    es.foldRight(Skip: eval.Expr)((e, expr) => e >> expr)
+  def apply(es: Expr*): Expr = es.foldRight(Skip: Expr)((e, expr) => e >> expr)
 }
 
 object And {
-
-  def apply(preds: Pred*): Pred = {
-    preds.foldRight[Pred](True) { (x, y) => And(x, y) }
-  }
-
+  def apply(preds: Pred*): Pred = preds.foldRight[Pred](True) { (x, y) => And(x, y) }
 }
