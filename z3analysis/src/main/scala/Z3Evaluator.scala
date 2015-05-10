@@ -1,5 +1,6 @@
 package z3analysis
 
+import java.nio.file.Paths
 import com.microsoft.z3.{ArrayExpr, Sort}
 import eval._
 import bdd.Bdd
@@ -58,8 +59,8 @@ class Z3Evaluator(graph: FileScriptGraph) {
   val cxt = new com.microsoft.z3.Context()
   val solver = cxt.mkSolver()
 
-  val allPaths = graphPaths(graph).toList
-  println(allPaths.length)
+  // Z3 will segfault if the size of an array's domain is zero.
+  val allPaths = (graphPaths(graph) + Paths.get("/")).toList
   val pathSort = cxt.mkUninterpretedSort("Path")
 
   val pathMap: Map[Path, com.microsoft.z3.Expr] =
