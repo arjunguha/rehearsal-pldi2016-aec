@@ -2,7 +2,7 @@ package eval
 
 object Implicits {
 
-  import  scala.language.implicitConversions
+  import scala.language.implicitConversions
   import java.nio.file.{Path, Paths, Files}
   import scalax.collection.Graph
   import scalax.collection.edge.LDiEdge
