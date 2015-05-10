@@ -17,10 +17,10 @@ trait InlineTestSuite extends org.scalatest.FunSuite {
   }
 
 
-  // test("single package without attributes") {
-  //   val program = """package{"sl": }"""
-  //   runTest(program)
-  // }
+   test("single package without attributes") {
+     val program = """package{"sl": }"""
+     runTest(program)
+   }
 
   // test("one directory") {
   //   runTest("""

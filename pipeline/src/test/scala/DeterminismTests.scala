@@ -9,8 +9,10 @@ import z3analysis.Z3Evaluator
 class DeterminismTestSuite extends InlineTestSuite {
 
   def genericTestRunner(resourceGraph: ResourceGraph,
-                        fileScriptGraph: FileScriptGraph): Unit = {
+                        g: FileScriptGraph): Unit = {
     val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
+    val fileScriptGraph = Slicing.sliceGraph(g)
+    println(fileScriptGraph)
     val pre = WeakestPreconditions.wpGraphBdd(myBdd)(fileScriptGraph, myBdd.bddTrue)
     println(WeakestPreconditions.bddToPred(myBdd)(pre))
     assert(Z3Evaluator.isDeterministic(myBdd)(pre, fileScriptGraph))
@@ -73,7 +75,7 @@ class DeterminismTestSuite extends InlineTestSuite {
       }
     }
 
-    val fileScriptGraph: FileScriptGraph = Graph(genSeq(500))
+    val fileScriptGraph: FileScriptGraph = Graph(genSeq(100))
     val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
     val pre = WeakestPreconditions.wpGraphBdd(myBdd)(fileScriptGraph, myBdd.bddTrue)
     assert(Z3Evaluator.isDeterministic(myBdd)(pre, fileScriptGraph) == true)
