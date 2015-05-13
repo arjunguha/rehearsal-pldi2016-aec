@@ -1,10 +1,11 @@
 import org.scalatest.FunSuite
 
+import scalax.collection.Graph
+import scalax.collection.GraphEdge.DiEdge
 import pipeline._
 import puppet.graph._
 import eval._
 import puppet.Facter
-import z3analysis.Z3Evaluator
 
 class DeterminismTestSuite extends InlineTestSuite {
 
@@ -80,4 +81,22 @@ class DeterminismTestSuite extends InlineTestSuite {
     val pre = WeakestPreconditions.wpGraphBdd(myBdd)(fileScriptGraph, myBdd.bddTrue)
     assert(Z3Evaluator.isDeterministic(myBdd)(pre, fileScriptGraph) == true)
   }
+
+  test("Is a singleton graph deterministic") {
+    import Implicits._
+    val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
+    val g = Graph[Expr, DiEdge](If(TestFileState("/foo", IsDir), Skip, Mkdir("/foo")))
+    assert(Z3Evaluator.isDeterministic(myBdd)(myBdd.bddTrue, g))
+  }
+
+  test("Two-node non-deterministic graph") {
+    import Implicits._
+    val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
+
+    val g = Graph[Expr, DiEdge](
+      Mkdir("/foo"),
+      If(TestFileState("/foo", IsDir), Skip, Mkdir("/bar")))
+    assert(Z3Evaluator.isDeterministic(myBdd)(myBdd.bddTrue, g) == false)
+  }
+
 }

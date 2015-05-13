@@ -38,9 +38,10 @@ lazy val eval = project.dependsOn(bdd)
 
 lazy val bdd = project
 
-lazy val pipeline = project.dependsOn(common, eval, z3analysis)
+lazy val github = project
+
+lazy val pipeline = project.dependsOn(common, eval, bdd)
 
 lazy val root = project.in(file("."))
   .aggregate(pipeline, eval)
 
-lazy val z3analysis = project.dependsOn(eval, bdd)

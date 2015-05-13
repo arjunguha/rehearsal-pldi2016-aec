@@ -1,7 +1,6 @@
 import pipeline._
 import eval._
 import puppet.Facter
-import z3analysis._
 
 import org.scalatest.FunSuite
 

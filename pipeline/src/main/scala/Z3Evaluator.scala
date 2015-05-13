@@ -1,4 +1,4 @@
-package z3analysis
+package pipeline
 
 import java.nio.file.Paths
 import com.microsoft.z3.{ArrayExpr, Sort}
@@ -110,7 +110,7 @@ class Z3Evaluator(graph: FileScriptGraph) {
               cxt.mkAnd(cxt.mkEq(inState, cxt.mkApp(okDecl, fsIn)),
                         f(fsIn))).asInstanceOf[z3.BoolExpr]
   }
-  
+
   def evalR(inState: z3.Expr, outState: z3.Expr, expr: Expr): z3.BoolExpr = expr match {
     case Skip => cxt.mkEq(inState, outState)
     case Error => cxt.mkEq(outState, error)
@@ -221,5 +221,6 @@ class Z3Evaluator(graph: FileScriptGraph) {
     // }
     r == z3.Status.UNSATISFIABLE
   }
+
 
 }

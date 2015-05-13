@@ -70,22 +70,22 @@ private[pipeline] object ResourceToExpr {
                   else if (source.isDefined) Some("file")
                   else None
 
-    if(_ensure.isDefined && _ensure.get == "link") {
-      throw new Exception(s"""file(${r.name}): "${_ensure.get}" ensure not supported""")
-    }
+    // if(_ensure.isDefined && _ensure.get == "link") {
+    //   throw new Exception(s"""file(${r.name}): "${_ensure.get}" ensure not supported""")
+    // }
 
-    if(source.isDefined) {
-      throw new Exception(s"""file(${r.name}): source attribute not supported""")
-    }
-    if(provider.isDefined && provider.get != "posix") {
-      throw new Exception(s"""file(${r.name}): "${provider.get}" provider not supported""")
-    }
-    if(mode.isDefined) {
-      throw new Exception(s"""file(${r.name}): "mode" attribute not supported""")
-    }
-    if(owner.isDefined) {
-      throw new Exception(s"""file(${r.name}): "owner" attribute not supported""")
-    }
+    // if(source.isDefined) {
+    //   throw new Exception(s"""file(${r.name}): source attribute not supported""")
+    // }
+    // if(provider.isDefined && provider.get != "posix") {
+    //   throw new Exception(s"""file(${r.name}): "${provider.get}" provider not supported""")
+    // }
+    // if(mode.isDefined) {
+    //   throw new Exception(s"""file(${r.name}): "mode" attribute not supported""")
+    // }
+    // if(owner.isDefined) {
+    //   throw new Exception(s"""file(${r.name}): "owner" attribute not supported""")
+    // }
 
     _ensure match {
       // Broken symlinks are ignored
