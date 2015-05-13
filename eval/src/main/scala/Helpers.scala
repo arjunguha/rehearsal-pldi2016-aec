@@ -76,4 +76,26 @@ private[eval] object Helpers {
     case Or(a, b) => simplify(a) || simplify(b)
     case _ => pred
   }
+
+  def ancestors(path: Path): Set[Path] = {
+    if (path.getParent == null) {
+      Set(path)
+    }
+    else {
+      Set(path, path.getParent)
+      // ancestors(path.getParent) + path
+    }
+  }
+
+  def exprPaths(expr: Expr): Set[Path] = expr match {
+    case Error => Set()
+    case Skip => Set()
+    case If(a, p, q) => a.readSet union exprPaths(p) union exprPaths(q)
+    case Seq(p, q) => exprPaths(p) union exprPaths(q)
+    case Mkdir(f) => ancestors(f)
+    case CreateFile(f, _) => ancestors(f)
+    case Rm(f) => ancestors(f)
+    case Cp(src, dst) => ancestors(src) union ancestors(dst)
+  }
+
 }

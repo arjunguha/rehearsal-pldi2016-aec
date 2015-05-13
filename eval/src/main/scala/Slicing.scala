@@ -77,7 +77,7 @@ object Slicing {
   def slice(paths: Set[Path], expr: Expr): Expr = sliceRec(allDeps(paths, expr), expr)
 
   def interferingPaths(exprs: List[Expr]): Set[Path] = {
-    val allPaths = exprs.map(e => e.readSet union e.writeSet)
+    val allPaths = exprs.map(e => Helpers.exprPaths(e))
     val counts = allPaths.flatten.groupBy(identity).mapValues(_.length)
     counts.filter(_._2 > 1).keySet
   }
