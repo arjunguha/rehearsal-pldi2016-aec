@@ -9,138 +9,94 @@ trait InlineTestSuite extends org.scalatest.FunSuite {
   def genericTestRunner(resourceGraph: ResourceGraph,
                         fileScriptGraph: FileScriptGraph): Unit
 
-  private def runTest(program: String): Unit = {
-    val resourceGraph = parse(program).desugar()
-                          .toGraph(Facter.emptyEnv).head._2
-    val fileScriptGraph = pipeline.toFileScriptGraph(resourceGraph)
-    genericTestRunner(resourceGraph, fileScriptGraph)
+  private def runTest(name: String, program: String): Unit = {
+    test (name) {
+      val resourceGraph = parse(program).desugar()
+                            .toGraph(Facter.emptyEnv).head._2
+      val fileScriptGraph = pipeline.toFileScriptGraph(resourceGraph)
+      genericTestRunner(resourceGraph, fileScriptGraph)
+    }
   }
 
 
-  test("single package without attributes") {
-    val program = """package{"sl": }"""
-    runTest(program)
-  }
+  runTest("single package without attributes",
+          """package{"sl": }""")
 
-  test("one directory") {
-    runTest("""
+  runTest("one directory", """
       file{"/a": ensure => directory }
     """)
-  }
 
-  test("file without ensure with content should succeed") {
-    val program = """file{"/foo":
+  runTest("file without ensure with content should succeed", """file{"/foo":
                        content => "some contents"
-                     }"""
-    runTest(program)
-  }
+                     }""")
 
-  test("single puppet file resource") {
-    val program = """file{"/foo": ensure => present }"""
-    runTest(program)
-  }
+  runTest("single puppet file resource",
+          """file{"/foo": ensure => present }""")
 
-  test("single directory") {
-    val program = """file{"/tmp":
-                              ensure => directory
-                            }"""
-    runTest(program)
-  }
+  runTest("single directory", """
+          file{"/tmp":
+            ensure => directory
+          }""")
 
-  test("file inside a directory") {
-    val program = """file{"/tmp/foo":
-                       ensure => present,
-                       require => File['/tmp']
-                     }
-                     file{"/tmp":
-                       ensure => directory
-                     }"""
-    runTest(program)
-  }
+  runTest("file inside a directory", """
+           file{"/tmp/foo":
+             ensure => present,
+             require => File['/tmp']
+           }
+           file{"/tmp":
+             ensure => directory
+           }""")
 
-  test("single puppet file resource with force") {
-    val program = """file{"/foo":
-                       ensure => file,
-                       force => true
-                     }"""
-    runTest(program)
-  }
+  runTest("single puppet file resource with force",
+          """file{"/foo":
+               ensure => file,
+               force => true
+             }""")
 
-  test("delete file resource") {
-    val program = """file{"/foo": ensure => absent }"""
-    runTest(program)
-  }
+  runTest("delete file resource",
+          """file{"/foo": ensure => absent }""")
 
-  test("delete dir with force") {
-    val program = """file {"/tmp":
-                       ensure => absent,
-                       force => true
-                     }"""
-    runTest(program)
-  }
+  runTest("delete dir with force",
+          """file {"/tmp":
+                   ensure => absent,
+                   force => true
+                  }""")
 
-  test("2 package dependent install") {
-    val program = """package{"sl": }
-                     package{"cmatrix":
-                       require => Package['sl']
-                     }"""
-    runTest(program)
-  }
+  runTest("2 package dependent install", """
+           package{"sl": }
+           package{"cmatrix":
+                    require => Package['sl']
+                  }""")
 
-  test("2 package concurrent install") {
-    val program = """package{["cmatrix",
-                              "telnet"]: }"""
-    runTest(program)
-  }
+  runTest("2 package concurrent install",
+          """package{["cmatrix", "telnet"]: }""")
 
-  test("single package remove") {
-    val program = """package{"telnet":
-                       ensure => absent
-                    }"""
-    runTest(program)
-  }
+  runTest("single package remove", """
+           package{"telnet":
+             ensure => absent
+           }""")
 
-  test("3 packages install") {
-    val program = """package{["sl",
-                              "cowsay",
-                              "cmatrix"]: }"""
-    runTest(program)
-  }
+  runTest("3 packages install",
+          """package{["sl", "cowsay", "cmatrix"]: }""")
 
- test("single group creation") {
-    val program = """group{"thegroup": ensure => present }"""
-    runTest(program)
-  }
+ runTest("single group creation",
+         """group{"thegroup": ensure => present }""")
 
-  test("single user creation") {
-    val program = """user{"abc": ensure => present }"""
-    runTest(program)
-  }
+  runTest("single user creation",
+          """user{"abc": ensure => present }""")
 
-  test("concurrent group creation") {
-    val program = """group{["a", "b"]: ensure => present }"""
-    runTest(program)
-  }
+  runTest("concurrent group creation",
+          """group{["a", "b"]: ensure => present }""")
 
-  test("concurrent user creation") {
-    val program = """user{["abc", "def"]: ensure => present }"""
-    runTest(program)
-  }
+  runTest("concurrent user creation",
+          """user{["abc", "def"]: ensure => present }""")
 
-  test("user remove") {
-    val program = """user{"abc":
-                       ensure => absent
-                    }"""
-    runTest(program)
-  }
+  runTest("user remove", """user{"abc": ensure => absent }""")
 
-  test("two directories (missing dependency)") {
-    runTest("""
+  runTest("two directories (missing dependency)", """
       file{"/foo": ensure => directory}
       file{"/foo/bar": ensure => directory}
       """)
-  }
-
 
 }
 
