@@ -19,10 +19,6 @@ object Implicits {
     def toPath = Paths.get(str)
   }
 
-  implicit def MapToPerfMap(map: Map[Path, FileState]): PerfMap[Path, FileState] = {
-    PerfMap(map)
-  }
-
   implicit class RichPred(a: Pred) {
 
     def &&(b: Pred): Pred = (a, b) match {
