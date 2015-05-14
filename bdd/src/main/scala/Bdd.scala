@@ -82,26 +82,39 @@ private class BddImpl[X](varLT : (X, X) => Boolean) extends Bdd[X] {
   def bddVar(x: X): Node = bddToNode(Branch(x, bddFalse, bddTrue))
 
   def bddApply(op: (Boolean, Boolean) => Boolean, lhs: Node, rhs: Node): Node = {
-    (toRep(lhs), toRep(rhs)) match {
+    val dpTable = Map[(Int, Int), Node]()
+
+    def recur(lhs: Node, rhs: Node) = dpTable.get(lhs -> rhs) match {
+      case Some(node) => node
+      case None => {
+        val result = body(lhs, rhs)
+        dpTable += (lhs, rhs) -> result
+        result
+      }
+    }
+
+    def body(lhs: Node, rhs: Node): Node =(toRep(lhs), toRep(rhs)) match {
       case (Leaf(b1), Leaf(b2)) => bddToNode(Leaf(op(b1, b2)))
       case (Leaf(_), Branch(x, lo, hi)) => {
-        mk(x, bddApply(op, lhs, lo), bddApply(op, lhs, hi))
+        mk(x, recur(lhs, lo), recur(lhs, hi))
       }
       case (Branch(x, lo, hi), Leaf(_))  => {
-        mk(x, bddApply(op, lo, rhs), bddApply(op, hi, rhs))
+        mk(x, recur(lo, rhs), recur(hi, rhs))
       }
       case (Branch(x1, lo1, hi1), Branch(x2, lo2, hi2)) => {
         if (x1 == x2) {
-          mk(x1, bddApply(op, lo1, lo2), bddApply(op, hi1, hi2))
+          mk(x1, recur(lo1, lo2), recur(hi1, hi2))
         }
         else if (varLT(x1, x2)) {
-          mk(x1, bddApply(op, lo1, rhs), bddApply(op, hi1, rhs))
+          mk(x1, recur(lo1, rhs), recur(hi1, rhs))
         }
         else {
-          mk(x2, bddApply(op, lhs, lo2), bddApply(op, lhs, hi2))
+          mk(x2, recur(lhs, lo2), recur(lhs, hi2))
         }
       }
     }
+
+    recur(lhs, rhs)
   }
 
   def bddRestrict(node: Node, variable: X, value: Boolean): Node = {
