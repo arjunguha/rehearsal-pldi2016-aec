@@ -27,7 +27,7 @@ trait WeakestPreconditionsTestSuite extends org.scalatest.fixture.FunSuite {
 
 }
 
-class WeakestPreconditionTests extends WeakestPreconditionsTestSuite {
+class SimpleWPTest extends WeakestPreconditionsTestSuite {
   import eval._
   import eval.Implicits._
 

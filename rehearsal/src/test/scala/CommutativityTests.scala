@@ -1,6 +1,5 @@
 import eval._
 import eval.Implicits._
-import Ample._
 
 class CommutativityTests extends org.scalatest.FunSuite {
 

@@ -1,21 +1,20 @@
-version in ThisBuild := "0.1"
-
-scalaVersion in ThisBuild := "2.11.5"
-
-scalacOptions in ThisBuild ++= Seq(
+name := "rehearsal"
+version := "0.1"
+scalaVersion := "2.11.5"
+scalacOptions ++= Seq(
   "-deprecation",
   "-unchecked",
   "-feature",
   "-Xfatal-warnings"
 )
 
-resolvers in ThisBuild ++= Seq(
+resolvers ++= Seq(
   "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
   "Typesafe Repository" at "http://repo.akka.io/snapshots/",
   "PLASMA" at "https://dl.bintray.com/plasma-umass/maven"
 )
 
-libraryDependencies in ThisBuild ++= {
+libraryDependencies ++= {
   val akkaV = "2.3.4"
   val graphV = "1.9.0"
   Seq(
@@ -28,20 +27,6 @@ libraryDependencies in ThisBuild ++= {
     "com.typesafe.akka" %% "akka-remote" % akkaV
   )
 }
-
-
-lazy val installer = project.dependsOn(common)
-
-lazy val common = project
-
-lazy val bdd = project
-
-lazy val github = project
-
-lazy val rehearsal = project.dependsOn(common, bdd)
-
-lazy val  root = project.in(file("."))
-  .aggregate(rehearsal)
 
 parallelExecution in Test := false
 
