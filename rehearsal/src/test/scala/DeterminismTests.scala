@@ -10,7 +10,7 @@ class DeterminismTestSuite extends InlineTestSuite {
 
   def myTestRunner(g: FileScriptGraph): Boolean = {
     //SymbolicEvaluator.isErrorFree(g)
-    SymbolicEvaluator.isDeterministic(g, false)
+    SymbolicEvaluator.isDeterministic(g)
   }
 
   def genericTestRunner(resourceGraph: ResourceGraph,

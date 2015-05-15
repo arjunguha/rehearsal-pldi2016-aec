@@ -36,7 +36,14 @@ private[fsmodel] object Commutativity {
     case Seq(p, q) => refinedFileSets(p.readSet ++ q.readSet,
                                       p.writeSet ++ q.writeSet,
                                       p.idemSet ++ q.idemSet)
-    case Mkdir(path) => (Set.empty, Set(path), Set.empty)
+    case Mkdir(path) => {
+      if (path.getParent == null) {
+        (Set.empty, Set(path), Set.empty)
+      }
+      else {
+        (Set(path.getParent), Set(path), Set())
+      }
+    }
     case CreateFile(path, _) => (Set.empty, Set(path), Set.empty)
     case Rm(path) => (Set.empty, Set(path), Set.empty)
     case Cp(src, dst) => (Set(src), Set(dst), Set.empty)
@@ -47,7 +54,7 @@ private[fsmodel] object Commutativity {
     case And(a, b) => a.readSet ++ b.readSet
     case Or(a, b) => a.readSet ++ b.readSet
     case Not(a) => a.readSet
-    case TestFileState(path, _) => Set(path)
+    case TestFileState(path, _) => Helpers.ancestors(path)
     case ITE(a, b, c) => a.readSet ++ b.readSet ++ c.readSet
   }
 

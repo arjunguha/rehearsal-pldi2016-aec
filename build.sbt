@@ -54,4 +54,4 @@ libraryDependencies ++= Seq(
  * D - Show durations for each test
  * F - Show full stack traces on exception
  */
-testOptions in Test += Tests.Argument("-oDF")
+testOptions in Test += Tests.Argument("-oD")
