@@ -9,8 +9,8 @@ package repl {
 
 
 
-    args.toSeq match {
-      case Seq() => {
+    args.toList match {
+      case List() => {
         def repl = new ILoop
 
         val settings = new Settings
@@ -24,9 +24,11 @@ package repl {
 
         repl.process(settings)
       }
-      case Seq("is-module-deterministic", name) => {
-        val (b, t) = isDeterministic(loadModuleClass(name))
-        println(s"$name,$b, $t")
+      case "is-module-deterministic" :: modules => {
+        for (name <- modules) {
+          val (b, t) = isDeterministic(loadModuleClass(name))
+          println(s"$name,$b, $t")
+        }
       }
       case args => {
         sys.error(s"Invalid command-line arguments: $args")
@@ -57,7 +59,7 @@ package object repl {
   def time[A](thunk: => A): (A, Long) = {
     val start = System.currentTimeMillis
     val r = thunk
-    val duration = start - System.currentTimeMillis
+    val duration = System.currentTimeMillis - start
     r -> duration
   }
 
