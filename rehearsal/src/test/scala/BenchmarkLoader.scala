@@ -1,4 +1,4 @@
-import pipeline._
+import rehearsal.ppmodel._
 
 object BenchmarkLoader {
 

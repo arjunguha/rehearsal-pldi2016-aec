@@ -1,9 +1,7 @@
-import org.scalatest.FunSuite
-
-import pipeline._
+import rehearsal.ppmodel._
 import puppet.syntax._
 import puppet.graph._
-import eval._
+import rehearsal.fsmodel._
 
 class WeakestPreconditionTests extends InlineTestSuite {
 

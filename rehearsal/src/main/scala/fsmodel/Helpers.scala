@@ -1,9 +1,9 @@
-package eval
+package rehearsal.fsmodel
 
 import java.nio.file.Path
 import Implicits._
 
-private[eval] object Helpers {
+private[fsmodel] object Helpers {
 
   def predSize(pred: Pred): Int = pred match {
     case Not(a) => 1 + a.size

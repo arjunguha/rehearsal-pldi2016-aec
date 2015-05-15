@@ -1,4 +1,4 @@
-package eval
+package rehearsal.fsmodel
 
 object Implicits {
 

@@ -1,4 +1,4 @@
-package pipeline
+package rehearsal
 
 import puppet.syntax._
 import puppet.graph._
@@ -11,10 +11,10 @@ import scalax.collection.GraphEdge._
 import scalax.collection.GraphPredef._
 import scalax.collection.edge.Implicits._
 
-import eval._
-import eval.Implicits._
+import rehearsal.fsmodel._
+import Implicits._
 
-package object pipeline {
+package object ppmodel {
 
   def toFileScriptGraph(resourceGraph: ResourceGraph): FileScriptGraph = {
     nodeMap(GraphResourceToExpr, resourceGraph)

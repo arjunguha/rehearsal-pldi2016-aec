@@ -1,5 +1,5 @@
-import pipeline._
-import eval._
+import rehearsal.fsmodel._
+import rehearsal.ppmodel._
 import puppet.Facter
 
 import org.scalatest.FunSuite
@@ -14,7 +14,7 @@ class BenchmarkTests extends FunSuite {
     test(s"benchmark: $name") {
       val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
       val resourceGraph = b.toGraph(facterEnv).head._2
-      val fileScriptGraph = Slicing.sliceGraph(pipeline.toFileScriptGraph(resourceGraph))
+      val fileScriptGraph = Slicing.sliceGraph(toFileScriptGraph(resourceGraph))
       info(fileScriptGraph.toString)
       val pre = WeakestPreconditions.wpGraphBdd(myBdd)(fileScriptGraph, myBdd.bddTrue)
       assert(Z3Evaluator.isDeterministic(myBdd)(myBdd.bddTrue, fileScriptGraph))

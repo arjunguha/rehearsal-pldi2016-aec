@@ -1,6 +1,6 @@
-package eval
+package rehearsal.fsmodel
 
-private[eval] object Pretty {
+private[fsmodel] object Pretty {
 
   sealed abstract trait PredCxt
   case object AndCxt extends PredCxt

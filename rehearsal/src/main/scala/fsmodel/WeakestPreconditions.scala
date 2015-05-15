@@ -1,4 +1,4 @@
-package eval
+package rehearsal.fsmodel
 
 import java.nio.file.Path
 import Implicits._
@@ -31,7 +31,7 @@ object WeakestPreconditions {
       case And(a, b) => predToBdd(bdd)(a) && predToBdd(bdd)(b)
       case Or(a, b) => predToBdd(bdd)(a) || predToBdd(bdd)(b)
       case Not(a) => !predToBdd(bdd)(a)
-      case ITE(a, b, c) => (predToBdd(bdd)(a) && predToBdd(bdd)(b)) || 
+      case ITE(a, b, c) => (predToBdd(bdd)(a) && predToBdd(bdd)(b)) ||
                            (!predToBdd(bdd)(a) && predToBdd(bdd)(c))
     }
   }
@@ -44,7 +44,7 @@ object WeakestPreconditions {
     case _ => ITE(a, b, c)
   }
 
-  def bddToPred(bdd: Bdd[TestFileState])(node: bdd.Node): Pred = 
+  def bddToPred(bdd: Bdd[TestFileState])(node: bdd.Node): Pred =
     bdd.bddFold[Pred](True, False)(node, { (l, x, r) => ite(x, r, l) })
 
   def wpBdd(bdd: Bdd[TestFileState])(expr: Expr, post: bdd.Node): bdd.Node = {

@@ -1,6 +1,6 @@
 trait WeakestPreconditionsTestSuite extends org.scalatest.fixture.FunSuite {
-  import eval._
-  import eval.WeakestPreconditions._
+  import rehearsal.fsmodel._
+  import WeakestPreconditions._
 
   case class FixtureParam(myBdd: bdd.Bdd[TestFileState]) {
 
@@ -28,8 +28,8 @@ trait WeakestPreconditionsTestSuite extends org.scalatest.fixture.FunSuite {
 }
 
 class SimpleWPTest extends WeakestPreconditionsTestSuite {
-  import eval._
-  import eval.Implicits._
+  import rehearsal.fsmodel._
+  import Implicits._
 
   test("one mkdir") { arg =>
     import arg._

@@ -1,8 +1,7 @@
-package pipeline
+package rehearsal.ppmodel
 
 import org.scalatest.FunSuite
 import org.scalatest.BeforeAndAfterAll
-
 import java.nio.file.{Files, Path}
 import scala.util.Try
 

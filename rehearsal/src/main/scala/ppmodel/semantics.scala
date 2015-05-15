@@ -1,15 +1,15 @@
-package pipeline
+package rehearsal.ppmodel
 
 import puppet.common.util._
-import eval._
-import eval.Implicits._
+import rehearsal.fsmodel._
+import rehearsal.fsmodel.Implicits._
 
 /*
  * Give filesystem semantics to resources
  *
  * Expresses resources in terms of file system changes
  */
-private[pipeline] object ResourceToExpr {
+private[ppmodel] object ResourceToExpr {
 
   import java.nio.file.{Path, Files, Paths}
 
@@ -168,9 +168,7 @@ private[pipeline] object ResourceToExpr {
         val files = pkgcache.files(r.name) getOrElse
           (throw new Exception(s"Package not found: ${r.name}"))
 
-        val allpaths = paths.allpaths(files)
-
-        val dirs = (allpaths -- files)
+        val dirs = (allpaths(files) -- files)
         /*
          * XXX(if sorting becomes a bottleneck): Bucket sort below but unreadable!
         val mkdirs = (dirs - paths.root).groupBy(_.getNameCount)
@@ -182,7 +180,7 @@ private[pipeline] object ResourceToExpr {
                                         .map(d => If(TestFileState(d, DoesNotExist),
                                                      Mkdir(d), Skip)).toList
         */
-        val mkdirs = (dirs - paths.root).toSeq.sortBy(_.getNameCount)
+        val mkdirs = (dirs - root).toSeq.sortBy(_.getNameCount)
                                         .map(d => If(TestFileState(d, DoesNotExist),
                                                      Mkdir(d), Skip)).toList
 

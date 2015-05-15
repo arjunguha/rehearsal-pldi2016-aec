@@ -1,11 +1,8 @@
-package pipeline
+package rehearsal.fsmodel
 
-import java.nio.file.Paths
+import java.nio.file.{Paths, Path}
 import com.microsoft.z3.{ArrayExpr, Sort}
-import eval._
 import bdd.Bdd
-
-import java.nio.file.Path
 
 object Z3Evaluator {
 
@@ -197,7 +194,7 @@ class Z3Evaluator(graph: FileScriptGraph) {
     }
     helper(node)
     solver.add(nodeToExpr(node))
-    println(s"Precondition has size ${nodeToExpr.size}")
+    //println(s"Precondition has size ${nodeToExpr.size}")
   }
 
   def isDeterministic(myBdd: Bdd[TestFileState])(pre: myBdd.Node): Boolean = {

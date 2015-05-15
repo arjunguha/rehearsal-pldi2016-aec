@@ -1,4 +1,4 @@
-package pipeline
+package rehearsal.ppmodel
 
 import java.io.File
 import java.nio.file.{Path, Paths, Files}
@@ -9,7 +9,7 @@ import puppet.common.util._
 import scala.util.Try
 
 /* Disk based cache to speed up apt-file */
-private[pipeline] class PackageCache(cacheroot: Path) {
+private[ppmodel] class PackageCache(cacheroot: Path) {
 
   val root = cacheroot.normalize().toAbsolutePath()
   require(Files.exists(root) && Files.isDirectory(root),

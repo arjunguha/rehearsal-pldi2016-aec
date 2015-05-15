@@ -1,8 +1,8 @@
-package eval
+package rehearsal.fsmodel
 
 import java.nio.file.Path
 
-private[eval] object Commutativity {
+private[fsmodel] object Commutativity {
 
   type ReadSet = Set[Path]
   type WriteSet = Set[Path]

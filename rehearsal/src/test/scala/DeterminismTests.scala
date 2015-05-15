@@ -1,10 +1,8 @@
-import org.scalatest.FunSuite
-
 import scalax.collection.Graph
 import scalax.collection.GraphEdge.DiEdge
-import pipeline._
+import rehearsal.ppmodel._
+import rehearsal.fsmodel._
 import puppet.graph._
-import eval._
 import puppet.Facter
 
 class DeterminismTestSuite extends InlineTestSuite {
@@ -16,7 +14,7 @@ class DeterminismTestSuite extends InlineTestSuite {
     println(fileScriptGraph)
     val pre = WeakestPreconditions.wpGraphBdd(myBdd)(fileScriptGraph, myBdd.bddTrue)
     println(WeakestPreconditions.bddToPred(myBdd)(pre))
-    assert(Z3Evaluator.isDeterministic(myBdd)(pre, fileScriptGraph))
+    assert(Z3Evaluator.isDeterministic(myBdd)(myBdd.bddTrue, fileScriptGraph))
   }
 
   test("trivial program with non-deterministic error") {
@@ -26,7 +24,7 @@ class DeterminismTestSuite extends InlineTestSuite {
     val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
     val pre = WeakestPreconditions.wpGraphBdd(myBdd)(fileScriptGraph, myBdd.bddTrue)
     println(WeakestPreconditions.bddToPred(myBdd)(pre))
-    assert(Z3Evaluator.isDeterministic(myBdd)(pre, fileScriptGraph) == false)
+    assert(Z3Evaluator.isDeterministic(myBdd)(myBdd.bddTrue, fileScriptGraph) == false)
   }
 
   test("trivial program with non-deterministic output") {

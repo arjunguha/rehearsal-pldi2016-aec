@@ -1,8 +1,8 @@
+import rehearsal.fsmodel._
+import rehearsal.ppmodel._
 import puppet.syntax._
 import puppet.graph._
-import eval._
 import puppet.Facter
-import pipeline._
 
 trait InlineTestSuite extends org.scalatest.FunSuite {
 
@@ -13,7 +13,7 @@ trait InlineTestSuite extends org.scalatest.FunSuite {
     test (name) {
       val resourceGraph = parse(program).desugar()
                             .toGraph(Facter.emptyEnv).head._2
-      val fileScriptGraph = pipeline.toFileScriptGraph(resourceGraph)
+      val fileScriptGraph = toFileScriptGraph(resourceGraph)
       genericTestRunner(resourceGraph, fileScriptGraph)
     }
   }
@@ -99,5 +99,3 @@ trait InlineTestSuite extends org.scalatest.FunSuite {
       """)
 
 }
-
-

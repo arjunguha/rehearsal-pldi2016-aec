@@ -1,7 +1,7 @@
 import bdd._
-import eval._
-import eval.Implicits._
-import eval.WeakestPreconditions._
+import rehearsal.fsmodel._
+import Implicits._
+import WeakestPreconditions._
 
 import java.nio.file.FileSystems
 

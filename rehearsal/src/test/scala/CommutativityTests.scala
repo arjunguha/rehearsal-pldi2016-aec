@@ -1,5 +1,5 @@
-import eval._
-import eval.Implicits._
+import rehearsal.fsmodel._
+import Implicits._
 
 class CommutativityTests extends org.scalatest.FunSuite {
 

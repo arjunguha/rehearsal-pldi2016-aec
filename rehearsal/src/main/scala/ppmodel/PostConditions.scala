@@ -1,11 +1,11 @@
-package pipeline
+package rehearsal.ppmodel
 
 import puppet.common.resource._
 import puppet.common.util._
-import eval._
-import eval.Implicits._
+import rehearsal.fsmodel._
+import Implicits._
 
-private[pipeline] object PostCondition {
+private[ppmodel] object PostCondition {
   import java.nio.file.{Files, Paths}
 
   val pkgcache = {
@@ -44,7 +44,7 @@ private[pipeline] object PostCondition {
       if (r.get[String]("content").isDefined) Some("present") else None
     }
     val force = validVal(r, "force", validBoolVals) getOrElse false
-    
+
     val _ensure = if (ensure.isDefined) ensure
                   else if (r.get[String]("source").isDefined) Some("file")
                   else None
@@ -62,7 +62,7 @@ private[pipeline] object PostCondition {
 
   def PuppetPackage(r: Resource): Pred = {
     val validEnsureVals = List("present", "installed", "absent", "purged", "held", "latest")
-    
+
     val ensure = validVal(r, "ensure", validEnsureVals) getOrElse "installed"
     val provider = r.get[String]("provider")
 
@@ -75,10 +75,8 @@ private[pipeline] object PostCondition {
         val files = pkgcache.files(r.name) getOrElse
           (throw new Exception(s"Package not found: ${r.name}"))
 
-        val allpaths = paths.allpaths(files)
+        val dirs = (allpaths(files) -- files)
 
-        val dirs = (allpaths -- files)
-        
         val dirPreds = dirs.toSeq.map(TestFileState(_, IsDir))
         val filePreds = files.toSeq.map(TestFileState(_, IsFile))
         val preds = dirPreds ++ filePreds
@@ -150,5 +148,5 @@ private[pipeline] object PostCondition {
     case "User" => User(r)
     case "Group" => Group(r)
     case _ => throw new Exception("Resource type \"%s\" not supported yet".format(r.typ))
-  } 
+  }
 }

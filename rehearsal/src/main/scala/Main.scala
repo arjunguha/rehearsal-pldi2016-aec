@@ -36,9 +36,8 @@ package repl {
 
 package object repl {
 
-  import pipeline._
-  import eval._
-  import pipeline.toFileScriptGraph
+  import rehearsal.ppmodel._
+  import rehearsal.fsmodel._
   import puppet.Modules
   import puppet.syntax.{TopLevel, parse}
 
