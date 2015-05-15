@@ -7,18 +7,29 @@ package repl {
 
   private object Main extends App {
 
-    def repl = new ILoop
 
-    val settings = new Settings
-    settings.Yreplsync.value = true
 
-    //use when launching normally outside SBT
-    //settings.usejavacp.value = true
+    args match {
+      case Array() => {
+        def repl = new ILoop
 
-    //an alternative to 'usejavacp' setting, when launching from within SBT
-    settings.embeddedDefaults[Main.type]
+        val settings = new Settings
+        settings.Yreplsync.value = true
 
-    repl.process(settings)
+        //use when launching normally outside SBT
+        //settings.usejavacp.value = true
+
+        //an alternative to 'usejavacp' setting, when launching from within SBT
+        settings.embeddedDefaults[Main.type]
+
+        repl.process(settings)
+      }
+      case Array("is-module-deterministic", name) => {
+        val b = isDeterministic(loadModuleClass(name))
+        println(s"$name,$b")
+      }
+    }
+
   }
 
 }
@@ -45,9 +56,9 @@ package object repl {
     val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
     val fileScriptGraph = Slicing.sliceGraph(g)
     println(fileScriptGraph)
-    val pre = WeakestPreconditions.wpGraphBdd(myBdd)(fileScriptGraph, myBdd.bddTrue)
-    println(WeakestPreconditions.bddToPred(myBdd)(pre))
-    Z3Evaluator.isDeterministic(myBdd)(pre, fileScriptGraph)
+    //val pre = WeakestPreconditions.wpGraphBdd(myBdd)(fileScriptGraph, myBdd.bddTrue)
+    //println(WeakestPreconditions.bddToPred(myBdd)(pre))
+    Z3Evaluator.isDeterministic(myBdd)(myBdd.bddTrue, fileScriptGraph)
   }
 
 }
