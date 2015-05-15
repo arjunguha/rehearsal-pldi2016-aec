@@ -6,39 +6,8 @@ import bdd.Bdd
 
 object Z3Evaluator {
 
-  def ancestors(path: Path): Set[Path] = {
-    if (path.getParent == null) {
-      Set(path)
-    }
-    else {
-      Set(path, path.getParent)
-      // ancestors(path.getParent) + path
-    }
-  }
-
-  def exprPaths(expr: Expr): Set[Path] = expr match {
-    case Error => Set()
-    case Skip => Set()
-    case If(a, p, q) => predPaths(a) union exprPaths(p) union exprPaths(q)
-    case Seq(p, q) => exprPaths(p) union exprPaths(q)
-    case Mkdir(f) => ancestors(f)
-    case CreateFile(f, _) => ancestors(f)
-    case Rm(f) => ancestors(f)
-    case Cp(src, dst) => ancestors(src) union ancestors(dst)
-  }
-
-  def predPaths(pred: Pred): Set[Path] = pred match {
-    case True => Set()
-    case False => Set()
-    case Not(a) => predPaths(a)
-    case And(a, b) => predPaths(a) union predPaths(b)
-    case Or(a, b) => predPaths(a) union predPaths(b)
-    case TestFileState(f, _) => ancestors(f)
-    case ITE(a, b, c) => predPaths(a) union predPaths(b) union predPaths(c)
-  }
-
   def graphPaths(graph: FileScriptGraph): Set[Path] = {
-    graph.nodes.map(p => exprPaths(p)).flatten.toSet
+    graph.nodes.map(_.paths).flatten.toSet
   }
 
   def isDeterministic(bdd: Bdd[TestFileState])

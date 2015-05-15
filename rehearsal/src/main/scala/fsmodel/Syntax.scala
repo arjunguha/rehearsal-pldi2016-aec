@@ -48,6 +48,7 @@ sealed abstract trait Expr extends Product {
 
   val size = Helpers.size(this)
 
+  val paths = Helpers.exprPaths(this)
   val (readSet, writeSet, idemSet) = Commutativity.exprFileSets(this)
 
   override lazy val hashCode: Int =
