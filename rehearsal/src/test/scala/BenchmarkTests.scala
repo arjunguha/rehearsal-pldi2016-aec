@@ -12,12 +12,10 @@ class BenchmarkTests extends FunSuite {
   for ((name, b) <- BenchmarkLoader.benchmarks) {
 
     test(s"benchmark: $name") {
-      val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
       val resourceGraph = b.toGraph(facterEnv).head._2
       val fileScriptGraph = Slicing.sliceGraph(toFileScriptGraph(resourceGraph))
       info(fileScriptGraph.toString)
-      val pre = WeakestPreconditions.wpGraphBdd(myBdd)(fileScriptGraph, myBdd.bddTrue)
-      assert(Z3Evaluator.isDeterministic(myBdd)(myBdd.bddTrue, fileScriptGraph))
+      assert(SymbolicEvaluator.isDeterministic(fileScriptGraph))
     }
   }
 }

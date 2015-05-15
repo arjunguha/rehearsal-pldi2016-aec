@@ -4,47 +4,36 @@ import rehearsal.ppmodel._
 import rehearsal.fsmodel._
 import puppet.graph._
 import puppet.Facter
+import Implicits._
 
 class DeterminismTestSuite extends InlineTestSuite {
 
+  def myTestRunner(g: FileScriptGraph): Boolean = {
+    //SymbolicEvaluator.isErrorFree(g)
+    SymbolicEvaluator.isDeterministic(g, false)
+  }
+
   def genericTestRunner(resourceGraph: ResourceGraph,
                         g: FileScriptGraph): Unit = {
-    val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
-    val fileScriptGraph = Slicing.sliceGraph(g)
-    println(fileScriptGraph)
-    val pre = WeakestPreconditions.wpGraphBdd(myBdd)(fileScriptGraph, myBdd.bddTrue)
-    println(WeakestPreconditions.bddToPred(myBdd)(pre))
-    assert(Z3Evaluator.isDeterministic(myBdd)(myBdd.bddTrue, fileScriptGraph))
+    SymbolicEvaluator.isDeterministic(g)
   }
 
   test("trivial program with non-deterministic error") {
-    import scalax.collection.Graph
-    import Implicits._
-    val fileScriptGraph: FileScriptGraph = Graph(Mkdir("/foo"), Mkdir("/foo/bar"))
-    val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
-    val pre = WeakestPreconditions.wpGraphBdd(myBdd)(fileScriptGraph, myBdd.bddTrue)
-    println(WeakestPreconditions.bddToPred(myBdd)(pre))
-    assert(Z3Evaluator.isDeterministic(myBdd)(myBdd.bddTrue, fileScriptGraph) == false)
+    assert(myTestRunner(Graph(Mkdir("/foo"),
+                              Mkdir("/foo/bar"))) == false)
   }
 
   test("trivial program with non-deterministic output") {
-    import scalax.collection.Graph
-    import Implicits._
-    val fileScriptGraph: FileScriptGraph = Graph(
-      If(TestFileState("/foo", IsDir), Mkdir("/bar"), Skip),
-      Mkdir("/foo"))
-    val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
-    val pre = WeakestPreconditions.wpGraphBdd(myBdd)(fileScriptGraph, myBdd.bddTrue)
-    assert(Z3Evaluator.isDeterministic(myBdd)(pre, fileScriptGraph) == false)
+    assert(myTestRunner(
+           Graph(If(TestFileState("/foo", IsDir), Mkdir("/bar"), Skip),
+                 Mkdir("/foo")))
+           == false)
   }
 
 
   test("Trivial, long program (performance test)") {
-    import scalax.collection.Graph
-    import Implicits._
 
     def genSeq(n: Int) : Expr = {
-      import Implicits._
       if (n == 0) {
         Mkdir("/bar")
       }
@@ -53,15 +42,10 @@ class DeterminismTestSuite extends InlineTestSuite {
       }
     }
 
-    val fileScriptGraph: FileScriptGraph = Graph(
-      genSeq(1000))
-    val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
-    val pre = WeakestPreconditions.wpGraphBdd(myBdd)(fileScriptGraph, myBdd.bddTrue)
-    assert(Z3Evaluator.isDeterministic(myBdd)(pre, fileScriptGraph) == true)
+    myTestRunner(Graph(genSeq(100)))
   }
 
   test("Trivial, long program with many files (performance test)") {
-    import scalax.collection.Graph
     import Implicits._
 
     def genSeq(n: Int) : Expr = {
@@ -74,27 +58,18 @@ class DeterminismTestSuite extends InlineTestSuite {
       }
     }
 
-    val fileScriptGraph: FileScriptGraph = Graph(genSeq(100))
-    val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
-    val pre = WeakestPreconditions.wpGraphBdd(myBdd)(fileScriptGraph, myBdd.bddTrue)
-    assert(Z3Evaluator.isDeterministic(myBdd)(pre, fileScriptGraph) == true)
+    myTestRunner(Graph(genSeq(100)))
   }
 
   test("Is a singleton graph deterministic") {
     import Implicits._
-    val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
-    val g = Graph[Expr, DiEdge](If(TestFileState("/foo", IsDir), Skip, Mkdir("/foo")))
-    assert(Z3Evaluator.isDeterministic(myBdd)(myBdd.bddTrue, g))
+    myTestRunner(Graph(If(TestFileState("/foo", IsDir), Skip, Mkdir("/foo"))))
   }
 
   test("Two-node non-deterministic graph") {
     import Implicits._
-    val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
-
-    val g = Graph[Expr, DiEdge](
-      Mkdir("/foo"),
-      If(TestFileState("/foo", IsDir), Skip, Mkdir("/bar")))
-    assert(Z3Evaluator.isDeterministic(myBdd)(myBdd.bddTrue, g) == false)
+    myTestRunner(Graph(Mkdir("/foo"),
+      If(TestFileState("/foo", IsDir), Skip, Mkdir("/bar"))))
   }
 
 }

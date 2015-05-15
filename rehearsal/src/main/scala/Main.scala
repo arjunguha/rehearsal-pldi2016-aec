@@ -9,8 +9,8 @@ package repl {
 
 
 
-    args match {
-      case Array() => {
+    args.toSeq match {
+      case Seq() => {
         def repl = new ILoop
 
         val settings = new Settings
@@ -24,9 +24,12 @@ package repl {
 
         repl.process(settings)
       }
-      case Array("is-module-deterministic", name) => {
-        val b = isDeterministic(loadModuleClass(name))
-        println(s"$name,$b")
+      case Seq("is-module-deterministic", name) => {
+        val (b, t) = isDeterministic(loadModuleClass(name))
+        println(s"$name,$b, $t")
+      }
+      case args => {
+        sys.error(s"Invalid command-line arguments: $args")
       }
     }
 
@@ -51,13 +54,16 @@ package object repl {
     toFileScriptGraph(pp.desugar.toGraph(puppet.Facter.emptyEnv).head._2)
   }
 
-  def isDeterministic(g: FileScriptGraph): Boolean = {
-    val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
-    val fileScriptGraph = Slicing.sliceGraph(g)
-    println(fileScriptGraph)
-    //val pre = WeakestPreconditions.wpGraphBdd(myBdd)(fileScriptGraph, myBdd.bddTrue)
-    //println(WeakestPreconditions.bddToPred(myBdd)(pre))
-    Z3Evaluator.isDeterministic(myBdd)(myBdd.bddTrue, fileScriptGraph)
+  def time[A](thunk: => A): (A, Long) = {
+    val start = System.currentTimeMillis
+    val r = thunk
+    val duration = start - System.currentTimeMillis
+    r -> duration
+  }
+
+  def isDeterministic(g: FileScriptGraph): (Boolean, Long) = {
+    val g2 = Slicing.sliceGraph(g)
+    time(SymbolicEvaluator.isDeterministic(g2))
   }
 
 }
