@@ -1,5 +1,6 @@
 import puppet.Modules
 import puppet.graph.Resource
+import rehearsal.ppmodel._
 import puppet.syntax.{TopLevel, parse}
 import scala.util.{Try, Success, Failure}
 import java.nio.file.{Files, Paths, Path}
@@ -45,15 +46,15 @@ class GithubSuite extends org.scalatest.FunSuite {
     .flatten
 
   for ((repo, topLevel) <- repos) {
-
-    Try(topLevel.desugar.toGraph(env).head._2) match {
+    Try(GuessClasses.guessLoad(topLevel).desugar.toGraph(env).head._2) match {
       case Failure(_) => ()
       case Success(g) => {
         val files = g.nodes.filter(_.typ == "File")
+        val numEdges = g.edges.size
         val numFiles = files.size
         val fileDeps = files.map(_.inDegree).sum
         val numNodes = g.nodes.size
-        println(s"$repo, $numFiles, $fileDeps, $numNodes")
+        println(s"$repo, $numFiles, $fileDeps, $numNodes, $numEdges")
       }
     }
   }
