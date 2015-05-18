@@ -9,7 +9,7 @@ import rehearsal.fsmodel.Implicits._
  *
  * Expresses resources in terms of file system changes
  */
-/*private[ppmodel]*/ object ResourceToExpr {
+private[ppmodel] object ResourceToExpr {
 
   import java.nio.file.{Path, Files, Paths}
 
