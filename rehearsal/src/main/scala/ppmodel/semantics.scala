@@ -9,7 +9,7 @@ import rehearsal.fsmodel.Implicits._
  *
  * Expresses resources in terms of file system changes
  */
-private[ppmodel] object ResourceToExpr {
+/*private[ppmodel]*/ object ResourceToExpr {
 
   import java.nio.file.{Path, Files, Paths}
 
@@ -26,6 +26,17 @@ private[ppmodel] object ResourceToExpr {
       Files.createDirectory(pkgcacheDir)
     }
     new PackageCache(pkgcacheDir.toString)
+  }
+
+  def PackageDependencies(pkg: String): List[String] = {
+    val cmd = s"""apt-rdepends --show=depends $pkg | grep -v '^ ' | grep -v $pkg"""
+    val (sts, out, err) = Cmd.exec(cmd)
+    /*  Toposort
+     *  Among dependent packages of this package, apt-get will install the
+     *  package with all its dependencies present first(in a reverse
+     *  topological sort order)
+     */
+     out.lines.toList
   }
 
   val validBoolVals = List ((BoolV(true): Value, true),
@@ -62,9 +73,7 @@ private[ppmodel] object ResourceToExpr {
     val mode = r.get[String]("mode")
 
     val p = path
-//     val c = Content(content getOrElse "")
     val c = content getOrElse ""
-//     val t = target getOrElse "/tmp/"
 
     val _ensure = if (ensure.isDefined) ensure
                   else if (source.isDefined) Some("file")
@@ -150,6 +159,29 @@ private[ppmodel] object ResourceToExpr {
   }
 
 
+  def installToFSExpr(name: String): Option[Expr] = {
+    val files = pkgcache.files(name) getOrElse {
+      // Maybe a virtual package
+      return None
+    }
+
+    val all_paths = allpaths(files)
+    val dirs = (all_paths -- files)
+
+    val mkdirs = (dirs - root).toSeq.sortBy(_.getNameCount)
+                              .map(d => If(TestFileState(d, DoesNotExist),
+                                           Mkdir(d), Skip)).toList
+    val somecontent = ""
+    val createfiles = files.map((f) => CreateFile(f, somecontent))
+
+    val exprs = (mkdirs ++ createfiles)
+    val block = Block(exprs: _*)
+
+    // check if package is already installed
+    Some(If(TestFileState(s"/packages/${name}", DoesNotExist), Skip, block))
+  }
+
+
   def PuppetPackage(r: Resource): Expr = {
 
     val validEnsureVals = List("present", "installed", "absent", "purged", "held", "latest")
@@ -165,31 +197,14 @@ private[ppmodel] object ResourceToExpr {
 
       case "present" | "installed" | "latest" => {
 
-        val files = pkgcache.files(r.name) getOrElse
+        val deps = PackageDependencies(r.name)
+        val depExprs = deps.map(d => installToFSExpr(d)).flatten
+
+        val exprs = installToFSExpr(r.name) getOrElse
           (throw new Exception(s"Package not found: ${r.name}"))
-
-        val dirs = (allpaths(files) -- files)
-        /*
-         * XXX(if sorting becomes a bottleneck): Bucket sort below but unreadable!
-        val mkdirs = (dirs - paths.root).groupBy(_.getNameCount)
-                                        .mapValues(_.toSeq)
-                                        .toSeq
-                                        .sortBy(_._1)
-                                        .unzip._2
-                                        .flatten
-                                        .map(d => If(TestFileState(d, DoesNotExist),
-                                                     Mkdir(d), Skip)).toList
-        */
-        val mkdirs = (dirs - root).toSeq.sortBy(_.getNameCount)
-                                        .map(d => If(TestFileState(d, DoesNotExist),
-                                                     Mkdir(d), Skip)).toList
-
-//         val somecontent = Content("")
-        val somecontent = ""
-        val createfiles = files.map((f) => CreateFile(f, somecontent))
-
-        val exprs = (mkdirs ++ createfiles)
-        Block(exprs: _*)
+        // Append at end
+        val block = depExprs :+ exprs
+        Block(block: _*)
       }
 
       case "absent" | "purged" => {
@@ -199,10 +214,15 @@ private[ppmodel] object ResourceToExpr {
 
         val exprs = files.map((f) => If(TestFileState(f, DoesNotExist),
                                         Skip, Rm(f))).toSeq
+
+        val pkgInstallInfoPath = s"/packages/${r.name}"
+        // Append at end
+        exprs :+ If(TestFileState(pkgInstallInfoPath, DoesNotExist),
+                    Skip, Rm(pkgInstallInfoPath))
         Block(exprs: _*)
       }
 
-      case "held"   => throw new Exception("NYI package held") // TODO
+      case "held" => throw new Exception("NYI package held") // TODO
       case _ => throw new Exception(s"Invalid value for ensure: ${ensure}")
     }
   }
@@ -250,11 +270,9 @@ private[ppmodel] object ResourceToExpr {
 
     val u = Paths.get(s"/etc/users/${r.name}")
     val usettings = Paths.get(s"/etc/users/${r.name}/settings")
-//    val usettingscontent = Content("")
     val usettingscontent = ""
     val g = Paths.get(s"/etc/groups/${r.name}")
     val gsettings = Paths.get(s"/etc/groups/${r.name}/settings")
-//    val gsettingscontent = Content("")
     val gsettingscontent = ""
     val h = Paths.get(home getOrElse s"/home/${r.name}")
 
