@@ -64,6 +64,8 @@ private[ppmodel] object ResourceToExpr {
     val content = r.get[String]("content")
     val ensure = validVal(r, "ensure", validEnsureVals) orElse {
       if(content.isDefined) Some("present") else None
+    } orElse {
+      if(source.isDefined) Some("file") else None
     }
     val force = validVal(r, "force", validBoolVals) getOrElse false
     val purge = validVal(r, "purge", validBoolVals) getOrElse false
@@ -72,12 +74,78 @@ private[ppmodel] object ResourceToExpr {
     val provider = r.get[String]("provider")
     val mode = r.get[String]("mode")
 
-    val p = path
-    val c = content getOrElse ""
+    val props: Map[String, Option[String]] = Map(
+      "path" -> Some(path),
+      "content" -> content,
+      "source" -> source,
+      "ensure" -> ensure,
+      "force" -> Some(force.toString),
+      "purge" -> Some(purge.toString)
+    )
 
-    val _ensure = if (ensure.isDefined) ensure
-                  else if (source.isDefined) Some("file")
-                  else None
+    (props("ensure"),
+     props("path"),
+     props("content"),
+     props("source"),
+     props("force")) match {
+       case (Some("present"), Some(p), Some(c), None, _) =>  If(TestFileState(p, IsFile),
+                                                                Block(Rm(p), CreateFile(p, c)),
+                                                                If(TestFileState(p, DoesNotExist),
+                                                                   CreateFile(p, c),
+                                                                   Skip))
+
+      case (Some("present"), Some(p), None, Some(c), _) => If(TestFileState(p, IsFile),
+                                                              Block(Rm(p), CreateFile(p, c)),
+                                                              If(TestFileState(p, DoesNotExist),
+                                                                 CreateFile(p, c),
+                                                                 Skip))
+
+       case (Some("present"), Some(p), None, None, _) =>  If(TestFileState(p, IsFile),
+                                                             Block(Rm(p), CreateFile(p, "")),
+                                                             If(TestFileState(p, DoesNotExist),
+                                                                CreateFile(p, ""),
+                                                                Skip))
+
+
+       case (Some("absent"), Some(p), _, _, Some("true")) => If(TestFileState(p, IsDir),
+                                                                Rm(p),
+                                                                If(TestFileState(p, IsFile), Rm(p), Skip))
+
+       case (Some("absent"), Some(p), _, _, Some("false")) => If(TestFileState(p, IsFile), Rm(p), Skip)
+
+       case (Some("file"), Some(p), Some(c), None, Some("true")) => Block(If(TestFileState(p, IsDir),
+                                                                             Rm(p),
+                                                                             If(TestFileState(p, IsFile), Rm(p), Skip)),
+                                                                          CreateFile(p, c))
+
+       case (Some("file"), Some(p), None, Some(c), Some("true")) => Block(If(TestFileState(p, IsDir),
+                                                                             Rm(p),
+                                                                             If(TestFileState(p, IsFile), Rm(p), Skip)),
+                                                                          CreateFile(p, c))
+
+       case (Some("file"), Some(p), None, None, Some("true")) => Block(If(TestFileState(p, IsDir),
+                                                                          Rm(p),
+                                                                          If(TestFileState(p, IsFile), Rm(p), Skip)),
+                                                                       CreateFile(p, ""))
+
+       case (Some("file"), Some(p), Some(c), None, Some("false")) => Block(If(TestFileState(p, IsFile), Rm(p), Skip),
+                                                                           CreateFile(p, c))
+
+       case (Some("file"), Some(p), None, Some(c), Some("false")) => Block(If(TestFileState(p, IsFile), Rm(p), Skip),
+                                                                           CreateFile(p, c))
+
+       case (Some("file"), Some(p), None, None, Some("false")) => Block(If(TestFileState(p, IsFile), Rm(p), Skip),
+                                                                           CreateFile(p, ""))
+
+       case (Some("directory"), Some(p), _, _, _) => If(TestFileState(p, IsDir),
+                                                        Skip,
+                                                        If(TestFileState(p, IsFile),
+                                                            Rm(p) >> Mkdir(p),
+                                                            Mkdir(p)))
+
+
+       case _ => throw new Exception(s"ensure attribute missing for file ${r.name}")
+     }
 
     // if(_ensure.isDefined && _ensure.get == "link") {
     //   throw new Exception(s"""file(${r.name}): "${_ensure.get}" ensure not supported""")
@@ -95,67 +163,6 @@ private[ppmodel] object ResourceToExpr {
     // if(owner.isDefined) {
     //   throw new Exception(s"""file(${r.name}): "owner" attribute not supported""")
     // }
-
-    _ensure match {
-      // Broken symlinks are ignored
-      /* What if content is set
-       *   - Depends on file type
-       *     o For Links, content is ignored
-       *     o For normal, content is applied
-       *     o For directory, content is ignored
-       */
-      case Some("present") => If(TestFileState(p, IsFile),
-                                 Block(Rm(p), CreateFile(p, c)), // true branch
-                                 If(TestFileState(p, DoesNotExist),
-                                    CreateFile(p, c),
-                                    Skip))
-
-      /*
-       * Cases
-       * If already absent then don't do anything
-       *  Directory: if force is set then remove otherwise ignore
-       *  File: remove if present
-       *  Symlink: Remove link (but not the target)
-       */
-      case Some("absent") if force => If(TestFileState(p, IsDir),
-                                         Rm(p),
-                                         If(TestFileState(p, IsFile),
-                                            Rm(p),
-                                            Skip))
-
-      case Some("absent") => If(TestFileState(p, IsFile),
-                                Rm(p),
-                                Skip)
-
-      /* missing: Create a file with content if content present
-       * directory: if force is set then remove directory createFile
-       *            and set content if present else ignore
-       * file: if content set then set content else ignore
-       * link: removelink, createfile and set content if present
-       */
-      case Some("file") if force => Block(If(TestFileState(p, IsDir),
-                                             Rm(p),
-                                             If(TestFileState(p, IsFile),
-                                                Rm(p),
-                                                Skip)),
-                                          CreateFile(p, c))
-
-      case Some("file") => Block(If(TestFileState(p, IsFile),
-                                    Rm(p),
-                                    Skip),
-                                 CreateFile(p, c))
-
-      /* Missing: Create new directory
-       * Directory: Ignore
-       * File: remove file and create directory
-       * link: remove link and create directory
-       */
-      case Some("directory") => If(TestFileState(p, IsDir), Skip,
-                                   If(TestFileState(p, IsFile),
-                                      Rm(p) >> Mkdir(p), Mkdir(p)))
-
-      case _ => throw new Exception(s"ensure attribute missing for file ${r.name}")
-    }
   }
 
 
