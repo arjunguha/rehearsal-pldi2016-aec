@@ -1,0 +1,4 @@
+https://github.com/chad-thompson/vagrantpress/commit/42077ec0142f6da253a95d94dd18e3556d6eea0f
+https://github.com/hilverd/vagrant-ubuntu-oracle-xe/commit/d7d9689528ba2204783bad7708e3707e655a0fa3
+https://github.com/openstack-infra/system-config/commit/81d316b2bc929eeeca6ee6a40a3a405582462e09
+
