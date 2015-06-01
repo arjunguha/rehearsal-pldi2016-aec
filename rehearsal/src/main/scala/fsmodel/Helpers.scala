@@ -10,6 +10,7 @@ private[fsmodel] object Helpers {
     case And(a, b) => 1 + a.size + b.size
     case Or(a, b) => 1 + a.size + b.size
     case TestFileState(_, _) => 1
+    case TestFileHash(_, _) => 1
     case True => 1
     case False => 1
     case ITE(a, b, c) => 1 + a.size + b.size + c.size

@@ -25,11 +25,13 @@ trait SymbolicEvaluator {
   def orB(a: B, b: B): B
   def ite[A <: Rep](a: B, x: A, y: A): A
   def testFileStateB(fs: FS, p: Path, st: FileState): B
+  def testFileHashB(fs: FS, p: Path, hash: Array[Byte]): B
 
   def ok(fs: FS): ST
   def error: ST
   def matchST[A <: Rep](st : ST, err: A)(ok: FS => A): A
   def update(fs: FS, p: Path, st: FileState): FS
+  def setFileHash(fs: FS, p: Path, hash: Array[Byte]): FS
 
   def choices[A <: Rep](lst: List[A]): A
   def fresh[A <: Rep](x: ST => A): A
@@ -44,6 +46,7 @@ trait SymbolicEvaluator {
     case And(a, b) => andB(evalPred(fs, a), evalPred(fs, b))
     case Or(a, b) => orB(evalPred(fs, a), evalPred(fs, b))
     case TestFileState(p, st) => testFileStateB(fs, p, st)
+    case TestFileHash(p, h) => testFileHashB(fs, p, h)
     case ITE(a, b, c) => ite(evalPred(fs, a),
                              evalPred(fs, b),
                              evalPred(fs, c))
@@ -63,10 +66,10 @@ trait SymbolicEvaluator {
           ok(update(fs, p, IsDir)),
           error)
     }
-    case CreateFile(p, _) => matchST(st, error) { fs =>
+    case CreateFile(p, h) => matchST(st, error) { fs =>
       ite(andB(testFileStateB(fs, p.getParent, IsDir),
                testFileStateB(fs, p, DoesNotExist)),
-          ok(update(fs, p, IsFile)),
+          ok(setFileHash(fs, p, h)),
           error)
     }
     case Rm(p) => matchST(st, error) { fs =>
@@ -123,16 +126,26 @@ class SymbolicEvaluatorImpl(val poReduction: Boolean) extends SymbolicEvaluator 
   val solver = cxt.mkSolver()
 
   val pathSort = cxt.mkUninterpretedSort("Path")
+  val hashSort = cxt.mkUninterpretedSort("Hash")
 
-  val statSort  = cxt.mkEnumSort("Stat", "IsDir", "IsFile", "DoesNotExist")
-  val Array(isDir, isFile, doesNotExist) = statSort.getConsts()
-  val fileStateMap = Map[FileState, z3.Expr](IsDir -> isDir, IsFile -> isFile,
-                         DoesNotExist -> doesNotExist)
+  val isDirCtor = cxt.mkConstructor("IsDir", "isIsDir", null, null, null)
+  val doesNotExistCtor = cxt.mkConstructor("DoesNotExist", "isDoesNotExist", null, null, null)
+  val isFileCtor = cxt.mkConstructor("IsFile", "isIsFile", Array[String]("IsFile-hash"),
+                                  Array[Sort](hashSort), Array(0))
+  val statSort = cxt.mkDatatypeSort("Stat", Array(isDirCtor, doesNotExistCtor, isFileCtor))
+  val Array(getIsFileHash) = isFileCtor.getAccessorDecls
+
+
+  def isFile(hash: Array[Byte]) = cxt.mkApp(isFileCtor.ConstructorDecl, hashToZ3(hash))
+  def isDir = cxt.mkConst(isDirCtor.ConstructorDecl)
+  def doesNotExist = cxt.mkConst(doesNotExistCtor.ConstructorDecl())
 
 
   val fsSort = cxt.mkArraySort(pathSort, statSort)
 
   val pathMap = scala.collection.mutable.Map[Path, z3.Expr]()
+
+  val fileHashMap = scala.collection.mutable.Map[List[Byte], z3.Expr]()
 
   def pathToZ3(p: Path): z3.Expr = pathMap.get(p) match {
     case Some(z) => z
@@ -143,6 +156,14 @@ class SymbolicEvaluatorImpl(val poReduction: Boolean) extends SymbolicEvaluator 
     }
   }
 
+  def hashToZ3(hash: Array[Byte]): z3.Expr = fileHashMap.get(hash.toList) match {
+    case Some(z) => z
+    case None => {
+      val z = cxt.mkFreshConst("hash", hashSort)
+      fileHashMap += (hash.toList -> z)
+      z
+    }
+  }
 
   type Rep = z3.Expr
   type B = z3.BoolExpr
@@ -157,10 +178,22 @@ class SymbolicEvaluatorImpl(val poReduction: Boolean) extends SymbolicEvaluator 
   def ite[A <: Rep](a: B, x: A, y: A): A = {
     cxt.mkITE(a, x, y).asInstanceOf[A]
   }
-  def testFileStateB(fs: FS, p: Path, st: FileState): B = {
-    cxt.mkEq(cxt.mkSelect(fs, pathToZ3(p)), fileStateMap(st))
+
+  def testFileStateB(fs: FS, p: Path, st: FileState): B = st match {
+    case IsDir => cxt.mkEq(cxt.mkSelect(fs, pathToZ3(p)), isDir)
+    case DoesNotExist => cxt.mkEq(cxt.mkSelect(fs, pathToZ3(p)), doesNotExist)
+    case IsFile => cxt.mkApp(isFileCtor.getTesterDecl, cxt.mkSelect(fs, pathToZ3(p))).asInstanceOf[z3.BoolExpr]
   }
 
+  def testFileHashB(fs: FS, p: Path, hash: Array[Byte]): B = {
+    val e = cxt.mkSelect(fs, pathToZ3(p))
+    cxt.mkAnd(cxt.mkApp(isFileCtor.getTesterDecl, e).asInstanceOf[z3.BoolExpr],
+              cxt.mkEq(cxt.mkApp(getIsFileHash, e), hashToZ3(hash)))
+  }
+
+  def setFileHash(fs: FS, p: Path, hash: Array[Byte]): FS = {
+    cxt.mkStore(fs, pathToZ3(p), isFile(hash))
+  }
 
   val errorCtor = cxt.mkConstructor("error", "is_error", null, null, null)
   val okCtor = cxt.mkConstructor("ok", "is_ok", Array[String]("ok_state"),
@@ -179,8 +212,10 @@ class SymbolicEvaluatorImpl(val poReduction: Boolean) extends SymbolicEvaluator 
               ok(cxt.mkApp(getOkFS, st).asInstanceOf[FS])).asInstanceOf[A]
   }
 
-  def update(fs: FS, p: Path, st: FileState): FS = {
-    cxt.mkStore(fs, pathToZ3(p), fileStateMap(st))
+  def update(fs: FS, p: Path, st: FileState): FS = st match {
+    case IsDir =>  cxt.mkStore(fs, pathToZ3(p), isDir)
+    case DoesNotExist =>  cxt.mkStore(fs, pathToZ3(p), doesNotExist)
+    case IsFile =>  cxt.mkStore(fs, pathToZ3(p), isFile(Array.fill(16)(0.toByte)))
   }
 
   def choices[A <: Rep](lst: List[A]): A = {
@@ -226,9 +261,24 @@ class SymbolicEvaluatorImpl(val poReduction: Boolean) extends SymbolicEvaluator 
                1, null, null, cxt.mkSymbol("q"), cxt.mkSymbol("sk")))
   }
 
+  def assertHashCardinality(): Unit = {
+    val hashes = fileHashMap.values.toList
+    if (hashes.isEmpty) {
+      return
+    }
+    solver.add(cxt.mkDistinct(hashes: _*))
+    val s = cxt.mkSymbol("p")
+    val p1 = cxt.mkConst(s, hashSort)
+
+    solver.add(cxt.mkForall(Array(hashSort), Array(s),
+               cxt.mkOr(hashes.map(p2 => cxt.mkEq(p1, p2)): _*),
+               1, null, null, cxt.mkSymbol("q"), cxt.mkSymbol("sk")))
+  }
+
   def check(b: B): Status = {
     solver.push()
     assertPathCardinality()
+    assertHashCardinality()
     solver.push()
     assert(solver.check() == z3.Status.SATISFIABLE)
     solver.pop()
@@ -236,7 +286,10 @@ class SymbolicEvaluatorImpl(val poReduction: Boolean) extends SymbolicEvaluator 
     val r = solver.check()
     solver.pop()
     r match {
-      case z3.Status.SATISFIABLE => Sat
+      case z3.Status.SATISFIABLE => {
+        println(solver.getModel)
+        Sat
+      }
       case z3.Status.UNSATISFIABLE => Unsat
       case z3.Status.UNKNOWN => Unknown
       case _ => throw new RuntimeException("unexpected status from Z3")
