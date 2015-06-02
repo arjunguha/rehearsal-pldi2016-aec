@@ -19,14 +19,14 @@ class DeterminismTestSuite extends /*InlineTestSuite*/ org.scalatest.FunSuite {
     SymbolicEvaluator.isDeterministic(g)
   }
 
-/*
+
   test("trivial program with non-deterministic error") {
     assert(myTestRunner(Graph(Mkdir("/foo"),
                               Mkdir("/foo/bar"))) == false)
   }
-*/
 
-/*
+
+
   test("trivial program with non-deterministic output") {
     assert(myTestRunner(
            Graph(If(TestFileState("/foo", IsDir), Mkdir("/bar"), Skip),
@@ -96,19 +96,16 @@ class DeterminismTestSuite extends /*InlineTestSuite*/ org.scalatest.FunSuite {
     val p = "/usr/foo"
     assert(false == myTestRunner(Graph(Rm(p), CreateFile(p, ""))))
   }
-*/
 
   test("should be non-deterministic") {
     val p = "/usr/foo"
-    val c1 = "abcdef"
-    val c2 = "xyz"
+    val c1 = "contents 1"
+    val c2 = "contents 2"
     val stmt1 = If(TestFileState(p, DoesNotExist), CreateFile(p, c1), Rm(p) >> CreateFile(p, c1))
     val stmt2 = If(TestFileState(p, DoesNotExist), CreateFile(p, c2), Rm(p) >> CreateFile(p, c2))
     assert(false == myTestRunner(Graph(stmt1, stmt2)))
   }
 
-
-/*
   test("package with config file non-deterministic graph") {
     val program = """
       file {'/usr/games/sl': ensure => present }
@@ -122,5 +119,5 @@ class DeterminismTestSuite extends /*InlineTestSuite*/ org.scalatest.FunSuite {
     g2.nodes.foreach(n => println(n.value.pretty()))
     assert(false == myTestRunner(g))
   }
-*/
+
 }

@@ -39,6 +39,8 @@ trait SymbolicEvaluator {
 
   def check(b: B): Status
 
+  def isDeterministic(g: FileScriptGraph, poReduction: Boolean = true): Boolean
+
   def evalPred(fs: FS, pred: Pred): B = pred match {
     case True => trueB
     case False => falseB
@@ -108,14 +110,8 @@ object SymbolicEvaluator {
   }
 
   def isDeterministic(g: FileScriptGraph, poReduction: Boolean = true): Boolean = {
-    val eval = SymbolicEvaluator(poReduction)
-    import eval._
-    val formula = fresh { inST =>
-      notB(eqB(evalGraph(inST, g), evalGraph(inST, g)))
-    }
-    check(formula) == Unsat
+    SymbolicEvaluator(poReduction).isDeterministic(g)
   }
-
 }
 
 class SymbolicEvaluatorImpl(val poReduction: Boolean) extends SymbolicEvaluator {
@@ -218,6 +214,8 @@ class SymbolicEvaluatorImpl(val poReduction: Boolean) extends SymbolicEvaluator 
     case IsFile =>  cxt.mkStore(fs, pathToZ3(p), isFile(Array.fill(16)(0.toByte)))
   }
 
+  var choiceVars = List[z3.Expr]()
+
   def choices[A <: Rep](lst: List[A]): A = {
     val numChoices = lst.length
     assert (numChoices > 0)
@@ -226,6 +224,7 @@ class SymbolicEvaluatorImpl(val poReduction: Boolean) extends SymbolicEvaluator 
     }
     else {
       val x = cxt.mkFreshConst("choice", cxt.mkIntSort).asInstanceOf[z3.ArithExpr]
+      choiceVars = x :: choiceVars
       solver.add(cxt.mkAnd(cxt.mkGe(x, cxt.mkInt(0)),
                            cxt.mkLt(x, cxt.mkInt(numChoices))))
       def helper(n: Int, lst: List[A]): A = lst match {
@@ -275,6 +274,16 @@ class SymbolicEvaluatorImpl(val poReduction: Boolean) extends SymbolicEvaluator 
                1, null, null, cxt.mkSymbol("q"), cxt.mkSymbol("sk")))
   }
 
+  def pushPop[A](body: => A): A = {
+    try {
+      solver.push()
+      body
+    }
+    finally {
+      solver.pop()
+    }
+  }
+
   def check(b: B): Status = {
     solver.push()
     assertPathCardinality()
@@ -283,6 +292,9 @@ class SymbolicEvaluatorImpl(val poReduction: Boolean) extends SymbolicEvaluator 
     assert(solver.check() == z3.Status.SATISFIABLE)
     solver.pop()
     solver.add(b)
+    for (assert <- solver.getAssertions) {
+      println(s"$assert")
+    }
     val r = solver.check()
     solver.pop()
     r match {
@@ -295,6 +307,37 @@ class SymbolicEvaluatorImpl(val poReduction: Boolean) extends SymbolicEvaluator 
       case _ => throw new RuntimeException("unexpected status from Z3")
     }
 
+  }
+
+  def isDeterministic(g: FileScriptGraph, poReduction: Boolean = true): Boolean = {
+    pushPop {
+      val inST = cxt.mkFreshConst("inST", stateSort)
+      val outST = cxt.mkFreshConst("outST", stateSort)
+      val b = cxt.mkEq(outST, evalGraph(inST, g))
+      assertPathCardinality()
+      assertHashCardinality()
+      solver.add(b)
+      solver.check() match {
+        case z3.Status.SATISFIABLE => {
+          val m = solver.getModel
+          for (choice <- choiceVars) {
+            solver.add(cxt.mkNot(cxt.mkEq(choice, m.eval(choice, true))))
+          }
+          solver.check() match {
+            case z3.Status.UNSATISFIABLE => true
+            case z3.Status.SATISFIABLE => {
+              println("*** Assertions ***")
+              for (assert <- solver.getAssertions) {
+                println(s"$assert")
+              }
+              false
+            }
+            case _ => throw new RuntimeException("unknown from second run")
+          }
+        }
+        case _ => throw new RuntimeException("No model for even one run")
+      }
+    }
   }
 
 
