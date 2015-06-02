@@ -204,14 +204,15 @@ private[ppmodel] object ResourceToExpr {
 
       case "present" | "installed" | "latest" => {
 
-        val deps = PackageDependencies(r.name)
+        /*val deps = PackageDependencies(r.name)
         val depExprs = deps.map(d => installToFSExpr(d)).flatten
+        */
 
-        val exprs = installToFSExpr(r.name) getOrElse
+        val expr = installToFSExpr(r.name) getOrElse
           (throw new Exception(s"Package not found: ${r.name}"))
         // Append at end
-        val block = depExprs :+ exprs
-        Block(block: _*)
+        /* val block = depExprs :+*/ expr
+        // Block(block: _*)
       }
 
       case "absent" | "purged" => {
