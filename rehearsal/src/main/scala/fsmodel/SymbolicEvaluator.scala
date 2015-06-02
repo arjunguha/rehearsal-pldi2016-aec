@@ -101,6 +101,18 @@ trait SymbolicEvaluator {
     }
   }
 
+  def evalGraphDeterministic(st: ST, g: FileScriptGraph): ST = matchST(st, error) { fs =>
+    val fringe = g.nodes.filter(_.outDegree == 0).toList
+    
+    if (fringe.length == 0) {
+      st
+    }
+    else {
+      evalGraph(evalExpr(st, fringe.head.value), g - fringe.head)
+    }
+  }
+
+
 }
 
 object SymbolicEvaluator {
@@ -317,17 +329,16 @@ class SymbolicEvaluatorImpl(val poReduction: Boolean) extends SymbolicEvaluator 
   }
 
   def printAssertions(): Unit = {
-                  println("*** Assertions ***")
-              for (assert <- solver.getAssertions) {
-                println(s"$assert")
-              }
-
+    println("*** Assertions ***")
+    for (assert <- solver.getAssertions) {
+      println(s"$assert")
+    }
   }
 
   def isDeterministic(g: FileScriptGraph, poReduction: Boolean = true): Boolean = {
     pushPop {
       val inST = cxt.mkFreshConst("inST", stateSort)
-      val b = cxt.mkNot(cxt.mkEq(evalGraph(inST, g), evalGraph(inST, g)))
+      val b = cxt.mkNot(cxt.mkEq(evalGraphDeterministic(inST, g), evalGraph(inST, g)))
       assertPathCardinality()
       assertHashCardinality()
       solver.add(b)
