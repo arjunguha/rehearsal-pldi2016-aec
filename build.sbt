@@ -38,8 +38,6 @@ lazy val common = project
 
 lazy val bdd = project
 
-lazy val github = project
-
 lazy val rehearsal = project.dependsOn(common, bdd)
 
 lazy val  root = project.in(file("."))
