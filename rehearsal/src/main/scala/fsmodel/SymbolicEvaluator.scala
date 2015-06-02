@@ -309,36 +309,38 @@ class SymbolicEvaluatorImpl(val poReduction: Boolean) extends SymbolicEvaluator 
 
   }
 
-  def isDeterministic(g: FileScriptGraph, poReduction: Boolean = true): Boolean = {
-    pushPop {
-      val inST = cxt.mkFreshConst("inST", stateSort)
-      val outST = cxt.mkFreshConst("outST", stateSort)
-      val b = cxt.mkEq(outST, evalGraph(inST, g))
-      assertPathCardinality()
-      assertHashCardinality()
-      solver.add(b)
-      solver.check() match {
-        case z3.Status.SATISFIABLE => {
-          val m = solver.getModel
-          for (choice <- choiceVars) {
-            solver.add(cxt.mkNot(cxt.mkEq(choice, m.eval(choice, true))))
-          }
-          solver.check() match {
-            case z3.Status.UNSATISFIABLE => true
-            case z3.Status.SATISFIABLE => {
-              println("*** Assertions ***")
-              for (assert <- solver.getAssertions) {
-                println(s"$assert")
-              }
-              false
-            }
-            case _ => throw new RuntimeException("unknown from second run")
-          }
-        }
-        case _ => throw new RuntimeException("No model for even one run")
-      }
+ def materializeArray(model: z3.Model, arr: z3.Expr, sort: z3.ArraySort): z3.Expr = {
+    val i = model.getFuncInterp(arr.getFuncDecl.getParameters.toList(0).getFuncDecl)
+    i.getEntries.foldLeft(cxt.mkConstArray(sort.getDomain, i.getElse)) { case (arr, entry) =>
+      cxt.mkStore(arr, entry.getArgs.head, entry.getValue)
     }
   }
 
+  def printAssertions(): Unit = {
+                  println("*** Assertions ***")
+              for (assert <- solver.getAssertions) {
+                println(s"$assert")
+              }
+
+  }
+
+  def isDeterministic(g: FileScriptGraph, poReduction: Boolean = true): Boolean = {
+    pushPop {
+      val inST = cxt.mkFreshConst("inST", stateSort)
+      val b = cxt.mkNot(cxt.mkEq(evalGraph(inST, g), evalGraph(inST, g)))
+      assertPathCardinality()
+      assertHashCardinality()
+      solver.add(b.simplify().asInstanceOf[z3.BoolExpr])
+      printAssertions()
+      solver.check() match {
+        case z3.Status.SATISFIABLE => {
+          println(s"Model:\n${solver.getModel}")
+          false
+        }
+        case z3.Status.UNSATISFIABLE => true
+        case _ => throw new RuntimeException("unexpected unknown from Z3")
+      }
+    }
+  }
 
 }
