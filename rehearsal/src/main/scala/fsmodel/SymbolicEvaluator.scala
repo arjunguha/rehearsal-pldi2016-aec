@@ -57,7 +57,7 @@ trait SymbolicEvaluator {
   def evalExpr(st: ST, expr: Expr): ST = expr match {
     case Skip => st
     case Error => error
-    case Seq(p, q) => matchST(st, error) { fs => evalExpr(ok(fs), q) }
+    case Seq(p, q) => evalExpr(evalExpr(st, p), q)
     case If(a, p, q) => matchST(st, error) { fs =>
       ite(evalPred(fs, a), evalExpr(st, p), evalExpr(st, q))
     }
@@ -203,7 +203,7 @@ class SymbolicEvaluatorImpl(val poReduction: Boolean) extends SymbolicEvaluator 
   def error: ST = cxt.mkConst(errorCtor.ConstructorDecl())
 
   def matchST[A <: Rep](st : ST, err: A)(ok: FS => A): A = {
-    cxt.mkITE(cxt.mkEq(st, error),
+    cxt.mkITE(cxt.mkApp(errorCtor.getTesterDecl(), st).asInstanceOf[z3.BoolExpr],
               err,
               ok(cxt.mkApp(getOkFS, st).asInstanceOf[FS])).asInstanceOf[A]
   }
@@ -330,13 +330,9 @@ class SymbolicEvaluatorImpl(val poReduction: Boolean) extends SymbolicEvaluator 
       val b = cxt.mkNot(cxt.mkEq(evalGraph(inST, g), evalGraph(inST, g)))
       assertPathCardinality()
       assertHashCardinality()
-      solver.add(b.simplify().asInstanceOf[z3.BoolExpr])
-      printAssertions()
+      solver.add(b)
       solver.check() match {
-        case z3.Status.SATISFIABLE => {
-          println(s"Model:\n${solver.getModel}")
-          false
-        }
+        case z3.Status.SATISFIABLE => false
         case z3.Status.UNSATISFIABLE => true
         case _ => throw new RuntimeException("unexpected unknown from Z3")
       }

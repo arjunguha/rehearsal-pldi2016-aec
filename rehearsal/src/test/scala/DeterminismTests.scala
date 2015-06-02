@@ -19,7 +19,6 @@ class DeterminismTestSuite extends /*InlineTestSuite*/ org.scalatest.FunSuite {
     SymbolicEvaluator.isDeterministic(g)
   }
 
-
   test("trivial program with non-deterministic error") {
     assert(myTestRunner(Graph(Mkdir("/foo"),
                               Mkdir("/foo/bar"))) == false)
@@ -34,7 +33,6 @@ class DeterminismTestSuite extends /*InlineTestSuite*/ org.scalatest.FunSuite {
            == false)
   }
 
-
   test("Trivial, long program (performance test)") {
 
     def genSeq(n: Int) : Expr = {
@@ -46,7 +44,7 @@ class DeterminismTestSuite extends /*InlineTestSuite*/ org.scalatest.FunSuite {
       }
     }
 
-    myTestRunner(Graph(genSeq(100)))
+    myTestRunner(Graph(genSeq(10)))
   }
 
   test("Trivial, long program with many files (performance test)") {
@@ -62,7 +60,7 @@ class DeterminismTestSuite extends /*InlineTestSuite*/ org.scalatest.FunSuite {
       }
     }
 
-    myTestRunner(Graph(genSeq(100)))
+    myTestRunner(Graph(genSeq(10)))
   }
 
   test("Is a singleton graph deterministic") {
@@ -97,6 +95,20 @@ class DeterminismTestSuite extends /*InlineTestSuite*/ org.scalatest.FunSuite {
     assert(false == myTestRunner(Graph(Rm(p), CreateFile(p, ""))))
   }
 
+  test("package with config file non-deterministic graph") {
+    val program = """
+      file {'/usr/games/sl': ensure => present }
+
+      package {'sl': ensure => present }
+    """
+    val pp = parse(program)
+    val g = toFileScriptGraph(pp.desugar.toGraph(Facter.emptyEnv).head._2)
+    //g.nodes.foreach(n => println(n.value.pretty()))
+    val g2 = Slicing.sliceGraph(g)
+    //g2.nodes.foreach(n => println(n.value.pretty()))
+    assert(false == myTestRunner(g))
+  }
+
   test("should be non-deterministic") {
     val p = "/usr/foo"
     val c1 = "contents 1"
@@ -106,18 +118,5 @@ class DeterminismTestSuite extends /*InlineTestSuite*/ org.scalatest.FunSuite {
     assert(false == myTestRunner(Graph(stmt1, stmt2)))
   }
 
-  test("package with config file non-deterministic graph") {
-    val program = """
-      file {'/usr/games/sl': ensure => present }
-
-      package {'sl': ensure => present }
-    """
-    val pp = parse(program)
-    val g = toFileScriptGraph(pp.desugar.toGraph(Facter.emptyEnv).head._2)
-    g.nodes.foreach(n => println(n.value.pretty()))
-    val g2 = Slicing.sliceGraph(g)
-    g2.nodes.foreach(n => println(n.value.pretty()))
-    assert(false == myTestRunner(g))
-  }
 
 }
