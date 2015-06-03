@@ -112,7 +112,6 @@ trait SymbolicEvaluator {
     }
   }
 
-
 }
 
 object SymbolicEvaluator {
@@ -143,17 +142,14 @@ class SymbolicEvaluatorImpl(val poReduction: Boolean) extends SymbolicEvaluator 
   val statSort = cxt.mkDatatypeSort("Stat", Array(isDirCtor, doesNotExistCtor, isFileCtor))
   val Array(getIsFileHash) = isFileCtor.getAccessorDecls
 
+  val fileHashMap = scala.collection.mutable.Map[List[Byte], z3.Expr]()
 
   def isFile(hash: Array[Byte]) = cxt.mkApp(isFileCtor.ConstructorDecl, hashToZ3(hash))
   def isDir = cxt.mkConst(isDirCtor.ConstructorDecl)
   def doesNotExist = cxt.mkConst(doesNotExistCtor.ConstructorDecl())
 
-
   val fsSort = cxt.mkArraySort(pathSort, statSort)
-
   val pathMap = scala.collection.mutable.Map[Path, z3.Expr]()
-
-  val fileHashMap = scala.collection.mutable.Map[List[Byte], z3.Expr]()
 
   def pathToZ3(p: Path): z3.Expr = pathMap.get(p) match {
     case Some(z) => z
