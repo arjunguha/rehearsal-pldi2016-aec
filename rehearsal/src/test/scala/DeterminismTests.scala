@@ -19,21 +19,21 @@ class DeterminismTestSuite extends /*InlineTestSuite*/ org.scalatest.FunSuite {
     SymbolicEvaluator.isDeterministic(g)
   }
 
-  ignore("trivial program with non-deterministic error") {
+  test("trivial program with non-deterministic error") {
     assert(myTestRunner(Graph(Mkdir("/foo"),
                               Mkdir("/foo/bar"))) == false)
   }
 
 
 
-  ignore("trivial program with non-deterministic output") {
+  test("trivial program with non-deterministic output") {
     assert(myTestRunner(
            Graph(If(TestFileState("/foo", IsDir), Mkdir("/bar"), Skip),
                  Mkdir("/foo")))
            == false)
   }
 
-  ignore("Trivial, long program (performance test)") {
+  test("Trivial, long program (performance test)") {
 
     def genSeq(n: Int) : Expr = {
       if (n == 0) {
@@ -47,7 +47,7 @@ class DeterminismTestSuite extends /*InlineTestSuite*/ org.scalatest.FunSuite {
     myTestRunner(Graph(genSeq(10)))
   }
 
-  ignore("Trivial, long program with many files (performance test)") {
+  test("Trivial, long program with many files (performance test)") {
     import Implicits._
 
     def genSeq(n: Int) : Expr = {
@@ -63,18 +63,18 @@ class DeterminismTestSuite extends /*InlineTestSuite*/ org.scalatest.FunSuite {
     myTestRunner(Graph(genSeq(10)))
   }
 
-  ignore("Is a singleton graph deterministic") {
+  test("Is a singleton graph deterministic") {
     import Implicits._
     myTestRunner(Graph(If(TestFileState("/foo", IsDir), Skip, Mkdir("/foo"))))
   }
 
-  ignore("Two-node non-deterministic graph") {
+  test("Two-node non-deterministic graph") {
     import Implicits._
     assert(false == myTestRunner(Graph(Mkdir("/foo"),
       If(TestFileState("/foo", IsDir), Skip, Mkdir("/bar")))))
   }
 
-  ignore("a bug") {
+  test("a bug") {
     val p = "/usr/games/sl"
     val c = ""
     val n1 = CreateFile(p, c)
@@ -84,13 +84,13 @@ class DeterminismTestSuite extends /*InlineTestSuite*/ org.scalatest.FunSuite {
     assert(false == myTestRunner(Graph(n1, n2)))
   }
 
-  ignore("should be deterministic") {
+  test("should be deterministic") {
     val p = "/usr/foo"
     val c = "c"
     assert(true == myTestRunner(Graph(CreateFile(p, c), CreateFile(p, c))))
   }
 
-  ignore("file removal and creation should be non-deterministic") {
+  test("file removal and creation should be non-deterministic") {
     val p = "/usr/foo"
     assert(false == myTestRunner(Graph(Rm(p), CreateFile(p, ""))))
   }
@@ -110,7 +110,7 @@ class DeterminismTestSuite extends /*InlineTestSuite*/ org.scalatest.FunSuite {
     assert(false == myTestRunner(g))
   }
 
-  ignore("should be non-deterministic") {
+  test("should be non-deterministic") {
     info("Should work")
     val p = "/usr/foo"
     val c1 = "contents 1"
