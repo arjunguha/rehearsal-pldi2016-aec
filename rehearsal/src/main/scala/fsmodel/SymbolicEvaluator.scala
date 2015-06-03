@@ -103,7 +103,7 @@ trait SymbolicEvaluator {
 
   def evalGraphDeterministic(st: ST, g: FileScriptGraph): ST = matchST(st, error) { fs =>
     val fringe = g.nodes.filter(_.outDegree == 0).toList
-    
+
     if (fringe.length == 0) {
       st
     }
@@ -335,17 +335,54 @@ class SymbolicEvaluatorImpl(val poReduction: Boolean) extends SymbolicEvaluator 
     }
   }
 
+  def allPairsCommute(lst: List[FileScriptGraph#NodeT]): Boolean = {
+    lst.combinations(2).forall {
+      case List(a,b) => a.value.commutesWith(b.value)
+    }
+  }
+
+  def findCounterexample(interST: z3.Expr,
+                         outST: z3.Expr,
+                         graph: FileScriptGraph): Option[z3.Model] = {
+    val fringe = graph.nodes.filter(_.outDegree == 0).toList
+    if (fringe.length == 0) {
+      pushPop {
+        solver.add(cxt.mkNot(cxt.mkEq(outST, interST)))
+        println("Running Z3...")
+        solver.check() match {
+          case z3.Status.SATISFIABLE => Some(solver.getModel())
+          case z3.Status.UNSATISFIABLE => None
+          case z3.Status.UNKNOWN => throw new RuntimeException("got unknown")
+        }
+      }
+    }
+    else if (poReduction && allPairsCommute(fringe)) {
+      val p = Block(fringe.foldRight(List[Expr]()) { (n, lst) => n :: lst }: _*)
+      findCounterexample(evalExpr(interST, p), outST, graph -- fringe)
+    }
+    else {
+      val interST1 = cxt.mkFreshConst("interST1", stateSort)
+      solver.add(cxt.mkEq(interST1, interST))
+      pushPop {
+        fringe.toStream.map({ p =>
+          findCounterexample(evalExpr(interST1, p), outST, graph - p)
+        })
+        .find(_.isDefined)
+        .flatten
+      }
+    }
+  }
+
   def isDeterministic(g: FileScriptGraph, poReduction: Boolean = true): Boolean = {
     pushPop {
       val inST = cxt.mkFreshConst("inST", stateSort)
-      val b = cxt.mkNot(cxt.mkEq(evalGraphDeterministic(inST, g), evalGraph(inST, g)))
+      val outST1 = cxt.mkFreshConst("outST", stateSort)
+      solver.add(cxt.mkEq(outST1, evalGraphDeterministic(inST, g)))
       assertPathCardinality()
       assertHashCardinality()
-      solver.add(b)
-      solver.check() match {
-        case z3.Status.SATISFIABLE => false
-        case z3.Status.UNSATISFIABLE => true
-        case _ => throw new RuntimeException("unexpected unknown from Z3")
+      findCounterexample(inST, outST1, g) match {
+        case None => true
+        case Some(model) => false
       }
     }
   }
