@@ -106,7 +106,7 @@ class DeterminismTestSuite extends /*InlineTestSuite*/ org.scalatest.FunSuite {
     val g = toFileScriptGraph(pp.desugar.toGraph(Facter.emptyEnv).head._2)
     //g.nodes.foreach(n => println(n.value.pretty()))
     val g2 = Slicing.sliceGraph(g)
-    g2.nodes.foreach(n => println(n.value.pretty()))
+    //g2.nodes.foreach(n => println(n.value.pretty()))
     assert(false == myTestRunner(g))
   }
 

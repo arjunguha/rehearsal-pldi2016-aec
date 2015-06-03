@@ -11,6 +11,7 @@ case object Unknown extends Status
 
 object Z3Helpers {
 
+  import scala.language.implicitConversions
   import com.microsoft.z3
 
   def pushPop[A](body: => A)(implicit solver: z3.Solver): A = {
@@ -72,6 +73,30 @@ object Z3Helpers {
     cxt.mkITE(a, x, y).asInstanceOf[A]
   }
 
+  implicit class RichExpr(e1: z3.Expr) {
+
+    def ===(e2: z3.Expr)(implicit cxt: z3.Context): z3.BoolExpr = {
+      cxt.mkEq(e1, e2)
+    }
+  }
+
+  implicit class RichBoolExpr(e1: z3.BoolExpr) {
+
+    def &&(e2: z3.BoolExpr)(implicit cxt: z3.Context): z3.BoolExpr = {
+      cxt.mkAnd(e1, e2)
+    }
+
+    def ||(e2: z3.BoolExpr)(implicit cxt: z3.Context): z3.BoolExpr = {
+      cxt.mkOr(e1, e2)
+    }
+
+    def unary_!()(implicit cxt: z3.Context): z3.BoolExpr = cxt.mkNot(e1)
+
+  }
+
+  implicit def boolToZ3(b: Boolean)(implicit cxt: z3.Context): z3.BoolExpr = {
+    cxt.mkBool(b)
+  }
 
 }
 
@@ -91,6 +116,14 @@ class SymbolicEvaluatorImpl(poReduction: Boolean, g: FileScriptGraph)  {
   implicit val cxt = new z3.Context()
   implicit val solver = cxt.mkSolver()
 
+  // We treat each hashcode as an uninterpreted value of sort 'hashSort'.
+  // 'fileHashMap' maps each hash to a unique constant. 'hashToZ3' looks up
+  // the constant for a hashcode in 'fileHashMap' and creates it if it doesn't
+  // exist. 'assertHashCardinality' asserts that all hashes are unique and no
+  // other hashes exist.
+  //
+  // One wart: hashes are Array[Byte], and arrays don't have proper hash
+  // functions in Java. We convert to List[Byte], which does the right thing.
   val hashSort = cxt.mkUninterpretedSort("Hash")
 
   val fileHashMap = scala.collection.mutable.Map[List[Byte], z3.Expr]()
@@ -104,6 +137,25 @@ class SymbolicEvaluatorImpl(poReduction: Boolean, g: FileScriptGraph)  {
     }
   }
 
+  // Don't allow hashToZ3 to create more hashes after this has been evaluated.
+  def assertHashCardinality(): Unit = {
+    val hashes = fileHashMap.values.toList
+    if (hashes.isEmpty) {
+      return
+    }
+    solver.add(cxt.mkDistinct(hashes: _*))
+    val s = cxt.mkSymbol("p")
+    val p1 = cxt.mkConst(s, hashSort)
+
+    solver.add(cxt.mkForall(Array(hashSort), Array(s),
+               cxt.mkOr(hashes.map(p2 => cxt.mkEq(p1, p2)): _*),
+               1, null, null, cxt.mkSymbol("q"), cxt.mkSymbol("sk")))
+  }
+
+
+  // This is essentially the following:
+  //
+  // type stat = IsDir | DoesNotExist | IsFile of hash
   val isDirCtor = cxt.mkConstructor("IsDir", "isIsDir", null, null, null)
   val doesNotExistCtor = cxt.mkConstructor("DoesNotExist", "isDoesNotExist",
     null, null, null)
@@ -121,131 +173,103 @@ class SymbolicEvaluatorImpl(poReduction: Boolean, g: FileScriptGraph)  {
     cxt.mkApp(isFileCtor.getTesterDecl(), e).asInstanceOf[z3.BoolExpr]
   }
 
+
+  // A state ("ST") is a collection of expressions that define program state.
+  // 'isErr' is true if the state is erroneous. 'paths' is a map from every
+  // path (from a finite universe of paths) to a 'statSort' that determines the
+  // state of the path. Path-states are meaningless if 'isErr' is true.
+
   val allPaths = g.nodes.map(e => Helpers.exprPaths(e)).reduce(_ union _).toList
+
+  case class ST(isErr: z3.BoolExpr, paths: Map[Path, z3.Expr]) {
+
+    // Two states are equal if both are in error or both are not in error and
+    // all their paths are in the same state. We could work with a stricter
+    // notion of equality too (i.e., all components are the same).
+    def ===(other: ST): z3.BoolExpr = {
+      val pathsEq = allPaths.map(p => cxt.mkEq(this.paths(p), other.paths(p)))
+      (this.isErr && other.isErr)  ||
+      (!this.isErr && !other.isErr && cxt.mkAnd(pathsEq: _*))
+    }
+
+   def select(path: Path): z3.Expr = paths(path)
+
+   def store(path: Path, stat: z3.Expr): ST = ST(isErr, paths + (path -> stat))
+
+   def setErr(b: z3.BoolExpr): ST = ST(b, paths)
+
+  }
 
   object ST {
 
+    // Creates a fresh state where the isErr bit and every path are bound
+    // to fresh variables.
     def apply(): ST = {
-      ST(cxt.mkFreshConst("b", cxt.mkBoolSort).asInstanceOf[z3.BoolExpr],
+      ST(freshBool("isErr"),
          allPaths.map(p => p -> cxt.mkFreshConst(p.toString, statSort)).toMap)
     }
 
-    def ite(b: z3.BoolExpr, st1: ST, st2: ST): ST = {
-      ST(cxt.mkITE(b, st1.isErr, st2.isErr).asInstanceOf[z3.BoolExpr],
-         allPaths.map(p => p -> cxt.mkITE(b, st1.files(p), st2.files(p))).toMap)
+    // Branching is messy. Suppose we want to write this expression in Z3, where
+    // b is a Z3 boolean:
+    //
+    // if (b) ST(err1, { p11, p12, ...}) else ST(err2, { p21, p22, ... })
+    //
+    // Since ST is not a Z3 value, we can't directly turn it into a Z3
+    // conditional. instead, we need to "push the b inwards":
+    //
+    // ST(b ? err1 : err2, { b ? p11 : p21, b ? p21 : p22, ... })
+    def test(b: z3.BoolExpr, st1: ST, st2: ST): ST = {
+      ST(ite(b, st1.isErr, st2.isErr),
+         allPaths.map(p => p -> ite(b, st1.paths(p), st2.paths(p))).toMap)
     }
+
   }
 
-  case class ST(isErr: z3.BoolExpr, files: Map[Path, z3.Expr]) {
-
-    def isEq(other: ST): z3.BoolExpr = {
-      val pathsEq = allPaths.map(p => cxt.mkEq(this.files(p), other.files(p)))
-      cxt.mkAnd(cxt.mkEq(this.isErr, other.isErr),
-                cxt.mkAnd(pathsEq: _*))
+  def evalPred(st: ST, pred: Pred): z3.BoolExpr = pred match {
+    case True => true
+    case False => false
+    case Not(a) => !evalPred(st, a)
+    case And(a, b) => evalPred(st, a) && evalPred(st, b)
+    case Or(a, b) => evalPred(st, a) || evalPred(st, b)
+    case TestFileState(p, IsDir) => st.select(p) === isDir
+    case TestFileState(p, DoesNotExist) => st.select(p) === doesNotExist
+    case TestFileState(p, IsFile) => isIsFile(st.select(p))
+    case TestFileHash(p, h) => {
+      val stat = st.select(p)
+      isIsFile(stat) && (cxt.mkApp(getIsFileHash, stat) === hashToZ3(h))
     }
-
-  }
-
-  def select(state: ST, path: Path): z3.Expr = state.files(path)
-
-  def store(state: ST, path: Path, stat: z3.Expr): ST =
-    ST(state.isErr, state.files + (path -> stat))
-
-  type Rep = z3.Expr
-  type B = z3.BoolExpr
-
-  def trueB = cxt.mkTrue
-  def falseB = cxt.mkFalse
-  def notB(a: B): B = cxt.mkNot(a)
-  def andB(a: B, b: B): B = cxt.mkAnd(a, b)
-  def orB(a: B, b: B): B = cxt.mkOr(a, b)
-
-  def testFileStateB(state: ST, p: Path, st: FileState): B = {
-    val stat = select(state, p)
-    st match {
-      case IsDir => cxt.mkEq(stat, isDir)
-      case DoesNotExist => cxt.mkEq(stat, doesNotExist)
-      case IsFile => isIsFile(stat)
-    }
-  }
-
-  def testFileHashB(state: ST, p: Path, hash: Array[Byte]): B = {
-    val stat = select(state, p)
-    cxt.mkAnd(isIsFile(stat),
-              cxt.mkEq(cxt.mkApp(getIsFileHash, stat), hashToZ3(hash)))
-  }
-
-  def setFileHash(st: ST, p: Path, hash: Array[Byte]): ST =
-    store(st, p, isFile(hash))
-
-  def update(state: ST, p: Path, stat: FileState): ST =  {
-    val stat1 = stat match {
-      case IsDir =>  isDir
-      case DoesNotExist =>  doesNotExist
-      case IsFile =>  isFile(Array.fill(16)(0.toByte))
-    }
-    store(state, p, stat1)
-  }
-
-  def eqB[A <: Rep](x: A, y: A): B = cxt.mkEq(x, y)
-
-  def evalPred(fs: ST, pred: Pred): B = pred match {
-    case True => trueB
-    case False => falseB
-    case Not(a) => notB(evalPred(fs, a))
-    case And(a, b) => andB(evalPred(fs, a), evalPred(fs, b))
-    case Or(a, b) => orB(evalPred(fs, a), evalPred(fs, b))
-    case TestFileState(p, st) => testFileStateB(fs, p, st)
-    case TestFileHash(p, h) => testFileHashB(fs, p, h)
-    case ITE(a, b, c) => ite(evalPred(fs, a),
-                             evalPred(fs, b),
-                             evalPred(fs, c))
+    case ITE(a, b, c) => ite(evalPred(st, a),
+                             evalPred(st, b),
+                             evalPred(st, c))
   }
 
   def evalExpr(st: ST, expr: Expr): ST = expr match {
     case Skip => st
-    case Error => ST(cxt.mkTrue, st.files)
+    case Error => ST(true, st.paths)
     case Seq(p, q) => evalExpr(evalExpr(st, p), q)
     case If(a, p, q) => {
-      val b = cxt.mkFreshConst("b", cxt.mkBoolSort).asInstanceOf[z3.BoolExpr]
-      solver.add(cxt.mkEq(b, evalPred(st, a)))
-      ST.ite(b, evalExpr(st, p), evalExpr(st, q))
+      val b = freshBool("if")
+      solver.add(b === evalPred(st, a))
+      ST.test(b, evalExpr(st, p), evalExpr(st, q))
     }
     case Mkdir(p) => {
-      val b = cxt.mkFreshConst("b", cxt.mkBoolSort).asInstanceOf[z3.BoolExpr]
-      solver.add(cxt.mkEq(b,
-                          andB(testFileStateB(st, p.getParent, IsDir),
-                               testFileStateB(st, p, DoesNotExist))))
-      ST(cxt.mkOr(st.isErr, cxt.mkNot(b)),
-         update(st, p, IsDir).files)
+      val b = freshBool("b")
+      solver.add(b === (st.select(p.getParent) === isDir &&
+                        st.select(p) === doesNotExist))
+      st.store(p, isDir).setErr(st.isErr || !b)
     }
     case CreateFile(p, h) => {
-      val b = cxt.mkFreshConst("b", cxt.mkBoolSort).asInstanceOf[z3.BoolExpr]
-      solver.add(cxt.mkEq(b, andB(testFileStateB(st, p.getParent, IsDir),
-                                  testFileStateB(st, p, DoesNotExist))))
-      ST(cxt.mkOr(st.isErr, cxt.mkNot(b)),
-         setFileHash(st, p, h).files)
+      val b = freshBool("b")
+      solver.add(b === (st.select(p.getParent) === isDir &&
+                        st.select(p) === doesNotExist))
+      st.store(p, isFile(h)).setErr(st.isErr || !b)
     }
     case Rm(p) => {
       val b = freshBool("b")
-      solver.add(cxt.mkEq(b, (testFileStateB(st, p, IsFile))))
-      ST(cxt.mkOr(st.isErr, cxt.mkNot(b)), update(st, p, DoesNotExist).files)
+      solver.add(b === isIsFile(st.select(p)))
+      st.store(p, doesNotExist).setErr(st.isErr || !b)
     }
     case _ => throw new IllegalArgumentException("not implemented")
-  }
-
-  def assertHashCardinality(): Unit = {
-    val hashes = fileHashMap.values.toList
-    if (hashes.isEmpty) {
-      return
-    }
-    solver.add(cxt.mkDistinct(hashes: _*))
-    val s = cxt.mkSymbol("p")
-    val p1 = cxt.mkConst(s, hashSort)
-
-    solver.add(cxt.mkForall(Array(hashSort), Array(s),
-               cxt.mkOr(hashes.map(p2 => cxt.mkEq(p1, p2)): _*),
-               1, null, null, cxt.mkSymbol("q"), cxt.mkSymbol("sk")))
   }
 
   def allPairsCommute(lst: List[FileScriptGraph#NodeT]): Boolean = {
@@ -270,47 +294,16 @@ class SymbolicEvaluatorImpl(poReduction: Boolean, g: FileScriptGraph)  {
     else {
       fringe.map(p => evalGraph(evalExpr(st, p), g - p)).reduce({ (st1, st2) =>
         val b = cxt.mkFreshConst("choice", cxt.mkBoolSort).asInstanceOf[z3.BoolExpr]
-        ST.ite(b, st1, st2)
+        ST.test(b, st1, st2)
       })
     }
   }
-
-  // def findCounterexample(interST: z3.Expr,
-  //                        outST: z3.Expr,
-  //                        graph: FileScriptGraph): Option[z3.Model] = {
-  //   val fringe = graph.nodes.filter(_.outDegree == 0).toList
-  //   if (fringe.length == 0) {
-  //     pushPop {
-  //       solver.add(cxt.mkNot(cxt.mkEq(outST, interST)).simplify.asInstanceOf[z3.BoolExpr])
-  //       solver.check() match {
-  //         case z3.Status.SATISFIABLE => Some(solver.getModel())
-  //         case z3.Status.UNSATISFIABLE => None
-  //         case z3.Status.UNKNOWN => throw new RuntimeException("got unknown")
-  //       }
-  //     }
-  //   }
-  //   else if (poReduction && allPairsCommute(fringe)) {
-  //     val p = Block(fringe.foldRight(List[Expr]()) { (n, lst) => n :: lst }: _*)
-  //     findCounterexample(evalExpr(interST, p), outST, graph -- fringe)
-  //   }
-  //   else {
-  //     val interST1 = cxt.mkFreshConst("interST1", stateSort)
-  //     solver.add(cxt.mkEq(interST1, interST).simplify.asInstanceOf[z3.BoolExpr])
-  //     pushPop {
-  //       fringe.toStream.map({ p =>
-  //         findCounterexample(evalExpr(interST1, p), outST, graph - p)
-  //       })
-  //       .find(_.isDefined)
-  //       .flatten
-  //     }
-  //   }
-  // }
 
   def isDeterministic(): Boolean = {
     val inST = ST()
     val outST1 = evalGraph(inST, g)
     val outST2 = evalGraph(inST, g)
-    solver.add(cxt.mkNot(outST1.isEq(outST2)))
+    solver.add(cxt.mkNot(outST1 === outST2))
     assertHashCardinality()
     solver.check() match {
       case z3.Status.SATISFIABLE => {
@@ -320,16 +313,6 @@ class SymbolicEvaluatorImpl(poReduction: Boolean, g: FileScriptGraph)  {
       case z3.Status.UNKNOWN => throw new RuntimeException("got unknown")
     }
 
-    // pushPop {
-    //   val inST = cxt.mkFreshConst("inST", stateSort)
-    //   val outST1 = cxt.mkFreshConst("outST", stateSort)
-    //   solver.add(cxt.mkEq(outST1, evalGraphDeterministic(inST, g)))
-    //   assertHashCardinality()
-    //   findCounterexample(inST, outST1, g) match {
-    //     case None => true
-    //     case Some(model) => false
-    //   }
-    // }
   }
 
 }
