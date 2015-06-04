@@ -44,6 +44,12 @@ object ResourceModel {
           If(TestFileState(p, IsFile),
              Rm(p),
              Skip))
+    case Directory(p) =>
+      If(TestFileState(p, IsDir),
+         Skip,
+         If(TestFileState(p, IsFile),
+            Rm(p) >> Mkdir(p),
+            Mkdir(p)))
     case User(name, present, manageHome) => {
       val u = Paths.get(s"/etc/users/$name")
       val g = Paths.get(s"/etc/groups/$name")
