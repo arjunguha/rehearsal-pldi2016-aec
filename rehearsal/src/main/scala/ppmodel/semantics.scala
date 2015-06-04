@@ -1,9 +1,11 @@
 package rehearsal.ppmodel
 
 import puppet.common.util._
+import rehearsal._
 import rehearsal.fsmodel._
 import rehearsal.fsmodel.Implicits._
 
+import ppmodel.{ResourceModel => R}
 /*
  * Give filesystem semantics to resources
  *
@@ -88,81 +90,20 @@ private[ppmodel] object ResourceToExpr {
      props("content"),
      props("source"),
      props("force")) match {
-       case (Some("present"), Some(p), Some(c), None, _) =>  If(TestFileState(p, IsFile),
-                                                                Block(Rm(p), CreateFile(p, c)),
-                                                                If(TestFileState(p, DoesNotExist),
-                                                                   CreateFile(p, c),
-                                                                   Skip))
-
-      case (Some("present"), Some(p), None, Some(c), _) => If(TestFileState(p, IsFile),
-                                                              Block(Rm(p), CreateFile(p, c)),
-                                                              If(TestFileState(p, DoesNotExist),
-                                                                 CreateFile(p, c),
-                                                                 Skip))
-
-       case (Some("present"), Some(p), None, None, _) =>  If(TestFileState(p, IsFile),
-                                                             Block(Rm(p), CreateFile(p, "")),
-                                                             If(TestFileState(p, DoesNotExist),
-                                                                CreateFile(p, ""),
-                                                                Skip))
-
-
-       case (Some("absent"), Some(p), _, _, Some("true")) => If(TestFileState(p, IsDir),
-                                                                Rm(p),
-                                                                If(TestFileState(p, IsFile), Rm(p), Skip))
-
-       case (Some("absent"), Some(p), _, _, Some("false")) => If(TestFileState(p, IsFile), Rm(p), Skip)
-
-       case (Some("file"), Some(p), Some(c), None, Some("true")) => Block(If(TestFileState(p, IsDir),
-                                                                             Rm(p),
-                                                                             If(TestFileState(p, IsFile), Rm(p), Skip)),
-                                                                          CreateFile(p, c))
-
-       case (Some("file"), Some(p), None, Some(c), Some("true")) => Block(If(TestFileState(p, IsDir),
-                                                                             Rm(p),
-                                                                             If(TestFileState(p, IsFile), Rm(p), Skip)),
-                                                                          CreateFile(p, c))
-
-       case (Some("file"), Some(p), None, None, Some("true")) => Block(If(TestFileState(p, IsDir),
-                                                                          Rm(p),
-                                                                          If(TestFileState(p, IsFile), Rm(p), Skip)),
-                                                                       CreateFile(p, ""))
-
-       case (Some("file"), Some(p), Some(c), None, Some("false")) => Block(If(TestFileState(p, IsFile), Rm(p), Skip),
-                                                                           CreateFile(p, c))
-
-       case (Some("file"), Some(p), None, Some(c), Some("false")) => Block(If(TestFileState(p, IsFile), Rm(p), Skip),
-                                                                           CreateFile(p, c))
-
-       case (Some("file"), Some(p), None, None, Some("false")) => Block(If(TestFileState(p, IsFile), Rm(p), Skip),
-                                                                           CreateFile(p, ""))
-
-       case (Some("directory"), Some(p), _, _, _) => If(TestFileState(p, IsDir),
-                                                        Skip,
-                                                        If(TestFileState(p, IsFile),
-                                                            Rm(p) >> Mkdir(p),
-                                                            Mkdir(p)))
-
-
+       case (Some("present"), Some(p), Some(c), None, _) =>  R.File(p, c, false).compile
+        case (Some("present"), Some(p), None, Some(c), _) => R.File(p, c, false).compile
+        case (Some("present"), Some(p), None, None, _) => R.File(p, "", false).compile
+        case (Some("absent"), Some(p), _, _, Some("true")) => R.AbsentPath(p, true).compile
+        case (Some("absent"), Some(p), _, _, Some("false")) => R.AbsentPath(p, false).compile
+        case (Some("file"), Some(p), Some(c), None, Some("true")) => R.File(p, c, true).compile
+        case (Some("file"), Some(p), None, Some(c), Some("true")) => R.File(p, c, true).compile
+        case (Some("file"), Some(p), None, None, Some("true")) => R.File(p, "", true).compile
+        case (Some("file"), Some(p), Some(c), None, Some("false")) =>  R.EnsureFile(p, c).compile
+        case (Some("file"), Some(p), None, Some(c), Some("false")) => R.EnsureFile(p, c).compile
+        case (Some("file"), Some(p), None, None, Some("false")) => R.EnsureFile(p, "").compile
+        case (Some("directory"), Some(p), _, _, _) => R.Directory(p).compile
        case _ => throw new Exception(s"ensure attribute missing for file ${r.name}")
      }
-
-    // if(_ensure.isDefined && _ensure.get == "link") {
-    //   throw new Exception(s"""file(${r.name}): "${_ensure.get}" ensure not supported""")
-    // }
-
-    // if(source.isDefined) {
-    //   throw new Exception(s"""file(${r.name}): source attribute not supported""")
-    // }
-    // if(provider.isDefined && provider.get != "posix") {
-    //   throw new Exception(s"""file(${r.name}): "${provider.get}" provider not supported""")
-    // }
-    // if(mode.isDefined) {
-    //   throw new Exception(s"""file(${r.name}): "mode" attribute not supported""")
-    // }
-    // if(owner.isDefined) {
-    //   throw new Exception(s"""file(${r.name}): "owner" attribute not supported""")
-    // }
   }
 
 
@@ -236,219 +177,53 @@ private[ppmodel] object ResourceToExpr {
   }
 
   def User(r: Resource): Expr = {
-
     val validEnsureVals = List("present", "absent", "role")
-
-    import java.nio.file.{Files, LinkOption, Paths, Path}
-
     val ensure = validVal(r, "ensure", validEnsureVals) getOrElse "present"
-    val gid = r.get[String]("gid")
-    val groups = r.get[Array[Value]]("groups") getOrElse {
-      r.get[String]("groups").map((g) => Array((StringV(g): Value))) getOrElse {
-        Array((UndefV: Value))
-      }
-    }
-
-    val shell = r.get[String]("shell")
-    val uid = r.get[String]("uid").map(_.toInt)
-    // Directory must be created separately and is not checked for existence
-    val home = r.get[String]("home")
-
-    val comment = r.get[String]("comment")
-    val expiry = r.get[String]("expiry")
-
-    val allowdupe = validVal(r, "allowdupe", validBoolVals) getOrElse false
     val managehome = validVal(r, "managehome", validBoolVals) getOrElse false
-    val system = validVal(r, "system", validBoolVals) getOrElse false
-    val provider = r.get[String]("provider")
-
-    def userExists(user: String): Boolean = {
-      val (sts, _, _) = Cmd.exec(s"id -u $user")
-      (sts == 0)
+    if (r.get[String]("provider").getOrElse("useradd") != "useradd") {
+      throw Unsupported(s"user(${r.name}): provider not supported")
     }
-
-    def gidExists(gid: String): Boolean = {
-      val (sts, _, _) = Cmd.exec(s"getent group $gid")
-      (sts == 0)
-    }
-
-    if(provider.isDefined && provider.get != "useradd") {
-      throw new Exception(s"""user(${r.name}): "${provider.get}" provider not supported""")
-    }
-
-    val u = Paths.get(s"/etc/users/${r.name}")
-    val usettings = Paths.get(s"/etc/users/${r.name}/settings")
-    val usettingscontent = ""
-    val g = Paths.get(s"/etc/groups/${r.name}")
-    val gsettings = Paths.get(s"/etc/groups/${r.name}/settings")
-    val gsettingscontent = ""
-    val h = Paths.get(home getOrElse s"/home/${r.name}")
 
     (ensure, managehome) match {
-
-      case ("present", true) => If(TestFileState(u, DoesNotExist),
-                                   Block(Mkdir(u),
-                                         CreateFile(usettings, usettingscontent),
-                                         If(TestFileState(g, DoesNotExist),
-                                            Block(Mkdir(g), CreateFile(gsettings, gsettingscontent)),
-                                            Skip),
-                                         // TODO : Add to rest of groups
-                                         If(TestFileState(h, DoesNotExist), Mkdir(h), Skip)),
-                                   Skip)
-
-      case ("present", false) => If(TestFileState(u, DoesNotExist),
-                                    Block(Mkdir(u),
-                                          CreateFile(usettings, usettingscontent),
-                                          If(TestFileState(g, DoesNotExist),
-                                             Block(Mkdir(g), CreateFile(gsettings, gsettingscontent)),
-                                             Skip)
-                                          // tODO: Add to rest of groups
-                                          ),
-                                    Skip)
-
-      case ("absent", _) => If(!TestFileState(u, DoesNotExist),
-                               Block(Rm(u),
-                                     If(!TestFileState(g, DoesNotExist), Rm(g), Skip),
-                                     If(!TestFileState(h, DoesNotExist), Rm(h), Skip)),
-                               Skip)
-
-      case (_, _) => throw new Exception(s"Unknown value present")
+      case ("present", true) => R.User(r.name, true, true).compile
+      case ("present", false) => R.User(r.name, true, false).compile
+      case ("absent", _) => R.User(r.name, false, managehome).compile
+      case (_, _) => throw Unexpected(s"value for ensure: $ensure")
     }
   }
 
 
   def Group(r: Resource): Expr = {
-
     val validEnsureVals = List("present", "absent")
-
-    val ensure = validVal(r, "ensure", validEnsureVals) getOrElse
-      (throw new Exception(s"Group ${r.name} 'ensure' attribute missing"))
-
-    val provider = r.get[String]("provider")
-
-    if(provider.isDefined && provider.get != "groupadd") {
-      throw new Exception(s"""group(${r.name}): "${provider.get}" provider not supported""")
+    val ensure = validVal(r, "ensure", validEnsureVals) getOrElse {
+      throw Unexpected(s"group ${r.name} 'ensure' attribute missing")
     }
-
-    /* Semantics of Group resource
-     *
-     * A group name is a directory by the name of the group located at
-     * location /etc/groups. Inside every directory there is a file called
-     * settings that contains configuration data of every group
-     *
-     */
-    val p = s"/etc/groups/${r.name}"
-    val s = s"/etc/groups/${r.name}/settings"
-//    val c = Content("")
-    val c = ""
+    val provider = r.get[String]("provider")
+    if (provider.getOrElse("groupadd") != "groupadd") {
+      throw Unsupported(s"""group(${r.name}): "${provider.get}" provider not supported""")
+    }
 
     ensure match {
-      case "present" => If(TestFileState(p, DoesNotExist),
-                           Mkdir(p) >> CreateFile(s, c),
-                           CreateFile(s, c))
-
-      case "absent" => If(!TestFileState(p, DoesNotExist), Rm(p), Skip)
-
-      case _ => throw new Exception(s"Invalid ensure value: $ensure")
+      case "present" => R.Group(r.name, true).compile
+      case "absent" => R.Group(r.name, false).compile
+      case _ => throw Unexpected(s"ensure value is $ensure")
     }
   }
-
-
-  def Exec(r: Resource): Expr = {
-
-    val command = r.get[String]("command") getOrElse r.name
-    val creates = r.get[String]("creates")
-    val provider = r.get[String]("provider")
-
-    if(provider.isDefined && provider.get == "windows") {
-      throw new Exception(s"exec(${r.name}): windows command execution not supported")
-    }
-
-    if(creates.isDefined) {
-      val p = creates.get
-      /* TODO(nimish): Semantics of shell*/
-      If(!TestFileState(p, DoesNotExist), Skip, Skip)
-    }
-    else { Skip /* TODO(nimish): Semantics of shell */ }
-  }
-
-  def Service(r: Resource): Expr = {
-
-    val validEnsureVals: Map[Value, String] = Map(
-      StringV("stopped") -> "stopped",
-      BoolV(false) -> "stopped",
-      StringV("running") -> "running",
-      BoolV(true) -> "running",
-      UndefV -> "undef"
-    )
-    val validBoolVal: Map[Value, Boolean] = Map(
-      StringV("true") -> true,
-      StringV("false") -> false
-    )
-    val validEnableVals = List("true", "false", "manual")
-    val validHasRestartVals = validBoolVal
-    val validHasStatusVals = validBoolVal
-
-    val ensure = validVal(r, "ensure", validEnsureVals) getOrElse
-      (throw new Exception(s"Service ${r.name} 'ensure' attribute missing"))
-    val binary = r.get[String]("binary") getOrElse r.name
-    // Decides whether a service should be enabled at boot time
-    val enable = validVal(r, "enable", validEnableVals)
-    val flags  = r.get[String]("flags") getOrElse ""
-    val hasrestart = validVal(r, "hasrestart", validHasRestartVals) getOrElse false
-    // if a service's init script has a functional status command,
-    val hasstatus = validVal(r, "hasstatus", validHasStatusVals) getOrElse true
-    val path = r.get[String]("path") getOrElse "/etc/init.d/"
-    /* pattern to search for in process table, used for stopping services
-     * that do not support init scripts
-     *
-     * Also used for determining service status on those service whose init
-     * scripts do not include a status command
-     */
-    val pattern = r.get[String]("pattern") getOrElse binary
-    // If not provided then service will be first stopped and then started
-    val restart = r.get[String]("restart")
-    val start = r.get[String]("start") getOrElse "start"
-    val stop = r.get[String]("stop") getOrElse "stop"
-    val status = r.get[String]("status")
-    val provider = r.get[String]("provider")
-
-    if (enable.isDefined && enable.get == "manual") {
-      throw new Exception(s"""service(${r.name}): "manual" enable defined only for windows based system""")
-    }
-
-    if(provider.isDefined && provider.get != "upstart") {
-      throw new Exception(s"""service(${r.name}: ${provider.get} unsupported on Ubuntu""")
-    }
-
-    val mode = ensure match {
-      case "stopped" => "stop"
-      case "running" => "start"
-      case "undef" => "start"
-      case _ => throw new Exception(s"service(${r.name}): Invalid value $ensure")
-    }
-
-    val command = s"${path}/${binary} ${flags} ${mode}"
-    // ShellExec(command)
-    Skip // TODO: Add ShellExec
-  }
-
-
-  def Notify(r: Resource): Expr = {
-
-    val msg = r.get[String]("message") getOrElse r.name
-    Skip
-  }
-
 
   def apply(r: Resource): Expr = r.typ match {
     case "File" => File(r)
     case "Package" => PuppetPackage(r)
     case "User" => User(r)
-    case "Notify" => Notify(r)
-    case "Service" => Service(r)
+    case "Notify" => Skip
+    case "Service" => {
+      println("Warning: found a service resource, but treating as Skip")
+      Skip
+    }
     case "Group" => Group(r)
-    case "Exec" => Exec(r)
-    case _ => throw new Exception("Resource type \"%s\" not supported yet".format(r.typ))
+    case "Exec" => {
+      println("WARNING: found an exec resource, but treating as Skip")
+      Skip
+    }
+    case _ => throw Unsupported("Resource type \"%s\" not supported yet".format(r.typ))
   }
 }
