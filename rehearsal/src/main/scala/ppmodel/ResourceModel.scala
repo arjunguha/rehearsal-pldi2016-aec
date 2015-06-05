@@ -98,12 +98,21 @@ object ResourceModel {
                      Skip))
 
       val somecontent = ""
-      val createfiles = files.map((f) => CreateFile(f, somecontent))
+      val createfiles = files.toSeq.map((f) => CreateFile(f, somecontent))
       val exprs = mkdirs ++ createfiles :+ CreateFile(s"/packages/$name", "")
 
       If(TestFileState(s"/packages/${name}", DoesNotExist),
          Block(exprs: _*),
          Skip)
+    }
+    case Package(name, false) => {
+      val files = pkgcache.files(name).getOrElse(Set()).toList
+      val exprs = files.map(f => If(TestFileState(f, DoesNotExist), Skip, Rm(f)))
+      val pkgInstallInfoPath = s"/packages/$name"
+      // Append at end
+      If(TestFileState(pkgInstallInfoPath, DoesNotExist),
+          Skip,
+          Block((Rm(pkgInstallInfoPath) :: exprs) :_*))
     }
     case _ => throw NotImplemented(r.toString)
   }

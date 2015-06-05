@@ -140,21 +140,7 @@ private[ppmodel] object ResourceToExpr {
 
     ensure match {
       case "present" | "installed" | "latest" => R.Package(r.name, true).compile
-      case "absent" | "purged" => {
-
-        val files = pkgcache.files(r.name) getOrElse
-          (throw new Exception(s"Package not found: ${r.name}"))
-
-        val exprs = files.map((f) => If(TestFileState(f, DoesNotExist),
-                                        Skip, Rm(f))).toSeq
-
-        val pkgInstallInfoPath = s"/packages/${r.name}"
-        // Append at end
-        exprs :+ If(TestFileState(pkgInstallInfoPath, DoesNotExist),
-                    Skip, Rm(pkgInstallInfoPath))
-        Block(exprs: _*)
-      }
-
+      case "absent" | "purged" => R.Package(r.name, false).compile
       case "held" => throw new Exception("NYI package held") // TODO
       case _ => throw new Exception(s"Invalid value for ensure: ${ensure}")
     }
