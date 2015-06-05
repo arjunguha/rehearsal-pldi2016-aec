@@ -2,9 +2,8 @@ package rehearsal.ppmodel
 
 import puppet.common.util._
 import rehearsal._
-import rehearsal.fsmodel._
+import rehearsal.fsmodel.{Expr, Skip}
 import rehearsal.fsmodel.Implicits._
-
 import ppmodel.{ResourceModel => R}
 /*
  * Give filesystem semantics to resources
@@ -92,30 +91,6 @@ private[ppmodel] object ResourceToExpr {
        case _ => throw new Exception(s"ensure attribute missing for file ${r.name}")
      }
   }
-
-
-  def installToFSExpr(name: String): Option[Expr] = {
-    val files = pkgcache.files(name) getOrElse {
-      // Maybe a virtual package
-      return None
-    }
-
-    val all_paths = allpaths(files)
-    val dirs = (all_paths -- files)
-
-    val mkdirs = (dirs - root).toSeq.sortBy(_.getNameCount)
-                              .map(d => If(TestFileState(d, DoesNotExist),
-                                           Mkdir(d), Skip)).toList
-    val somecontent = ""
-    val createfiles = files.map((f) => CreateFile(f, somecontent))
-
-    val exprs = (mkdirs ++ createfiles)
-    val block = Block(exprs: _*)
-
-    // check if package is already installed
-    Some(If(TestFileState(s"/packages/${name}", DoesNotExist), Skip, block))
-  }
-
 
   def PuppetPackage(r: Resource): Expr = {
 
