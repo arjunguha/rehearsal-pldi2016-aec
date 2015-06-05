@@ -85,10 +85,7 @@ private[ppmodel] object ResourceToExpr {
       "purge" -> Some(purge.toString)
     )
 
-    (props("ensure"),
-     props("path"),
-     props("content"),
-     props("source"),
+    (props("ensure"), props("path"), props("content"), props("source"),
      props("force")) match {
        case (Some("present"), Some(p), Some(c), None, _) =>  R.File(p, c, false).compile
         case (Some("present"), Some(p), None, Some(c), _) => R.File(p, c, false).compile
@@ -183,7 +180,6 @@ private[ppmodel] object ResourceToExpr {
     if (r.get[String]("provider").getOrElse("useradd") != "useradd") {
       throw Unsupported(s"user(${r.name}): provider not supported")
     }
-
     (ensure, managehome) match {
       case ("present", true) => R.User(r.name, true, true).compile
       case ("present", false) => R.User(r.name, true, false).compile
@@ -191,7 +187,6 @@ private[ppmodel] object ResourceToExpr {
       case (_, _) => throw Unexpected(s"value for ensure: $ensure")
     }
   }
-
 
   def Group(r: Resource): Expr = {
     val validEnsureVals = List("present", "absent")
@@ -202,7 +197,6 @@ private[ppmodel] object ResourceToExpr {
     if (provider.getOrElse("groupadd") != "groupadd") {
       throw Unsupported(s"""group(${r.name}): "${provider.get}" provider not supported""")
     }
-
     ensure match {
       case "present" => R.Group(r.name, true).compile
       case "absent" => R.Group(r.name, false).compile

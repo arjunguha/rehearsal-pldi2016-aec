@@ -42,14 +42,3 @@ lazy val rehearsal = project.dependsOn(common, bdd)
 
 lazy val  root = project.in(file("."))
   .aggregate(rehearsal)
-
-parallelExecution in Test := false
-
-libraryDependencies ++= Seq(
-  "edu.umass.cs" %% "scala-puppet" % "0.2.3")
-
-/*
- * D - Show durations for each test
- * F - Show full stack traces on exception
- */
-testOptions in Test += Tests.Argument("-oD")

@@ -14,21 +14,10 @@ resolvers ++= Seq(
   "PLASMA" at "https://dl.bintray.com/plasma-umass/maven"
 )
 
-libraryDependencies ++= {
-  val akkaV = "2.3.4"
-  val graphV = "1.9.0"
-  Seq(
-    "org.scalatest" %% "scalatest" % "2.2.1" % "test",
-    "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
-    "com.assembla.scala-incubator" %% "graph-core" % graphV,
-    "edu.umass.cs" %% "scala-puppet" % "0.2.3",
-    "com.typesafe.akka" %% "akka-actor"  % akkaV,
-    "com.typesafe.akka" %% "akka-kernel" % akkaV,
-    "com.typesafe.akka" %% "akka-remote" % akkaV
-  )
-}
+libraryDependencies ++= Seq(
+  "org.scalatest" %% "scalatest" % "2.2.1" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
+  "com.assembla.scala-incubator" %% "graph-core" % "1.9.0",
+  "edu.umass.cs" %% "scala-puppet" % "0.2.3")
 
 parallelExecution in Test := false
-
-libraryDependencies ++= Seq(
-  "edu.umass.cs" %% "scala-puppet" % "0.2.3")
