@@ -2,6 +2,8 @@ package rehearsal.ppmodel
 
 object ResourceModel {
 
+  import ResourceToExpr.pkgcache
+
   import java.nio.file.{Path, Paths}
   import rehearsal._
   import rehearsal.fsmodel._
@@ -85,6 +87,23 @@ object ResourceModel {
         case true => If(TestFileState(p, DoesNotExist), Mkdir(p), Skip)
         case false => If(!TestFileState(p, DoesNotExist), Rm(p), Skip)
       }
+    }
+    case Package(name, true) => {
+      val files = pkgcache.files(name).getOrElse(Set())
+      val dirs = allpaths(files) -- files - root
+
+      val mkdirs = dirs.toSeq.sortBy(_.getNameCount)
+        .map(d => If(TestFileState(d, DoesNotExist),
+                     Mkdir(d),
+                     Skip))
+
+      val somecontent = ""
+      val createfiles = files.map((f) => CreateFile(f, somecontent))
+      val exprs = mkdirs ++ createfiles :+ CreateFile(s"/packages/$name", "")
+
+      If(TestFileState(s"/packages/${name}", DoesNotExist),
+         Block(exprs: _*),
+         Skip)
     }
     case _ => throw NotImplemented(r.toString)
   }

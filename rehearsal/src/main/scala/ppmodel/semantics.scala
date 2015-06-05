@@ -139,20 +139,7 @@ private[ppmodel] object ResourceToExpr {
     }
 
     ensure match {
-
-      case "present" | "installed" | "latest" => {
-
-        /*val deps = PackageDependencies(r.name)
-        val depExprs = deps.map(d => installToFSExpr(d)).flatten
-        */
-
-        val expr = installToFSExpr(r.name) getOrElse
-          (throw new Exception(s"Package not found: ${r.name}"))
-        // Append at end
-        /* val block = depExprs :+*/ expr
-        // Block(block: _*)
-      }
-
+      case "present" | "installed" | "latest" => R.Package(r.name, true).compile
       case "absent" | "purged" => {
 
         val files = pkgcache.files(r.name) getOrElse
