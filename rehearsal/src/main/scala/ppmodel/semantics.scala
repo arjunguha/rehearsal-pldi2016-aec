@@ -18,17 +18,7 @@ private[ppmodel] object ResourceToExpr {
   import puppet.common.resource._
   import puppet.common.resource.Extractor._
 
-  val pkgcache = {
-    val benchmarksDir = Paths.get("benchmarks")
-    if (!Files.isDirectory(benchmarksDir)) {
-      Files.createDirectory(benchmarksDir)
-    }
-    val pkgcacheDir = benchmarksDir.resolve("pkgcache")
-    if (!Files.isDirectory(pkgcacheDir)) {
-      Files.createDirectory(pkgcacheDir)
-    }
-    new PackageCache(pkgcacheDir.toString)
-  }
+  val pkgcache = PackageCache()
 
   def PackageDependencies(pkg: String): List[String] = {
     val cmd = s"""apt-rdepends --show=depends $pkg | grep -v '^ ' | grep -v $pkg"""

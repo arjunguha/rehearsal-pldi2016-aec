@@ -3,9 +3,7 @@ package rehearsal.ppmodel
 import java.io.File
 import java.nio.file.{Path, Paths, Files}
 import java.nio.charset.StandardCharsets
-
 import puppet.common.util._
-
 import scala.util.Try
 
 /* Disk based cache to speed up apt-file */
@@ -57,4 +55,21 @@ private[ppmodel] class PackageCache(cacheroot: Path) {
     val cachepath = s"${root}/${pkg}"
     Files.exists(Paths.get(cachepath))
   }
+}
+
+object PackageCache {
+
+
+  def apply(): PackageCache = {
+    val benchmarksDir = Paths.get("benchmarks")
+    if (!Files.isDirectory(benchmarksDir)) {
+      Files.createDirectory(benchmarksDir)
+    }
+    val pkgcacheDir = benchmarksDir.resolve("pkgcache")
+    if (!Files.isDirectory(pkgcacheDir)) {
+      Files.createDirectory(pkgcacheDir)
+    }
+    new PackageCache(pkgcacheDir)
+  }
+
 }
