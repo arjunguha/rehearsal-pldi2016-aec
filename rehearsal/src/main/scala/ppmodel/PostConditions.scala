@@ -1,11 +1,12 @@
 package rehearsal.ppmodel
 
-import puppet.common.resource._
-import puppet.common.util._
-import rehearsal.fsmodel._
-import Implicits._
-
 private[ppmodel] object PostCondition {
+
+  import puppet.graph._
+  import puppet.common.util._
+  import rehearsal.fsmodel._
+  import puppet.graph.Implicits._
+  import rehearsal.fsmodel.Implicits._
   import java.nio.file.{Files, Paths}
 
   val pkgcache = {

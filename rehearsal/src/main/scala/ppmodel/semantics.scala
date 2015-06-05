@@ -14,8 +14,8 @@ private[ppmodel] object ResourceToExpr {
 
   import java.nio.file.{Path, Files, Paths}
 
-  import puppet.common.resource._
-  import puppet.common.resource.Extractor._
+  import puppet.graph._
+  import puppet.graph.Implicits._
 
   val pkgcache = PackageCache()
 

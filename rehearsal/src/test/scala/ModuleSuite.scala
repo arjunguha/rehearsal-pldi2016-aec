@@ -16,7 +16,7 @@ class ModuleSuite extends org.scalatest.FunSuite {
 
   if (Files.isDirectory(Paths.get(modulesPath))) {
 
-    val modules = Modules(modulesPath).withoutRuby
+    val modules = Modules(modulesPath).withoutRubyAndInvalidDeps
 
     def load(name: String): FileScriptGraph = {
       val mod = modules.loadWithDependencies(name)

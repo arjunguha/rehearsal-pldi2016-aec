@@ -46,7 +46,7 @@ package object repl {
   import puppet.Modules
   import puppet.syntax.{TopLevel, parse}
 
-  val modules = Modules("benchmarks/puppetforge-modules/modules").withoutRuby
+  val modules = Modules("benchmarks/puppetforge-modules/modules").withoutRubyAndInvalidDeps
 
   def loadModuleClass(name: String) = {
     val likelyClassName = name.split("/").last

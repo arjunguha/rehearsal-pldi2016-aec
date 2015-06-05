@@ -1,13 +1,13 @@
-import scalax.collection.Graph
-import scalax.collection.GraphEdge.DiEdge
-import rehearsal.ppmodel._
-import rehearsal.fsmodel._
-import puppet.syntax.parse
-import puppet.graph._
-import puppet.Facter
-import Implicits._
-
 class DeterminismTestSuite extends /*InlineTestSuite*/ org.scalatest.FunSuite {
+
+  import scalax.collection.Graph
+  import scalax.collection.GraphEdge.DiEdge
+  import rehearsal.ppmodel._
+  import rehearsal.fsmodel._
+  import puppet.syntax.parse
+  import puppet.graph._
+  import puppet.Facter
+  import rehearsal.fsmodel.Implicits._
 
   def myTestRunner(g: FileScriptGraph): Boolean = {
     //SymbolicEvaluator.isErrorFree(g)
@@ -48,10 +48,8 @@ class DeterminismTestSuite extends /*InlineTestSuite*/ org.scalatest.FunSuite {
   }
 
   test("Trivial, long program with many files (performance test)") {
-    import Implicits._
 
     def genSeq(n: Int) : Expr = {
-      import Implicits._
       if (n == 0) {
         Mkdir("/bar")
       }
@@ -64,12 +62,10 @@ class DeterminismTestSuite extends /*InlineTestSuite*/ org.scalatest.FunSuite {
   }
 
   test("Is a singleton graph deterministic") {
-    import Implicits._
     myTestRunner(Graph(If(TestFileState("/foo", IsDir), Skip, Mkdir("/foo"))))
   }
 
   test("Two-node non-deterministic graph") {
-    import Implicits._
     assert(false == myTestRunner(Graph(Mkdir("/foo"),
       If(TestFileState("/foo", IsDir), Skip, Mkdir("/bar")))))
   }
