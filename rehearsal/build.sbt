@@ -21,3 +21,8 @@ libraryDependencies ++= Seq(
   "edu.umass.cs" %% "scala-puppet" % "0.2.3")
 
 parallelExecution in Test := false
+
+// Logging dependencies
+libraryDependencies ++=
+  Seq("com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
+      "org.slf4j" % "slf4j-simple" % "1.7.12")
