@@ -70,23 +70,21 @@ private[ppmodel] object ResourceToExpr {
       "content" -> content,
       "source" -> source,
       "ensure" -> ensure,
-      "force" -> Some(force.toString),
-      "purge" -> Some(purge.toString)
-    )
+      "force" -> Some(force.toString))
 
     (props("ensure"), props("path"), props("content"), props("source"),
-     props("force")) match {
+     r.get[Boolean]("force").getOrElse(false)) match {
        case (Some("present"), Some(p), Some(c), None, _) =>  R.File(p, c, false).compile
         case (Some("present"), Some(p), None, Some(c), _) => R.File(p, c, false).compile
         case (Some("present"), Some(p), None, None, _) => R.File(p, "", false).compile
-        case (Some("absent"), Some(p), _, _, Some("true")) => R.AbsentPath(p, true).compile
-        case (Some("absent"), Some(p), _, _, Some("false")) => R.AbsentPath(p, false).compile
-        case (Some("file"), Some(p), Some(c), None, Some("true")) => R.File(p, c, true).compile
-        case (Some("file"), Some(p), None, Some(c), Some("true")) => R.File(p, c, true).compile
-        case (Some("file"), Some(p), None, None, Some("true")) => R.File(p, "", true).compile
-        case (Some("file"), Some(p), Some(c), None, Some("false")) =>  R.EnsureFile(p, c).compile
-        case (Some("file"), Some(p), None, Some(c), Some("false")) => R.EnsureFile(p, c).compile
-        case (Some("file"), Some(p), None, None, Some("false")) => R.EnsureFile(p, "").compile
+        case (Some("absent"), Some(p), _, _, true) => R.AbsentPath(p, true).compile
+        case (Some("absent"), Some(p), _, _, false) => R.AbsentPath(p, false).compile
+        case (Some("file"), Some(p), Some(c), None, true) => R.File(p, c, true).compile
+        case (Some("file"), Some(p), None, Some(c), true) => R.File(p, c, true).compile
+        case (Some("file"), Some(p), None, None, true) => R.File(p, "", true).compile
+        case (Some("file"), Some(p), Some(c), None, false) =>  R.EnsureFile(p, c).compile
+        case (Some("file"), Some(p), None, Some(c), false) => R.EnsureFile(p, c).compile
+        case (Some("file"), Some(p), None, None, false) => R.EnsureFile(p, "").compile
         case (Some("directory"), Some(p), _, _, _) => R.Directory(p).compile
        case _ => throw new Exception(s"ensure attribute missing for file ${r.name}")
      }

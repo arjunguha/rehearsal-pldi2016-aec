@@ -2,8 +2,6 @@ package rehearsal
 
 import puppet.graph._
 import scala.reflect.runtime.universe.TypeTag
-import puppet.common.{resource => resrc}
-
 import scalax.collection.Graph
 import scalax.collection.GraphEdge.DiEdge
 import scalax.collection.GraphEdge._
