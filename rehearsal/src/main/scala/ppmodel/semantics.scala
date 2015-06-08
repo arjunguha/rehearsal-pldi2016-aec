@@ -1,6 +1,5 @@
 package rehearsal.ppmodel
 
-import puppet.common.util._
 import rehearsal._
 import rehearsal.fsmodel.{Expr, Skip}
 import rehearsal.fsmodel.Implicits._
@@ -86,7 +85,7 @@ private[ppmodel] object ResourceToExpr {
         case (Some("file"), Some(p), None, Some(c), false) => R.EnsureFile(p, c).compile
         case (Some("file"), Some(p), None, None, false) => R.EnsureFile(p, "").compile
         case (Some("directory"), Some(p), _, _, _) => R.Directory(p).compile
-       case _ => throw new Exception(s"ensure attribute missing for file ${r.name}")
+       case _ => throw Unexpected(s"ensure attribute missing for file ${r.name}")
      }
   }
 
@@ -98,14 +97,14 @@ private[ppmodel] object ResourceToExpr {
     val provider = r.get[String]("provider")
 
     if(provider.isDefined && provider.get != "apt") {
-      throw new Exception(s"""package(${r.name}): "${provider.get}" provider not supported""")
+      throw Unexpected(s"""package(${r.name}): "${provider.get}" provider not supported""")
     }
 
     ensure match {
       case "present" | "installed" | "latest" => R.Package(r.name, true).compile
       case "absent" | "purged" => R.Package(r.name, false).compile
-      case "held" => throw new Exception("NYI package held") // TODO
-      case _ => throw new Exception(s"Invalid value for ensure: ${ensure}")
+      case "held" => throw NotImplemented("NYI package held") // TODO
+      case _ => throw Unexpected(s"Invalid value for ensure: ${ensure}")
     }
   }
 
@@ -114,7 +113,7 @@ private[ppmodel] object ResourceToExpr {
     val ensure = validVal(r, "ensure", validEnsureVals) getOrElse "present"
     val managehome = validVal(r, "managehome", validBoolVals) getOrElse false
     if (r.get[String]("provider").getOrElse("useradd") != "useradd") {
-      throw Unsupported(s"user(${r.name}): provider not supported")
+      throw NotImplemented(s"user(${r.name}): provider not supported")
     }
     (ensure, managehome) match {
       case ("present", true) => R.User(r.name, true, true).compile
@@ -131,7 +130,7 @@ private[ppmodel] object ResourceToExpr {
     }
     val provider = r.get[String]("provider")
     if (provider.getOrElse("groupadd") != "groupadd") {
-      throw Unsupported(s"""group(${r.name}): "${provider.get}" provider not supported""")
+      throw NotImplemented(s"""group(${r.name}): "${provider.get}" provider not supported""")
     }
     ensure match {
       case "present" => R.Group(r.name, true).compile
@@ -154,6 +153,6 @@ private[ppmodel] object ResourceToExpr {
       println("WARNING: found an exec resource, but treating as Skip")
       Skip
     }
-    case _ => throw Unsupported("Resource type \"%s\" not supported yet".format(r.typ))
+    case _ => throw NotImplemented("Resource type \"%s\" not supported yet".format(r.typ))
   }
 }

@@ -1,9 +1,9 @@
 package rehearsal.ppmodel
 
+import rehearsal._
 import java.io.File
 import java.nio.file.{Path, Paths, Files}
 import java.nio.charset.StandardCharsets
-import puppet.common.util._
 import scala.util.Try
 
 /* Disk based cache to speed up apt-file */

@@ -2,24 +2,14 @@ package rehearsal.ppmodel
 
 private[ppmodel] object PostCondition {
 
+  import rehearsal._
   import puppet.graph._
-  import puppet.common.util._
   import rehearsal.fsmodel._
   import puppet.graph.Implicits._
   import rehearsal.fsmodel.Implicits._
-  import java.nio.file.{Files, Paths}
+  import java.nio.file.Paths
 
-  val pkgcache = {
-    val benchmarksDir = Paths.get("benchmarks")
-    if (!Files.isDirectory(benchmarksDir)) {
-      Files.createDirectory(benchmarksDir)
-    }
-    val pkgcacheDir = benchmarksDir.resolve("pkgcache")
-    if (!Files.isDirectory(pkgcacheDir)) {
-      Files.createDirectory(pkgcacheDir)
-    }
-    new PackageCache(pkgcacheDir.toString)
-  }
+  val pkgcache = PackageCache()
 
   val validBoolVals = List ((BoolV(true): Value, true),
                             (BoolV(false): Value, false),
@@ -57,7 +47,7 @@ private[ppmodel] object PostCondition {
       case Some("file") if force => TestFileState(path, IsFile)
       case Some("file") => !TestFileState(path, DoesNotExist)
       case Some("directory") => TestFileState(path, IsDir)
-      case _ => throw new Exception(s"ensure attribute missing for file ${r.name}")
+      case _ => throw Unexpected(s"ensure attribute missing for file ${r.name}")
     }
   }
 
@@ -68,13 +58,13 @@ private[ppmodel] object PostCondition {
     val provider = r.get[String]("provider")
 
     if (provider.isDefined && provider.get != "apt") {
-      throw new Exception(s"""package(${r.name}): "${provider.get}" provider not supported""")
+      throw NotImplemented(s"""package(${r.name}): "${provider.get}" provider not supported""")
     }
 
     ensure match {
       case "present" | "installed" | "latest" => {
         val files = pkgcache.files(r.name) getOrElse
-          (throw new Exception(s"Package not found: ${r.name}"))
+          (throw Unexpected(s"Package not found: ${r.name}"))
 
         val dirs = (allpaths(files) -- files)
 
@@ -86,11 +76,11 @@ private[ppmodel] object PostCondition {
       }
       case "absent" | "purged" => {
         val files = pkgcache.files(r.name) getOrElse
-          (throw new Exception(s"Package not found: ${r.name}"))
+          (throw Unexpected(s"Package not found: ${r.name}"))
 
         And(files.toSeq.map(TestFileState(_, DoesNotExist)): _*)
       }
-      case _ => throw new Exception(s"Invalid value for ensure: ${ensure}")
+      case _ => throw Unexpected(s"Invalid value for ensure: ${ensure}")
     }
   }
 
@@ -116,7 +106,7 @@ private[ppmodel] object PostCondition {
       case ("absent", _) => TestFileState(u, DoesNotExist) && TestFileState(usets, DoesNotExist) &&
                             TestFileState(g, DoesNotExist) && TestFileState(gsets, DoesNotExist) &&
                             TestFileState(h, DoesNotExist)
-      case (_, _) => throw new Exception(s"Unknown value for ensure: ${ensure}")
+      case (_, _) => throw Unexpected(s"Unknown value for ensure: ${ensure}")
     }
   }
 
@@ -124,7 +114,7 @@ private[ppmodel] object PostCondition {
     val validEnsureVals = List("present", "absent")
 
     val ensure = validVal(r, "ensure", validEnsureVals) getOrElse
-      (throw new Exception(s"Group ${r.name} 'ensure' attribute missing"))
+      (throw Unexpected(s"Group ${r.name} 'ensure' attribute missing"))
 
     /* Semantics of Group resource
      *
@@ -139,7 +129,7 @@ private[ppmodel] object PostCondition {
     ensure match {
       case "present" => TestFileState(p, IsDir) && TestFileState(s, IsFile)
       case "absent" => TestFileState(p, DoesNotExist) && TestFileState(s, DoesNotExist)
-      case _ => throw new Exception(s"Invalid ensure value: $ensure")
+      case _ => throw Unexpected(s"Invalid ensure value: $ensure")
     }
   }
 
@@ -148,6 +138,6 @@ private[ppmodel] object PostCondition {
     case "Package" => PuppetPackage(r)
     case "User" => User(r)
     case "Group" => Group(r)
-    case _ => throw new Exception("Resource type \"%s\" not supported yet".format(r.typ))
+    case _ => throw NotImplemented("Resource type \"%s\" not supported yet".format(r.typ))
   }
 }

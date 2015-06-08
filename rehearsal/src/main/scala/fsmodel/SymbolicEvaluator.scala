@@ -1,5 +1,6 @@
 package rehearsal.fsmodel
 
+import rehearsal._
 import java.nio.file.{Paths, Path}
 import com.microsoft.z3.{ArrayExpr, Sort}
 import bdd.Bdd
@@ -269,7 +270,7 @@ class SymbolicEvaluatorImpl(poReduction: Boolean, g: FileScriptGraph)  {
       solver.add(b === isIsFile(st.select(p)))
       st.store(p, doesNotExist).setErr(st.isErr || !b)
     }
-    case _ => throw new IllegalArgumentException("not implemented")
+    case _ => throw NotImplemented(expr.toString)
   }
 
   def allPairsCommute(lst: List[FileScriptGraph#NodeT]): Boolean = {
