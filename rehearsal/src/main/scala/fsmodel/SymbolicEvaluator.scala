@@ -25,43 +25,10 @@ object Z3Helpers {
     }
   }
 
- def materializeArray(model: z3.Model, arr: z3.Expr, sort: z3.ArraySort)
-   (implicit cxt: z3.Context, solver: z3.Solver): z3.Expr = {
-   val arrFromAsArray = arr.getFuncDecl.getParameters.toList(0).getFuncDecl
-   val i = model.getFuncInterp(arrFromAsArray)
-   val baseAcc = cxt.mkConstArray(sort.getDomain, i.getElse)
-   i.getEntries.foldLeft(baseAcc)({ case (arr, entry) =>
-          cxt.mkStore(arr, entry.getArgs.head, entry.getValue)
-   })
- }
-
   def printAssertions()(implicit solver: z3.Solver): Unit = {
     println("*** Assertions ***")
     for (assert <- solver.getAssertions) {
       println(s"$assert")
-    }
-  }
-
-  def choices[A <: z3.Expr](lst: List[A])
-    (implicit cxt: z3.Context, solver: z3.Solver): A = {
-    val numChoices = lst.length
-    assert (numChoices > 0)
-    if (numChoices == 1) {
-      lst.head
-    }
-    else {
-      val x = cxt.mkFreshConst("choice", cxt.mkIntSort).asInstanceOf[z3.ArithExpr]
-      solver.add(cxt.mkAnd(cxt.mkGe(x, cxt.mkInt(0)),
-                           cxt.mkLt(x, cxt.mkInt(numChoices))))
-      def helper(n: Int, lst: List[A]): A = lst match {
-        case List(alt) => alt
-        case alt :: rest => {
-          cxt.mkITE(cxt.mkEq(x, cxt.mkInt(n)),
-                    alt,
-                    helper(n + 1, rest)).asInstanceOf[A]
-        }
-      }
-      helper(0, lst)
     }
   }
 
