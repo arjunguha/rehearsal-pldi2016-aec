@@ -18,7 +18,10 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "2.2.1" % "test",
   "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
   "com.assembla.scala-incubator" %% "graph-core" % "1.9.0",
-  "edu.umass.cs" %% "scala-puppet" % "0.2.4")
+  "edu.umass.cs" %% "scala-puppet" % "0.2.4",
+  "org.scala-lang" % "scala-compiler" % "2.11.5",
+  "jline" % "jline" % "2.11",
+  "scala-smt-lib" %% "scala-smt-lib" % "0.1")
 
 parallelExecution in Test := false
 
@@ -26,3 +29,4 @@ parallelExecution in Test := false
 libraryDependencies ++=
   Seq("com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
       "org.slf4j" % "slf4j-simple" % "1.7.12")
+

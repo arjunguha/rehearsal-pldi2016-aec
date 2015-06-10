@@ -25,9 +25,7 @@ libraryDependencies in ThisBuild ++= {
     "edu.umass.cs" %% "scala-puppet" % "0.2.3",
     "com.typesafe.akka" %% "akka-actor"  % akkaV,
     "com.typesafe.akka" %% "akka-kernel" % akkaV,
-    "com.typesafe.akka" %% "akka-remote" % akkaV,
-    "org.scala-lang" % "scala-compiler" % "2.11.5",
-    "jline" % "jline" % "2.11"
+    "com.typesafe.akka" %% "akka-remote" % akkaV
   )
 }
 
