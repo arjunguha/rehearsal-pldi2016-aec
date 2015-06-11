@@ -124,6 +124,24 @@ object SymbolicEvaluator2 {
       ST(Or(st.isErr, Not(pre)),
          st.paths + (p -> FunctionApplication("IsFile", Seq("hash0"))))
     }
+    case fsmodel.Mkdir(p) => {
+      val pre = And(Equals(st.paths(p), "DoesNotExist"),
+                    Equals(st.paths(p.getParent), "IsDir"))
+      ST(Or(st.isErr, Not(pre)),
+         st.paths + (p -> "IsDir"))
+    }
+    case fsmodel.Rm(p) => {
+      val pre = And(Equals(st.paths(p), FunctionApplication("IsFile", Seq("hash0"))))
+      ST(Or(st.isErr, Not(pre)),
+        st.paths + (p -> "DoesNotExist"))
+    }
+    case fsmodel.Cp(src, dst) => {
+      val pre = And(Equals(st.paths(src), FunctionApplication("IsFile", Seq("hash0"))),
+                    Equals(st.paths(dst.getParent), "IsDir"),
+                    Equals(st.paths(dst), "DoesNotExist"))
+      ST(Or(st.isErr, Not(pre)),
+        st.paths + (dst -> FunctionApplication("IsFile", Seq("hash0"))))
+    }
     case _ => throw NotImplemented(expr.toString)
   }
 
