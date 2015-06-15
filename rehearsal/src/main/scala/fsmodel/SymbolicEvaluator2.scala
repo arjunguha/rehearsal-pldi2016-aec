@@ -20,6 +20,9 @@ object SymbolicEvaluator2 {
   def predEquals(a: fsmodel.Pred, b: fsmodel.Pred): Boolean = {
     new SymbolicEvaluatorImpl((a.readSet union b.readSet).toList).predEquals(a, b)
   }
+  def isDeterministic(g: FileScriptGraph): Boolean = {
+    new SymbolicEvaluatorImpl(g.nodes.map(e => e.paths).reduce(_ union _).toList).isDeterministic(g)
+  }
 }
 class SymbolicEvaluatorImpl(allPaths: List[Path]) {
   import scala.language.implicitConversions
@@ -69,6 +72,11 @@ class SymbolicEvaluatorImpl(allPaths: List[Path]) {
       val isErr = freshName("isErr")
       process(DeclareConst(isErr, BoolSort()))
       ST(QualifiedIdentifier(Identifier(isErr)), paths.toMap)
+    }
+
+    def stEquals(st1: ST, st2: ST): Term = {
+      And(Equals(st1.isErr, st2.isErr),
+        And(allPaths.map(p => Equals(st1.paths(p), st2.paths(p))): _*))
     }
 
     def evalPred(st: ST, pred: fsmodel.Pred): Term = pred match {
@@ -154,9 +162,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path]) {
         val st = freshST()
         val st1 = evalExpr(st, e1)
         val st2 = evalExpr(st, e2)
-        val b = And(Equals(st1.isErr, st2.isErr),
-          And(allPaths.map(p => Equals(st1.paths(p), st2.paths(p))): _*))
-        process(Assert(Not(b)))
+
+        process(Assert(Not(stEquals(st1, st2))))
         process(CheckSat()) match {
           case CheckSatStatus(SatStatus) => {
             process(GetModel())
@@ -197,6 +204,24 @@ class SymbolicEvaluatorImpl(allPaths: List[Path]) {
             allPaths.map(p => p -> ITE("choice", st1.paths(p),st2.paths(p))).toMap)
         })
       }
+    }
+
+    def isDeterministic(g: FileScriptGraph): Boolean = {
+      val inST = freshST()
+      val outST1 = evalGraph(inST, g)
+      val outST2 = evalGraph(inST, g)
+      process(Assert(stEquals(outST1, outST2)))
+     // assertHashCardinality()
+      process(CheckSat()) match {
+        case CheckSatStatus(SatStatus) => {
+          process(GetModel())
+          false
+        }
+        case CheckSatStatus(UnsatStatus) => true
+        case CheckSatStatus(UnknownStatus) => throw new RuntimeException("got unknown")
+        case s => throw Unexpected(s"got $s from check-sat")
+      }
+
     }
 
   /*
