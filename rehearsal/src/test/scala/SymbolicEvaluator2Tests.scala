@@ -4,7 +4,6 @@ import java.nio.file.Paths
 import scalax.collection.Graph
 import scalax.collection.GraphEdge.DiEdge
 import rehearsal.ppmodel._
-import rehearsal.fsmodel._
 import puppet.syntax.parse
 import puppet.graph._
 import puppet.Facter
@@ -149,17 +148,17 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     assert(false == isDeterministic(Graph[Expr, DiEdge](stmt1, stmt2)))
   }
 
-    val example1 = {
-    import fsmodel._
-    (And(TestFileState(Paths.get("/usr"), IsFile),
-      TestFileState(Paths.get("/lib"), IsDir)))
-  }
-
-  val example2 = {
-    import fsmodel._
-    TestFileState(Paths.get("/usr"), IsFile)
-
-  }
+//    val example1 = {
+//    import rehearsal.fsmodel._
+//    (And(TestFileState(Paths.get("/usr"), IsFile),
+//      TestFileState(Paths.get("/lib"), IsDir)))
+//  }
+//
+//  val example2 = {
+//    import rehearsal.fsmodel._
+//    TestFileState(Paths.get("/usr"), IsFile)
+//
+//  }
 
 
 }
