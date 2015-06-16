@@ -75,8 +75,9 @@ class SymbolicEvaluatorImpl(allPaths: List[Path]) {
     }
 
     def stEquals(st1: ST, st2: ST): Term = {
-      And(Equals(st1.isErr, st2.isErr),
-        And(allPaths.map(p => Equals(st1.paths(p), st2.paths(p))): _*))
+      Or(And(st1.isErr, st2.isErr),
+         And(Not(st1.isErr), Not(st2.isErr),
+             And(allPaths.map(p => Equals(st1.paths(p), st2.paths(p))): _*)))
     }
 
     def evalPred(st: ST, pred: fsmodel.Pred): Term = pred match {
