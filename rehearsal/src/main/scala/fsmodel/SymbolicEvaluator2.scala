@@ -144,12 +144,12 @@ class SymbolicEvaluatorImpl(allPaths: List[Path]) {
           st.paths + (p -> "IsDir"))
       }
       case fsmodel.Rm(p) => {
-        val pre = And(Equals(st.paths(p), FunctionApplication("IsFile", Seq("hash0"))))
+        val pre = FunctionApplication("is-IsFile", Seq(st.paths(p)))
         ST(Or(st.isErr, Not(pre)),
           st.paths + (p -> "DoesNotExist"))
       }
       case fsmodel.Cp(src, dst) => {
-        val pre = And(Equals(st.paths(src), FunctionApplication("IsFile", Seq("hash0"))),
+        val pre = And(FunctionApplication("is-IsFile", Seq(st.paths(src))),
           Equals(st.paths(dst.getParent), "IsDir"),
           Equals(st.paths(dst), "DoesNotExist"))
         ST(Or(st.isErr, Not(pre)),
