@@ -210,7 +210,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path]) {
       val inST = freshST()
       val outST1 = evalGraph(inST, g)
       val outST2 = evalGraph(inST, g)
-      process(Assert(stEquals(outST1, outST2)))
+      process(Assert(Not(stEquals(outST1, outST2))))
      // assertHashCardinality()
       process(CheckSat()) match {
         case CheckSatStatus(SatStatus) => {
