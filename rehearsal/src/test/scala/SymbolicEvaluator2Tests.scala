@@ -75,9 +75,9 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
   }
 
   test("program equivalence 9 - Cp"){
-    val x = CreateFile(Paths.get("/usr"), Array.fill(16)(0))
+    val x = CreateFile(Paths.get("/usr"), "a")
     val y = Cp(Paths.get("/usr"), Paths.get("/lib"))
-    val z = CreateFile(Paths.get("/lib"), Array.fill(16)(0))
+    val z = CreateFile(Paths.get("/lib"), "a")
     assert(exprEquals(Seq(x, y), Seq(x, z)))
   }
 
@@ -113,7 +113,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     assert(false == isDeterministic(Graph[Expr, DiEdge](n1, n2)))
   }
 
-  ignore("should be deterministic") {
+  test("should be deterministic") {
     val p = Paths.get("/usr/foo")
     val c = "c"
     val n = CreateFile(p, c)

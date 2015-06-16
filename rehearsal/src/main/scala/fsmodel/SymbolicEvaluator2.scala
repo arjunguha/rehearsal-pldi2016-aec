@@ -11,20 +11,22 @@ import theories.Core._
 import interpreters.Z3Interpreter
 import CommandsResponses._
 import java.nio.file.{Path, Paths}
-import rehearsal.fsmodel.{Block, Expr}
+import rehearsal.fsmodel.{Block, Expr, HashHelper}
 
 object SymbolicEvaluator2 {
   def exprEquals(e1: fsmodel.Expr, e2: fsmodel.Expr): Boolean = {
-    new SymbolicEvaluatorImpl((e1.paths union e2.paths).toList).exprEquals(e1, e2)
+    new SymbolicEvaluatorImpl((e1.paths union e2.paths).toList,
+                    HashHelper.exprHashes(e1) union HashHelper.exprHashes(e2)).exprEquals(e1, e2)
   }
   def predEquals(a: fsmodel.Pred, b: fsmodel.Pred): Boolean = {
-    new SymbolicEvaluatorImpl((a.readSet union b.readSet).toList).predEquals(a, b)
+    new SymbolicEvaluatorImpl((a.readSet union b.readSet).toList, Set()).predEquals(a, b)
   }
   def isDeterministic(g: FileScriptGraph): Boolean = {
-    new SymbolicEvaluatorImpl(g.nodes.map(e => e.paths).reduce(_ union _).toList).isDeterministic(g)
+    new SymbolicEvaluatorImpl(g.nodes.map(e => e.paths).reduce(_ union _).toList,
+      g.nodes.map(e => HashHelper.exprHashes(e)).reduce(_ union _)).isDeterministic(g)
   }
 }
-class SymbolicEvaluatorImpl(allPaths: List[Path]) {
+class SymbolicEvaluatorImpl(allPaths: List[Path], hashes: Set[List[Byte]]) {
   import scala.language.implicitConversions
 
   implicit def stringToQualID(str: String): QualifiedIdentifier = {
@@ -50,8 +52,14 @@ class SymbolicEvaluatorImpl(allPaths: List[Path]) {
 
     val hashSort = Sort(SimpleIdentifier(SSymbol("hash")))
 
-    val hash0 = SSymbol("hash0")
-    process(DeclareConst(hash0, hashSort))
+    def hashToTerm(l: List[Byte]): (List[Byte], Term) ={
+      val x = freshName("hash")
+      process(DeclareConst(x, hashSort))
+      (l, QualifiedIdentifier(Identifier(x)))
+    }
+
+    val hashToz3: Map[List[Byte], Term] = hashes.toList.map(hashToTerm).toMap
+    if(hashToz3.size != 0)  process(Assert(FunctionApplication("distinct", hashToz3.values.toSeq)))
 
     // type stat = IsDir | DoesNotExist | IsFile of hash
     process(DeclareDatatypes(Seq((SSymbol("stat"),
@@ -134,8 +142,9 @@ class SymbolicEvaluatorImpl(allPaths: List[Path]) {
       case fsmodel.CreateFile(p, h) => {
         val pre = And(Equals(st.paths(p), QualifiedIdentifier(Identifier(SSymbol("DoesNotExist")))),
           Equals(st.paths(p.getParent), QualifiedIdentifier(Identifier(SSymbol("IsDir")))))
+
         ST(Or(st.isErr, Not(pre)),
-          st.paths + (p -> FunctionApplication("IsFile", Seq("hash0"))))
+          st.paths + (p -> FunctionApplication("IsFile", Seq(hashToz3(h.toList)))))
       }
       case fsmodel.Mkdir(p) => {
         val pre = And(Equals(st.paths(p), "DoesNotExist"),
@@ -153,7 +162,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path]) {
           Equals(st.paths(dst.getParent), "IsDir"),
           Equals(st.paths(dst), "DoesNotExist"))
         ST(Or(st.isErr, Not(pre)),
-          st.paths + (dst -> FunctionApplication("IsFile", Seq("hash0"))))
+          st.paths + (dst -> FunctionApplication("IsFile",
+                                Seq(FunctionApplication("hash", Seq(st.paths(src)))))))
       }
     }
 
@@ -163,6 +173,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path]) {
         val st = freshST()
         val st1 = evalExpr(st, e1)
         val st2 = evalExpr(st, e2)
+
 
         process(Assert(Not(stEquals(st1, st2))))
         process(CheckSat()) match {

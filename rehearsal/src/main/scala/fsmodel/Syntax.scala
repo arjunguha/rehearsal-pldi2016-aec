@@ -81,3 +81,17 @@ object Block {
 object And {
   def apply(preds: Pred*): Pred = preds.foldRight[Pred](True) { (x, y) => And(x, y) }
 }
+
+object HashHelper {
+
+  def exprHashes(expr: Expr): Set[List[Byte]] = expr match{
+    case Error => Set()
+    case Skip => Set()
+    case If(a, p, q) => exprHashes(p) union exprHashes(q)
+    case Seq(p, q) => exprHashes(p) union exprHashes(q)
+    case Mkdir(f) => Set()
+    case CreateFile(f, h) => Set(h.toList)
+    case Rm(f) => Set()
+    case Cp(src, dst) => Set()
+  }
+}
