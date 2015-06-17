@@ -20,7 +20,8 @@ class SMT(outputFile: Option[String]) extends com.typesafe.scalalogging.LazyLogg
     outputPath match {
       case None => ()
       case Some(p) => {
-        Files.write(p, command.toString.getBytes, StandardOpenOption.APPEND)
+        Files.write(p, command.toString.getBytes, StandardOpenOption.APPEND,
+                    StandardOpenOption.CREATE)
         Files.write(p, "\n".getBytes, StandardOpenOption.APPEND)
       }
     }
