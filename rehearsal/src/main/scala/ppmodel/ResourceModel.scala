@@ -127,4 +127,16 @@ object ResourceModel {
   }
 
   def coerceAll(r: List[Res]): List[E.Expr] = r.map(coerce)
+  
+  import E.TypeDef
+  type Constr = List[(String, List[E.Type])]
+  def buildTypes(r: List[Res]): (TypeDef, TypeDef) = r.foldLeft[(Constr, Constr)]((Nil, Nil)) {
+    case ((pathDef, hashDef), File(path, hash, _)) => ((path.toString, Nil) :: pathDef, (hash, Nil) :: hashDef)
+    case ((pathDef, hashDef), EnsureFile(path, hash)) => ((path.toString, Nil) :: pathDef, (hash, Nil) :: hashDef)
+    case ((pathDef, hashDef), AbsentPath(path, _)) => ((path.toString, Nil) :: pathDef, hashDef)
+    case ((pathDef, hashDef), Directory(path)) => ((path.toString, Nil) :: pathDef, hashDef)
+    case (_, r) => throw NotImplemented(r.toString)
+  } match {
+    case (pathDef, hashDef) => (TypeDef("path", pathDef), TypeDef("hash", hashDef))
+  }
 }
