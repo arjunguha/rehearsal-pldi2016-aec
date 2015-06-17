@@ -5,6 +5,7 @@ object ResourceModel {
   import ResourceToExpr.pkgcache
 
   import java.nio.file.{Path, Paths}
+  import exp.{External => E}
   import rehearsal._
   import rehearsal.fsmodel._
   import rehearsal.fsmodel.Implicits._
@@ -117,4 +118,11 @@ object ResourceModel {
     case _ => throw NotImplemented(r.toString)
   }
 
+  def coerce(r: Res): E.Expr = r match {
+    case File(path, hash, force) => E.Constructor("RFile", List(E.Constructor(path.toString, Nil), E.Constructor(hash, Nil), E.EConst(E.CBool(force))))
+    case EnsureFile(path, hash) => E.Constructor("REnsureFile", List(E.Constructor(path.toString, Nil), E.Constructor(hash, Nil)))
+    case AbsentPath(path, force) => E.Constructor("RAbsentPath", List(E.Constructor(path.toString, Nil), E.EConst(E.CBool(force))))
+    case Directory(path) => E.Constructor("RDirectory", List(E.Constructor(path.toString, Nil)))
+    case _ => throw NotImplemented(r.toString)
+  }
 }
