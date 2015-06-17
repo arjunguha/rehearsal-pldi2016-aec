@@ -5,6 +5,7 @@ object ResourceModel {
   import ResourceToExpr.pkgcache
 
   import java.nio.file.{Path, Paths}
+  import scala.collection.immutable.Set
   import exp.{External => E}
   import rehearsal._
   import rehearsal.fsmodel._
@@ -128,15 +129,18 @@ object ResourceModel {
 
   def coerceAll(r: List[Res]): List[E.Expr] = r.map(coerce)
   
+  def allPaths(path: Path): List[Path] = Stream.iterate(path)(_.getParent).takeWhile(_ != null).toList
+  def toAdd(path: Path): List[(String, List[E.Type])] = allPaths(path).map(_.toString).zip(Stream.continually(Nil))
+
   import E.TypeDef
-  type Constr = List[(String, List[E.Type])]
-  def buildTypes(r: List[Res]): (TypeDef, TypeDef) = r.foldLeft[(Constr, Constr)]((Nil, Nil)) {
-    case ((pathDef, hashDef), File(path, hash, _)) => ((path.toString, Nil) :: pathDef, (hash, Nil) :: hashDef)
-    case ((pathDef, hashDef), EnsureFile(path, hash)) => ((path.toString, Nil) :: pathDef, (hash, Nil) :: hashDef)
-    case ((pathDef, hashDef), AbsentPath(path, _)) => ((path.toString, Nil) :: pathDef, hashDef)
-    case ((pathDef, hashDef), Directory(path)) => ((path.toString, Nil) :: pathDef, hashDef)
+  type Constr = Set[(String, List[E.Type])]
+  def buildTypes(r: List[Res]): (TypeDef, TypeDef) = r.foldLeft[(Constr, Constr)]((Set(), Set())) {
+    case ((pathDef, hashDef), File(path, hash, _)) => (pathDef ++ toAdd(path), hashDef + ((hash, Nil)))
+    case ((pathDef, hashDef), EnsureFile(path, hash)) => (pathDef ++ toAdd(path), hashDef + ((hash, Nil)))
+    case ((pathDef, hashDef), AbsentPath(path, _)) => (pathDef ++ toAdd(path), hashDef)
+    case ((pathDef, hashDef), Directory(path)) => (pathDef ++ toAdd(path), hashDef)
     case (_, r) => throw NotImplemented(r.toString)
   } match {
-    case (pathDef, hashDef) => (TypeDef("path", pathDef), TypeDef("hash", hashDef))
+    case (pathDef, hashDef) => (TypeDef("path", pathDef.toList), TypeDef("hash", hashDef.toList))
   }
 }
