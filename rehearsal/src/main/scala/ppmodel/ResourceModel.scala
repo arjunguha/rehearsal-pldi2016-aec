@@ -4,7 +4,7 @@ object ResourceModel {
 
   import ResourceToExpr.pkgcache
 
-  import java.nio.file.{Path, Paths}
+  import java.nio.file.{FileSystems, Path, Paths}
   import scala.collection.immutable.Set
   import exp.{External => E}
   import rehearsal._
@@ -142,5 +142,19 @@ object ResourceModel {
     case (_, r) => throw NotImplemented(r.toString)
   } match {
     case (pathDef, hashDef) => (TypeDef("path", pathDef.toList), TypeDef("hash", hashDef.toList))
+  }
+
+  def getParent(path: String): String = {
+    val parent = FileSystems.getDefault.getPath(path).getParent
+    if (parent == null) {
+      path
+    } else {
+      parent
+    }.toString
+  }
+
+  def genGetParent(pathDef: TypeDef): E.Expr = {
+    val cases = pathDef.cons.map(_._1).map { p => (E.PConstr(p, Nil), E.Constructor(getParent(p), Nil)) }
+    E.TypedFun(E.Id("path"), E.TConstructor("path"), E.Match(E.EId(E.Id("path")), cases))
   }
 }
