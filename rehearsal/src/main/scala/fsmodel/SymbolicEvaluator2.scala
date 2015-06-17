@@ -58,8 +58,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path], hashes: Set[List[Byte]]) {
       (l, QualifiedIdentifier(Identifier(x)))
     }
 
-    val hashToz3: Map[List[Byte], Term] = hashes.toList.map(hashToTerm).toMap
-    if(hashToz3.size != 0)  process(Assert(FunctionApplication("distinct", hashToz3.values.toSeq)))
+    val hashToZ3: Map[List[Byte], Term] = hashes.toList.map(hashToTerm).toMap
+    if(hashToZ3.size != 0)  process(Assert(FunctionApplication("distinct", hashToZ3.values.toSeq)))
 
     // type stat = IsDir | DoesNotExist | IsFile of hash
     process(DeclareDatatypes(Seq((SSymbol("stat"),
@@ -98,10 +98,11 @@ class SymbolicEvaluatorImpl(allPaths: List[Path], hashes: Set[List[Byte]]) {
       case fsmodel.TestFileState(p, fsmodel.DoesNotExist) => Equals(st.paths(p), QualifiedIdentifier(Identifier(SSymbol("DoesNotExist"))))
       case fsmodel.TestFileState(p, fsmodel.IsFile) =>
         FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("is-IsFile"))), Seq(st.paths(p)))
-      //    case fsmodel.TestFileHash(p, h) => {
-      //      val stat = st.select(p)
-      //      isIsFile(stat) && (cxt.mkApp(getIsFileHash, stat) === hashToZ3(h))
-      //    }
+      case fsmodel.TestFileHash(p, h) => {
+        val stat = st.paths(p)
+        And(FunctionApplication("is-IsFile", Seq(stat)),
+            (Equals(FunctionApplication("hash", Seq(stat)), hashToZ3(h.toList))))
+      }
       //    case fsmodel.ITE(a, b, c) => ite(evalPred(st, a),
       //      evalPred(st, b),
       //      evalPred(st, c))
@@ -144,7 +145,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path], hashes: Set[List[Byte]]) {
           Equals(st.paths(p.getParent), QualifiedIdentifier(Identifier(SSymbol("IsDir")))))
 
         ST(Or(st.isErr, Not(pre)),
-          st.paths + (p -> FunctionApplication("IsFile", Seq(hashToz3(h.toList)))))
+          st.paths + (p -> FunctionApplication("IsFile", Seq(hashToZ3(h.toList)))))
       }
       case fsmodel.Mkdir(p) => {
         val pre = And(Equals(st.paths(p), "DoesNotExist"),
