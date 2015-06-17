@@ -136,7 +136,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     //g.nodes.foreach(n => println(n.value.pretty()))
     val g2 = Slicing.sliceGraph(g)
     //g2.nodes.foreach(n => println(n.value.pretty()))
-    assert(false == isDeterministic(g))
+    assert(false == isDeterministic(g, Some("bad.smt")))
   }
 
   test("should be non-deterministic") {

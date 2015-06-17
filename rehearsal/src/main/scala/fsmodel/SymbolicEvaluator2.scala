@@ -3,16 +3,28 @@ package exp
 case class SMTError(resp: smtlib.parser.CommandsResponses.FailureResponse)
   extends RuntimeException(resp.toString)
 
-class SMT() extends com.typesafe.scalalogging.LazyLogging {
+class SMT(outputFile: Option[String]) extends com.typesafe.scalalogging.LazyLogging {
 
+  import java.nio.file._
   import smtlib.parser.Commands._
   import smtlib.parser.CommandsResponses._
   import smtlib.interpreters.Z3Interpreter
 
   private val interpreter = Z3Interpreter.buildDefault
 
+  private val outputPath = outputFile.map(p => Paths.get(p))
+
   def process(command: Command) : CommandResponse = {
     logger.debug(command.toString)
+
+    outputPath match {
+      case None => ()
+      case Some(p) => {
+        Files.write(p, command.toString.getBytes, StandardOpenOption.APPEND)
+        Files.write(p, "\n".getBytes, StandardOpenOption.APPEND)
+      }
+    }
+
     val resp = interpreter.eval(command)
     resp match {
       case Error(msg) => {
@@ -48,18 +60,24 @@ import rehearsal.fsmodel.{Block, Expr, HashHelper}
 object SymbolicEvaluator2 {
   def exprEquals(e1: fsmodel.Expr, e2: fsmodel.Expr): Boolean = {
     new SymbolicEvaluatorImpl((e1.paths union e2.paths).toList,
-                    HashHelper.exprHashes(e1) union HashHelper.exprHashes(e2)).exprEquals(e1, e2)
+                    HashHelper.exprHashes(e1) union HashHelper.exprHashes(e2), None).exprEquals(e1, e2)
   }
   def predEquals(a: fsmodel.Pred, b: fsmodel.Pred): Boolean = {
-    new SymbolicEvaluatorImpl((a.readSet union b.readSet).toList, Set()).predEquals(a, b)
+    new SymbolicEvaluatorImpl((a.readSet union b.readSet).toList, Set(), None).predEquals(a, b)
   }
-  def isDeterministic(g: FileScriptGraph): Boolean = {
-    new SymbolicEvaluatorImpl(g.nodes.map(e => e.paths).reduce(_ union _).toList,
-      g.nodes.map(e => HashHelper.exprHashes(e)).reduce(_ union _)).isDeterministic(g)
+  def isDeterministic(g: FileScriptGraph,
+                      logFile: Option[String] = None): Boolean = {
+    new SymbolicEvaluatorImpl(
+      g.nodes.map(e => e.paths).reduce(_ union _).toList,
+      g.nodes.map(e => HashHelper.exprHashes(e)).reduce(_ union _),
+      logFile
+      ).isDeterministic(g)
   }
 }
 
-class SymbolicEvaluatorImpl(allPaths: List[Path], hashes: Set[List[Byte]]) {
+class SymbolicEvaluatorImpl(allPaths: List[Path],
+                            hashes: Set[List[Byte]],
+                            logFile: Option[String]) {
   import scala.language.implicitConversions
 
   implicit def stringToQualID(str: String): QualifiedIdentifier = {
@@ -76,7 +94,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path], hashes: Set[List[Byte]]) {
     SSymbol(s"$base$nextName")
   }
 
-  val smt = new SMT()
+  val smt = new SMT(logFile)
   import smt.process
 
     process(DeclareSort(SSymbol("hash"), 0))
