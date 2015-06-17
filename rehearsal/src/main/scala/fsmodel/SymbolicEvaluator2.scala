@@ -1,5 +1,37 @@
 package exp
 
+case class SMTError(resp: smtlib.parser.CommandsResponses.FailureResponse)
+  extends RuntimeException(resp.toString)
+
+class SMT() extends com.typesafe.scalalogging.LazyLogging {
+
+  import smtlib.parser.Commands._
+  import smtlib.parser.CommandsResponses._
+  import smtlib.interpreters.Z3Interpreter
+
+  private val interpreter = Z3Interpreter.buildDefault
+
+  def process(command: Command) : CommandResponse = {
+    logger.debug(command.toString)
+    val resp = interpreter.eval(command)
+    resp match {
+      case Error(msg) => {
+        logger.error(s"Error from SMT solver: $msg")
+        throw SMTError(Error(msg))
+      }
+      case Unsupported => {
+        logger.error("Unsupported from SMT solver")
+        throw SMTError(Unsupported)
+      }
+      case _ => {
+        logger.debug(resp.toString)
+        resp
+      }
+    }
+  }
+
+}
+
 import rehearsal._
 import fsmodel.FileScriptGraph
 import smtlib._
@@ -26,11 +58,16 @@ object SymbolicEvaluator2 {
       g.nodes.map(e => HashHelper.exprHashes(e)).reduce(_ union _)).isDeterministic(g)
   }
 }
+
 class SymbolicEvaluatorImpl(allPaths: List[Path], hashes: Set[List[Byte]]) {
   import scala.language.implicitConversions
 
   implicit def stringToQualID(str: String): QualifiedIdentifier = {
     QualifiedIdentifier(Identifier(SSymbol(str)))
+  }
+
+  implicit def symbolToQualID(s: SSymbol): QualifiedIdentifier = {
+    QualifiedIdentifier(Identifier(s))
   }
 
   var nextName = 0
@@ -39,14 +76,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path], hashes: Set[List[Byte]]) {
     SSymbol(s"$base$nextName")
   }
 
-  val interpreter : Interpreter = Z3Interpreter.buildDefault
-
-  def process(command: Command) : CommandResponse = {
-    print(command)
-    val resp = interpreter.eval(command)
-    println(s"; $resp")
-    resp
-  }
+  val smt = new SMT()
+  import smt.process
 
     process(DeclareSort(SSymbol("hash"), 0))
 
@@ -211,9 +242,10 @@ class SymbolicEvaluatorImpl(allPaths: List[Path], hashes: Set[List[Byte]]) {
       }
       else {
         fringe.map(p => evalGraph(evalExpr(st, p), g - p)).reduce({ (st1: ST, st2: ST) =>
-          val b = process(DeclareConst(freshName("choice"), BoolSort()))
-          ST(ITE("choice", st1.isErr, st2.isErr),
-            allPaths.map(p => p -> ITE("choice", st1.paths(p),st2.paths(p))).toMap)
+          val c = freshName("choice")
+          val b = process(DeclareConst(c, BoolSort()))
+          ST(ITE(c, st1.isErr, st2.isErr),
+            allPaths.map(p => p -> ITE(c, st1.paths(p),st2.paths(p))).toMap)
         })
       }
     }
