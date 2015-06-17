@@ -125,4 +125,6 @@ object ResourceModel {
     case Directory(path) => E.Constructor("RDirectory", List(E.Constructor(path.toString, Nil)))
     case _ => throw NotImplemented(r.toString)
   }
+
+  def coerceAll(r: List[Res]): List[E.Expr] = r.map(coerce)
 }
