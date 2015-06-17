@@ -126,15 +126,16 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
   }
 
 
-  test("package with config file non-deterministic graph") {
+  ignore("package with config file non-deterministic graph") {
     val program = """
-      file {'/usr/games/sl': ensure => present }
+      file {'/usr/games/sl': ensure => present, content => "something"}
       package {'sl': ensure => present }
                   """
     val pp = parse(program)
     val g = toFileScriptGraph(pp.desugar.toGraph(Facter.emptyEnv).head._2)
     //g.nodes.foreach(n => println(n.value.pretty()))
     val g2 = Slicing.sliceGraph(g)
+    println(g)
     //g2.nodes.foreach(n => println(n.value.pretty()))
     assert(false == isDeterministic(g, Some("bad.smt")))
   }

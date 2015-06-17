@@ -144,10 +144,10 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       case fsmodel.Not(a) => Not(evalPred(st, a))
       case fsmodel.And(a, b) => And(evalPred(st, a), evalPred(st, b))
       case fsmodel.Or(a, b) => Or(evalPred(st, a), evalPred(st, b))
-      case fsmodel.TestFileState(p, fsmodel.IsDir) => Equals(st.paths(p), QualifiedIdentifier(Identifier(SSymbol("IsDir"))))
-      case fsmodel.TestFileState(p, fsmodel.DoesNotExist) => Equals(st.paths(p), QualifiedIdentifier(Identifier(SSymbol("DoesNotExist"))))
+      case fsmodel.TestFileState(p, fsmodel.IsDir) => Equals(st.paths(p), "IsDir")
+      case fsmodel.TestFileState(p, fsmodel.DoesNotExist) => Equals(st.paths(p), "DoesNotExist")
       case fsmodel.TestFileState(p, fsmodel.IsFile) =>
-        FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("is-IsFile"))), Seq(st.paths(p)))
+        FunctionApplication("is-IsFile", Seq(st.paths(p)))
       case fsmodel.TestFileHash(p, h) => {
         val stat = st.paths(p)
         And(FunctionApplication("is-IsFile", Seq(stat)),
@@ -191,8 +191,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
           allPaths.map(p => (p, ITE(b, st1.paths(p), st2.paths(p)))).toMap)
       }
       case fsmodel.CreateFile(p, h) => {
-        val pre = And(Equals(st.paths(p), QualifiedIdentifier(Identifier(SSymbol("DoesNotExist")))),
-          Equals(st.paths(p.getParent), QualifiedIdentifier(Identifier(SSymbol("IsDir")))))
+        val pre = And(Equals(st.paths(p), "DoesNotExist"),
+          Equals(st.paths(p.getParent), "IsDir"))
 
         ST(Or(st.isErr, Not(pre)),
           st.paths + (p -> FunctionApplication("IsFile", Seq(hashToZ3(h.toList)))))
