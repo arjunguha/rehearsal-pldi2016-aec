@@ -23,7 +23,6 @@ libraryDependencies in ThisBuild ++= {
     "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
     "com.assembla.scala-incubator" %% "graph-core" % graphV,
     "edu.umass.cs" %% "scala-puppet" % "0.2.3",
-    "edu.umass.cs" %% "synth" % "1.0",
     "com.typesafe.akka" %% "akka-actor"  % akkaV,
     "com.typesafe.akka" %% "akka-kernel" % akkaV,
     "com.typesafe.akka" %% "akka-remote" % akkaV
@@ -37,7 +36,9 @@ lazy val common = project
 
 lazy val bdd = project
 
-lazy val rehearsal = project.dependsOn(bdd)
+lazy val synth = project
+
+lazy val rehearsal = project.dependsOn(bdd, synth)
 
 lazy val  root = project.in(file("."))
   .aggregate(rehearsal)

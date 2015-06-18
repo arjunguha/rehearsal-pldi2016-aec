@@ -6,7 +6,7 @@ object ResourceModel {
 
   import java.nio.file.{FileSystems, Path, Paths}
   import scala.collection.immutable.Set
-  import exp.{External => E}
+  import exp.{External => E, CommonSyntax => C}
   import rehearsal._
   import rehearsal.fsmodel._
   import rehearsal.fsmodel.Implicits._
@@ -128,7 +128,7 @@ object ResourceModel {
   }
 
   def coerceAll(r: List[Res]): List[E.Expr] = r.map(coerce)
-  
+
   def allPaths(path: Path): List[Path] = Stream.iterate(path)(_.getParent).takeWhile(_ != null).toList
   def toAdd(path: Path): List[(String, List[E.Type])] = allPaths(path).map(_.toString).zip(Stream.continually(Nil))
 
@@ -155,6 +155,6 @@ object ResourceModel {
 
   def genGetParent(pathDef: TypeDef): E.Expr = {
     val cases = pathDef.cons.map(_._1).map { p => (E.PConstr(p, Nil), E.Constructor(getParent(p), Nil)) }
-    E.TypedFun(E.Id("path"), E.TConstructor("path"), E.Match(E.EId(E.Id("path")), cases))
+    E.TypedFun(C.Id("path"), E.TConstructor("path"), E.Match(E.EId(C.Id("path")), cases))
   }
 }
