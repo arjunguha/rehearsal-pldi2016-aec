@@ -45,7 +45,7 @@ private[ppmodel] object ResourceToExpr {
     validVal(r, property, m)
   }
 
-  def File(r: Resource): Expr = {
+  def File(r: Resource) = {
 
     val validEnsureVals = List("present", "absent", "file", "directory", "link")
 
@@ -73,23 +73,23 @@ private[ppmodel] object ResourceToExpr {
 
     (props("ensure"), props("path"), props("content"), props("source"),
      r.get[Boolean]("force").getOrElse(false)) match {
-       case (Some("present"), Some(p), Some(c), None, _) =>  R.File(p, c, false).compile
-        case (Some("present"), Some(p), None, Some(c), _) => R.File(p, c, false).compile
-        case (Some("present"), Some(p), None, None, _) => R.File(p, "", false).compile
-        case (Some("absent"), Some(p), _, _, true) => R.AbsentPath(p, true).compile
-        case (Some("absent"), Some(p), _, _, false) => R.AbsentPath(p, false).compile
-        case (Some("file"), Some(p), Some(c), None, true) => R.File(p, c, true).compile
-        case (Some("file"), Some(p), None, Some(c), true) => R.File(p, c, true).compile
-        case (Some("file"), Some(p), None, None, true) => R.File(p, "", true).compile
-        case (Some("file"), Some(p), Some(c), None, false) =>  R.EnsureFile(p, c).compile
-        case (Some("file"), Some(p), None, Some(c), false) => R.EnsureFile(p, c).compile
-        case (Some("file"), Some(p), None, None, false) => R.EnsureFile(p, "").compile
-        case (Some("directory"), Some(p), _, _, _) => R.Directory(p).compile
+       case (Some("present"), Some(p), Some(c), None, _) =>  R.File(p, c, false)
+        case (Some("present"), Some(p), None, Some(c), _) => R.File(p, c, false)
+        case (Some("present"), Some(p), None, None, _) => R.File(p, "", false)
+        case (Some("absent"), Some(p), _, _, true) => R.AbsentPath(p, true)
+        case (Some("absent"), Some(p), _, _, false) => R.AbsentPath(p, false)
+        case (Some("file"), Some(p), Some(c), None, true) => R.File(p, c, true)
+        case (Some("file"), Some(p), None, Some(c), true) => R.File(p, c, true)
+        case (Some("file"), Some(p), None, None, true) => R.File(p, "", true)
+        case (Some("file"), Some(p), Some(c), None, false) =>  R.EnsureFile(p, c)
+        case (Some("file"), Some(p), None, Some(c), false) => R.EnsureFile(p, c)
+        case (Some("file"), Some(p), None, None, false) => R.EnsureFile(p, "")
+        case (Some("directory"), Some(p), _, _, _) => R.Directory(p)
        case _ => throw Unexpected(s"ensure attribute missing for file ${r.name}")
      }
   }
 
-  def PuppetPackage(r: Resource): Expr = {
+  def PuppetPackage(r: Resource) = {
 
     val validEnsureVals = List("present", "installed", "absent", "purged", "held", "latest")
 
@@ -101,14 +101,14 @@ private[ppmodel] object ResourceToExpr {
     }
 
     ensure match {
-      case "present" | "installed" | "latest" => R.Package(r.name, true).compile
-      case "absent" | "purged" => R.Package(r.name, false).compile
+      case "present" | "installed" | "latest" => R.Package(r.name, true)
+      case "absent" | "purged" => R.Package(r.name, false)
       case "held" => throw NotImplemented("NYI package held") // TODO
       case _ => throw Unexpected(s"Invalid value for ensure: ${ensure}")
     }
   }
 
-  def User(r: Resource): Expr = {
+  def User(r: Resource) = {
     val validEnsureVals = List("present", "absent", "role")
     val ensure = validVal(r, "ensure", validEnsureVals) getOrElse "present"
     val managehome = validVal(r, "managehome", validBoolVals) getOrElse false
@@ -116,14 +116,14 @@ private[ppmodel] object ResourceToExpr {
       throw NotImplemented(s"user(${r.name}): provider not supported")
     }
     (ensure, managehome) match {
-      case ("present", true) => R.User(r.name, true, true).compile
-      case ("present", false) => R.User(r.name, true, false).compile
-      case ("absent", _) => R.User(r.name, false, managehome).compile
+      case ("present", true) => R.User(r.name, true, true)
+      case ("present", false) => R.User(r.name, true, false)
+      case ("absent", _) => R.User(r.name, false, managehome)
       case (_, _) => throw Unexpected(s"value for ensure: $ensure")
     }
   }
 
-  def Group(r: Resource): Expr = {
+  def Group(r: Resource) = {
     val validEnsureVals = List("present", "absent")
     val ensure = validVal(r, "ensure", validEnsureVals) getOrElse {
       throw Unexpected(s"group ${r.name} 'ensure' attribute missing")
@@ -133,26 +133,29 @@ private[ppmodel] object ResourceToExpr {
       throw NotImplemented(s"""group(${r.name}): "${provider.get}" provider not supported""")
     }
     ensure match {
-      case "present" => R.Group(r.name, true).compile
-      case "absent" => R.Group(r.name, false).compile
+      case "present" => R.Group(r.name, true)
+      case "absent" => R.Group(r.name, false)
       case _ => throw Unexpected(s"ensure value is $ensure")
     }
   }
-
-  def apply(r: Resource): Expr = r.typ match {
+  
+  def convert(r: Resource): ResourceModel.Res = r.typ match {
     case "File" => File(r)
     case "Package" => PuppetPackage(r)
     case "User" => User(r)
-    case "Notify" => Skip
-    case "Service" => {
-      println("Warning: found a service resource, but treating as Skip")
-      Skip
-    }
     case "Group" => Group(r)
-    case "Exec" => {
-      println("WARNING: found an exec resource, but treating as Skip")
-      Skip
-    }
+//    case "Notify" => Skip
+//    case "Service" => {
+//      println("Warning: found a service resource, but treating as Skip")
+//      Skip
+//    }
+//    case "Exec" => {
+//      println("WARNING: found an exec resource, but treating as Skip")
+//      Skip
+//    }
     case _ => throw NotImplemented("Resource type \"%s\" not supported yet".format(r.typ))
-  }
+  } 
+
+  def apply(r: Resource): Expr = convert(r).compile
+    
 }

@@ -4,10 +4,9 @@ package repl {
 
   import scala.tools.nsc.interpreter._
   import scala.tools.nsc.Settings
+  import java.nio.file.Paths
 
   private object Main extends App {
-
-
 
     args.toList match {
       case List() => {
@@ -23,6 +22,9 @@ package repl {
         settings.embeddedDefaults[Main.type]
 
         repl.process(settings)
+      }
+      case List("update", manifest1, manifest2) => {
+        rehearsal.ppmodel.UpdateSynth.calculate(Paths.get(manifest1), Paths.get(manifest2))
       }
       case "is-module-deterministic" :: modules => {
         for (name <- modules) {

@@ -127,7 +127,9 @@ object ResourceModel {
     case _ => throw NotImplemented(r.toString)
   }
 
-  def coerceAll(r: List[Res]): List[E.Expr] = r.map(coerce)
+  def coerceAll(r: List[Res]): E.Expr = {
+    r.map(coerce).foldRight[E.Expr](E.Constructor("RListNil", Nil))({ case (hd, tl) => E.Constructor("RListCons", List(hd, tl)) })
+  }
 
   def allPaths(path: Path): List[Path] = Stream.iterate(path)(_.getParent).takeWhile(_ != null).toList
   def toAdd(path: Path): List[(String, List[E.Type])] = allPaths(path).map(_.toString).zip(Stream.continually(Nil))
@@ -144,17 +146,23 @@ object ResourceModel {
     case (pathDef, hashDef) => (TypeDef("path", pathDef.toList), TypeDef("hash", hashDef.toList))
   }
 
-  def getParent(path: String): String = {
+  def getParent(path: String): Option[String] = {
     val parent = FileSystems.getDefault.getPath(path).getParent
     if (parent == null) {
-      path
+      None
     } else {
-      parent
-    }.toString
+      Some(parent.toString)
+    }
   }
 
   def genGetParent(pathDef: TypeDef): E.Expr = {
-    val cases = pathDef.cons.map(_._1).map { p => (E.PConstr(p, Nil), E.Constructor(getParent(p), Nil)) }
+    val cases = pathDef.cons.map(_._1).map { p =>
+      (E.PConstr(p, Nil),
+       getParent(p) match {
+         case Some(str) => E.Constructor("Parent", List(E.Constructor(str, Nil)))
+         case None =>  E.Constructor("NoParent", Nil)
+       })
+    }
     E.TypedFun(C.Id("path"), E.TConstructor("path"), E.Match(E.EId(C.Id("path")), cases))
   }
 }
