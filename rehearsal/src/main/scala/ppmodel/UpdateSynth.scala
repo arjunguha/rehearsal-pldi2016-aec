@@ -38,7 +38,7 @@ object UpdateSynth  extends com.typesafe.scalalogging.LazyLogging {
     val n = typeDef.cons.length
     val pats = (0.until(n - 1).map(i => E.PConst(E.CNum(i)))) :+ E.PElse
     val arms = typeDef.cons.map({ case (cname, _) => E.EConstr(cname, Nil) })
-    E.TypedFun(C.Id("_"), E.TNum, E.EMatch(E.EOp2(C.Mod, E.EMkHole, E.EConst(E.CNum(n))), pats.zip(arms).toList))
+    E.TypedFun(C.Id("_"), E.TNum, E.EMatch(E.EOp2(C.Mod, E.EMkHole(), E.EConst(E.CNum(n))), pats.zip(arms).toList))
   }
 
   def replaceBody(expr: E.Expr, body: E.Expr): E.Expr = expr match {
