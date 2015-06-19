@@ -37,21 +37,21 @@ object UpdateSynth  extends com.typesafe.scalalogging.LazyLogging {
     assert (typeDef.isEnumerated)
     val n = typeDef.cons.length
     val pats = (0.until(n - 1).map(i => E.PConst(E.CNum(i)))) :+ E.PElse
-    val arms = typeDef.cons.map({ case (cname, _) => E.Constructor(cname, Nil) })
-    E.TypedFun(C.Id("_"), E.TNum, E.Match(E.EOp2(C.Mod, E.Hole, E.EConst(E.CNum(n))), pats.zip(arms).toList))
+    val arms = typeDef.cons.map({ case (cname, _) => E.EConstr(cname, Nil) })
+    E.TypedFun(C.Id("_"), E.TNum, E.EMatch(E.EOp2(C.Mod, E.EMkHole, E.EConst(E.CNum(n))), pats.zip(arms).toList))
   }
 
   def replaceBody(expr: E.Expr, body: E.Expr): E.Expr = expr match {
-    case E.Let(x, e1, e2) => E.Let(x, e1, replaceBody(e2, body))
-    case E.LetRec(x, t, e1, e2) => E.LetRec(x, t, e1, replaceBody(e2, body))
+    case E.ELet(x, e1, e2) => E.ELet(x, e1, replaceBody(e2, body))
+    case E.ELetRec(x, t, e1, e2) => E.ELetRec(x, t, e1, replaceBody(e2, body))
     case _ => body
   }
 
-  def mkLet(x: String, e1: E.Expr, e2: E.Expr) = E.Let(C.Id(x), e1, e2)
+  def mkLet(x: String, e1: E.Expr, e2: E.Expr) = E.ELet(C.Id(x), e1, e2)
 
   def okHack(e: E.Expr) = {
-    E.App(E.App(E.EId(C.Id("unwrapstate")), e),
-          E.Array(Map(), E.Constructor("SDoesNotExist", Nil), E.TConstructor("path"), E.TConstructor("filestate")))
+    E.EApp(E.EApp(E.EId(C.Id("unwrapstate")), e),
+          E.EArray(Map(), E.EConstr("SDoesNotExist", Nil), E.TConstructor("path"), E.TConstructor("filestate")))
   }
 
   def enumEqDef(t: E.TypeDef): E.Expr = {
@@ -60,10 +60,10 @@ object UpdateSynth  extends com.typesafe.scalalogging.LazyLogging {
     val x = EId(Id("x"))
     val y = EId(Id("y"))
     println(t)
-    val cases = t.cons.map(_._1).map(cname => PConstr(cname, Nil) -> Match(y, List(PConstr(cname, Nil) -> EConst(CBool(true)), PElse -> EConst(CBool(false)))))
+    val cases = t.cons.map(_._1).map(cname => PConstr(cname, Nil) -> EMatch(y, List(PConstr(cname, Nil) -> EConst(CBool(true)), PElse -> EConst(CBool(false)))))
     TypedFun(Id("x"), TConstructor(t.id),
       TypedFun(Id("y"), TConstructor(t.id),
-        if (cases.length == 1) { EConst(CBool(true)) } else { Match(x, cases) }))
+        if (cases.length == 1) { EConst(CBool(true)) } else { EMatch(x, cases) }))
   }
 
   def fileArrayEq(paths: E.TypeDef): E.Expr = {
@@ -72,7 +72,7 @@ object UpdateSynth  extends com.typesafe.scalalogging.LazyLogging {
     val x = EId(Id("x"))
     val y = EId(Id("y"))
 
-    val lst: List[Expr] = paths.cons.map(_._1).map(pname => App(App(EId(Id("filestateeq")), Select(x, Constructor(pname, Nil))), Select(y, Constructor(pname, Nil))))
+    val lst: List[Expr] = paths.cons.map(_._1).map(pname => EApp(EApp(EId(Id("filestateeq")), ESelect(x, EConstr(pname, Nil))), ESelect(y, EConstr(pname, Nil))))
     val body = lst.reduce((e1, e2) => EOp2(And, e1, e2))
     val tarray = E.TArray(E.TConstructor("path"), E.TConstructor("filestate"))
     TypedFun(Id("x"), tarray,
@@ -89,9 +89,9 @@ object UpdateSynth  extends com.typesafe.scalalogging.LazyLogging {
     val fs1 =  Id("fs1")
     TypedFun(Id("x"), TConstructor("state"),
       TypedFun(Id("y"), TConstructor("state"),
-      Match(x, List(PConstr("Ok", List(fs0)) -> Match(y, List(PConstr("Ok", List(fs1)) -> App(App(EId(Id("filearrayeq")), EId(fs1)), EId(fs0)),
+      EMatch(x, List(PConstr("Ok", List(fs0)) -> EMatch(y, List(PConstr("Ok", List(fs1)) -> EApp(EApp(EId(Id("filearrayeq")), EId(fs1)), EId(fs0)),
                                                               PElse -> EConst(CBool(false)))),
-                    PConstr("Error", Nil) -> Match (y, List(PConstr("Error", Nil) -> EConst(CBool(true)),
+                    PConstr("Error", Nil) -> EMatch (y, List(PConstr("Error", Nil) -> EConst(CBool(true)),
                                                             PElse -> EConst(CBool(false))))))))
   }
 
@@ -121,29 +121,29 @@ object UpdateSynth  extends com.typesafe.scalalogging.LazyLogging {
                           mkLet("hasheq", enumEqDef(hashTypeDef),
                             staticCommonExprs))))
 
-    val spec = E.App(E.App(E.EId(C.Id("evalresources")), E.EId(C.Id("inSt"))),
+    val spec = E.EApp(E.EApp(E.EId(C.Id("evalresources")), E.EId(C.Id("inSt"))),
                                         ResourceModel.coerceAll(resList2))
 
-    val sketch = E.App(E.App(E.EId(C.Id("evalunwrap")),
-                     E.App(E.App(E.EId(C.Id("evalresources")), E.EId(C.Id("inSt"))), ResourceModel.coerceAll(resList1))),
-                   E.App(E.EId(C.Id("genresourcelist")), E.EConst(E.CNum(depth))))
+    val sketch = E.EApp(E.EApp(E.EId(C.Id("evalunwrap")),
+                     E.EApp(E.EApp(E.EId(C.Id("evalresources")), E.EId(C.Id("inSt"))), ResourceModel.coerceAll(resList1))),
+                   E.EApp(E.EId(C.Id("genresourcelist")), E.EConst(E.CNum(depth))))
 
 
     val expr = replaceBody(commonExprs,
       mkLet("filearrayeq", fileArrayEq(pathTypeDef),
         mkLet("stateeq", stateEqDef,
-          E.App(E.App(E.EId(C.Id("stateeq")), sketch), spec))))
+          E.EApp(E.EApp(E.EId(C.Id("stateeq")), sketch), spec))))
 
 
     val (t, exprTyped) = E.typeCheck(tenv, env, expr)
     assert (t == E.TBool)
 
 
-    val genFSArrayDef = E.Array(
+    val genFSArrayDef = E.EArray(
       pathTypeDef.cons.map(_._1).map {
-        pathName => (E.Constructor(pathName, Nil), E.App(E.EId(C.Id("genfilestate")), E.EConst(E.CNum(0))))
+        pathName => (E.EConstr(pathName, Nil), E.EApp(E.EId(C.Id("genfilestate")), E.EConst(E.CNum(0))))
       }.toMap,
-      E.Constructor("SDoesNotExist", Nil),
+      E.EConstr("SDoesNotExist", Nil),
       E.TConstructor("path"),
       E.TConstructor("filestate"))
 

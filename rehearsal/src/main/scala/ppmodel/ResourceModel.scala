@@ -120,15 +120,15 @@ object ResourceModel {
   }
 
   def coerce(r: Res): E.Expr = r match {
-    case File(path, hash, force) => E.Constructor("RFile", List(E.Constructor(path.toString, Nil), E.Constructor(hash, Nil), E.EConst(E.CBool(force))))
-    case EnsureFile(path, hash) => E.Constructor("REnsureFile", List(E.Constructor(path.toString, Nil), E.Constructor(hash, Nil)))
-    case AbsentPath(path, force) => E.Constructor("RAbsentPath", List(E.Constructor(path.toString, Nil), E.EConst(E.CBool(force))))
-    case Directory(path) => E.Constructor("RDirectory", List(E.Constructor(path.toString, Nil)))
+    case File(path, hash, force) => E.EConstr("RFile", List(E.EConstr(path.toString, Nil), E.EConstr(hash, Nil), E.EConst(E.CBool(force))))
+    case EnsureFile(path, hash) => E.EConstr("REnsureFile", List(E.EConstr(path.toString, Nil), E.EConstr(hash, Nil)))
+    case AbsentPath(path, force) => E.EConstr("RAbsentPath", List(E.EConstr(path.toString, Nil), E.EConst(E.CBool(force))))
+    case Directory(path) => E.EConstr("RDirectory", List(E.EConstr(path.toString, Nil)))
     case _ => throw NotImplemented(r.toString)
   }
 
   def coerceAll(r: List[Res]): E.Expr = {
-    r.map(coerce).foldRight[E.Expr](E.Constructor("RListNil", Nil))({ case (hd, tl) => E.Constructor("RListCons", List(hd, tl)) })
+    r.map(coerce).foldRight[E.Expr](E.EConstr("RListNil", Nil))({ case (hd, tl) => E.EConstr("RListCons", List(hd, tl)) })
   }
 
   def allPaths(path: Path): List[Path] = Stream.iterate(path)(_.getParent).takeWhile(_ != null).toList
@@ -159,10 +159,10 @@ object ResourceModel {
     val cases = pathDef.cons.map(_._1).map { p =>
       (E.PConstr(p, Nil),
        getParent(p) match {
-         case Some(str) => E.Constructor("Parent", List(E.Constructor(str, Nil)))
-         case None =>  E.Constructor("NoParent", Nil)
+         case Some(str) => E.EConstr("Parent", List(E.EConstr(str, Nil)))
+         case None =>  E.EConstr("NoParent", Nil)
        })
     }
-    E.TypedFun(C.Id("path"), E.TConstructor("path"), E.Match(E.EId(C.Id("path")), cases))
+    E.TypedFun(C.Id("path"), E.TConstructor("path"), E.EMatch(E.EId(C.Id("path")), cases))
   }
 }
