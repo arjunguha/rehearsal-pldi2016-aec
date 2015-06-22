@@ -11,6 +11,7 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
 
   import java.nio.file.Path
   import ResourceModel._
+  import fsmodel.{Expr, Seq => Sequence, Skip}
   import fsmodel.Eval._
 
   val b = Seq(true, false)
@@ -46,5 +47,35 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
     })
 
     Math.pow(vec.sum, 1.0 / vec.length.toDouble)
+  }
+
+  def delta(r1: Seq[Res], r2: Seq[Res], in: Set[State]): Seq[Res] = {
+    val fs1 = r1.foldRight[Expr](Skip) { case (r, acc) => Sequence(acc, compile(r)) }
+    val fs2 = r2.foldRight[Expr](Skip) { case (r, acc) => Sequence(acc, compile(r)) }
+    val out1 = in.toSeq.map(eval(_, fs1))
+    val out2 = in.toSeq.map(eval(_, fs2))
+    val out = out1.zip(out2)
+
+    // idea 1: (beam search?)
+    // 1. generate a list of initial candidates
+    // 2. evaluate each candidate on states from out LHS
+    // 3. take distance from new state to RHS
+    // 4. repeat process using top N candidates
+    // 5. each time, expand list by making a copy of each top candidate with each resource appended
+    // 6. stop when distance of 0 is found
+    // We could return here, or we could continue:
+    // 7. minimize the candidate by attempting to remove each element and checking if dist = 0
+
+    // idea 2: (a genetic algorithm)
+    // 1. generate a list of initial candidates
+    // 2. evaluate each candidate on states from out LHS
+    // 3. take distance from new state to RHS
+    // 4. repeat process using best candidate
+    // 5. each time, produce a large list by randomly mutating copies of best candidate
+    // 6. stop when distance of 0 is found
+    // We could return here, or we could continue:
+    // 7. minimize the candidate by attempting to remove each element and checking if dist = 0
+
+    null
   }
 }
