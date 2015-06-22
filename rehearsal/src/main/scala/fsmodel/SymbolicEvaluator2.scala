@@ -1,5 +1,7 @@
 package exp
 
+import rehearsal.fsmodel.Eval._
+
 case class SMTError(resp: smtlib.parser.CommandsResponses.FailureResponse)
   extends RuntimeException(resp.toString)
 
@@ -62,6 +64,10 @@ object SymbolicEvaluator2 {
   def exprEquals(e1: fsmodel.Expr, e2: fsmodel.Expr): Boolean = {
     new SymbolicEvaluatorImpl((e1.paths union e2.paths).toList,
                     HashHelper.exprHashes(e1) union HashHelper.exprHashes(e2), None).exprEquals(e1, e2)
+  }
+  def exprEqualsPrime(e1: fsmodel.Expr, e2: fsmodel.Expr): Option[Option[State]] = {
+    new SymbolicEvaluatorImpl((e1.paths union e2.paths).toList,
+                    HashHelper.exprHashes(e1) union HashHelper.exprHashes(e2), None).exprEqualsPrime(e1, e2)
   }
   def predEquals(a: fsmodel.Pred, b: fsmodel.Pred): Boolean = {
     new SymbolicEvaluatorImpl((a.readSet union b.readSet).toList, Set(), None).predEquals(a, b)
@@ -217,6 +223,61 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
                                 Seq(FunctionApplication("hash", Seq(st.paths(src)))))))
       }
     }
+
+  def handleSexpr(reverseMap: Map[String, Path], reverseHash: Map[String, List[Byte]])(acc: Option[State], sexpr: SExpr): Option[State] =
+    acc match {
+      case None => None
+      case Some(state) => {
+        sexpr match {
+          case DefineFun(FunDef(name, _, returnSort, body)) => {
+            returnSort.id.symbol.name match {
+              case "stat" => {
+                val path = reverseMap.get(name.name).get
+                body match {
+                  case QualifiedIdentifier(Identifier(SSymbol("IsDir"), _), _) => Some(state + (path -> FDir))
+                  //TODO(jcollard): Not sure how to deal with the file hash here. Is it important?
+                  case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("IsFile"), _), _), List(hash)) => {
+                    val data = reverseHash.getOrElse(hash.asInstanceOf[QualifiedIdentifier].id.symbol.name, List(42,42,42,42).map(x => x.toByte)).toArray
+                    Some(state + (path -> FFile(data)))
+                  }
+                  case _ => Some(state)
+                }
+              }
+              case "Bool" => if(name.name.startsWith("isErr") && body.asInstanceOf[QualifiedIdentifier].id.symbol.name.toBoolean) { None } else { Some(state) }
+              case _ => throw new RuntimeException(s"Unexpected definition: $sexpr")
+            }
+          }
+          case _ => Some(state)
+        }
+      }
+    }
+
+
+ def exprEqualsPrime(e1: fsmodel.Expr, e2: fsmodel.Expr): Option[Option[State]] = {
+   try {
+     process(Push(1))
+     val st = freshST()
+     val st1 = evalExpr(st, e1)
+     val st2 = evalExpr(st, e2)
+
+
+     process(Assert(Not(stEquals(st1, st2))))
+     process(CheckSat()) match {
+       case CheckSatStatus(SatStatus) => {
+         val model: List[SExpr] = process(GetModel()).asInstanceOf[GetModelResponseSuccess].model
+         val reverseMap = st.paths.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
+         val reverseHash = hashToZ3.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
+         Some(model.foldLeft(Some(Map()): Option[State])(handleSexpr(reverseMap, reverseHash)(_,_)))
+       }
+       case CheckSatStatus(UnsatStatus) => None
+       case CheckSatStatus(UnknownStatus) => throw Unexpected("got unknown")
+       case s => throw Unexpected(s"got $s from check-sat")
+     }
+   }
+   finally {
+     process(Pop(1))
+   }
+ }
 
     def exprEquals(e1: fsmodel.Expr, e2: fsmodel.Expr): Boolean = {
       try {
