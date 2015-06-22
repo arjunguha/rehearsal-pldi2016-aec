@@ -145,7 +145,7 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
         SymbolicEvaluator2.exprEquals(e1, e2) match {
           case None => Some(delta)
           case Some(cex) => {
-            logger.info("Counterexample input state: $cex")
+            logger.info(s"Counterexample input state: $cex")
             synth(cex +: inputs, v1, v2)
           }
         }
