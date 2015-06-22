@@ -82,12 +82,12 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
                   dists: Seq[Double],
                   targets: Seq[S],
                   available: Seq[Seq[Res]]): Option[List[Res]] = {
-    println(s"jointSearch(dists = $dists)")
+    logger.info(s"jointSearch(dists = $dists)")
     if (dists.sum == 0) {
       Some(List())
     }
     else if (available.length == 0) {
-      println("No more options")
+      logger.info("No more options")
       None
     }
     else {
@@ -98,7 +98,7 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
       .minBy(_._3.sum)
 
       if (dists_.sum > dists.sum) {
-        println("Overshot")
+        logger.info("overshot")
         None
       }
       else {
@@ -139,12 +139,13 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
     guess(inputs, v1, v2) match {
       case None => None
       case Some(delta) => {
+        logger.info(s"Synthesized delta: $delta")
         val e1 = Block((v1 ++ delta).map(_.compile): _*)
         val e2 = Block(v2.map(_.compile): _*) // TODO(arjun): needless work
         SymbolicEvaluator2.exprEquals(e1, e2) match {
           case None => Some(delta)
           case Some(cex) => {
-            println(s"counterexample: $cex")
+            logger.info("Counterexample input state: $cex")
             synth(cex +: inputs, v1, v2)
           }
         }
@@ -255,6 +256,9 @@ object UpdateSynth2 extends com.typesafe.scalalogging.LazyLogging {
 
     val all = v1 ++ v2
 
+    logger.info(s"V1: $v1")
+    logger.info(s"V2: $v2")
+
     val upd = new UpdateSynth2(
       unions(all.map(allPaths)).toList,
       unions(all.map(allContents)).toList,
@@ -263,6 +267,7 @@ object UpdateSynth2 extends com.typesafe.scalalogging.LazyLogging {
       unions(all.map(allGroups)).toList)
 
     val r = upd.synth(Seq(initState), v1, v2)
+    logger.info(s"Synthesis result: $r")
     println(r)
   }
 
