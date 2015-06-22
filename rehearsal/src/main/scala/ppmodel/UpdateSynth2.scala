@@ -124,6 +124,10 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
     .minBy({ case (_, _, dists) => dists.sum })
   }
 
+  def evalErrRes(st: S, lst: List[Res]) = {
+    evalErr(st, Block(lst.map(_.compile): _*))
+  }
+
   def guess(inputs: Seq[S], v1: List[Res], v2: List[Res]): Option[List[Res]] = {
     import fsmodel._
     val all = allResources.filterNot(_.isEmpty)
@@ -146,6 +150,8 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
           case None => Some(delta)
           case Some(cex) => {
             logger.info(s"Counterexample input state: $cex")
+            logger.info(s"Running v1 + delta on cex: ${evalErrRes(cex, v1 ++ delta)}")
+            logger.info(s"Running v2 on cex: ${evalErrRes(cex, v2)}")
             synth(cex +: inputs, v1, v2)
           }
         }
