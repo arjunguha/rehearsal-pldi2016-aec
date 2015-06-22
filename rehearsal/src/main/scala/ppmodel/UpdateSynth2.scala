@@ -145,8 +145,9 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
       case Some(delta) => {
         logger.info(s"Synthesized delta: $delta")
         val e1 = Block((v1 ++ delta).map(_.compile): _*)
+        val eDelta = Block((delta).map(_.compile): _*)
         val e2 = Block(v2.map(_.compile): _*) // TODO(arjun): needless work
-        SymbolicEvaluator2.exprEquals(e1, e2) match {
+        SymbolicEvaluator2.exprEqualsSynth(e1, eDelta, e2) match {
           case None => Some(delta)
           case Some(cex) => {
             logger.info(s"Counterexample input state: $cex")

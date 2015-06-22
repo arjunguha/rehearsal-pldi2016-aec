@@ -61,6 +61,13 @@ import java.nio.file.{Path, Paths}
 import rehearsal.fsmodel.{Block, Expr, HashHelper}
 
 object SymbolicEvaluator2 {
+
+   def exprEqualsSynth(e1: fsmodel.Expr, delta: fsmodel.Expr,
+                       e2: fsmodel.Expr): Option[Option[State]] = {
+    new SymbolicEvaluatorImpl((e1.paths union e2.paths).toList,
+                    HashHelper.exprHashes(e1) union HashHelper.exprHashes(e2), None).exprEqualsSynth(e1,delta, e2)
+  }
+
   def exprEquals(e1: fsmodel.Expr, e2: fsmodel.Expr): Option[Option[State]] = {
     new SymbolicEvaluatorImpl((e1.paths union e2.paths).toList,
                     HashHelper.exprHashes(e1) union HashHelper.exprHashes(e2), None).exprEquals(e1, e2)
@@ -254,6 +261,35 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
     }
 
+ def exprEqualsSynth(e1: fsmodel.Expr, delta: fsmodel.Expr,
+                     e2: fsmodel.Expr): Option[Option[State]] = {
+   try {
+     process(Push(1))
+     val st = freshST()
+     val stInter = evalExpr(st, e1)
+
+     val st1 = evalExpr(stInter, delta)
+     val st2 = evalExpr(st, e2)
+
+     process(Assert(Not(stEquals(stInter, st1))))
+     process(Assert(Not(stEquals(st1, st2))))
+     process(CheckSat()) match {
+       case CheckSatStatus(SatStatus) => {
+         val model: List[SExpr] = process(GetModel()).asInstanceOf[GetModelResponseSuccess].model
+         val reverseMap = st.paths.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
+         val reverseHash = hashToZ3.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
+         Some(model.foldLeft(Some(Map()): Option[State])(handleSexpr(reverseMap, reverseHash)(_,_)))
+       }
+       case CheckSatStatus(UnsatStatus) => None
+       case CheckSatStatus(UnknownStatus) => throw Unexpected("got unknown")
+       case s => throw Unexpected(s"got $s from check-sat")
+     }
+   }
+   finally {
+     process(Pop(1))
+   }
+ }
+
 
  def exprEquals(e1: fsmodel.Expr, e2: fsmodel.Expr): Option[Option[State]] = {
    try {
@@ -261,7 +297,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
      val st = freshST()
      val st1 = evalExpr(st, e1)
      val st2 = evalExpr(st, e2)
-
 
      process(Assert(Not(stEquals(st1, st2))))
      process(CheckSat()) match {
