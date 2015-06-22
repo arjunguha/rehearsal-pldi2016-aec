@@ -24,6 +24,10 @@ object Eval {
     case _ => false
   }
 
+  def isEmptyDir(st: State, p: Path) = {
+    !st.toSeq.exists({ case (p1, s) => p1.startsWith(p) && p1 != p })
+  }
+
   def evalPred(st: State, pred: Pred): Boolean = pred match {
     case True => true
     case False => false
@@ -65,7 +69,7 @@ object Eval {
     }
     case Cp(src, dst) => throw NotImplemented("not implemented")
     case Rm(p) => {
-      if (isFile(st, p)) {
+      if (isFile(st, p) || isEmptyDir(st, p)) {
         Some(st - p)
       }
       else {

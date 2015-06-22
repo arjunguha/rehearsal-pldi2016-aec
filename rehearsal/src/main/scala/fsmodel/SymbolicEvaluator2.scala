@@ -206,7 +206,13 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
           st.paths + (p -> "IsDir"))
       }
       case fsmodel.Rm(p) => {
-        val pre = FunctionApplication("is-IsFile", Seq(st.paths(p)))
+        val descendants = st.paths.filter(p1 => p1._1 != p && p1._1.startsWith(p))
+          .map(_._2).toSeq
+
+        val pre = Or(FunctionApplication("is-IsFile", Seq(st.paths(p))),
+                      And(FunctionApplication("is-IsDir", Seq(st.paths(p))),
+                          And(descendants.map(p_ => Equals(p_, "DoesNotExist")) :_*)))
+
         ST(Or(st.isErr, Not(pre)),
           st.paths + (p -> "DoesNotExist"))
       }
