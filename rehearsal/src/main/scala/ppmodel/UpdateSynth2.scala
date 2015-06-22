@@ -9,9 +9,10 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
                    allGroups: List[String])
   extends com.typesafe.scalalogging.LazyLogging {
 
+  import exp.SymbolicEvaluator2
   import java.nio.file.Path
   import ResourceModel._
-  import fsmodel.{Expr, Seq => Sequence, Skip}
+  import fsmodel.{Expr, Seq => Sequence, Skip, Block}
   import fsmodel.Eval._
 
   // Example:
@@ -127,11 +128,28 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
     import fsmodel._
     val all = allResources.filterNot(_.isEmpty)
     val expr1 = Block(v1.map(_.compile): _*)
-    val expr2 = Block(v2.map(_.compile): _*)
+    val expr2 = Block(v2.map(_.compile): _*) // TODO(arjun): needless work
     val inits = inputs.map(st => evalErr(st, expr1))
     val targets = inputs.map(st => evalErr(st, expr2))
     val dists = inits.zip(targets).map({ case(x, y) => distance(x, y) })
     jointSearch(inits, dists, targets, all)
+  }
+
+  def synth(inputs: Seq[S], v1: List[Res], v2: List[Res]): Option[List[Res]] = {
+    guess(inputs, v1, v2) match {
+      case None => None
+      case Some(delta) => {
+        val e1 = Block((v1 ++ delta).map(_.compile): _*)
+        val e2 = Block(v2.map(_.compile): _*) // TODO(arjun): needless work
+        SymbolicEvaluator2.exprEquals(e1, e2) match {
+          case None => Some(delta)
+          case Some(cex) => {
+            println(s"counterexample: $cex")
+            synth(cex +: inputs, v1, v2)
+          }
+        }
+      }
+    }
   }
 
   def delta(r1: Seq[Res], r2: Seq[Res], in: Set[State]): Seq[Res] = {
@@ -244,7 +262,7 @@ object UpdateSynth2 extends com.typesafe.scalalogging.LazyLogging {
       unions(all.map(allUsers)).toList,
       unions(all.map(allGroups)).toList)
 
-    val r = upd.guess(Seq(initState), v1, v2)
+    val r = upd.synth(Seq(initState), v1, v2)
     println(r)
   }
 
