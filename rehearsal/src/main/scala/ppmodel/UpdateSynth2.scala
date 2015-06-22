@@ -40,7 +40,6 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
     allGroups.map { g => b.map { b => Group(g, b) } } ++
     allUsers.map { u =>  b.flatMap { p => b.map { h => User(u, p, h) } } }
 
-<<<<<<< HEAD
   def distance(s1: Option[State], s2: Option[State]): Double = (s1, s2) match {
     case (Some(st1), Some(st2)) => stateDist(st1, st2)
     case (None, None) => 0.0
@@ -49,9 +48,6 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
 
   def stateDist(st1: State, st2: State): Double = {
     var dist = 0
-=======
-  def dist(st1: State, st2: State): Double = {
->>>>>>> 997e939f838cdee747eaae26340ae34eb27f674a
     val paths: Seq[Path] = (st1.keys.toSet union st2.keys.toSet).toSeq
 
     val vec: Seq[Double] = paths.map(p => (st1.get(p), st2.get(p)) match {
