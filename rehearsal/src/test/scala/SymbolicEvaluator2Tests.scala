@@ -8,7 +8,8 @@ import puppet.syntax.parse
 import puppet.graph._
 import puppet.Facter
 import rehearsal.fsmodel.Implicits._
-
+import java.nio.file.Path
+import java.nio.file.Paths
 class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
 
   import exp.SymbolicEvaluator2.{predEquals, exprEquals, isDeterministic}
@@ -26,43 +27,43 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
 
   test("program equivalence") {
     val x = CreateFile(Paths.get("/usr"), Array.fill(16)(0))
-    assert(exprEquals(x, x))
+    assert(exprEquals(x, x) == None)
   }
 
 
   test("program equivalence 2") {
     val x = CreateFile(Paths.get("/usr"), Array.fill(16)(0))
     val y = CreateFile(Paths.get("/lib"), Array.fill(16)(0))
-    assert(exprEquals(Seq(x, y), Seq(y, x)))
+    assert(exprEquals(Seq(x, y), Seq(y, x)) == None)
   }
 
   test("program equivalence 3") {
     val x = CreateFile(Paths.get("/usr/bin"), Array.fill(16)(0))
     val y = CreateFile(Paths.get("/usr"), Array.fill(16)(0))
-    assert(exprEquals(x, y) == false)
+    assert(exprEquals(x, y) != None)
   }
 
   test("program equivalence 4 - Mkdir"){
     val x = Mkdir(Paths.get("/usr"))
-    assert(exprEquals(x, x))
+    assert(exprEquals(x, x) == None)
   }
 
   test("program equivalence 5 - Mkdir") {
     val x = Mkdir(Paths.get("/usr"))
     val y = CreateFile(Paths.get("/usr/bin"), Array.fill(16)(0))
-    assert(exprEquals(Seq(x, y), Seq(y, x)) == false)
+    assert(exprEquals(Seq(x, y), Seq(y, x)) != None)
   }
 
   test("program equivalence 6 - Mkdir"){
     val x = Mkdir(Paths.get("/usr"))
     val y = Mkdir(Paths.get("/lib"))
-    assert(exprEquals(Seq(x, y), Seq(y, x)))
+    assert(exprEquals(Seq(x, y), Seq(y, x)) == None)
   }
 
   test("program equivalence 7 - Rm"){
     val y = CreateFile(Paths.get("/usr"), Array.fill(16)(0))
     val x = Rm(Paths.get("/usr"))
-    assert(exprEquals(Seq(y, x), Seq(x, y)) == false)
+    assert(exprEquals(Seq(y, x), Seq(x, y)) != None)
   }
 
   test("program equivalence 8 - Rm"){
@@ -71,14 +72,14 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     val x1 = Rm(Paths.get("/usr"))
     val y1 = Rm(Paths.get("/lib"))
     assert(exprEquals(Seq(Seq(x, y), Seq(x1, y1)),
-                      Seq(Seq(x, y), Seq(y1, x1))))
+                      Seq(Seq(x, y), Seq(y1, x1))) == None)
   }
 
   test("program equivalence 9 - Cp"){
     val x = CreateFile(Paths.get("/usr"), "a")
     val y = Cp(Paths.get("/usr"), Paths.get("/lib"))
     val z = CreateFile(Paths.get("/lib"), "a")
-    assert(exprEquals(Seq(x, y), Seq(x, z)))
+    assert(exprEquals(Seq(x, y), Seq(x, z)) == None)
   }
 
   test("trivial program with non-deterministic output") {
@@ -161,6 +162,5 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
 //    TestFileState(Paths.get("/usr"), IsFile)
 //
 //  }
-
 
 }
