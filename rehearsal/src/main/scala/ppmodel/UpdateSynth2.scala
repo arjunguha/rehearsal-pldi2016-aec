@@ -164,3 +164,94 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
     null
   }
 }
+
+object UpdateSynth2 extends com.typesafe.scalalogging.LazyLogging {
+
+  import exp.SymbolicEvaluator2
+  import java.nio.file.{Path, Paths, Files}
+  import ResourceModel._
+
+  def allPaths(r: Res): Set[Path] = r match {
+    case File(p, _, _) => Set(p)
+    case EnsureFile(p, _) => Set(p)
+    case AbsentPath(p, _) => Set(p)
+    case Directory(p) => Set(p)
+    case Package(_, _) => Set()
+    case Group(_, _) => Set()
+    case User(_, _, _) => Set()
+  }
+
+  def allContents(r: Res): Set[String] = r match {
+    case File(_, c, _) => Set(c)
+    case EnsureFile(_, c) => Set(c)
+    case AbsentPath(_, _) => Set()
+    case Directory(_) => Set()
+    case Package(_, _) => Set()
+    case Group(_, _) => Set()
+    case User(_, _, _) => Set()
+  }
+
+  def allPackages(r: Res): Set[String] = r match {
+    case File(_, _, _) => Set()
+    case EnsureFile(_, _) => Set()
+    case AbsentPath(_, _) => Set()
+    case Directory(_) => Set()
+    case Package(p, _) => Set(p)
+    case Group(_, _) => Set()
+    case User(_, _, _) => Set()
+  }
+
+  def allUsers(r: Res): Set[String] = r match {
+    case File(_, _, _) => Set()
+    case EnsureFile(_, _) => Set()
+    case AbsentPath(_, _) => Set()
+    case Directory(_) => Set()
+    case Package(_, _) => Set()
+    case Group(_, _) => Set()
+    case User(u, _, _) => Set(u)
+  }
+
+  def allGroups(r: Res): Set[String] = r match {
+    case File(_, _, _) => Set()
+    case EnsureFile(_, _) => Set()
+    case AbsentPath(_, _) => Set()
+    case Directory(_) => Set()
+    case Package(_, _) => Set()
+    case Group(g, _) => Set(g)
+    case User(_, _, _) => Set()
+  }
+
+  val initState = Some(Map(Paths.get("/") -> rehearsal.fsmodel.Eval.FDir))
+
+  def calculate(manifest1: String, manifest2: String): Unit = {
+    val graph1 = puppet.syntax.parse(manifest1).desugar().toGraph(Map()).head._2
+    val graph2 = puppet.syntax.parse(manifest2).desugar().toGraph(Map()).head._2
+
+    assert(SymbolicEvaluator2.isDeterministic(toFileScriptGraph(graph1)),
+           "V1 is not deterministic")
+    assert(SymbolicEvaluator2.isDeterministic(toFileScriptGraph(graph2)),
+           "V2 is not deterministic")
+
+    val v1 = topologicalSort(graph1).map(r => ResourceToExpr.convert(r))
+    val v2 = topologicalSort(graph2).map(r => ResourceToExpr.convert(r))
+
+    val all = v1 ++ v2
+
+    val upd = new UpdateSynth2(
+      unions(all.map(allPaths)).toList,
+      unions(all.map(allContents)).toList,
+      unions(all.map(allPackages)).toList,
+      unions(all.map(allUsers)).toList,
+      unions(all.map(allGroups)).toList)
+
+    val r = upd.guess(Seq(initState), v1, v2)
+    println(r)
+  }
+
+  def calculate(manifest1: Path, manifest2: Path): Unit = {
+    calculate(new String(Files.readAllBytes(manifest1)),
+              new String(Files.readAllBytes(manifest2)))
+  }
+
+
+}

@@ -24,7 +24,7 @@ package repl {
         repl.process(settings)
       }
       case List("update", manifest1, manifest2) => {
-        rehearsal.ppmodel.UpdateSynth.calculate(Paths.get(manifest1), Paths.get(manifest2))
+        rehearsal.ppmodel.UpdateSynth2.calculate(Paths.get(manifest1), Paths.get(manifest2))
       }
       case "is-module-deterministic" :: modules => {
         for (name <- modules) {

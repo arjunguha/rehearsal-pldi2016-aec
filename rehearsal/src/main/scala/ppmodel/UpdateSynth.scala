@@ -19,20 +19,6 @@ object UpdateSynth  extends com.typesafe.scalalogging.LazyLogging {
               new String(Files.readAllBytes(manifest2)))
   }
 
-  def topologicalSort[V](graph: scalax.collection.Graph[V, DiEdge]): List[V] = {
-    if (graph.isEmpty) {
-      List()
-    }
-    else {
-      graph.nodes.find(_.inDegree == 0) match {
-        case None => throw CannotUpdate("cyclic graph")
-        case Some(node) => {
-          node :: topologicalSort(graph - node)
-        }
-      }
-    }
-  }
-
   def genEnum(typeDef: E.TypeDef): E.Expr = {
     assert (typeDef.isEnumerated)
     val n = typeDef.cons.length
