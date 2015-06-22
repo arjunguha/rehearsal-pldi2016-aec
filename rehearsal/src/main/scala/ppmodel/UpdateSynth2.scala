@@ -37,22 +37,14 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
       case (Some(_), None) => 1.0
       case (None, Some(_)) => 1.0
       case (Some(FDir), Some(FDir)) => 0.0
-      case (Some(FFile(h1)), Some(FFile(h2))) => {
-        if (h1.toSeq == h2.toSeq) {
-          0.0
-        }
-        else {
-          1.0
-        }
+      case (Some(FFile(h1)), Some(FFile(h2))) => if (h1.toSeq == h2.toSeq) {
+        0.0
+      } else {
+        1.0
       }
       case (Some(_), Some(_)) => 1.0
     })
 
     Math.pow(vec.sum, 1.0 / vec.length.toDouble)
   }
-
-
-
-
-
 }
