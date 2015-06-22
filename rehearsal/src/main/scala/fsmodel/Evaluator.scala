@@ -8,7 +8,11 @@ object Eval {
 
   sealed trait FState
   case object FDir extends FState
-  case class FFile(hash: Array[Byte]) extends FState
+  case class FFile(hash: Array[Byte]) extends FState {
+    override def toString() = {
+      s"FFile(${new String(hash)})"
+    }
+  }
   type State = Map[Path, FState]
 
   def isDir(st: State, p: Path): Boolean = st.get(p) == Some(FDir)
