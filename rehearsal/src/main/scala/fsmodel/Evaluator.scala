@@ -4,6 +4,8 @@ import java.nio.file.Path
 
 object Eval {
 
+  type S = Option[State]
+
   sealed trait FState
   case object FDir extends FState
   case class FFile(hash: Array[Byte]) extends FState
@@ -38,7 +40,7 @@ object Eval {
     case TestFileHash(_, _) => throw NotImplemented("nyi")
   }
 
-  def eval(st: State, expr: Expr): Option[State] = expr match {
+  def eval(st: State, expr: Expr): S = expr match {
     case Error => None
     case Skip => Some(st)
     case Mkdir(p) => {
@@ -75,6 +77,11 @@ object Eval {
         eval(st, e2)
       }
     }
+  }
+
+  def evalErr(s: S, expr: Expr): S = s match {
+    case None => None
+    case Some(st) => eval(st, expr)
   }
 
 }

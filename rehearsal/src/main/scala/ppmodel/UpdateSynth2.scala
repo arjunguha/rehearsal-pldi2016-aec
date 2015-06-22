@@ -14,6 +14,16 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
   import fsmodel.{Expr, Seq => Sequence, Skip}
   import fsmodel.Eval._
 
+  // Example:
+  //
+  // pick(Seq(a, b, c)) == Seq(a -> Seq(b, c), b -> Seq(a, c), c -> Seq(a, b))
+  def pick[A](seq: Seq[A]): Seq[(A, Seq[A])] = {
+    for (i <- 0.to(seq.length - 1)) yield {
+      val (prefix, Seq(a, suffix @ _*)) = seq.splitAt(i)
+      (a, prefix ++ suffix)
+    }
+  }
+
   val b = Seq(true, false)
 
   // When flattened, this is a list of all resources. But, we represent the
@@ -40,11 +50,6 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
     allGroups.map { g => b.map { b => Group(g, b) } } ++
     allUsers.map { u =>  b.flatMap { p => b.map { h => User(u, p, h) } } }
 
-  def distance(s1: Option[State], s2: Option[State]): Double = (s1, s2) match {
-    case (Some(st1), Some(st2)) => stateDist(st1, st2)
-    case (None, None) => 0.0
-    case _ => 1.0
-  }
 
   def stateDist(st1: State, st2: State): Double = {
     var dist = 0
@@ -66,30 +71,18 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
     Math.pow(vec.sum, 1.0 / vec.length.toDouble)
   }
 
-  def nextMove(stInit: State, stFinal: Option[State],
-               options: Seq[Res]): (Res, Option[State], Double) = {
-    assert(!options.isEmpty)
-
-    options.map({ res =>
-      val st = eval(stInit, res.compile)
-      (res, st, distance(st, stFinal))
-    })
-    .minBy(_._3)
+  def distance(s1: S, s2: S): Double = (s1, s2) match {
+    case (Some(st1), Some(st2)) => stateDist(st1, st2)
+    case (None, None) => 0.0
+    case _ => 1.0
   }
 
-  // Example:
-  //
-  // pick(Seq(a, b, c)) == Seq(a -> Seq(b, c), b -> Seq(a, c), c -> Seq(a, b))
-  def pick[A](seq: Seq[A]): Seq[(A, Seq[A])] = {
-    for (i <- 0.to(seq.length - 1)) yield {
-      val (prefix, Seq(a, suffix @ _*)) = seq.splitAt(i)
-      (a, prefix ++ suffix)
-    }
-  }
-
-  def greedySearch(dist: Double, stInit: State, stFinal: Option[State],
-                   available: Seq[Seq[Res]]): Option[List[Res]] = {
-    if (dist == 0) {
+  def jointSearch(inits: Seq[S],
+                  dists: Seq[Double],
+                  targets: Seq[S],
+                  available: Seq[Seq[Res]]): Option[List[Res]] = {
+    println(s"jointSearch(dists = $dists)")
+    if (dists.sum == 0) {
       Some(List())
     }
     else if (available.length == 0) {
@@ -97,51 +90,48 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
       None
     }
     else {
-      val ((nextRes, nextSt, nextDist), rest) = pick(available)
-        .map({ case (options, others) => {
-          (nextMove(stInit, stFinal, options), others)
-         } })
-        .minBy(_._1._3)
-      if (nextDist > dist) {
-        None // greedy: don't move further away
-      }
-      else if (nextDist == dist) {
-        Some(List(nextRes))
+      val (res, inits_, dists_, available_) = pick(available).map({ case (opts, rest) =>
+        val (res, states, dists) = bestMove(inits, targets, opts)
+        (res, states, dists, rest)
+      })
+      .minBy(_._3.sum)
+
+      if (dists_.sum > dists.sum) {
+        println("Overshot")
+        None
       }
       else {
-        nextSt match {
-          case None => {
-            if (stFinal == None) {
-              Some(List(nextRes))
-            }
-            else {
-              None
-            }
-          }
-          case Some(stInit_) => {
-            greedySearch(nextDist, stInit_, stFinal, rest) match {
-              case None => None
-              case Some(seq) => Some(nextRes :: seq)
-            }
-          }
+        jointSearch(inits_, dists_, targets, available_) match {
+          case None => None
+          case Some(lst) => Some(res :: lst)
         }
       }
     }
   }
 
-  def guess(stInit: State, res1: List[Res], res2: List[Res]): Option[List[Res]] = {
+  // Finds the best resource in options to apply to bring all states in
+  // inits closer to target. Returns the resource and the sequence of states
+  // that are produced by apply the resource to each state in inits.
+  def bestMove(inits: Seq[S],
+               targets: Seq[S],
+               options: Seq[Res]):(Res, Seq[S], Seq[Double]) = {
+    options.map({ res =>
+      val inits_ = inits.map(st => evalErr(st, res.compile))
+      val dists = inits_.zip(targets).map({ case (x, y) => distance(x, y) })
+      (res, inits_, dists)
+    })
+    .minBy({ case (_, _, dists) => dists.sum })
+  }
+
+  def guess(inputs: Seq[S], v1: List[Res], v2: List[Res]): Option[List[Res]] = {
     import fsmodel._
     val all = allResources.filterNot(_.isEmpty)
-    val st1 = eval(stInit, Block(res1.map(_.compile): _*))
-    val st2 = eval(stInit, Block(res2.map(_.compile): _*))
-    (st1, st2) match {
-      case (None, None) => Some(List())
-      case (None, Some(_)) => None
-      case (Some(st1_), _) => {
-        greedySearch(distance(st1, st2), st1_, st2,
-                     all)
-      }
-    }
+    val expr1 = Block(v1.map(_.compile): _*)
+    val expr2 = Block(v2.map(_.compile): _*)
+    val inits = inputs.map(st => evalErr(st, expr1))
+    val targets = inputs.map(st => evalErr(st, expr2))
+    val dists = inits.zip(targets).map({ case(x, y) => distance(x, y) })
+    jointSearch(inits, dists, targets, all)
   }
 
   def delta(r1: Seq[Res], r2: Seq[Res], in: Set[State]): Seq[Res] = {
