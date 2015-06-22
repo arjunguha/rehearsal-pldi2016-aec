@@ -70,7 +70,6 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
     Math.pow(vec.sum, 1.0 / vec.length.toDouble)
   }
 
-<<<<<<< HEAD
   def nextMove(stInit: State, stFinal: Option[State],
                options: Seq[Res]): (Res, Option[State], Double) = {
     assert(!options.isEmpty)
