@@ -30,7 +30,6 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
     allUsers.flatMap { u =>  b.flatMap { p => b.map { h => User(u, p, h) } } }
 
   def dist(st1: State, st2: State): Double = {
-    var dist = 0
     val paths: Seq[Path] = (st1.keys.toSet union st2.keys.toSet).toSeq
 
     val vec: Seq[Double] = paths.map(p => (st1.get(p), st2.get(p)) match {
