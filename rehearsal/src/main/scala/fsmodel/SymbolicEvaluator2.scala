@@ -107,143 +107,143 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   val smt = new SMT(logFile)
   import smt.process
 
-    process(DeclareSort(SSymbol("hash"), 0))
+  process(DeclareSort(SSymbol("hash"), 0))
 
-    val hashSort = Sort(SimpleIdentifier(SSymbol("hash")))
+  val hashSort = Sort(SimpleIdentifier(SSymbol("hash")))
 
-    def hashToTerm(l: String): (String, Term) = {
-      val x = freshName("hash")
-      process(DeclareConst(x, hashSort))
-      (l, QualifiedIdentifier(Identifier(x)))
-    }
+  def hashToTerm(l: String): (String, Term) = {
+    val x = freshName("hash")
+    process(DeclareConst(x, hashSort))
+    (l, QualifiedIdentifier(Identifier(x)))
+  }
 
-    val hashToZ3: Map[String, Term] = hashes.toList.map(hashToTerm).toMap
-    if(hashToZ3.size != 0)  {
-      val hashes = hashToZ3.values.toSeq
-      process(Assert(FunctionApplication("distinct", hashes)))
-      val x = freshName("h")
-      process(Assert(ForAll(SortedVar(x, hashSort), Seq(),
-                            Or(hashes.map(h => Equals(x, h)): _*))))
-    }
+  val hashToZ3: Map[String, Term] = hashes.toList.map(hashToTerm).toMap
+  if(hashToZ3.size != 0)  {
+    val hashes = hashToZ3.values.toSeq
+    process(Assert(FunctionApplication("distinct", hashes)))
+    val x = freshName("h")
+    process(Assert(ForAll(SortedVar(x, hashSort), Seq(),
+                          Or(hashes.map(h => Equals(x, h)): _*))))
+  }
 
-    // type stat = IsDir | DoesNotExist | IsFile of hash
-    process(DeclareDatatypes(Seq((SSymbol("stat"),
-      Seq(Constructor(SSymbol("IsDir"), Seq()),
-        Constructor(SSymbol("DoesNotExist"), Seq()),
-        Constructor(SSymbol("IsFile"), Seq((SSymbol("hash"), hashSort))))))))
+  // type stat = IsDir | DoesNotExist | IsFile of hash
+  process(DeclareDatatypes(Seq((SSymbol("stat"),
+    Seq(Constructor(SSymbol("IsDir"), Seq()),
+      Constructor(SSymbol("DoesNotExist"), Seq()),
+      Constructor(SSymbol("IsFile"), Seq((SSymbol("hash"), hashSort))))))))
 
-    val statSort = Sort(SimpleIdentifier(SSymbol("stat")))
+  val statSort = Sort(SimpleIdentifier(SSymbol("stat")))
 
-    case class ST(isErr: Term, paths: Map[Path, Term])
+  case class ST(isErr: Term, paths: Map[Path, Term])
 
-    def freshST(): ST = {
-      val paths = allPaths.map(p => {
-        val z = freshName("path")
-        process(DeclareConst(z, statSort))
-        (p, QualifiedIdentifier(Identifier(z)))
-      })
-      val isErr = freshName("isErr")
-      process(DeclareConst(isErr, BoolSort()))
-      ST(QualifiedIdentifier(Identifier(isErr)), paths.toMap)
-    }
+  def freshST(): ST = {
+    val paths = allPaths.map(p => {
+      val z = freshName("path")
+      process(DeclareConst(z, statSort))
+      (p, QualifiedIdentifier(Identifier(z)))
+    })
+    val isErr = freshName("isErr")
+    process(DeclareConst(isErr, BoolSort()))
+    ST(QualifiedIdentifier(Identifier(isErr)), paths.toMap)
+  }
 
-    def stEquals(st1: ST, st2: ST): Term = {
-      Or(And(st1.isErr, st2.isErr),
-         And(Not(st1.isErr), Not(st2.isErr),
-             And(allPaths.map(p => Equals(st1.paths(p), st2.paths(p))): _*)))
-    }
+  def stEquals(st1: ST, st2: ST): Term = {
+    Or(And(st1.isErr, st2.isErr),
+       And(Not(st1.isErr), Not(st2.isErr),
+           And(allPaths.map(p => Equals(st1.paths(p), st2.paths(p))): _*)))
+  }
 
-    def evalPred(st: ST, pred: fsmodel.Pred): Term = pred match {
-      case fsmodel.True => True()
-      case fsmodel.False => False()
-      case fsmodel.Not(a) => Not(evalPred(st, a))
-      case fsmodel.And(a, b) => And(evalPred(st, a), evalPred(st, b))
-      case fsmodel.Or(a, b) => Or(evalPred(st, a), evalPred(st, b))
-      case fsmodel.TestFileState(p, fsmodel.IsDir) => Equals(st.paths(p), "IsDir")
-      case fsmodel.TestFileState(p, fsmodel.DoesNotExist) => Equals(st.paths(p), "DoesNotExist")
-      case fsmodel.TestFileState(p, fsmodel.IsFile) =>
-        FunctionApplication("is-IsFile", Seq(st.paths(p)))
-      //    case fsmodel.ITE(a, b, c) => ite(evalPred(st, a),
-      //      evalPred(st, b),
-      //      evalPred(st, c))
-      case _ => throw NotImplemented(pred.toString)
-    }
+  def evalPred(st: ST, pred: fsmodel.Pred): Term = pred match {
+    case fsmodel.True => True()
+    case fsmodel.False => False()
+    case fsmodel.Not(a) => Not(evalPred(st, a))
+    case fsmodel.And(a, b) => And(evalPred(st, a), evalPred(st, b))
+    case fsmodel.Or(a, b) => Or(evalPred(st, a), evalPred(st, b))
+    case fsmodel.TestFileState(p, fsmodel.IsDir) => Equals(st.paths(p), "IsDir")
+    case fsmodel.TestFileState(p, fsmodel.DoesNotExist) => Equals(st.paths(p), "DoesNotExist")
+    case fsmodel.TestFileState(p, fsmodel.IsFile) =>
+      FunctionApplication("is-IsFile", Seq(st.paths(p)))
+    //    case fsmodel.ITE(a, b, c) => ite(evalPred(st, a),
+    //      evalPred(st, b),
+    //      evalPred(st, c))
+    case _ => throw NotImplemented(pred.toString)
+  }
 
-    def predEquals(a: fsmodel.Pred, b: fsmodel.Pred): Boolean = {
-      try {
-        process(Push(1))
-        val st = freshST()
-        process(Assert(Not(Equals(evalPred(st, a), evalPred(st, b)))))
-        process(CheckSat()) match {
-          case CheckSatStatus(SatStatus) => {
-            process(GetModel())
-            false
-          }
-          case CheckSatStatus(UnsatStatus) => true
-          case CheckSatStatus(UnknownStatus) => throw Unexpected("got unknown")
-          case s => throw Unexpected(s"got $s from check-sat")
+  def predEquals(a: fsmodel.Pred, b: fsmodel.Pred): Boolean = {
+    try {
+      process(Push(1))
+      val st = freshST()
+      process(Assert(Not(Equals(evalPred(st, a), evalPred(st, b)))))
+      process(CheckSat()) match {
+        case CheckSatStatus(SatStatus) => {
+          process(GetModel())
+          false
         }
-      }
-      finally {
-        process(Pop(1))
-      }
-    }
-
-    def ite(cond: Term, tru: Term, fls: Term): Term = {
-      if (tru == fls) {
-        tru
-      }
-      else {
-        ITE(cond, tru, fls)
+        case CheckSatStatus(UnsatStatus) => true
+        case CheckSatStatus(UnknownStatus) => throw Unexpected("got unknown")
+        case s => throw Unexpected(s"got $s from check-sat")
       }
     }
-
-    def evalExpr(st: ST, expr: fsmodel.Expr): ST = expr match {
-      case fsmodel.Skip => st
-      case fsmodel.Error => ST(True(), st.paths)
-      case fsmodel.Seq(p, q) => evalExpr(evalExpr(st, p), q)
-      case fsmodel.If(a, e1, e2) => {
-        val st1 = evalExpr(st, e1)
-        val st2 = evalExpr(st, e2)
-        val b = freshName("b")
-        process(DeclareConst(b, BoolSort()))
-        process(Assert(Equals(b, evalPred(st, a))))
-        ST(ite(b, st1.isErr, st2.isErr),
-          allPaths.map(p => (p, ite(b, st1.paths(p), st2.paths(p)))).toMap)
-      }
-      case fsmodel.CreateFile(p, h) => {
-        val pre = And(Equals(st.paths(p), "DoesNotExist"),
-          Equals(st.paths(p.getParent), "IsDir"))
-
-        ST(Or(st.isErr, Not(pre)),
-          st.paths + (p -> FunctionApplication("IsFile", Seq(hashToZ3(h)))))
-      }
-      case fsmodel.Mkdir(p) => {
-        val pre = And(Equals(st.paths(p), "DoesNotExist"),
-          Equals(st.paths(p.getParent), "IsDir"))
-        ST(Or(st.isErr, Not(pre)),
-          st.paths + (p -> "IsDir"))
-      }
-      case fsmodel.Rm(p) => {
-        val descendants = st.paths.filter(p1 => p1._1 != p && p1._1.startsWith(p))
-          .map(_._2).toSeq
-
-        val pre = Or(FunctionApplication("is-IsFile", Seq(st.paths(p))),
-                      And(FunctionApplication("is-IsDir", Seq(st.paths(p))),
-                          And(descendants.map(p_ => Equals(p_, "DoesNotExist")) :_*)))
-
-        ST(Or(st.isErr, Not(pre)),
-          st.paths + (p -> "DoesNotExist"))
-      }
-      case fsmodel.Cp(src, dst) => {
-        val pre = And(FunctionApplication("is-IsFile", Seq(st.paths(src))),
-          Equals(st.paths(dst.getParent), "IsDir"),
-          Equals(st.paths(dst), "DoesNotExist"))
-        ST(Or(st.isErr, Not(pre)),
-          st.paths + (dst -> FunctionApplication("IsFile",
-                                Seq(FunctionApplication("hash", Seq(st.paths(src)))))))
-      }
+    finally {
+      process(Pop(1))
     }
+  }
+
+  def ite(cond: Term, tru: Term, fls: Term): Term = {
+    if (tru == fls) {
+      tru
+    }
+    else {
+      ITE(cond, tru, fls)
+    }
+  }
+
+  def evalExpr(st: ST, expr: fsmodel.Expr): ST = expr match {
+    case fsmodel.Skip => st
+    case fsmodel.Error => ST(True(), st.paths)
+    case fsmodel.Seq(p, q) => evalExpr(evalExpr(st, p), q)
+    case fsmodel.If(a, e1, e2) => {
+      val st1 = evalExpr(st, e1)
+      val st2 = evalExpr(st, e2)
+      val b = freshName("b")
+      process(DeclareConst(b, BoolSort()))
+      process(Assert(Equals(b, evalPred(st, a))))
+      ST(ite(b, st1.isErr, st2.isErr),
+        allPaths.map(p => (p, ite(b, st1.paths(p), st2.paths(p)))).toMap)
+    }
+    case fsmodel.CreateFile(p, h) => {
+      val pre = And(Equals(st.paths(p), "DoesNotExist"),
+        Equals(st.paths(p.getParent), "IsDir"))
+
+      ST(Or(st.isErr, Not(pre)),
+        st.paths + (p -> FunctionApplication("IsFile", Seq(hashToZ3(h)))))
+    }
+    case fsmodel.Mkdir(p) => {
+      val pre = And(Equals(st.paths(p), "DoesNotExist"),
+        Equals(st.paths(p.getParent), "IsDir"))
+      ST(Or(st.isErr, Not(pre)),
+        st.paths + (p -> "IsDir"))
+    }
+    case fsmodel.Rm(p) => {
+      val descendants = st.paths.filter(p1 => p1._1 != p && p1._1.startsWith(p))
+        .map(_._2).toSeq
+
+      val pre = Or(FunctionApplication("is-IsFile", Seq(st.paths(p))),
+                    And(FunctionApplication("is-IsDir", Seq(st.paths(p))),
+                        And(descendants.map(p_ => Equals(p_, "DoesNotExist")) :_*)))
+
+      ST(Or(st.isErr, Not(pre)),
+        st.paths + (p -> "DoesNotExist"))
+    }
+    case fsmodel.Cp(src, dst) => {
+      val pre = And(FunctionApplication("is-IsFile", Seq(st.paths(src))),
+        Equals(st.paths(dst.getParent), "IsDir"),
+        Equals(st.paths(dst), "DoesNotExist"))
+      ST(Or(st.isErr, Not(pre)),
+        st.paths + (dst -> FunctionApplication("IsFile",
+                              Seq(FunctionApplication("hash", Seq(st.paths(src)))))))
+    }
+  }
 
   def handleSexpr(reverseMap: Map[String, Path], reverseHash: Map[String, String])(acc: Option[State], sexpr: SExpr): Option[State] =
     acc match {
