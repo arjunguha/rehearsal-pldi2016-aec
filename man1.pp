@@ -1,4 +1,4 @@
 file{'/arjun':
-  ensure => present,
+  ensure => file,
   content => "chipmunk"
 }
