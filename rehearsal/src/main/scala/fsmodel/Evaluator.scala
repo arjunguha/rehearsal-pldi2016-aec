@@ -45,7 +45,6 @@ object Eval {
     case TestFileState(p, IsFile) => isFile(st, p)
     case TestFileState(p, IsDir) => isDir(st, p)
     case TestFileState(p, DoesNotExist) => doesNotExist(st, p)
-    case TestFileHash(_, _) => throw NotImplemented("nyi")
   }
 
   def eval(st: State, expr: Expr): S = expr match {

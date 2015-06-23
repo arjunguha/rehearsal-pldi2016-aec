@@ -202,10 +202,6 @@ class SymbolicEvaluatorImpl(poReduction: Boolean, g: FileScriptGraph)  {
     case TestFileState(p, IsDir) => st.select(p) === isDir
     case TestFileState(p, DoesNotExist) => st.select(p) === doesNotExist
     case TestFileState(p, IsFile) => isIsFile(st.select(p))
-    case TestFileHash(p, h) => {
-      val stat = st.select(p)
-      isIsFile(stat) && (cxt.mkApp(getIsFileHash, stat) === hashToZ3(h))
-    }
     case ITE(a, b, c) => ite(evalPred(st, a),
                              evalPred(st, b),
                              evalPred(st, c))

@@ -11,7 +11,6 @@ private[fsmodel] object Pretty {
     case True => "true"
     case False => "false"
     case TestFileState(p, s) => s"$s($p)"
-    case TestFileHash(p, h) => s"hash($p) == $h"
     case Not(True) => "!true"
     case Not(False) => "!false"
     case Not(TestFileState(p, s)) => s"!$s($p)"

@@ -28,7 +28,6 @@ object WeakestPreconditions {
       case True => bddTrue
       case False => bddFalse
       case TestFileState(f, s) => bddVar(TestFileState(f, s))
-      case TestFileHash(f, s) => bddVar(TestFileState(f, IsFile))
       case And(a, b) => predToBdd(bdd)(a) && predToBdd(bdd)(b)
       case Or(a, b) => predToBdd(bdd)(a) || predToBdd(bdd)(b)
       case Not(a) => !predToBdd(bdd)(a)

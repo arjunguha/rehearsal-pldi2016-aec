@@ -163,11 +163,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       case fsmodel.TestFileState(p, fsmodel.DoesNotExist) => Equals(st.paths(p), "DoesNotExist")
       case fsmodel.TestFileState(p, fsmodel.IsFile) =>
         FunctionApplication("is-IsFile", Seq(st.paths(p)))
-      case fsmodel.TestFileHash(p, h) => {
-        val stat = st.paths(p)
-        And(FunctionApplication("is-IsFile", Seq(stat)),
-            (Equals(FunctionApplication("hash", Seq(stat)), hashToZ3(h.toList))))
-      }
       //    case fsmodel.ITE(a, b, c) => ite(evalPred(st, a),
       //      evalPred(st, b),
       //      evalPred(st, c))

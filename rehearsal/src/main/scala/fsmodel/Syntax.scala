@@ -30,10 +30,6 @@ case object False extends Pred
 case class And(a: Pred, b: Pred) extends Pred
 case class Or(a: Pred, b: Pred) extends Pred
 case class Not(a: Pred) extends Pred
-case class TestFileHash(path: Path, hash: Array[Byte]) extends Pred {
-  require(hash.length == 16,
-          s"hashcode must be 16 bytes long (got ${hash.length})")
-}
 case class TestFileState(path: Path, s: FileState) extends Pred {
   def <(tfs: TestFileState): Boolean = (this, tfs) match {
     case (TestFileState(f, x), TestFileState(g, y)) => if (f.toString == g.toString) {
