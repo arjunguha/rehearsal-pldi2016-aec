@@ -85,8 +85,13 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     val empty = DomainBounds(List(), List(), List(), List(), List())
   }
 
-  class UpdateSynth2(bounds: DomainBounds) {
-    import bounds._
+  trait Synthesizer {
+
+    def synthesize(inits: Seq[S], dists: Seq[Double], targets: Seq[S], available: Seq[Seq[Res]]): Option[List[Res]]
+
+  }
+
+  trait GreedySynthesizer extends Synthesizer {
 
     // Example:
     //
@@ -95,38 +100,6 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
       for (i <- 0.to(seq.length - 1)) yield {
         val (prefix, Seq(a, suffix @ _*)) = seq.splitAt(i)
         (a, prefix ++ suffix)
-      }
-    }
-
-    def jointSearch(inits: Seq[S],
-                    dists: Seq[Double],
-                    targets: Seq[S],
-                    available: Seq[Seq[Res]]): Option[List[Res]] = {
-      logger.info(s"jointSearch(dists = $dists)")
-      if (dists.sum == 0) {
-        Some(List())
-      }
-      else if (available.length == 0) {
-        logger.info("No more options")
-        None
-      }
-      else {
-        val (res, inits_, dists_, available_) = pick(available).map({ case (opts, rest) =>
-          val (res, states, dists) = bestMove(inits, targets, opts)
-          (res, states, dists, rest)
-        })
-        .minBy(_._3.sum)
-
-        if (dists_.sum > dists.sum) {
-          logger.info("overshot")
-          None
-        }
-        else {
-          jointSearch(inits_, dists_, targets, available_) match {
-            case None => None
-            case Some(lst) => Some(res :: lst)
-          }
-        }
       }
     }
 
@@ -141,8 +114,44 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
         val dists = inits_.zip(targets).map({ case (x, y) => distance(x, y) })
         (res, inits_, dists)
       })
-      .minBy({ case (_, _, dists) => dists.sum })
+        .minBy({ case (_, _, dists) => dists.sum })
     }
+
+
+    def synthesize(inits: Seq[S], dists: Seq[Double], targets: Seq[S], available: Seq[Seq[Res]]): Option[List[Res]] = {
+      logger.info(s"jointSearch(dists = $dists)")
+      if (dists.sum == 0) {
+        Some(List())
+      }
+      else if (available.length == 0) {
+        logger.info("No more options")
+        None
+      }
+      else {
+        val (res, inits_, dists_, available_) = pick(available).map({ case (opts, rest) =>
+          val (res, states, dists) = bestMove(inits, targets, opts)
+          (res, states, dists, rest)
+        })
+          .minBy(_._3.sum)
+
+        if (dists_.sum > dists.sum) {
+          logger.info("overshot")
+          None
+        }
+        else {
+          synthesize(inits_, dists_, targets, available_) match {
+            case None => None
+            case Some(lst) => Some(res :: lst)
+          }
+        }
+      }
+    }
+
+  }
+
+  trait SynthesizeVerify extends Synthesizer {
+    val bounds: DomainBounds
+    import bounds._
 
     def evalErrRes(st: S, lst: List[Res]) = {
       evalErr(st, Block(lst.map(_.compile): _*))
@@ -156,7 +165,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
       val inits = inputs.map(st => evalErr(st, expr1))
       val targets = inputs.map(st => evalErr(st, expr2))
       val dists = inits.zip(targets).map({ case(x, y) => distance(x, y) })
-      jointSearch(inits, dists, targets, all)
+      synthesize(inits, dists, targets, all)
     }
 
     def synth(inputs: Seq[S], v1: List[Res], v2: List[Res]): Option[List[Res]] = {
@@ -202,6 +211,8 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     // We could return here, or we could continue:
     // 7. minimize the candidate by attempting to remove each element and checking if dist = 0
   }
+
+  class UpdateSynth2(val bounds: DomainBounds) extends SynthesizeVerify with GreedySynthesizer
 
   def allPaths(r: Res): Set[Path] = r match {
     case File(p, _, _) => Set(p)
