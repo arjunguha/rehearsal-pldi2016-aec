@@ -4,15 +4,17 @@ import rehearsal._
 
 object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
 
-  case class DomainBounds(allPaths: List[java.nio.file.Path], allContents: List[String], allPackages: List[String],
+  import java.nio.file.{Files, Paths, Path}
+  import exp.SymbolicEvaluator2
+  import ResourceModel._
+  import fsmodel.{Expr, Skip, Block}
+  import fsmodel.Eval._
+
+  case class DomainBounds(allPaths: List[Path], allContents: List[String], allPackages: List[String],
     allUsers: List[String],  allGroups: List[String]) {
 
-    import java.nio.file.Path
-    import ResourceModel._
-
     // For testing
-    def withPaths(paths: java.nio.file.Path*): DomainBounds = this.copy(allPaths = paths.toList)
-
+    def withPaths(paths: Path*): DomainBounds = this.copy(allPaths = paths.toList)
     def withContents(contents: String*): DomainBounds = this.copy(allContents = contents.toList)
 
     private val b = Seq(true, false)
@@ -44,20 +46,10 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
   }
 
   object DomainBounds {
-
     val empty = DomainBounds(List(), List(), List(), List(), List())
-
   }
 
-
-  class UpdateSynth2(bounds: DomainBounds) extends com.typesafe.scalalogging.LazyLogging {
-
-    import exp.SymbolicEvaluator2
-    import java.nio.file.Path
-    import ResourceModel._
-    import fsmodel.{Expr, Seq => Sequence, Skip, Block}
-    import fsmodel.Eval._
-
+  class UpdateSynth2(bounds: DomainBounds) {
     import bounds._
 
     // Example:
@@ -179,40 +171,27 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
       }
     }
 
-    def delta(r1: Seq[Res], r2: Seq[Res], in: Set[State]): Seq[Res] = {
-      val fs1 = r1.foldRight[Expr](Skip) { case (r, acc) => Sequence(acc, compile(r)) }
-      val fs2 = r2.foldRight[Expr](Skip) { case (r, acc) => Sequence(acc, compile(r)) }
-      val out1 = in.toSeq.map(eval(_, fs1))
-      val out2 = in.toSeq.map(eval(_, fs2))
-      val out = out1.zip(out2)
 
-      // idea 1: (beam search?)
-      // 1. generate a list of initial candidates
-      // 2. evaluate each candidate on states from out LHS
-      // 3. take distance from new state to RHS
-      // 4. repeat process using top N candidates
-      // 5. each time, expand list by making a copy of each top candidate with each resource appended
-      // 6. stop when distance of 0 is found
-      // We could return here, or we could continue:
-      // 7. minimize the candidate by attempting to remove each element and checking if dist = 0
+    // idea 1: (beam search?)
+    // 1. generate a list of initial candidates
+    // 2. evaluate each candidate on states from out LHS
+    // 3. take distance from new state to RHS
+    // 4. repeat process using top N candidates
+    // 5. each time, expand list by making a copy of each top candidate with each resource appended
+    // 6. stop when distance of 0 is found
+    // We could return here, or we could continue:
+    // 7. minimize the candidate by attempting to remove each element and checking if dist = 0
 
-      // idea 2: (a genetic algorithm)
-      // 1. generate a list of initial candidates
-      // 2. evaluate each candidate on states from out LHS
-      // 3. take distance from new state to RHS
-      // 4. repeat process using best candidate
-      // 5. each time, produce a large list by randomly mutating copies of best candidate
-      // 6. stop when distance of 0 is found
-      // We could return here, or we could continue:
-      // 7. minimize the candidate by attempting to remove each element and checking if dist = 0
-
-      null
-    }
+    // idea 2: (a genetic algorithm)
+    // 1. generate a list of initial candidates
+    // 2. evaluate each candidate on states from out LHS
+    // 3. take distance from new state to RHS
+    // 4. repeat process using best candidate
+    // 5. each time, produce a large list by randomly mutating copies of best candidate
+    // 6. stop when distance of 0 is found
+    // We could return here, or we could continue:
+    // 7. minimize the candidate by attempting to remove each element and checking if dist = 0
   }
-
-  import exp.SymbolicEvaluator2
-  import java.nio.file.{Path, Paths, Files}
-  import ResourceModel._
 
   def allPaths(r: Res): Set[Path] = r match {
     case File(p, _, _) => Set(p)
