@@ -2,18 +2,31 @@ package rehearsal.ppmodel
 
 import rehearsal._
 
-class UpdateSynth2(allPaths: List[java.nio.file.Path],
-                   allContents: List[String],
-                   allPackages: List[String],
-                   allUsers: List[String],
-                   allGroups: List[String])
-  extends com.typesafe.scalalogging.LazyLogging {
+case class DomainBounds(allPaths: List[java.nio.file.Path], allContents: List[String], allPackages: List[String],
+  allUsers: List[String],  allGroups: List[String]) {
+
+  // For testing
+  def withPaths(paths: java.nio.file.Path*): DomainBounds = this.copy(allPaths = paths.toList)
+
+  def withContents(contents: String*): DomainBounds = this.copy(allContents = contents.toList)
+
+}
+
+object DomainBounds {
+
+  val empty = DomainBounds(List(), List(), List(), List(), List())
+
+}
+
+class UpdateSynth2(bounds: DomainBounds) extends com.typesafe.scalalogging.LazyLogging {
 
   import exp.SymbolicEvaluator2
   import java.nio.file.Path
   import ResourceModel._
   import fsmodel.{Expr, Seq => Sequence, Skip, Block}
   import fsmodel.Eval._
+
+  import bounds._
 
   // Example:
   //
@@ -267,12 +280,13 @@ object UpdateSynth2 extends com.typesafe.scalalogging.LazyLogging {
     logger.info(s"V1: $v1")
     logger.info(s"V2: $v2")
 
-    val upd = new UpdateSynth2(
-      unions(all.map(allPaths)).toList,
+    val bounds = DomainBounds(unions(all.map(allPaths)).toList,
       unions(all.map(allContents)).toList,
       unions(all.map(allPackages)).toList,
       unions(all.map(allUsers)).toList,
       unions(all.map(allGroups)).toList)
+
+    val upd = new UpdateSynth2(bounds)
 
     val r = upd.synth(Seq(initState), v1, v2)
     logger.info(s"Synthesis result: $r")
@@ -283,6 +297,5 @@ object UpdateSynth2 extends com.typesafe.scalalogging.LazyLogging {
     calculate(new String(Files.readAllBytes(manifest1)),
               new String(Files.readAllBytes(manifest2)))
   }
-
 
 }

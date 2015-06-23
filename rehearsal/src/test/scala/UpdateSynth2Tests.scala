@@ -6,12 +6,11 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
   import ResourceModel._
   import rehearsal.fsmodel.Eval._
 
+  val bounds = DomainBounds.empty.withPaths(Paths.get("/a"), Paths.get("/b")).withContents("hello", "bye")
+
   test("trivial guess") {
-    val upd = new UpdateSynth2(List(Paths.get("/a"), Paths.get("/b")),
-                               List("hello", "bye"),
-                               List(),
-                               List(),
-                               List())
+    val upd = new UpdateSynth2(bounds)
+
     import upd._
     val r = guess(Seq(Some(Map(Paths.get("/") -> FDir))),
                   List(EnsureFile(Paths.get("/a"), "hello")),
@@ -22,11 +21,7 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
   }
 
   test("trivial guess with a state that leads to error") {
-    val upd = new UpdateSynth2(List(Paths.get("/a"), Paths.get("/b")),
-                               List("hello", "bye"),
-                               List(),
-                               List(),
-                               List())
+    val upd = new UpdateSynth2(bounds)
     import upd._
     val r = guess(Seq(Some(Map(Paths.get("/") -> FDir)),
                        Some(Map())),
@@ -37,11 +32,7 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
   }
 
   test("trivial guess with error as input") {
-    val upd = new UpdateSynth2(List(Paths.get("/a"), Paths.get("/b")),
-                               List("hello", "bye"),
-                               List(),
-                               List(),
-                               List())
+    val upd = new UpdateSynth2(bounds)
     import upd._
     val r = guess(Seq(Some(Map(Paths.get("/") -> FDir)),
                        None),
