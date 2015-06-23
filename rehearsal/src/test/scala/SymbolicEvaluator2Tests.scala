@@ -26,20 +26,20 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
   }
 
   test("program equivalence") {
-    val x = CreateFile(Paths.get("/usr"), Array.fill(16)(0))
+    val x = CreateFile(Paths.get("/usr"), "astring")
     assert(exprEquals(x, x) == None)
   }
 
 
   test("program equivalence 2") {
-    val x = CreateFile(Paths.get("/usr"), Array.fill(16)(0))
-    val y = CreateFile(Paths.get("/lib"), Array.fill(16)(0))
+    val x = CreateFile(Paths.get("/usr"), "astring")
+    val y = CreateFile(Paths.get("/lib"), "astring")
     assert(exprEquals(Seq(x, y), Seq(y, x)) == None)
   }
 
   test("program equivalence 3") {
-    val x = CreateFile(Paths.get("/usr/bin"), Array.fill(16)(0))
-    val y = CreateFile(Paths.get("/usr"), Array.fill(16)(0))
+    val x = CreateFile(Paths.get("/usr/bin"), "astring")
+    val y = CreateFile(Paths.get("/usr"), "astring")
     assert(exprEquals(x, y) != None)
   }
 
@@ -50,7 +50,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
 
   test("program equivalence 5 - Mkdir") {
     val x = Mkdir(Paths.get("/usr"))
-    val y = CreateFile(Paths.get("/usr/bin"), Array.fill(16)(0))
+    val y = CreateFile(Paths.get("/usr/bin"), "astring")
     assert(exprEquals(Seq(x, y), Seq(y, x)) != None)
   }
 
@@ -61,14 +61,14 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
   }
 
   test("program equivalence 7 - Rm"){
-    val y = CreateFile(Paths.get("/usr"), Array.fill(16)(0))
+    val y = CreateFile(Paths.get("/usr"), "astring")
     val x = Rm(Paths.get("/usr"))
     assert(exprEquals(Seq(y, x), Seq(x, y)) != None)
   }
 
   test("program equivalence 8 - Rm"){
-    val x = CreateFile(Paths.get("/usr"), Array.fill(16)(0))
-    val y = CreateFile(Paths.get("/lib"), Array.fill(16)(0))
+    val x = CreateFile(Paths.get("/usr"), "astring")
+    val y = CreateFile(Paths.get("/lib"), "astring")
     val x1 = Rm(Paths.get("/usr"))
     val y1 = Rm(Paths.get("/lib"))
     assert(exprEquals(Seq(Seq(x, y), Seq(x1, y1)),

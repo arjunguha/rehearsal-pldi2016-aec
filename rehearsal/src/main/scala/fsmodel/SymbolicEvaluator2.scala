@@ -86,7 +86,7 @@ object SymbolicEvaluator2 {
 }
 
 class SymbolicEvaluatorImpl(allPaths: List[Path],
-                            hashes: Set[List[Byte]],
+                            hashes: Set[String],
                             logFile: Option[String]) {
   import scala.language.implicitConversions
 
@@ -111,13 +111,13 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
     val hashSort = Sort(SimpleIdentifier(SSymbol("hash")))
 
-    def hashToTerm(l: List[Byte]): (List[Byte], Term) ={
+    def hashToTerm(l: String): (String, Term) = {
       val x = freshName("hash")
       process(DeclareConst(x, hashSort))
       (l, QualifiedIdentifier(Identifier(x)))
     }
 
-    val hashToZ3: Map[List[Byte], Term] = hashes.toList.map(hashToTerm).toMap
+    val hashToZ3: Map[String, Term] = hashes.toList.map(hashToTerm).toMap
     if(hashToZ3.size != 0)  {
       val hashes = hashToZ3.values.toSeq
       process(Assert(FunctionApplication("distinct", hashes)))
@@ -216,7 +216,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
           Equals(st.paths(p.getParent), "IsDir"))
 
         ST(Or(st.isErr, Not(pre)),
-          st.paths + (p -> FunctionApplication("IsFile", Seq(hashToZ3(h.toList)))))
+          st.paths + (p -> FunctionApplication("IsFile", Seq(hashToZ3(h)))))
       }
       case fsmodel.Mkdir(p) => {
         val pre = And(Equals(st.paths(p), "DoesNotExist"),
@@ -245,7 +245,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
     }
 
-  def handleSexpr(reverseMap: Map[String, Path], reverseHash: Map[String, List[Byte]])(acc: Option[State], sexpr: SExpr): Option[State] =
+  def handleSexpr(reverseMap: Map[String, Path], reverseHash: Map[String, String])(acc: Option[State], sexpr: SExpr): Option[State] =
     acc match {
       case None => None
       case Some(state) => {
@@ -257,7 +257,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
                 body match {
                   case QualifiedIdentifier(Identifier(SSymbol("IsDir"), _), _) => Some(state + (path -> FDir))
                   case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("IsFile"), _), _), List(hash)) => {
-                    val data = reverseHash.getOrElse(hash.asInstanceOf[QualifiedIdentifier].id.symbol.name, List(42,42,42,42).map(x => x.toByte)).toArray
+                    val data = reverseHash.getOrElse(hash.asInstanceOf[QualifiedIdentifier].id.symbol.name, "<unknown>")
                     Some(state + (path -> FFile(data)))
                   }
                   case _ => Some(state)

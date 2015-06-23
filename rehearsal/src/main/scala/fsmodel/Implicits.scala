@@ -11,9 +11,6 @@ object Implicits {
 
   implicit def stringToPath(str: String): Path = Paths.get(str)
 
-  implicit def contentToHash(content: String): Array[Byte] =
-    MessageDigest.getInstance("MD5").digest(content.getBytes)
-
   implicit class RichString(str: String) {
 
     def toPath = Paths.get(str)

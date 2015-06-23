@@ -30,7 +30,7 @@ class PredConversionTests extends org.scalatest.FunSuite {
   }
 
   test("weakest precondition (wp)") {
-    val hash = (for (i <- 0 until 16) yield 0.toByte).toArray
+    val hash = "astring"
     val root = FileSystems.getDefault().getPath("/")
     val home = FileSystems.getDefault().getPath("/home")
     assert(Mkdir(home).wp(TestFileState(home, IsDir)) == (True &&
