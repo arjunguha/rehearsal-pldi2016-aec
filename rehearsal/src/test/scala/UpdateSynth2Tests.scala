@@ -4,6 +4,7 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
   import java.nio.file.Paths
   import rehearsal.ppmodel._
   import ResourceModel._
+  import UpdateSynth._
   import rehearsal.fsmodel.Eval._
 
   val bounds = DomainBounds.empty.withPaths(Paths.get("/a"), Paths.get("/b")).withContents("hello", "bye")

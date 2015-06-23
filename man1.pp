@@ -1,6 +1,4 @@
 file{'/arjun':
-  ensure => present
-}
-file{'/joe':
-  ensure => present
+  ensure => present,
+  content => "chipmunk"
 }

@@ -1,3 +1,4 @@
 file{'/home/aaron':
-  ensure => present
+  ensure => present,
+  content => "strawberry"
 }
