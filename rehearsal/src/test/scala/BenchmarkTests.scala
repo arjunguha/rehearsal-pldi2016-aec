@@ -15,7 +15,7 @@ class BenchmarkTests extends FunSuite {
       val resourceGraph = b.toGraph(facterEnv).head._2
       val fileScriptGraph = Slicing.sliceGraph(toFileScriptGraph(resourceGraph))
       info(fileScriptGraph.toString)
-      assert(SymbolicEvaluator.isDeterministic(fileScriptGraph))
+      assert(exp.SymbolicEvaluator2.isDeterministic(fileScriptGraph))
     }
   }
 }
