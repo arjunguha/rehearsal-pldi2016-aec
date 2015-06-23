@@ -136,6 +136,21 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   case class ST(isErr: Term, paths: Map[Path, Term])
 
+  // Ensures that all paths in st form a proper directory tree. If we assert this for the input state
+  // and all operations preserve directory-tree-ness, then there is no need to assert it for all states.
+  def assertPathConsistency(st: ST): Unit = {
+    for (p <- allPaths) {
+      if (p == Paths.get("/")) {
+        process(Assert(FunctionApplication("is-IsDir", Seq(st.paths(p)))))
+      }
+      else {
+        process(Assert(Implies(Or(FunctionApplication("is-IsFile", Seq(st.paths(p))),
+                                  FunctionApplication("is-IsDir", Seq(st.paths(p)))),
+                               FunctionApplication("is-IsDir", Seq(st.paths(p.getParent))))))
+      }
+    }
+  }
+
   def freshST(): ST = {
     val paths = allPaths.map(p => {
       val z = freshName("path")
@@ -278,6 +293,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
    try {
      process(Push(1))
      val st = freshST()
+     assertPathConsistency(st)
      val stInter = evalExpr(st, e1)
 
      val st1 = evalExpr(stInter, delta)
