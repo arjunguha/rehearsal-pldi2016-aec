@@ -64,8 +64,8 @@ object SymbolicEvaluator2 {
 
    def exprEqualsSynth(e1: fsmodel.Expr, delta: fsmodel.Expr,
                        e2: fsmodel.Expr): Option[Option[State]] = {
-    new SymbolicEvaluatorImpl((e1.paths union e2.paths).toList,
-                    HashHelper.exprHashes(e1) union HashHelper.exprHashes(e2), None).exprEqualsSynth(e1,delta, e2)
+    new SymbolicEvaluatorImpl((e1.paths union e2.paths union delta.paths).toList,
+                    HashHelper.exprHashes(e1) union HashHelper.exprHashes(e2) union HashHelper.exprHashes(delta), None).exprEqualsSynth(e1,delta, e2)
   }
 
   def exprEquals(e1: fsmodel.Expr, e2: fsmodel.Expr): Option[Option[State]] = {
@@ -188,6 +188,15 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
     }
 
+    def ite(cond: Term, tru: Term, fls: Term): Term = {
+      if (tru == fls) {
+        tru
+      }
+      else {
+        ITE(cond, tru, fls)
+      }
+    }
+
     def evalExpr(st: ST, expr: fsmodel.Expr): ST = expr match {
       case fsmodel.Skip => st
       case fsmodel.Error => ST(True(), st.paths)
@@ -195,9 +204,11 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       case fsmodel.If(a, e1, e2) => {
         val st1 = evalExpr(st, e1)
         val st2 = evalExpr(st, e2)
-        val b = evalPred(st, a)
-        ST(ITE(b, st1.isErr, st2.isErr),
-          allPaths.map(p => (p, ITE(b, st1.paths(p), st2.paths(p)))).toMap)
+        val b = freshName("b")
+        process(DeclareConst(b, BoolSort()))
+        process(Assert(Equals(b, evalPred(st, a))))
+        ST(ite(b, st1.isErr, st2.isErr),
+          allPaths.map(p => (p, ite(b, st1.paths(p), st2.paths(p)))).toMap)
       }
       case fsmodel.CreateFile(p, h) => {
         val pre = And(Equals(st.paths(p), "DoesNotExist"),
@@ -271,7 +282,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
      val st1 = evalExpr(stInter, delta)
      val st2 = evalExpr(st, e2)
 
-     process(Assert(Not(stEquals(stInter, st1))))
+     process(Assert(Not(stEquals(stInter, st))))
      process(Assert(Not(stEquals(st1, st2))))
      process(CheckSat()) match {
        case CheckSatStatus(SatStatus) => {
@@ -338,8 +349,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         fringe.map(p => evalGraph(evalExpr(st, p), g - p)).reduce({ (st1: ST, st2: ST) =>
           val c = freshName("choice")
           val b = process(DeclareConst(c, BoolSort()))
-          ST(ITE(c, st1.isErr, st2.isErr),
-            allPaths.map(p => p -> ITE(c, st1.paths(p),st2.paths(p))).toMap)
+          ST(ite(c, st1.isErr, st2.isErr),
+            allPaths.map(p => p -> ite(c, st1.paths(p),st2.paths(p))).toMap)
         })
       }
     }
