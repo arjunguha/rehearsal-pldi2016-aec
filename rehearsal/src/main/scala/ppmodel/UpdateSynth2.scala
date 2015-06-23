@@ -5,11 +5,40 @@ import rehearsal._
 case class DomainBounds(allPaths: List[java.nio.file.Path], allContents: List[String], allPackages: List[String],
   allUsers: List[String],  allGroups: List[String]) {
 
+  import java.nio.file.Path
+  import ResourceModel._
+
   // For testing
   def withPaths(paths: java.nio.file.Path*): DomainBounds = this.copy(allPaths = paths.toList)
 
   def withContents(contents: String*): DomainBounds = this.copy(allContents = contents.toList)
 
+  private val b = Seq(true, false)
+
+  // When flattened, this is a list of all resources. But, we represent the
+  // resources as nested sequences:
+  //
+  // Seq(Seq(a1, a2), Seq(b1, b2), ...)
+  //
+  // Where resources in a nested group are mutually exclusive.
+  // For example:
+  //
+  // Seq(Seq(Package("vim", present = true), Package("vim", present = false)),
+  //     Seq(Package("emacs", present = true), Package("emacs", present = false)),
+  //     ..)
+  val allResources: Seq[Seq[Res]] =
+    allPaths.map { p =>
+      allContents.flatMap { c =>
+        Seq(EnsureFile(p, c)) ++
+          b.map { f => File(p, c, f) }
+      } ++
+        b.map { f => AbsentPath(p, f) } ++
+        Seq(Directory(p))
+    } ++
+      allPackages.map { pkg => b.map { b => Package(pkg, b) } } ++
+      allGroups.map { g => b.map { b => Group(g, b) } } ++
+      allUsers.map { u =>  b.flatMap { p => b.map { h => User(u, p, h) } } }
+  
 }
 
 object DomainBounds {
@@ -17,6 +46,8 @@ object DomainBounds {
   val empty = DomainBounds(List(), List(), List(), List(), List())
 
 }
+
+
 
 class UpdateSynth2(bounds: DomainBounds) extends com.typesafe.scalalogging.LazyLogging {
 
@@ -37,33 +68,6 @@ class UpdateSynth2(bounds: DomainBounds) extends com.typesafe.scalalogging.LazyL
       (a, prefix ++ suffix)
     }
   }
-
-  val b = Seq(true, false)
-
-  // When flattened, this is a list of all resources. But, we represent the
-  // resources as nested sequences:
-  //
-  // Seq(Seq(a1, a2), Seq(b1, b2), ...)
-  //
-  // Where resources in a nested group are mutually exclusive.
-  // For example:
-  //
-  // Seq(Seq(Package("vim", present = true), Package("vim", present = false)),
-  //     Seq(Package("emacs", present = true), Package("emacs", present = false)),
-  //     ..)
-  val allResources: Seq[Seq[Res]] =
-    allPaths.map { p =>
-      allContents.flatMap { c =>
-        Seq(EnsureFile(p, c)) ++
-        b.map { f => File(p, c, f) }
-      } ++
-      b.map { f => AbsentPath(p, f) } ++
-      Seq(Directory(p))
-    } ++
-    allPackages.map { pkg => b.map { b => Package(pkg, b) } } ++
-    allGroups.map { g => b.map { b => Group(g, b) } } ++
-    allUsers.map { u =>  b.flatMap { p => b.map { h => User(u, p, h) } } }
-
 
   def stateDist(st1: State, st2: State): Double = {
     var dist = 0
