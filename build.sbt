@@ -38,7 +38,7 @@ lazy val bdd = project
 
 lazy val synth = project
 
-lazy val rehearsal = project.dependsOn(bdd, synth)
+lazy val rehearsal = project.dependsOn(bdd)
 
 lazy val  root = project.in(file("."))
   .aggregate(rehearsal)
