@@ -250,8 +250,6 @@ object UpdateSynth2 extends com.typesafe.scalalogging.LazyLogging {
 
   val initState = Some(Map(Paths.get("/") -> rehearsal.fsmodel.Eval.FDir))
 
-  def
-
   def calculate(manifest1: String, manifest2: String): Unit = {
     val graph1 = puppet.syntax.parse(manifest1).desugar().toGraph(Map()).head._2
     val graph2 = puppet.syntax.parse(manifest2).desugar().toGraph(Map()).head._2
