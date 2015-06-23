@@ -118,7 +118,13 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
 
     val hashToZ3: Map[List[Byte], Term] = hashes.toList.map(hashToTerm).toMap
-    if(hashToZ3.size != 0)  process(Assert(FunctionApplication("distinct", hashToZ3.values.toSeq)))
+    if(hashToZ3.size != 0)  {
+      val hashes = hashToZ3.values.toSeq
+      process(Assert(FunctionApplication("distinct", hashes)))
+      val x = freshName("h")
+      process(Assert(ForAll(SortedVar(x, hashSort), Seq(),
+                            Or(hashes.map(h => Equals(x, h)): _*))))
+    }
 
     // type stat = IsDir | DoesNotExist | IsFile of hash
     process(DeclareDatatypes(Seq((SSymbol("stat"),
