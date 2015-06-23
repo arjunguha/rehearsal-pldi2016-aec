@@ -1,3 +1,3 @@
-file{'/aaron':
+file{'/home/aaron':
   ensure => present
 }

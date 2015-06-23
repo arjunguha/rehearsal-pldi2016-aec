@@ -144,7 +144,7 @@ class UpdateSynth2(allPaths: List[java.nio.file.Path],
       case None => None
       case Some(delta) => {
         logger.info(s"Synthesized delta: $delta")
-        val e1 = Block((v1 ++ delta).map(_.compile): _*)
+        val e1 = Block(v1.map(_.compile): _*)
         val eDelta = Block((delta).map(_.compile): _*)
         val e2 = Block(v2.map(_.compile): _*) // TODO(arjun): needless work
         SymbolicEvaluator2.exprEqualsSynth(e1, eDelta, e2) match {
@@ -249,6 +249,8 @@ object UpdateSynth2 extends com.typesafe.scalalogging.LazyLogging {
   }
 
   val initState = Some(Map(Paths.get("/") -> rehearsal.fsmodel.Eval.FDir))
+
+  def
 
   def calculate(manifest1: String, manifest2: String): Unit = {
     val graph1 = puppet.syntax.parse(manifest1).desugar().toGraph(Map()).head._2
