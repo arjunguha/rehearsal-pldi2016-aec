@@ -14,7 +14,7 @@ class Test extends org.scalatest.FunSuite {
 
   import exp.SymbolicEvaluator2.{predEquals, exprEquals, isDeterministic}
 
-  val zeros = List(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0).map(x => x.toByte).toArray
+  val zeros = "00000"
 
   val x = 
     If(TestFileState(Paths.get("/arjun"), IsFile),
