@@ -10,6 +10,42 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
   import fsmodel.{Expr, Skip, Block}
   import fsmodel.Eval._
 
+
+  // Calculates the "distance" between two states. The distance is in the range [0.0, 1.0], where 0.0 means
+  // identical and 1.0 means "very different.
+  //
+  // TODO(arjun): A potential problem with this metric is that it doesn't rely on the total number of possible
+  // paths. States don't explicitly represent paths that don't exist, so this can cause problems. We should
+  // probably change it so that 1.0 means "all paths are different".
+  def distance(s1: S, s2: S): Double = {
+
+    def stateDist(st1: State, st2: State): Double = {
+      var dist = 0
+      val paths: Seq[Path] = (st1.keys.toSet union st2.keys.toSet).toSeq
+
+      val vec: Seq[Double] = paths.map(p => (st1.get(p), st2.get(p)) match {
+        case (None, None) => 0.0
+        case (Some(_), None) => 1.0
+        case (None, Some(_)) => 1.0
+        case (Some(FDir), Some(FDir)) => 0.0
+        case (Some(FFile(h1)), Some(FFile(h2))) => if (h1.toSeq == h2.toSeq) {
+          0.0
+        } else {
+          1.0
+        }
+        case (Some(_), Some(_)) => 1.0
+      })
+
+      Math.pow(vec.sum, 1.0 / vec.length.toDouble)
+    }
+
+    (s1, s2) match {
+      case (Some(st1), Some(st2)) => stateDist(st1, st2)
+      case (None, None) => 0.0
+      case _ => 1.0
+    }
+  }
+
   case class DomainBounds(allPaths: List[Path], allContents: List[String], allPackages: List[String],
     allUsers: List[String],  allGroups: List[String]) {
 
@@ -60,32 +96,6 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
         val (prefix, Seq(a, suffix @ _*)) = seq.splitAt(i)
         (a, prefix ++ suffix)
       }
-    }
-
-    def stateDist(st1: State, st2: State): Double = {
-      var dist = 0
-      val paths: Seq[Path] = (st1.keys.toSet union st2.keys.toSet).toSeq
-
-      val vec: Seq[Double] = paths.map(p => (st1.get(p), st2.get(p)) match {
-        case (None, None) => 0.0
-        case (Some(_), None) => 1.0
-        case (None, Some(_)) => 1.0
-        case (Some(FDir), Some(FDir)) => 0.0
-        case (Some(FFile(h1)), Some(FFile(h2))) => if (h1.toSeq == h2.toSeq) {
-          0.0
-        } else {
-          1.0
-        }
-        case (Some(_), Some(_)) => 1.0
-      })
-
-      Math.pow(vec.sum, 1.0 / vec.length.toDouble)
-    }
-
-    def distance(s1: S, s2: S): Double = (s1, s2) match {
-      case (Some(st1), Some(st2)) => stateDist(st1, st2)
-      case (None, None) => 0.0
-      case _ => 1.0
     }
 
     def jointSearch(inits: Seq[S],
