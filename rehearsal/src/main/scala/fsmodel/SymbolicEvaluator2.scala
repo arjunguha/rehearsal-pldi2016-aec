@@ -62,10 +62,10 @@ import rehearsal.fsmodel.{Block, Expr, HashHelper}
 
 object SymbolicEvaluator2 {
 
-   def exprEqualsSynth(e1: fsmodel.Expr, delta: fsmodel.Expr,
+   def exprEqualsSynth(precond: Seq[State], e1: fsmodel.Expr, delta: fsmodel.Expr,
                        e2: fsmodel.Expr): Option[Option[State]] = {
     new SymbolicEvaluatorImpl((e1.paths union e2.paths union delta.paths).toList,
-                    HashHelper.exprHashes(e1) union HashHelper.exprHashes(e2) union HashHelper.exprHashes(delta), None).exprEqualsSynth(e1,delta, e2)
+                    HashHelper.exprHashes(e1) union HashHelper.exprHashes(e2) union HashHelper.exprHashes(delta), None).exprEqualsSynth(precond, e1,delta, e2)
   }
 
   def exprEquals(e1: fsmodel.Expr, e2: fsmodel.Expr): Option[Option[State]] = {
@@ -149,6 +149,11 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
                                FunctionApplication("is-IsDir", Seq(st.paths(p.getParent))))))
       }
     }
+  }
+
+  def convertST(st: ST, state: State): ST = {
+    //TODO(jcollard): how should we handle the isErr term? 
+    ST(st.isErr, state.keys.map(k => (k, st.paths(k))).toMap)
   }
 
   def freshST(): ST = {
@@ -288,12 +293,13 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
     }
 
- def exprEqualsSynth(e1: fsmodel.Expr, delta: fsmodel.Expr,
+ def exprEqualsSynth(precond: Seq[State], e1: fsmodel.Expr, delta: fsmodel.Expr,
                      e2: fsmodel.Expr): Option[Option[State]] = {
    try {
      process(Push(1))
      val st = freshST()
      assertPathConsistency(st)
+     precond.map(pre => process(Assert(Not(stEquals(st, convertST(st, pre))))))
      val stInter = evalExpr(st, e1)
 
      val st1 = evalExpr(stInter, delta)

@@ -168,22 +168,29 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
       synthesize(inits, dists, targets, all)
     }
 
-    def synth(inputs: Seq[S], v1: List[Res], v2: List[Res]): Option[List[Res]] = {
+    def synth(precond: Seq[State], inputs: Seq[S], v1: List[Res], v2: List[Res]): Option[(Seq[State], List[Res])] = {
       guess(inputs, v1, v2) match {
-        case None => None
+        // We have failed... use the latest counter example as a precondition
+        // and start over
+        case None => {
+          inputs.head match {
+            case None => None
+            case Some(pre) => synth(pre +: precond, inputs.tail, v1, v2)
+          }
+        }
         case Some(delta) => {
           logger.info(s"Synthesized delta: $delta")
           val e1 = Block(v1.map(_.compile): _*)
           val eDelta = Block((delta).map(_.compile): _*)
           val e2 = Block(v2.map(_.compile): _*) // TODO(arjun): needless work
-          SymbolicEvaluator2.exprEqualsSynth(e1, eDelta, e2) match {
-            case None => Some(delta)
+          SymbolicEvaluator2.exprEqualsSynth(precond, e1, eDelta, e2) match {
+            case None => Some(precond, delta)
             case Some(cex) => {
               logger.info(s"Counterexample input state: $cex")
               logger.info(s"Running v1 on cex: ${evalErrRes(cex, v1)}")
               logger.info(s"Running v1 + delta on cex: ${evalErrRes(cex, v1 ++ delta)}")
               logger.info(s"Running v2 on cex: ${evalErrRes(cex, v2)}")
-              synth(cex +: inputs, v1, v2)
+              synth(precond, cex +: inputs, v1, v2)
             }
           }
         }
@@ -291,7 +298,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
 
     val upd = new UpdateSynth2(bounds)
 
-    val r = upd.synth(Seq(initState), v1, v2)
+    val r = upd.synth(Seq(), Seq(initState), v1, v2)
     logger.info(s"Synthesis result: $r")
     println(r)
   }
