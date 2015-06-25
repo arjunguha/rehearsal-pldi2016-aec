@@ -87,7 +87,7 @@ object SymbolicEvaluator2 {
 
 class SymbolicEvaluatorImpl(allPaths: List[Path],
                             hashes: Set[String],
-                            logFile: Option[String]) {
+                            logFile: Option[String]) extends com.typesafe.scalalogging.LazyLogging {
   import scala.language.implicitConversions
 
   implicit def stringToQualID(str: String): QualifiedIdentifier = {
@@ -109,6 +109,10 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   process(DeclareSort(SSymbol("hash"), 0))
 
+  //TODO(jcollard): This sort is to general, I think we need an enumerated type
+  // one for each of the contents we have in our manifests and then one more
+  // for "unknown". Currently, this ends up generating the same counter example
+  // repeatedly because we don't have a way to represent this.
   val hashSort = Sort(SimpleIdentifier(SSymbol("hash")))
 
   def hashToTerm(l: String): (String, Term) = {
@@ -134,6 +138,9 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   val statSort = Sort(SimpleIdentifier(SSymbol("stat")))
 
+  val arbitraryContents = QualifiedIdentifier(Identifier(SSymbol("arbitrary-contents")))
+  process(DeclareConst(arbitraryContents.id.symbol, hashSort))
+
   case class ST(isErr: Term, paths: Map[Path, Term])
 
   // Ensures that all paths in st form a proper directory tree. If we assert this for the input state
@@ -150,10 +157,20 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
     }
   }
-
-  def convertST(st: ST, state: State): ST = {
-    //TODO(jcollard): how should we handle the isErr term? 
-    ST(st.isErr, state.keys.map(k => (k, st.paths(k))).toMap)
+  def buildST(state: State): ST = {
+    val paths = allPaths.map(p => {
+      val z = freshName("path")
+      val qid = QualifiedIdentifier(Identifier(z))
+      process(DeclareConst(z, statSort))
+      process(Assert(
+        state.get(p) match {
+          case None => FunctionApplication("is-DoesNotExist", Seq(qid))
+          case Some(FDir) => FunctionApplication("is-IsDir", Seq(qid))
+          case Some(FFile(hash)) => Equals(qid, FunctionApplication("IsFile", Seq(hashToZ3.getOrElse(hash, arbitraryContents))))
+        }))
+      (p, QualifiedIdentifier(Identifier(z)))
+    })
+    ST(False(), paths.toMap)
   }
 
   def freshST(): ST = {
@@ -277,8 +294,10 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
                 body match {
                   case QualifiedIdentifier(Identifier(SSymbol("IsDir"), _), _) => Some(state + (path -> FDir))
                   case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("IsFile"), _), _), List(hash)) => {
-                    val data = reverseHash.getOrElse(hash.asInstanceOf[QualifiedIdentifier].id.symbol.name, "<unknown>")
-                    Some(state + (path -> FFile(data)))
+                    reverseHash.get(hash.asInstanceOf[QualifiedIdentifier].id.symbol.name) match {
+                      case None => Some(state + (path -> FFile("<unknown>")))
+                      case Some(data) => Some(state + (path -> FFile(data)))
+                    }
                   }
                   case _ => Some(state)
                 }
@@ -298,8 +317,20 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
    try {
      process(Push(1))
      val st = freshST()
+     val initialReverseMap = st.paths.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
+     
      assertPathConsistency(st)
-     precond.map(pre => process(Assert(Not(stEquals(st, convertST(st, pre))))))
+     logger.info(s"preconditions: ${precond.size}")
+     val (preconditions, reverseMap) = 
+       precond.foldRight[(Term, Map[String, Path])]((True(), initialReverseMap))({ case (pre, (term, rm)) => {
+         val stPre = buildST(pre)
+         val termPrime = And(term, stEquals(st, stPre))
+         val reverseMapPrime = stPre.paths.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
+         (termPrime,  rm ++ reverseMapPrime)
+       }})
+     if(!precond.isEmpty){ 
+       process(Assert(Not(preconditions)))
+     }
      val stInter = evalExpr(st, e1)
 
      val st1 = evalExpr(stInter, delta)
@@ -310,8 +341,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
      process(CheckSat()) match {
        case CheckSatStatus(SatStatus) => {
          val model: List[SExpr] = process(GetModel()).asInstanceOf[GetModelResponseSuccess].model
-         val reverseMap = st.paths.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
          val reverseHash = hashToZ3.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
+         logger.info(model.toString)
          Some(model.foldLeft(Some(Map()): Option[State])(handleSexpr(reverseMap, reverseHash)(_,_)))
        }
        case CheckSatStatus(UnsatStatus) => None

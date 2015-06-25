@@ -172,12 +172,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
       guess(inputs, v1, v2) match {
         // We have failed... use the latest counter example as a precondition
         // and start over
-        case None => {
-          inputs.head match {
-            case None => None
-            case Some(pre) => synth(pre +: precond, inputs.tail, v1, v2)
-          }
-        }
+        case None => synth(inputs.head.get +: precond, Seq(inputs.last), v1, v2)
         case Some(delta) => {
           logger.info(s"Synthesized delta: $delta")
           val e1 = Block(v1.map(_.compile): _*)
@@ -193,13 +188,13 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
               synth(precond, cex +: inputs, v1, v2)
             }
           }
-        }
+       } 
       }
     }
 
 
     // idea 1: (beam search?)
-    // 1. generate a list of initial candidates
+    // 1. egnerate a list of initial candidates
     // 2. evaluate each candidate on states from out LHS
     // 3. take distance from new state to RHS
     // 4. repeat process using top N candidates

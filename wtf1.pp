@@ -5,5 +5,5 @@ file{'/arjun':
 
 file{'/foo':
   ensure => file,
-  content => "chipberry"
+  content => "baz"
 }
