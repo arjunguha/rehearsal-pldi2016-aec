@@ -384,31 +384,4 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
     }
 
-  /*
-    val interpreter : Interpreter = Z3Interpreter.buildDefault
-
-    def process(command: Command) : CommandResponse = {
-      print(command)
-      interpreter.eval(command)
-    }
-
-    process(DeclareConst(SSymbol("x"), BitVectorSort(5)))
-    process(DeclareConst(SSymbol("y"), BitVectorSort(5)))
-    process(Assert(Equals(QualifiedIdentifier(Identifier(SSymbol("x")), None),
-      QualifiedIdentifier(Identifier(SSymbol("y")), None))))
-    process(CheckSat())
-    val model = process(GetModel()) match {
-      case GetModelResponseSuccess(model) => model
-      case other => throw new RuntimeException(s"GetModel() expected model response but received $other")
-    }
-    println(model)
-    for (sexpr <- model) {
-      sexpr match {
-        case SList(sexprs) => println(sexprs)
-        case DefineFun(FunDef(name, _, _, body)) => println(s"$name = $body")
-        case _ => throw new RuntimeException("eye em le ded...")
-      }
-    }
-  */
-
 }
