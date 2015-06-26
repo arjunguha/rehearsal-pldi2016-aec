@@ -59,7 +59,7 @@ import rehearsal.{FSSyntax => F}
 
 object SymbolicEvaluator2 {
 
-   def exprEqualsSynth(precond: Seq[State], e1: F.Expr, delta: F.Expr,
+   def exprEqualsSynth(precond: Set[State], e1: F.Expr, delta: F.Expr,
                        e2: F.Expr): Option[Option[State]] = {
     new SymbolicEvaluatorImpl((e1.paths union e2.paths union delta.paths).toList,
       e1.hashes union e2.hashes union delta.hashes, Some("wtf.smt")).exprEqualsSynth(precond, e1,delta, e2)
@@ -106,10 +106,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   process(DeclareSort(SSymbol("hash"), 0))
 
-  //TODO(jcollard): This sort is to general, I think we need an enumerated type
-  // one for each of the contents we have in our manifests and then one more
-  // for "unknown". Currently, this ends up generating the same counter example
-  // repeatedly because we don't have a way to represent this.
   val hashSort = Sort(SimpleIdentifier(SSymbol("hash")))
 
   def hashToTerm(l: String): (String, Term) = {
@@ -294,7 +290,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
                   case QualifiedIdentifier(Identifier(SSymbol("IsDir"), _), _) => Some(state + (path -> FDir))
                   case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("IsFile"), _), _), List(hash)) => {
                     reverseHash.get(hash.asInstanceOf[QualifiedIdentifier].id.symbol.name) match {
-                      case None => Some(state + (path -> FFile("<unknown>")))
+                      case None => Some(state + (path -> FFile(s"unknown - ${hash.toString}")))
                       case Some(data) => Some(state + (path -> FFile(data)))
                     }
                   }
@@ -311,7 +307,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
     }
 
- def exprEqualsSynth(precond: Seq[State], e1: F.Expr, delta: F.Expr,
+ def exprEqualsSynth(precond: Set[State], e1: F.Expr, delta: F.Expr,
                      e2: F.Expr): Option[Option[State]] = {
    try {
      process(Push(1))
@@ -319,7 +315,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
      val initialReverseMap = st.paths.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
      
      assertPathConsistency(st)
-     logger.info(s"preconditions: ${precond.size}")
+     logger.info(s"preconditions: ${precond.toSet.size}")
 
      val (preconditions, reverseMap) = 
        precond.foldRight[(Term, Map[String, Path])]((False(), initialReverseMap))({ case (pre, (term, rm)) => {

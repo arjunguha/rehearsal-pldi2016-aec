@@ -164,11 +164,16 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
       synthesize(inits, dists, targets, all)
     }
 
-    def synth(precond: Seq[State], inputs: Seq[S], v1: List[Res], v2: List[Res]): Option[(Seq[State], List[Res])] = {
+    def synth(precond: Set[State], inputs: Seq[S], v1: List[Res], v2: List[Res]): Option[(Set[State], List[Res])] = {
       guess(inputs, v1, v2) match {
         // We have failed... use the latest counter example as a precondition
         // and start over
-        case None => synth(inputs.head.get +: precond, Seq(inputs.last), v1, v2)
+        case None => {
+          val cex = inputs.head.get
+          if(precond.contains(cex))
+            throw Unexpected("Generated duplicate precondition")
+          synth(precond + inputs.head.get, Seq(inputs.last), v1, v2)
+        }
         case Some(delta) => {
           logger.info(s"Synthesized delta: $delta")
           val e1 = Block(v1.map(_.compile): _*)
@@ -289,7 +294,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
 
     val upd = new UpdateSynth2(bounds)
 
-    val r = upd.synth(Seq(), Seq(initState), v1, v2)
+    val r = upd.synth(Set(), Seq(initState), v1, v2)
     logger.info(s"Synthesis result: $r")
     println(r)
   }
