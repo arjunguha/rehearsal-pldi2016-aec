@@ -98,4 +98,16 @@ private[fsmodel] object Helpers {
     case Cp(src, dst) => ancestors(src) union ancestors(dst)
   }
 
+  def exprHashes(expr: Expr): Set[String] = expr match{
+    case Error => Set()
+    case Skip => Set()
+    case If(a, p, q) => p.hashes union q.hashes
+    case Seq(p, q) => p.hashes union q.hashes
+    case Mkdir(f) => Set()
+    case CreateFile(f, h) => Set(h)
+    case Rm(f) => Set()
+    case Cp(src, dst) => Set()
+  }
+
+
 }

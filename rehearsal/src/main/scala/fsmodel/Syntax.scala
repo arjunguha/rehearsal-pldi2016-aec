@@ -47,8 +47,8 @@ sealed abstract trait Expr extends Product {
   def wp(post: Pred): Pred = WeakestPreconditions.wp(this, post)
 
   val size = Helpers.size(this)
-
   val paths = Helpers.exprPaths(this)
+  val hashes = Helpers.exprHashes(this)
   val (readSet, writeSet, idemSet) = Commutativity.exprFileSets(this)
 
   override lazy val hashCode: Int =
@@ -73,18 +73,4 @@ object Block {
 
 object And {
   def apply(preds: Pred*): Pred = preds.foldRight[Pred](True) { (x, y) => And(x, y) }
-}
-
-object HashHelper {
-
-  def exprHashes(expr: Expr): Set[String] = expr match{
-    case Error => Set()
-    case Skip => Set()
-    case If(a, p, q) => exprHashes(p) union exprHashes(q)
-    case Seq(p, q) => exprHashes(p) union exprHashes(q)
-    case Mkdir(f) => Set()
-    case CreateFile(f, h) => Set(h)
-    case Rm(f) => Set()
-    case Cp(src, dst) => Set()
-  }
 }

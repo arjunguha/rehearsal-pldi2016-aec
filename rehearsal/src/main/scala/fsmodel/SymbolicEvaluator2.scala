@@ -58,19 +58,19 @@ import theories.Core._
 import interpreters.Z3Interpreter
 import CommandsResponses._
 import java.nio.file.{Path, Paths}
-import rehearsal.fsmodel.{Block, Expr, HashHelper}
+import rehearsal.fsmodel.{Block, Expr}
 
 object SymbolicEvaluator2 {
 
    def exprEqualsSynth(precond: Seq[State], e1: fsmodel.Expr, delta: fsmodel.Expr,
                        e2: fsmodel.Expr): Option[Option[State]] = {
     new SymbolicEvaluatorImpl((e1.paths union e2.paths union delta.paths).toList,
-                    HashHelper.exprHashes(e1) union HashHelper.exprHashes(e2) union HashHelper.exprHashes(delta), None).exprEqualsSynth(precond, e1,delta, e2)
+      e1.hashes union e2.hashes union delta.hashes, None).exprEqualsSynth(precond, e1,delta, e2)
   }
 
   def exprEquals(e1: fsmodel.Expr, e2: fsmodel.Expr): Option[Option[State]] = {
     new SymbolicEvaluatorImpl((e1.paths union e2.paths).toList,
-                    HashHelper.exprHashes(e1) union HashHelper.exprHashes(e2), None).exprEquals(e1, e2)
+                    e1.hashes union e2.hashes, None).exprEquals(e1, e2)
   }
   def predEquals(a: fsmodel.Pred, b: fsmodel.Pred): Boolean = {
     new SymbolicEvaluatorImpl((a.readSet union b.readSet).toList, Set(), None).predEquals(a, b)
@@ -79,7 +79,7 @@ object SymbolicEvaluator2 {
                       logFile: Option[String] = None): Boolean = {
     new SymbolicEvaluatorImpl(
       g.nodes.map(e => e.paths).reduce(_ union _).toList,
-      g.nodes.map(e => HashHelper.exprHashes(e)).reduce(_ union _),
+      g.nodes.map(_.hashes).reduce(_ union _),
       logFile
       ).isDeterministic(g)
   }
