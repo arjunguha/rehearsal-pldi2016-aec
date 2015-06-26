@@ -62,7 +62,7 @@ object SymbolicEvaluator2 {
    def exprEqualsSynth(precond: Seq[State], e1: F.Expr, delta: F.Expr,
                        e2: F.Expr): Option[Option[State]] = {
     new SymbolicEvaluatorImpl((e1.paths union e2.paths union delta.paths).toList,
-      e1.hashes union e2.hashes union delta.hashes, None).exprEqualsSynth(precond, e1,delta, e2)
+      e1.hashes union e2.hashes union delta.hashes, Some("wtf.smt")).exprEqualsSynth(precond, e1,delta, e2)
   }
 
   def exprEquals(e1: F.Expr, e2: F.Expr): Option[Option[State]] = {
@@ -135,9 +135,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   val statSort = Sort(SimpleIdentifier(SSymbol("stat")))
 
-  val arbitraryContents = QualifiedIdentifier(Identifier(SSymbol("arbitrary-contents")))
-  process(DeclareConst(arbitraryContents.id.symbol, hashSort))
-
   case class ST(isErr: Term, paths: Map[Path, Term])
 
   // Ensures that all paths in st form a proper directory tree. If we assert this for the input state
@@ -163,7 +160,12 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         state.get(p) match {
           case None => FunctionApplication("is-DoesNotExist", Seq(qid))
           case Some(FDir) => FunctionApplication("is-IsDir", Seq(qid))
-          case Some(FFile(hash)) => Equals(qid, FunctionApplication("IsFile", Seq(hashToZ3.getOrElse(hash, arbitraryContents))))
+          case Some(FFile(hash)) => {
+            hashToZ3.get(hash) match {
+              case Some(h) => Equals(qid, FunctionApplication("IsFile", Seq(h)))
+              case None => FunctionApplication("is-IsFile", Seq(qid))
+            }
+          }
         }))
       (p, QualifiedIdentifier(Identifier(z)))
     })
@@ -318,16 +320,21 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
      
      assertPathConsistency(st)
      logger.info(s"preconditions: ${precond.size}")
+
      val (preconditions, reverseMap) = 
-       precond.foldRight[(Term, Map[String, Path])]((True(), initialReverseMap))({ case (pre, (term, rm)) => {
+       precond.foldRight[(Term, Map[String, Path])]((False(), initialReverseMap))({ case (pre, (term, rm)) => {
          val stPre = buildST(pre)
-         val termPrime = And(term, stEquals(st, stPre))
+         val termPrime = Or(term, Not(stEquals(st, stPre)))
          val reverseMapPrime = stPre.paths.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
          (termPrime,  rm ++ reverseMapPrime)
        }})
-     if(!precond.isEmpty){ 
-       process(Assert(Not(preconditions)))
+
+     if(!precond.isEmpty) {
+       println(preconditions)
+       println("**************************")
+       process(Assert(preconditions))
      }
+
      val stInter = evalExpr(st, e1)
 
      val st1 = evalExpr(stInter, delta)
@@ -339,7 +346,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
        case CheckSatStatus(SatStatus) => {
          val model: List[SExpr] = process(GetModel()).asInstanceOf[GetModelResponseSuccess].model
          val reverseHash = hashToZ3.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
-         logger.info(model.toString)
+         logger.debug(model.toString)
          Some(model.foldLeft(Some(Map()): Option[State])(handleSexpr(reverseMap, reverseHash)(_,_)))
        }
        case CheckSatStatus(UnsatStatus) => None
