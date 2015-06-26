@@ -218,11 +218,19 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
 
   class UpdateSynth2(val bounds: DomainBounds) extends SynthesizeVerify with GreedySynthesizer
 
+  def findAllSubPaths(p: Path): Set[Path] =
+    p.toString.split('/').drop(1).foldLeft[List[String]](List())( {
+      case (paths, next) => paths match {
+        case List() => List(s"/$next")
+        case parent :: _ => s"$parent/$next" :: paths
+      }
+    }).map(Paths.get(_)).toSet
+
   def allPaths(r: Res): Set[Path] = r match {
-    case File(p, _, _) => Set(p)
-    case EnsureFile(p, _) => Set(p)
-    case AbsentPath(p, _) => Set(p)
-    case Directory(p) => Set(p)
+    case File(p, _, _) => findAllSubPaths(p)
+    case EnsureFile(p, _) => findAllSubPaths(p)
+    case AbsentPath(p, _) => findAllSubPaths(p)
+    case Directory(p) => findAllSubPaths(p)
     case Package(_, _) => Set()
     case Group(_, _) => Set()
     case User(_, _, _) => Set()
@@ -294,7 +302,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
       unions(all.map(allGroups)).toList)
 
     val upd = new UpdateSynth2(bounds)
-
+    
     val (precond, r) = upd.synth(Set(), Seq(initState), v1, v2)
     logger.info(s"Synthesis Preconditions: $precond")
     logger.info(s"Synthesis result: $r")
