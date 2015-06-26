@@ -6,14 +6,15 @@ case class SMTError(resp: smtlib.parser.CommandsResponses.FailureResponse)
 object SMT {
 
   import smtlib.parser.Terms._
+  import smtlib.theories.Core._
 
   private val names = collection.mutable.Map[String,Int]()
 
   def freshName(base: String = "x"): SSymbol = {
     names.get(base) match {
       case None => {
-        names += (base -> 0)
-        SSymbol(base)
+        names += (base -> 1)
+        SSymbol(base + "0")
       }
       case Some(n) => {
         names += (base -> (n + 1))
@@ -25,6 +26,17 @@ object SMT {
   object Implicits {
 
     import scala.language.implicitConversions
+
+    implicit class RichTerm(term: Term) {
+
+      def &&(other: Term) = other match {
+        case True() => term
+        case False() => other
+        case And(e1, e2) => And(term, e1, e2)
+        case _ => And(term, other)
+      }
+
+    }
 
     implicit def stringToQualID(str: String): QualifiedIdentifier = {
       QualifiedIdentifier(Identifier(SSymbol(str)))
