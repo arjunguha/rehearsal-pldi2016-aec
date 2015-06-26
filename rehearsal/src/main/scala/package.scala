@@ -5,11 +5,14 @@ package object rehearsal {
   import scalax.collection.GraphPredef._
   import scalax.collection.Graph
   import scalax.collection.GraphEdge.DiEdge
-  import java.nio.file.{Paths, Path}
+  import java.nio.file.{Paths, Path, Files}
   import scala.annotation.tailrec
   import FSSyntax._
   import scalax.collection.edge.Implicits._
   import rehearsal.Implicits._
+  import scala.util.{Try, Success, Failure}
+  import puppet.syntax.{TopLevel, parse}
+
 
   def toFileScriptGraph(resourceGraph: ResourceGraph): FileScriptGraph = {
     nodeMap((r: Resource) => ResourceToExpr(r), resourceGraph)
@@ -60,5 +63,35 @@ package object rehearsal {
 
     pathSet.foldLeft(Set.empty[Path]) { (pathSet, path) => loop(path, pathSet) }
   }
+
+  def dirListing(p: Path): scala.Seq[Path] = {
+    import scala.collection.JavaConversions._
+    val stream = Files.newDirectoryStream(p)
+    val lst = stream.toList.toSeq
+    stream.close
+    lst
+  }
+
+  def recursiveDirListing(p: Path): scala.Seq[Path] = {
+    dirListing(p).flatMap { child =>
+      if (Files.isDirectory(child)) { recursiveDirListing(child) }
+      else { scala.Seq(child) }
+    }
+  }
+
+  def findPuppetFiles(repo: Path): Try[TopLevel] = {
+    println(recursiveDirListing(repo).toList)
+    val ppFiles = recursiveDirListing(repo).filter(_.getFileName.toString.endsWith(".pp")).toList
+    if (ppFiles.length == 0) {
+      Failure(new RuntimeException("no Puppet files"))
+    }
+    else {
+      Try(ppFiles.map(p => parse(new String(Files.readAllBytes(p))))) match {
+        case Success(topLevels) => Success(TopLevel(topLevels.map(_.items).flatten))
+        case Failure(exn) => Failure(exn)
+      }
+    }
+  }
+
 
 }
