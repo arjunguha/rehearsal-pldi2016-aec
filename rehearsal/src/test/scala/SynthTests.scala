@@ -36,9 +36,10 @@ class SynthTests extends org.scalatest.FunSuite {
         unions(all.map(allContents)).toList,
         unions(all.map(allPackages)).toList,
         unions(all.map(allUsers)).toList,
-        unions(all.map(allGroups)).toList)
+        unions(all.map(allGroups)).toList) 
 
       val update = new UpdateSynth2(bounds)
+      
 
       val (_, result) = update.synth(Set(), Seq(Some(initState)), e1, e2)
 
@@ -76,16 +77,8 @@ class SynthTests extends org.scalatest.FunSuite {
 
   testCase("Add file in sub directory",
     List(),
-    //TODO(jcollard): If we specifically say
-    // Directory(path("/home")) as one of the resources this
-    // works fine. Should we parse through all of the sub directories
-    // and ensure that they are paths?
     List(EnsureFile("/home/jcollard", "darn")))
-
-  testCase("Specify root directory",
-    //TODO(jcollard): Is this a valid manifest?
-    List(Directory("/")),
-    List(Directory("/")))
+ 
 
   testCase("Make several changes",
 
@@ -104,5 +97,6 @@ class SynthTests extends org.scalatest.FunSuite {
       EnsureFile("/home/arjun/bin/doom", "classic binary")
         
     ))
+
 
 }

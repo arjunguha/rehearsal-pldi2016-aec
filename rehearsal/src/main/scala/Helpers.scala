@@ -83,8 +83,10 @@ private[rehearsal] object Helpers {
       Set(path)
     }
     else {
-      Set(path, path.getParent)
-      // ancestors(path.getParent) + path
+      //TODO(jcollard): The comment on this was reversed when I found it
+      // I am assuming there was some reason for it but I cannot figure it out.
+      //Set(path, path.getParent)
+      ancestors(path.getParent) + path
     }
   }
 
