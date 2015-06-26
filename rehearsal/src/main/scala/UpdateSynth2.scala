@@ -164,18 +164,24 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
       synthesize(inits, dists, targets, all)
     }
 
-    def synth(precond: Seq[State], inputs: Seq[S], v1: List[Res], v2: List[Res]): Option[(Seq[State], List[Res])] = {
+    def synth(precond: Set[State], inputs: Seq[S], v1: List[Res], v2: List[Res]): (Set[State], List[Res]) = {
       guess(inputs, v1, v2) match {
         // We have failed... use the latest counter example as a precondition
         // and start over
-        case None => synth(inputs.head.get +: precond, Seq(inputs.last), v1, v2)
+        case None => {
+          val cex = inputs.head.get
+          logger.info(s"Could not guess next, adding precondition: $cex")
+          if(precond.contains(cex))
+            throw Unexpected("Generated duplicate precondition")
+          synth(precond + inputs.head.get, Seq(inputs.last), v1, v2)
+        }
         case Some(delta) => {
           logger.info(s"Synthesized delta: $delta")
           val e1 = Block(v1.map(_.compile): _*)
           val eDelta = Block((delta).map(_.compile): _*)
           val e2 = Block(v2.map(_.compile): _*) // TODO(arjun): needless work
           SymbolicEvaluator2.exprEqualsSynth(precond, e1, eDelta, e2) match {
-            case None => Some(precond, delta)
+            case None => (precond, delta)
             case Some(cex) => {
               logger.info(s"Counterexample input state: $cex")
               logger.info(s"Running v1 on cex: ${evalErrRes(cex, v1)}")
@@ -289,9 +295,13 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
 
     val upd = new UpdateSynth2(bounds)
 
-    val r = upd.synth(Seq(), Seq(initState), v1, v2)
+    val (precond, r) = upd.synth(Set(), Seq(initState), v1, v2)
+    logger.info(s"Synthesis Preconditions: $precond")
     logger.info(s"Synthesis result: $r")
-    println(r)
+    println("Preconditions:")
+    for(pre <- precond)
+      println(s"  $pre")
+    println(s"Result: $r")
   }
 
   def calculate(manifest1: Path, manifest2: Path): Unit = {
