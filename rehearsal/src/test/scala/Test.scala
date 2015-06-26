@@ -1,20 +1,18 @@
-
-import rehearsal.fsmodel._
-import FSSyntax._
-
-import java.nio.file.Paths
-import scalax.collection.Graph
-import scalax.collection.GraphEdge.DiEdge
-import rehearsal.ppmodel._
-import puppet.syntax.parse
-import puppet.graph._
-import puppet.Facter
-import rehearsal.fsmodel.Implicits._
-import java.nio.file.Path
-import java.nio.file.Paths
 class Test extends org.scalatest.FunSuite {
 
-  import exp.SymbolicEvaluator2.{predEquals, exprEquals, isDeterministic}
+  import rehearsal._
+  import FSSyntax._
+  import java.nio.file.Paths
+  import scalax.collection.Graph
+  import scalax.collection.GraphEdge.DiEdge
+  import puppet.syntax.parse
+  import puppet.graph._
+  import puppet.Facter
+  import rehearsal.Implicits._
+  import java.nio.file.Path
+  import java.nio.file.Paths
+
+  import SymbolicEvaluator2.{predEquals, exprEquals, isDeterministic}
 
   val zeros = "00000"
 

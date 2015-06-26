@@ -1,4 +1,4 @@
-package rehearsal.fsmodel
+package rehearsal
 
 object WeakestPreconditions {
   import java.nio.file.Path

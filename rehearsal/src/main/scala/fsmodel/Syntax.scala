@@ -1,8 +1,8 @@
-package rehearsal.fsmodel
-
-import java.nio.file.Path
+package rehearsal
 
 object FSSyntax {
+
+  import java.nio.file.Path
 
   sealed trait FileState {
     def <(s: FileState): Boolean = (this, s) match {

@@ -1,6 +1,6 @@
-package rehearsal.fsmodel
+package rehearsal
 
-private[fsmodel] object Pretty {
+private[rehearsal] object Pretty {
 
   import FSSyntax._
 

@@ -1,16 +1,15 @@
-package rehearsal.ppmodel
+package rehearsal
 
 /*
  * Give filesystem semantics to resources
  *
  * Expresses resources in terms of file system changes
  */
-private[ppmodel] object ResourceToExpr {
+object ResourceToExpr {
 
-  import rehearsal._
-  import rehearsal.fsmodel.FSSyntax.{Expr, Skip}
-  import rehearsal.fsmodel.Implicits._
-  import ppmodel.{ResourceModel => R}
+  import FSSyntax.{Expr, Skip}
+  import rehearsal.Implicits._
+  import rehearsal.{ResourceModel => R}
 
   import java.nio.file.{Path, Files, Paths}
 

@@ -1,11 +1,11 @@
-import puppet.Modules
-import puppet.graph.Resource
-import rehearsal.ppmodel._
-import puppet.syntax.{TopLevel, parse}
-import scala.util.{Try, Success, Failure}
-import java.nio.file.{Files, Paths, Path}
-
 class GithubSuite extends org.scalatest.FunSuite {
+
+  import puppet.Modules
+  import puppet.graph.Resource
+  import rehearsal._
+  import puppet.syntax.{TopLevel, parse}
+  import scala.util.{Try, Success, Failure}
+  import java.nio.file.{Files, Paths, Path}
 
   val env = puppet.Facter.fromFile("rehearsal/src/test/arjun-vm.facter") getOrElse
     (throw new Exception("Facter environment not found"))

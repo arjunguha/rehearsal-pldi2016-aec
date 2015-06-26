@@ -1,10 +1,8 @@
-import rehearsal.fsmodel._
-import rehearsal.ppmodel._
-import puppet.Facter
 
-import org.scalatest.FunSuite
+class BenchmarkTests extends org.scalatest.FunSuite {
 
-class BenchmarkTests extends FunSuite {
+  import rehearsal._
+  import puppet.Facter
 
   private val facterEnv = Facter.run() getOrElse
     (throw new Exception("Facter environment required"))
@@ -15,7 +13,7 @@ class BenchmarkTests extends FunSuite {
       val resourceGraph = b.toGraph(facterEnv).head._2
       val fileScriptGraph = Slicing.sliceGraph(toFileScriptGraph(resourceGraph))
       info(fileScriptGraph.toString)
-      assert(exp.SymbolicEvaluator2.isDeterministic(fileScriptGraph))
+      assert(SymbolicEvaluator2.isDeterministic(fileScriptGraph))
     }
   }
 }

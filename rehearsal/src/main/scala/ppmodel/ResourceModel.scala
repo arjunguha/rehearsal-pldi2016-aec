@@ -1,4 +1,4 @@
-package rehearsal.ppmodel
+package rehearsal
 
 object ResourceModel {
 
@@ -6,10 +6,8 @@ object ResourceModel {
 
   import java.nio.file.{Path, Paths}
   import scala.collection.immutable.Set
-  import rehearsal._
-  import rehearsal.fsmodel._
   import FSSyntax._
-  import rehearsal.fsmodel.Implicits._
+  import rehearsal.Implicits._
 
   sealed trait Res {
     def compile(): Expr = ResourceModel.compile(this)

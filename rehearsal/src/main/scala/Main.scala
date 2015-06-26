@@ -24,7 +24,7 @@ package repl {
         repl.process(settings)
       }
       case List("update", manifest1, manifest2) => {
-        rehearsal.ppmodel.UpdateSynth.calculate(Paths.get(manifest1), Paths.get(manifest2))
+        UpdateSynth.calculate(Paths.get(manifest1), Paths.get(manifest2))
       }
       case "is-module-deterministic" :: modules => {
         for (name <- modules) {
@@ -43,8 +43,6 @@ package repl {
 
 package object repl {
 
-  import rehearsal.ppmodel._
-  import rehearsal.fsmodel._
   import puppet.Modules
   import puppet.syntax.{TopLevel, parse}
 
@@ -67,7 +65,7 @@ package object repl {
 
   def isDeterministic(g: FileScriptGraph): (Boolean, Long) = {
     val g2 = Slicing.sliceGraph(g)
-    time(exp.SymbolicEvaluator2.isDeterministic(g2))
+    time(SymbolicEvaluator2.isDeterministic(g2))
   }
 
 }

@@ -1,5 +1,4 @@
-package rehearsal.fsmodel
-import rehearsal._
+package rehearsal
 
 object Eval {
 

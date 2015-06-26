@@ -1,7 +1,7 @@
 class WeakestPreconditionTests extends InlineTestSuite {
 
   import puppet.graph._
-  import rehearsal.fsmodel._
+  import rehearsal._
   import FSSyntax._
 
   def genericTestRunner(resourceGraph: ResourceGraph,

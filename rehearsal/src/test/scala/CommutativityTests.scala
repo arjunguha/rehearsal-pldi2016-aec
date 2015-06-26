@@ -1,8 +1,9 @@
-import rehearsal.fsmodel._
-import FSSyntax._
-import Implicits._
 
 class CommutativityTests extends org.scalatest.FunSuite {
+
+  import rehearsal._
+  import FSSyntax._
+  import Implicits._
 
   test("idempotent directory creation") {
     val p = If(TestFileState("/parent", IsDir), Skip, Mkdir("/parent"))

@@ -1,14 +1,11 @@
-package rehearsal.ppmodel
-
+package rehearsal
 
 object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
-  import rehearsal._
 
   import java.nio.file.{Files, Paths, Path}
-  import exp.SymbolicEvaluator2
   import ResourceModel._
-  import fsmodel.FSSyntax.{Expr, Skip, Block}
-  import fsmodel.Eval._
+  import FSSyntax.{Expr, Skip, Block}
+  import Eval._
 
 
   // Calculates the "distance" between two states. The distance is in the range [0.0, 1.0], where 0.0 means
@@ -158,7 +155,6 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     }
 
     def guess(inputs: Seq[S], v1: List[Res], v2: List[Res]): Option[List[Res]] = {
-      import fsmodel._
       val all = allResources.filterNot(_.isEmpty)
       val expr1 = Block(v1.map(_.compile): _*)
       val expr2 = Block(v2.map(_.compile): _*) // TODO(arjun): needless work
@@ -266,7 +262,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     case User(_, _, _) => Set()
   }
 
-  val initState = Some(Map(Paths.get("/") -> rehearsal.fsmodel.Eval.FDir))
+  val initState = Some(Map(Paths.get("/") -> Eval.FDir))
 
   def calculate(manifest1: String, manifest2: String): Unit = {
     val graph1 = puppet.syntax.parse(manifest1).desugar().toGraph(Map()).head._2

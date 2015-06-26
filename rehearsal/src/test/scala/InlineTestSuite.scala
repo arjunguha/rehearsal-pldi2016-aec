@@ -1,10 +1,9 @@
-import rehearsal.fsmodel._
-import rehearsal.ppmodel._
-import puppet.syntax._
-import puppet.graph._
-import puppet.Facter
-
 trait InlineTestSuite extends org.scalatest.FunSuite {
+
+  import rehearsal._
+  import puppet.syntax._
+  import puppet.graph._
+  import puppet.Facter
 
   def genericTestRunner(resourceGraph: ResourceGraph,
                         fileScriptGraph: FileScriptGraph): Unit

@@ -1,4 +1,4 @@
-package rehearsal.ppmodel
+package rehearsal
 
 object GuessClasses {
 

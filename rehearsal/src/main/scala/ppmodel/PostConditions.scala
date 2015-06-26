@@ -1,14 +1,11 @@
-package rehearsal.ppmodel
+package rehearsal
 
-private[ppmodel] object PostCondition {
+private[rehearsal] object PostCondition {
 
-
-  import rehearsal._
   import puppet.graph._
-  import rehearsal.fsmodel._
   import FSSyntax._
   import puppet.graph.Implicits._
-  import rehearsal.fsmodel.Implicits._
+  import rehearsal.Implicits._
   import java.nio.file.Paths
 
   val pkgcache = PackageCache()

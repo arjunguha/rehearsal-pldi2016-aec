@@ -1,4 +1,4 @@
-package rehearsal.fsmodel
+package rehearsal
 
 object Implicits {
 

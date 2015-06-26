@@ -1,16 +1,14 @@
-import scalax.collection.Graph
-import scalax.collection.GraphEdge.DiEdge
-import puppet.Modules
-import puppet.syntax.{TopLevel, parse}
-import scala.util.{Try, Success, Failure}
-import java.nio.file.{Files, Paths}
-import rehearsal.ppmodel._
-import puppet.graph._
-import rehearsal.fsmodel._
-import puppet.Facter
-
-
 class ModuleSuite extends org.scalatest.FunSuite {
+
+  import scalax.collection.Graph
+  import scalax.collection.GraphEdge.DiEdge
+  import puppet.Modules
+  import puppet.syntax.{TopLevel, parse}
+  import scala.util.{Try, Success, Failure}
+  import java.nio.file.{Files, Paths}
+  import rehearsal._
+  import puppet.graph._
+  import puppet.Facter
 
   val modulesPath = "benchmarks/puppetforge-modules/modules"
 

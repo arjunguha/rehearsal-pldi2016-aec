@@ -1,9 +1,8 @@
-package rehearsal.ppmodel
-
 class PackageCacheTestSuite extends org.scalatest.FunSuite with org.scalatest.BeforeAndAfterAll {
 
   import java.nio.file.{Files, Path}
   import scala.util.Try
+  import rehearsal._
 
   var cacheroot: Path = _
   val dir_prefix = "pkgcache_test"

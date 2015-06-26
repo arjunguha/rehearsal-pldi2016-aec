@@ -1,6 +1,6 @@
-package exp
+package rehearsal
 
-import rehearsal.fsmodel.Eval._
+import Eval._
 
 case class SMTError(resp: smtlib.parser.CommandsResponses.FailureResponse)
   extends RuntimeException(resp.toString)
@@ -47,8 +47,6 @@ class SMT(outputFile: Option[String]) extends com.typesafe.scalalogging.LazyLogg
 
 }
 
-import rehearsal._
-import fsmodel.FileScriptGraph
 import smtlib._
 import parser._
 import Commands._
@@ -56,8 +54,8 @@ import Terms._
 import theories.Core._
 import CommandsResponses._
 import java.nio.file.{Path, Paths}
-import fsmodel.FSSyntax.{Block, Expr}
-import fsmodel.{FSSyntax => F}
+import FSSyntax.{Block, Expr}
+import rehearsal.{FSSyntax => F}
 
 object SymbolicEvaluator2 {
 

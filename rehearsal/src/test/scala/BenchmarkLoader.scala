@@ -1,6 +1,6 @@
-import rehearsal.ppmodel._
-
 object BenchmarkLoader {
+
+  import rehearsal._
 
   private val facterEnv = Map()
 

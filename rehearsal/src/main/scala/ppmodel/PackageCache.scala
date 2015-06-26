@@ -1,7 +1,7 @@
-package rehearsal.ppmodel
+package rehearsal
 
 /* Disk based cache to speed up apt-file */
-private[ppmodel] class PackageCache(cacheroot: java.nio.file.Path) {
+class PackageCache(cacheroot: java.nio.file.Path) {
 
   import rehearsal._
   import java.io.File

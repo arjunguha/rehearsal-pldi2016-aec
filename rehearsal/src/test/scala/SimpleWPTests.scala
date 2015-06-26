@@ -1,5 +1,5 @@
 trait WeakestPreconditionsTestSuite extends org.scalatest.fixture.FunSuite {
-  import rehearsal.fsmodel._
+  import rehearsal._
   import FSSyntax._
   import WeakestPreconditions._
 
@@ -29,7 +29,7 @@ trait WeakestPreconditionsTestSuite extends org.scalatest.fixture.FunSuite {
 }
 
 class SimpleWPTest extends WeakestPreconditionsTestSuite {
-  import rehearsal.fsmodel._
+  import rehearsal._
   import FSSyntax._
   import Implicits._
 

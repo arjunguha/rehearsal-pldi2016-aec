@@ -1,6 +1,6 @@
-package rehearsal.fsmodel
+package rehearsal
 
-private[fsmodel] object Commutativity {
+private[rehearsal] object Commutativity {
 
   import java.nio.file.Path
   import FSSyntax._

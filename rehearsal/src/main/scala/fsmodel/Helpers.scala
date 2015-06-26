@@ -1,7 +1,6 @@
-package rehearsal.fsmodel
+package rehearsal
 
-
-private[fsmodel] object Helpers {
+private[rehearsal] object Helpers {
 
   import java.nio.file.Path
   import Implicits._

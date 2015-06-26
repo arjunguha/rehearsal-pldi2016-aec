@@ -1,6 +1,6 @@
 class PredConversionTests extends org.scalatest.FunSuite {
   import bdd._
-  import rehearsal.fsmodel._
+  import rehearsal._
   import Implicits._
   import WeakestPreconditions._
   import FSSyntax._
