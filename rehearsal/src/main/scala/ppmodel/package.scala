@@ -1,17 +1,16 @@
 package rehearsal
 
-import puppet.graph._
-import scala.reflect.runtime.universe.TypeTag
-import scalax.collection.Graph
-import scalax.collection.GraphEdge.DiEdge
-import scalax.collection.GraphEdge._
-import scalax.collection.GraphPredef._
-import scalax.collection.edge.Implicits._
-
-import rehearsal.fsmodel._
-import rehearsal.fsmodel.Implicits._
-
 package object ppmodel {
+  import puppet.graph._
+  import scala.reflect.runtime.universe.TypeTag
+  import scalax.collection.Graph
+  import scalax.collection.GraphEdge.DiEdge
+  import scalax.collection.GraphEdge._
+  import scalax.collection.GraphPredef._
+  import scalax.collection.edge.Implicits._
+
+  import rehearsal.fsmodel._
+  import rehearsal.fsmodel.Implicits._
 
   def toFileScriptGraph(resourceGraph: ResourceGraph): FileScriptGraph = {
     nodeMap((r: Resource) => ResourceToExpr(r), resourceGraph)

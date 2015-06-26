@@ -1,9 +1,9 @@
 package rehearsal.ppmodel
 
-import puppet.syntax.{TopLevel, parse}
-import puppet.core._
-
 object GuessClasses {
+
+  import puppet.syntax.{TopLevel, parse}
+  import puppet.core._
 
   def nullaryClasses(stmt: StatementC): Seq[String] = stmt match {
     case BlockStmtC(stmts) => stmts.toSeq.flatMap(nullaryClasses _)

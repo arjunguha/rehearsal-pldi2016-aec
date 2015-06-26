@@ -1,16 +1,15 @@
-
-import rehearsal.fsmodel._
-import java.nio.file.Paths
-import scalax.collection.Graph
-import scalax.collection.GraphEdge.DiEdge
-import rehearsal.ppmodel._
-import puppet.syntax.parse
-import puppet.graph._
-import puppet.Facter
-import rehearsal.fsmodel.Implicits._
-import java.nio.file.Path
-import java.nio.file.Paths
 class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
+
+  import rehearsal.fsmodel._
+  import FSSyntax._
+  import scalax.collection.Graph
+  import scalax.collection.GraphEdge.DiEdge
+  import rehearsal.ppmodel._
+  import puppet.syntax.parse
+  import puppet.Facter
+  import rehearsal.fsmodel.Implicits._
+  import java.nio.file.Path
+  import java.nio.file.Paths
 
   import exp.SymbolicEvaluator2.{predEquals, exprEquals, isDeterministic}
 

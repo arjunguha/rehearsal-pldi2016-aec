@@ -4,10 +4,11 @@ object ResourceModel {
 
   import ResourceToExpr.pkgcache
 
-  import java.nio.file.{FileSystems, Path, Paths}
+  import java.nio.file.{Path, Paths}
   import scala.collection.immutable.Set
   import rehearsal._
   import rehearsal.fsmodel._
+  import FSSyntax._
   import rehearsal.fsmodel.Implicits._
 
   sealed trait Res {

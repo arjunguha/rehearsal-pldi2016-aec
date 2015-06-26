@@ -1,11 +1,11 @@
-import bdd._
-import rehearsal.fsmodel._
-import Implicits._
-import WeakestPreconditions._
-
-import java.nio.file.FileSystems
-
 class PredConversionTests extends org.scalatest.FunSuite {
+  import bdd._
+  import rehearsal.fsmodel._
+  import Implicits._
+  import WeakestPreconditions._
+  import FSSyntax._
+  import java.nio.file.FileSystems
+
   test("negation normal form (nnf)") {
     val in = TestFileState(FileSystems.getDefault().getPath("/"), IsDir)
     assert((!(in && in)).nnf() == (!in || !in))

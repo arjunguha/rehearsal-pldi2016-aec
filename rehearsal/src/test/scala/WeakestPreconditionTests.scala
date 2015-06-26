@@ -1,9 +1,8 @@
-import rehearsal.ppmodel._
-import puppet.syntax._
-import puppet.graph._
-import rehearsal.fsmodel._
-
 class WeakestPreconditionTests extends InlineTestSuite {
+
+  import puppet.graph._
+  import rehearsal.fsmodel._
+  import FSSyntax._
 
   def genericTestRunner(resourceGraph: ResourceGraph,
                         fileScriptGraph: FileScriptGraph): Unit = {

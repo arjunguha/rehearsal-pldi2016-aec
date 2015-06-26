@@ -1,8 +1,9 @@
 package rehearsal.fsmodel
 
-import java.nio.file.Path
-
 private[fsmodel] object Commutativity {
+
+  import java.nio.file.Path
+  import FSSyntax._
 
   type ReadSet = Set[Path]
   type WriteSet = Set[Path]

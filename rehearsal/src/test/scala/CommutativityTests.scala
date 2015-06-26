@@ -1,4 +1,5 @@
 import rehearsal.fsmodel._
+import FSSyntax._
 import Implicits._
 
 class CommutativityTests extends org.scalatest.FunSuite {

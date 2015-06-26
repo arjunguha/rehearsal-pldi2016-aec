@@ -1,9 +1,11 @@
 package rehearsal.fsmodel
 
-import java.nio.file.Path
-import Implicits._
 
 private[fsmodel] object Helpers {
+
+  import java.nio.file.Path
+  import Implicits._
+  import FSSyntax._
 
   def predSize(pred: Pred): Int = pred match {
     case Not(a) => 1 + a.size

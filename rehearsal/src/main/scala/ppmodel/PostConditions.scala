@@ -2,9 +2,11 @@ package rehearsal.ppmodel
 
 private[ppmodel] object PostCondition {
 
+
   import rehearsal._
   import puppet.graph._
   import rehearsal.fsmodel._
+  import FSSyntax._
   import puppet.graph.Implicits._
   import rehearsal.fsmodel.Implicits._
   import java.nio.file.Paths

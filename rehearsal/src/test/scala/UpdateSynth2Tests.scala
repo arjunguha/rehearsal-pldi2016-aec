@@ -1,4 +1,3 @@
-
 class UpdateSynth2Tests extends org.scalatest.FunSuite {
 
   import java.nio.file.Paths

@@ -2,12 +2,9 @@ package rehearsal.fsmodel
 
 object Implicits {
 
+  import FSSyntax._
   import scala.language.implicitConversions
   import java.nio.file.{Path, Paths, Files}
-  import scalax.collection.Graph
-  import scalax.collection.edge.LDiEdge
-  import scalax.collection.GraphEdge.DiEdge
-  import java.security.MessageDigest
 
   implicit def stringToPath(str: String): Path = Paths.get(str)
 

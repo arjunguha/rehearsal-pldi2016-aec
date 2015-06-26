@@ -1,10 +1,11 @@
 package rehearsal.fsmodel
 
-import scala.annotation.tailrec
-import java.nio.file.Path
-import Implicits._
-
 object Slicing {
+
+  import scala.annotation.tailrec
+  import java.nio.file.Path
+  import Implicits._
+  import FSSyntax._
 
   /*
 

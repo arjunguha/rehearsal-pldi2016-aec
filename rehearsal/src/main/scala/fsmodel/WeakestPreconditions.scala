@@ -1,11 +1,11 @@
 package rehearsal.fsmodel
 
-import java.nio.file.Path
-import Implicits._
-
-import bdd._
-
 object WeakestPreconditions {
+  import java.nio.file.Path
+  import Implicits._
+  import bdd._
+  import FSSyntax._
+
   def bddWithFileState(bdd: Bdd[TestFileState])(pred: bdd.Node, f: Path, s: FileState): bdd.Node = {
     import bdd._
     s match {

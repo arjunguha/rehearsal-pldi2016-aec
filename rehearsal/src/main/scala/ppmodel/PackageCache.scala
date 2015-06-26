@@ -1,13 +1,13 @@
 package rehearsal.ppmodel
 
-import rehearsal._
-import java.io.File
-import java.nio.file.{Path, Paths, Files}
-import java.nio.charset.StandardCharsets
-import scala.util.Try
-
 /* Disk based cache to speed up apt-file */
-private[ppmodel] class PackageCache(cacheroot: Path) {
+private[ppmodel] class PackageCache(cacheroot: java.nio.file.Path) {
+
+  import rehearsal._
+  import java.io.File
+  import java.nio.file.{Path, Paths, Files}
+  import java.nio.charset.StandardCharsets
+  import scala.util.Try
 
   val root = cacheroot.normalize().toAbsolutePath()
   require(Files.exists(root) && Files.isDirectory(root),
@@ -59,6 +59,7 @@ private[ppmodel] class PackageCache(cacheroot: Path) {
 
 object PackageCache {
 
+  import java.nio.file._
 
   def apply(): PackageCache = {
     val benchmarksDir = Paths.get("benchmarks")

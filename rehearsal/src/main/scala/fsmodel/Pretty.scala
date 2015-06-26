@@ -2,6 +2,8 @@ package rehearsal.fsmodel
 
 private[fsmodel] object Pretty {
 
+  import FSSyntax._
+
   sealed abstract trait PredCxt
   case object AndCxt extends PredCxt
   case object OrCxt extends PredCxt

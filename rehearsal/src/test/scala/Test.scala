@@ -1,5 +1,7 @@
 
 import rehearsal.fsmodel._
+import FSSyntax._
+
 import java.nio.file.Paths
 import scalax.collection.Graph
 import scalax.collection.GraphEdge.DiEdge

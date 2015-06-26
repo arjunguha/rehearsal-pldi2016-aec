@@ -1,11 +1,13 @@
 package rehearsal
 
-import scalax.collection.Graph
-import scalax.collection.GraphEdge.DiEdge
-import java.nio.file.{Paths, Path}
-import scala.annotation.tailrec
-
 package object fsmodel {
+
+  import scalax.collection.Graph
+  import scalax.collection.GraphEdge.DiEdge
+  import java.nio.file.{Paths, Path}
+  import scala.annotation.tailrec
+  import FSSyntax._
+
 
   type FileScriptGraph = Graph[Expr, DiEdge]
 

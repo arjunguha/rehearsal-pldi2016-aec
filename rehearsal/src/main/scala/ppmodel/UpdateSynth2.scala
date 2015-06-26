@@ -1,13 +1,13 @@
 package rehearsal.ppmodel
 
-import rehearsal._
 
 object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
+  import rehearsal._
 
   import java.nio.file.{Files, Paths, Path}
   import exp.SymbolicEvaluator2
   import ResourceModel._
-  import fsmodel.{Expr, Skip, Block}
+  import fsmodel.FSSyntax.{Expr, Skip, Block}
   import fsmodel.Eval._
 
 

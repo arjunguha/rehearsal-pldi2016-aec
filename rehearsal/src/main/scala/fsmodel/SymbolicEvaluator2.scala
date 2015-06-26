@@ -54,25 +54,24 @@ import parser._
 import Commands._
 import Terms._
 import theories.Core._
-//import theories.FixedSizeBitVectors._
-import interpreters.Z3Interpreter
 import CommandsResponses._
 import java.nio.file.{Path, Paths}
-import rehearsal.fsmodel.{Block, Expr}
+import fsmodel.FSSyntax.{Block, Expr}
+import fsmodel.{FSSyntax => F}
 
 object SymbolicEvaluator2 {
 
-   def exprEqualsSynth(precond: Seq[State], e1: fsmodel.Expr, delta: fsmodel.Expr,
-                       e2: fsmodel.Expr): Option[Option[State]] = {
+   def exprEqualsSynth(precond: Seq[State], e1: F.Expr, delta: F.Expr,
+                       e2: F.Expr): Option[Option[State]] = {
     new SymbolicEvaluatorImpl((e1.paths union e2.paths union delta.paths).toList,
       e1.hashes union e2.hashes union delta.hashes, None).exprEqualsSynth(precond, e1,delta, e2)
   }
 
-  def exprEquals(e1: fsmodel.Expr, e2: fsmodel.Expr): Option[Option[State]] = {
+  def exprEquals(e1: F.Expr, e2: F.Expr): Option[Option[State]] = {
     new SymbolicEvaluatorImpl((e1.paths union e2.paths).toList,
                     e1.hashes union e2.hashes, None).exprEquals(e1, e2)
   }
-  def predEquals(a: fsmodel.Pred, b: fsmodel.Pred): Boolean = {
+  def predEquals(a: F.Pred, b: F.Pred): Boolean = {
     new SymbolicEvaluatorImpl((a.readSet union b.readSet).toList, Set(), None).predEquals(a, b)
   }
   def isDeterministic(g: FileScriptGraph,
@@ -190,15 +189,15 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
            And(allPaths.map(p => Equals(st1.paths(p), st2.paths(p))): _*)))
   }
 
-  def evalPred(st: ST, pred: fsmodel.Pred): Term = pred match {
-    case fsmodel.True => True()
-    case fsmodel.False => False()
-    case fsmodel.Not(a) => Not(evalPred(st, a))
-    case fsmodel.And(a, b) => And(evalPred(st, a), evalPred(st, b))
-    case fsmodel.Or(a, b) => Or(evalPred(st, a), evalPred(st, b))
-    case fsmodel.TestFileState(p, fsmodel.IsDir) => Equals(st.paths(p), "IsDir")
-    case fsmodel.TestFileState(p, fsmodel.DoesNotExist) => Equals(st.paths(p), "DoesNotExist")
-    case fsmodel.TestFileState(p, fsmodel.IsFile) =>
+  def evalPred(st: ST, pred: F.Pred): Term = pred match {
+    case F.True => True()
+    case F.False => False()
+    case F.Not(a) => Not(evalPred(st, a))
+    case F.And(a, b) => And(evalPred(st, a), evalPred(st, b))
+    case F.Or(a, b) => Or(evalPred(st, a), evalPred(st, b))
+    case F.TestFileState(p, F.IsDir) => Equals(st.paths(p), "IsDir")
+    case F.TestFileState(p, F.DoesNotExist) => Equals(st.paths(p), "DoesNotExist")
+    case F.TestFileState(p, F.IsFile) =>
       FunctionApplication("is-IsFile", Seq(st.paths(p)))
     //    case fsmodel.ITE(a, b, c) => ite(evalPred(st, a),
     //      evalPred(st, b),
@@ -206,7 +205,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     case _ => throw NotImplemented(pred.toString)
   }
 
-  def predEquals(a: fsmodel.Pred, b: fsmodel.Pred): Boolean = {
+  def predEquals(a: F.Pred, b: F.Pred): Boolean = {
     try {
       process(Push(1))
       val st = freshST()
@@ -235,11 +234,11 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  def evalExpr(st: ST, expr: fsmodel.Expr): ST = expr match {
-    case fsmodel.Skip => st
-    case fsmodel.Error => ST(True(), st.paths)
-    case fsmodel.Seq(p, q) => evalExpr(evalExpr(st, p), q)
-    case fsmodel.If(a, e1, e2) => {
+  def evalExpr(st: ST, expr: F.Expr): ST = expr match {
+    case F.Skip => st
+    case F.Error => ST(True(), st.paths)
+    case F.Seq(p, q) => evalExpr(evalExpr(st, p), q)
+    case F.If(a, e1, e2) => {
       val st1 = evalExpr(st, e1)
       val st2 = evalExpr(st, e2)
       val b = freshName("b")
@@ -248,20 +247,20 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       ST(ite(b, st1.isErr, st2.isErr),
         allPaths.map(p => (p, ite(b, st1.paths(p), st2.paths(p)))).toMap)
     }
-    case fsmodel.CreateFile(p, h) => {
+    case F.CreateFile(p, h) => {
       val pre = And(Equals(st.paths(p), "DoesNotExist"),
         Equals(st.paths(p.getParent), "IsDir"))
 
       ST(Or(st.isErr, Not(pre)),
         st.paths + (p -> FunctionApplication("IsFile", Seq(hashToZ3(h)))))
     }
-    case fsmodel.Mkdir(p) => {
+    case F.Mkdir(p) => {
       val pre = And(Equals(st.paths(p), "DoesNotExist"),
         Equals(st.paths(p.getParent), "IsDir"))
       ST(Or(st.isErr, Not(pre)),
         st.paths + (p -> "IsDir"))
     }
-    case fsmodel.Rm(p) => {
+    case F.Rm(p) => {
       val descendants = st.paths.filter(p1 => p1._1 != p && p1._1.startsWith(p))
         .map(_._2).toSeq
 
@@ -272,7 +271,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       ST(Or(st.isErr, Not(pre)),
         st.paths + (p -> "DoesNotExist"))
     }
-    case fsmodel.Cp(src, dst) => {
+    case F.Cp(src, dst) => {
       val pre = And(FunctionApplication("is-IsFile", Seq(st.paths(src))),
         Equals(st.paths(dst.getParent), "IsDir"),
         Equals(st.paths(dst), "DoesNotExist"))
@@ -312,8 +311,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
     }
 
- def exprEqualsSynth(precond: Seq[State], e1: fsmodel.Expr, delta: fsmodel.Expr,
-                     e2: fsmodel.Expr): Option[Option[State]] = {
+ def exprEqualsSynth(precond: Seq[State], e1: F.Expr, delta: F.Expr,
+                     e2: F.Expr): Option[Option[State]] = {
    try {
      process(Push(1))
      val st = freshST()
@@ -356,7 +355,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
  }
 
 
- def exprEquals(e1: fsmodel.Expr, e2: fsmodel.Expr): Option[Option[State]] = {
+ def exprEquals(e1: F.Expr, e2: F.Expr): Option[Option[State]] = {
    try {
      process(Push(1))
      val st = freshST()
