@@ -147,26 +147,20 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
     }
   }
-  def buildST(state: State): ST = {
-    val paths = allPaths.map(p => {
-      val z = freshName("path")
-      val qid = QualifiedIdentifier(Identifier(z))
-      process(DeclareConst(z, statSort))
-      process(Assert(
-        state.get(p) match {
-          case None => FunctionApplication("is-DoesNotExist", Seq(qid))
-          case Some(FDir) => FunctionApplication("is-IsDir", Seq(qid))
-          case Some(FFile(hash)) => {
-            hashToZ3.get(hash) match {
-              case Some(h) => Equals(qid, FunctionApplication("IsFile", Seq(h)))
-              case None => FunctionApplication("is-IsFile", Seq(qid))
-            }
+
+  def buildPrecondition(st: ST, state: State): Term =
+    st.paths.foldRight[Term](True())( { case ((p, t), pre) =>
+      state.get(p) match {
+        case None => pre // DoesNotExist
+        case Some(FDir) => And(pre, FunctionApplication("is-IsDir", Seq(t)))
+        case Some(FFile(hash)) => {
+          hashToZ3.get(hash) match {
+            case None => And(pre, FunctionApplication("is-IsFile", Seq(t)))
+            case Some(h) => And(Equals(t, FunctionApplication("IsFile", Seq(h))))
           }
-        }))
-      (p, QualifiedIdentifier(Identifier(z)))
+        }
+      }
     })
-    ST(False(), paths.toMap)
-  }
 
   def freshST(): ST = {
     val paths = allPaths.map(p => {
@@ -324,17 +318,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
      assertPathConsistency(st)
      logger.info(s"preconditions: ${precond.toSet.size}")
 
-     val preconditions = 
-       precond.foldRight[Term](False())({ case (pre, term) => {
-         val stPre = buildST(pre)
-         Or(term, Not(stEquals(st, stPre)))
-       }})
-         
-     if(!precond.isEmpty) {
-       println(preconditions)
-       println("**************************")
-       process(Assert(preconditions))
-     }
+     precond.map(pre => process(Assert(Not(buildPrecondition(st, pre)))))
 
      val stInter = evalExpr(st, e1)
 
