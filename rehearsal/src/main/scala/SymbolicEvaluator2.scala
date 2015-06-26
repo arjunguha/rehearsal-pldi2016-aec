@@ -5,7 +5,7 @@ import smtlib._
 import parser._
 import Commands._
 import Terms._
-import theories.Core._
+import theories.Core.{And => _, Or => _, _}
 import CommandsResponses._
 import java.nio.file.{Path, Paths}
 import FSSyntax.{Block, Expr}
@@ -49,13 +49,12 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   val hashSort = Sort(SimpleIdentifier(SSymbol("hash")))
 
-  def hashToTerm(l: String): (String, Term) = {
+  val hashToZ3: Map[String, Term] = hashes.toList.map(h => {
     val x = freshName("hash")
     eval(DeclareConst(x, hashSort))
-    (l, QualifiedIdentifier(Identifier(x)))
-  }
+    (h, QualifiedIdentifier(Identifier(x)))
+  }).toMap
 
-  val hashToZ3: Map[String, Term] = hashes.toList.map(hashToTerm).toMap
   if(hashToZ3.size != 0)  {
     val hashes = hashToZ3.values.toSeq
     eval(Assert(FunctionApplication("distinct", hashes)))
@@ -84,22 +83,22 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         eval(Assert(FunctionApplication("is-IsDir", Seq(st.paths(p)))))
       }
       else {
-        eval(Assert(Implies(Or(FunctionApplication("is-IsFile", Seq(st.paths(p))),
-                                  FunctionApplication("is-IsDir", Seq(st.paths(p)))),
+        eval(Assert(Implies(FunctionApplication("is-IsFile", Seq(st.paths(p))) ||
+                            FunctionApplication("is-IsDir", Seq(st.paths(p))),
                                FunctionApplication("is-IsDir", Seq(st.paths(p.getParent))))))
       }
     }
   }
 
   def buildPrecondition(st: ST, state: State): Term =
-    st.paths.foldRight[Term](True())( { case ((p, t), pre) =>
+    st.paths.foldRight[Term](True())( { case ((p, t), pre: Term) =>
       state.get(p) match {
         case None => pre // DoesNotExist
-        case Some(FDir) => And(pre, FunctionApplication("is-IsDir", Seq(t)))
+        case Some(FDir) => pre && FunctionApplication("is-IsDir", Seq(t))
         case Some(FFile(hash)) => {
           hashToZ3.get(hash) match {
-            case None => And(pre, FunctionApplication("is-IsFile", Seq(t)))
-            case Some(h) => And(pre, Equals(t, FunctionApplication("IsFile", Seq(h))))
+            case None => pre && FunctionApplication("is-IsFile", Seq(t))
+            case Some(h) => pre && Equals(t, FunctionApplication("IsFile", Seq(h)))
           }
         }
       }
@@ -117,17 +116,16 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   }
 
   def stEquals(st1: ST, st2: ST): Term = {
-    Or(And(st1.isErr, st2.isErr),
-       And(Not(st1.isErr), Not(st2.isErr),
-           And(allPaths.map(p => Equals(st1.paths(p), st2.paths(p))): _*)))
+    (st1.isErr && st2.isErr) ||
+      (Not(st1.isErr) && Not(st2.isErr) && And(allPaths.map(p => Equals(st1.paths(p), st2.paths(p))): _*))
   }
 
   def evalPred(st: ST, pred: F.Pred): Term = pred match {
     case F.True => True()
     case F.False => False()
     case F.Not(a) => Not(evalPred(st, a))
-    case F.And(a, b) => And(evalPred(st, a), evalPred(st, b))
-    case F.Or(a, b) => Or(evalPred(st, a), evalPred(st, b))
+    case F.And(a, b) => evalPred(st, a) && evalPred(st, b)
+    case F.Or(a, b) => evalPred(st, a) || evalPred(st, b)
     case F.TestFileState(p, F.IsDir) => Equals(st.paths(p), "IsDir")
     case F.TestFileState(p, F.DoesNotExist) => Equals(st.paths(p), "DoesNotExist")
     case F.TestFileState(p, F.IsFile) =>
@@ -181,34 +179,31 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         allPaths.map(p => (p, ite(b, st1.paths(p), st2.paths(p)))).toMap)
     }
     case F.CreateFile(p, h) => {
-      val pre = And(Equals(st.paths(p), "DoesNotExist"),
-        Equals(st.paths(p.getParent), "IsDir"))
-
-      ST(Or(st.isErr, Not(pre)),
+      val pre = Equals(st.paths(p), "DoesNotExist") && Equals(st.paths(p.getParent), "IsDir")
+      ST(st.isErr || Not(pre),
         st.paths + (p -> FunctionApplication("IsFile", Seq(hashToZ3(h)))))
     }
     case F.Mkdir(p) => {
-      val pre = And(Equals(st.paths(p), "DoesNotExist"),
-        Equals(st.paths(p.getParent), "IsDir"))
-      ST(Or(st.isErr, Not(pre)),
+      val pre = Equals(st.paths(p), "DoesNotExist") && Equals(st.paths(p.getParent), "IsDir")
+      ST(st.isErr || Not(pre),
         st.paths + (p -> "IsDir"))
     }
     case F.Rm(p) => {
       val descendants = st.paths.filter(p1 => p1._1 != p && p1._1.startsWith(p))
         .map(_._2).toSeq
 
-      val pre = Or(FunctionApplication("is-IsFile", Seq(st.paths(p))),
-                    And(FunctionApplication("is-IsDir", Seq(st.paths(p))),
-                        And(descendants.map(p_ => Equals(p_, "DoesNotExist")) :_*)))
+      val pre = FunctionApplication("is-IsFile", Seq(st.paths(p))) ||
+        (FunctionApplication("is-IsDir", Seq(st.paths(p))) &&
+          And(descendants.map(p_ => Equals(p_, "DoesNotExist")) :_*))
 
-      ST(Or(st.isErr, Not(pre)),
+      ST(st.isErr || Not(pre),
         st.paths + (p -> "DoesNotExist"))
     }
     case F.Cp(src, dst) => {
-      val pre = And(FunctionApplication("is-IsFile", Seq(st.paths(src))),
-        Equals(st.paths(dst.getParent), "IsDir"),
-        Equals(st.paths(dst), "DoesNotExist"))
-      ST(Or(st.isErr, Not(pre)),
+      val pre = FunctionApplication("is-IsFile", Seq(st.paths(src))) &&
+        Equals(st.paths(dst.getParent), "IsDir") &&
+        Equals(st.paths(dst), "DoesNotExist")
+      ST(st.isErr || Not(pre),
         st.paths + (dst -> FunctionApplication("IsFile",
                               Seq(FunctionApplication("hash", Seq(st.paths(src)))))))
     }
