@@ -3,7 +3,43 @@ package rehearsal
 case class SMTError(resp: smtlib.parser.CommandsResponses.FailureResponse)
   extends RuntimeException(resp.toString)
 
-class SMT(outputFile: Option[String]) extends com.typesafe.scalalogging.LazyLogging {
+object SMT {
+
+  import smtlib.parser.Terms._
+
+  private val names = collection.mutable.Map[String,Int]()
+
+  def freshName(base: String = "x"): SSymbol = {
+    names.get(base) match {
+      case None => {
+        names += (base -> 0)
+        SSymbol(base)
+      }
+      case Some(n) => {
+        names += (base -> (n + 1))
+        SSymbol(s"$base$n")
+      }
+    }
+  }
+
+  object Implicits {
+
+    import scala.language.implicitConversions
+
+    implicit def stringToQualID(str: String): QualifiedIdentifier = {
+      QualifiedIdentifier(Identifier(SSymbol(str)))
+    }
+
+    implicit def symbolToQualID(s: SSymbol): QualifiedIdentifier = {
+      QualifiedIdentifier(Identifier(s))
+    }
+
+  }
+
+
+}
+
+class SMT(outputFile: Option[String]) extends smtlib.Interpreter with com.typesafe.scalalogging.LazyLogging {
 
   import java.nio.file._
   import smtlib.parser.Commands._
@@ -14,7 +50,15 @@ class SMT(outputFile: Option[String]) extends com.typesafe.scalalogging.LazyLogg
 
   private val outputPath = outputFile.map(p => Paths.get(p))
 
-  def process(command: Command) : CommandResponse = {
+  def free(): Unit = {
+    interpreter.free()
+  }
+
+  def interrupt(): Unit = {
+    interpreter.interrupt()
+  }
+
+  def eval(command: Command) : CommandResponse = {
     logger.debug(command.toString)
 
     outputPath match {

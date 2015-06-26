@@ -39,48 +39,35 @@ object SymbolicEvaluator2 {
 class SymbolicEvaluatorImpl(allPaths: List[Path],
                             hashes: Set[String],
                             logFile: Option[String]) extends com.typesafe.scalalogging.LazyLogging {
-  import scala.language.implicitConversions
-
-  implicit def stringToQualID(str: String): QualifiedIdentifier = {
-    QualifiedIdentifier(Identifier(SSymbol(str)))
-  }
-
-  implicit def symbolToQualID(s: SSymbol): QualifiedIdentifier = {
-    QualifiedIdentifier(Identifier(s))
-  }
-
-  var nextName = 0
-  def freshName(base: String = "x"): SSymbol = {
-    nextName = nextName + 1
-    SSymbol(s"$base$nextName")
-  }
+  import SMT._
+  import SMT.Implicits._
 
   val smt = new SMT(logFile)
-  import smt.process
+  import smt.eval
 
-  process(DeclareSort(SSymbol("hash"), 0))
+  eval(DeclareSort(SSymbol("hash"), 0))
 
   val hashSort = Sort(SimpleIdentifier(SSymbol("hash")))
 
   def hashToTerm(l: String): (String, Term) = {
     val x = freshName("hash")
-    process(DeclareConst(x, hashSort))
+    eval(DeclareConst(x, hashSort))
     (l, QualifiedIdentifier(Identifier(x)))
   }
 
   val hashToZ3: Map[String, Term] = hashes.toList.map(hashToTerm).toMap
   if(hashToZ3.size != 0)  {
     val hashes = hashToZ3.values.toSeq
-    process(Assert(FunctionApplication("distinct", hashes)))
+    eval(Assert(FunctionApplication("distinct", hashes)))
     val x = freshName("h")
-    process(Assert(ForAll(SortedVar(x, hashSort), Seq(),
+    eval(Assert(ForAll(SortedVar(x, hashSort), Seq(),
                           Or(hashes.map(h => Equals(x, h)): _*))))
   }
 
   val termToHash: Map[Term, String] = hashToZ3.toList.map({ case (x,y) => (y, x) }).toMap
 
   // type stat = IsDir | DoesNotExist | IsFile of hash
-  process(DeclareDatatypes(Seq((SSymbol("stat"),
+  eval(DeclareDatatypes(Seq((SSymbol("stat"),
     Seq(Constructor(SSymbol("IsDir"), Seq()),
       Constructor(SSymbol("DoesNotExist"), Seq()),
       Constructor(SSymbol("IsFile"), Seq((SSymbol("hash"), hashSort))))))))
@@ -94,10 +81,10 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   def assertPathConsistency(st: ST): Unit = {
     for (p <- allPaths) {
       if (p == Paths.get("/")) {
-        process(Assert(FunctionApplication("is-IsDir", Seq(st.paths(p)))))
+        eval(Assert(FunctionApplication("is-IsDir", Seq(st.paths(p)))))
       }
       else {
-        process(Assert(Implies(Or(FunctionApplication("is-IsFile", Seq(st.paths(p))),
+        eval(Assert(Implies(Or(FunctionApplication("is-IsFile", Seq(st.paths(p))),
                                   FunctionApplication("is-IsDir", Seq(st.paths(p)))),
                                FunctionApplication("is-IsDir", Seq(st.paths(p.getParent))))))
       }
@@ -121,11 +108,11 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   def freshST(): ST = {
     val paths = allPaths.map(p => {
       val z = freshName("path")
-      process(DeclareConst(z, statSort))
+      eval(DeclareConst(z, statSort))
       (p, QualifiedIdentifier(Identifier(z)))
     })
     val isErr = freshName("isErr")
-    process(DeclareConst(isErr, BoolSort()))
+    eval(DeclareConst(isErr, BoolSort()))
     ST(QualifiedIdentifier(Identifier(isErr)), paths.toMap)
   }
 
@@ -153,12 +140,12 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   def predEquals(a: F.Pred, b: F.Pred): Boolean = {
     try {
-      process(Push(1))
+      eval(Push(1))
       val st = freshST()
-      process(Assert(Not(Equals(evalPred(st, a), evalPred(st, b)))))
-      process(CheckSat()) match {
+      eval(Assert(Not(Equals(evalPred(st, a), evalPred(st, b)))))
+      eval(CheckSat()) match {
         case CheckSatStatus(SatStatus) => {
-          process(GetModel())
+          eval(GetModel())
           false
         }
         case CheckSatStatus(UnsatStatus) => true
@@ -167,7 +154,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
     }
     finally {
-      process(Pop(1))
+      eval(Pop(1))
     }
   }
 
@@ -188,8 +175,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       val st1 = evalExpr(st, e1)
       val st2 = evalExpr(st, e2)
       val b = freshName("b")
-      process(DeclareConst(b, BoolSort()))
-      process(Assert(Equals(b, evalPred(st, a))))
+      eval(DeclareConst(b, BoolSort()))
+      eval(Assert(Equals(b, evalPred(st, a))))
       ST(ite(b, st1.isErr, st2.isErr),
         allPaths.map(p => (p, ite(b, st1.paths(p), st2.paths(p)))).toMap)
     }
@@ -238,12 +225,12 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   }
 
   def stateFromTerm(st: ST): Option[State] = {
-    val GetValueResponseSuccess(Seq((_,  isErr))) = process(GetValue(st.isErr, Seq()))
+    val GetValueResponseSuccess(Seq((_,  isErr))) = eval(GetValue(st.isErr, Seq()))
     isErr match {
       case QualifiedIdentifier(Identifier(SSymbol("true"), Seq()), _) => None
       case QualifiedIdentifier(Identifier(SSymbol("false"), Seq()), _) => {
         val (paths, terms) = st.paths.toList.unzip
-        val GetValueResponseSuccess(binds) = process(GetValue(terms.head, terms.tail))
+        val GetValueResponseSuccess(binds) = eval(GetValue(terms.head, terms.tail))
         Some(paths.zip(binds).map({ case (path, (_, t)) => fstateFromTerm(t).map(f => path -> f) }).flatten.toMap)
       }
       case _ => throw Unexpected("unexpected value for isErr")
@@ -292,24 +279,24 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
  def exprEqualsSynth(precond: Set[State], e1: F.Expr, delta: F.Expr,
                      e2: F.Expr): Option[Option[State]] = {
    try {
-     process(Push(1))
+     eval(Push(1))
      val st = freshST()
 
      assertPathConsistency(st)
      logger.info(s"preconditions: ${precond.toSet.size}")
 
-     precond.map(pre => process(Assert(Not(buildPrecondition(st, pre)))))
+     precond.map(pre => eval(Assert(Not(buildPrecondition(st, pre)))))
 
      val stInter = evalExpr(st, e1)
 
      val st1 = evalExpr(stInter, delta)
      val st2 = evalExpr(st, e2)
 
-     process(Assert(Not(stEquals(stInter, st))))
-     process(Assert(Not(stEquals(st1, st2))))
-     process(CheckSat()) match {
+     eval(Assert(Not(stEquals(stInter, st))))
+     eval(Assert(Not(stEquals(st1, st2))))
+     eval(CheckSat()) match {
        case CheckSatStatus(SatStatus) => {
-         val model: List[SExpr] = process(GetModel()).asInstanceOf[GetModelResponseSuccess].model
+         val model: List[SExpr] = eval(GetModel()).asInstanceOf[GetModelResponseSuccess].model
          val reverseMap = st.paths.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
          val reverseHash = hashToZ3.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
          logger.debug(model.toString)
@@ -321,22 +308,22 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
      }
    }
    finally {
-     process(Pop(1))
+     eval(Pop(1))
    }
  }
 
 
  def exprEquals(e1: F.Expr, e2: F.Expr): Option[Option[State]] = {
    try {
-     process(Push(1))
+     eval(Push(1))
      val st = freshST()
      val st1 = evalExpr(st, e1)
      val st2 = evalExpr(st, e2)
 
-     process(Assert(Not(stEquals(st1, st2))))
-     process(CheckSat()) match {
+     eval(Assert(Not(stEquals(st1, st2))))
+     eval(CheckSat()) match {
        case CheckSatStatus(SatStatus) => {
-         val model: List[SExpr] = process(GetModel()).asInstanceOf[GetModelResponseSuccess].model
+         val model: List[SExpr] = eval(GetModel()).asInstanceOf[GetModelResponseSuccess].model
          val reverseMap = st.paths.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
          val reverseHash = hashToZ3.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
          Some(model.foldLeft(Some(Map()): Option[State])(handleSexpr(reverseMap, reverseHash)(_,_)))
@@ -347,7 +334,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
      }
    }
    finally {
-     process(Pop(1))
+     eval(Pop(1))
    }
  }
 
@@ -372,7 +359,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       else {
         fringe.map(p => evalGraph(evalExpr(st, p), g - p)).reduce({ (st1: ST, st2: ST) =>
           val c = freshName("choice")
-          val b = process(DeclareConst(c, BoolSort()))
+          val b = eval(DeclareConst(c, BoolSort()))
           ST(ite(c, st1.isErr, st2.isErr),
             allPaths.map(p => p -> ite(c, st1.paths(p),st2.paths(p))).toMap)
         })
@@ -383,11 +370,11 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       val inST = freshST()
       val outST1 = evalGraph(inST, g)
       val outST2 = evalGraph(inST, g)
-      process(Assert(Not(stEquals(outST1, outST2))))
+      eval(Assert(Not(stEquals(outST1, outST2))))
      // assertHashCardinality()
-      process(CheckSat()) match {
+      eval(CheckSat()) match {
         case CheckSatStatus(SatStatus) => {
-          process(GetModel())
+          eval(GetModel())
           false
         }
         case CheckSatStatus(UnsatStatus) => true
