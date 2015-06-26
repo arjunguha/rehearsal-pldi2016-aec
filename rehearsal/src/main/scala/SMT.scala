@@ -6,7 +6,7 @@ case class SMTError(resp: smtlib.parser.CommandsResponses.FailureResponse)
 object SMT {
 
   import smtlib.parser.Terms._
-  import smtlib.theories.Core._
+  import smtlib.theories.Core.{True, False}
 
   private val names = collection.mutable.Map[String,Int]()
 
@@ -23,18 +23,75 @@ object SMT {
     }
   }
 
+  private case object FoundAnnihilator extends RuntimeException("")
+
+  object Or {
+
+    // flatten(terms) == None means that terms is equivalent to true
+    private def flatten(term: Term): Seq[Term] = term match {
+      case Or(terms) =>  terms.flatMap(t => flatten(t))
+      case True() => throw FoundAnnihilator
+      case False() => Seq()
+      case _ => Seq(term)
+    }
+
+    def apply(terms: Term*): Term = {
+      try {
+        terms.flatMap(flatten) match {
+          case Seq() => False()
+          case Seq(t) => t
+          case xs => FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("or"))), xs)
+        }
+      }
+      catch {
+        case FoundAnnihilator => True()
+      }
+    }
+
+    def unapply(term: Term): Option[Seq[Term]] = term match {
+      case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("or"), Seq()), None), terms) => Some(terms)
+      case _ => None
+    }
+
+  }
+
+  object And {
+
+    private def flatten(term: Term): Seq[Term] = term match {
+      case And(terms) => terms.flatMap(flatten)
+      case False() => throw FoundAnnihilator
+      case True() => Seq()
+      case _ => Seq(term)
+    }
+
+    def apply(terms: Term*): Term = {
+      try {
+        terms.flatMap(flatten) match {
+          case Seq() => True()
+          case Seq(x) => x
+          case xs => FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("and"))), xs)
+        }
+      }
+      catch {
+        case FoundAnnihilator => False()
+      }
+    }
+
+    def unapply(term: Term): Option[Seq[Term]] = term match {
+      case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("and"), Seq()), None), terms) => Some(terms)
+      case _ => None
+    }
+
+  }
+
   object Implicits {
 
     import scala.language.implicitConversions
 
     implicit class RichTerm(term: Term) {
 
-      def &&(other: Term) = other match {
-        case True() => term
-        case False() => other
-        case And(e1, e2) => And(term, e1, e2)
-        case _ => And(term, other)
-      }
+      def &&(other: Term): Term = And(term, other)
+      def ||(other: Term): Term = Or(term, other)
 
     }
 
