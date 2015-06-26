@@ -333,9 +333,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
          val reverseMap = st.paths.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
          val reverseHash = hashToZ3.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
          logger.debug(model.toString)
-         val result = Some(model.foldLeft(Some(Map()): Option[State])(handleSexpr(reverseMap, reverseHash)(_,_)))
-         println(result)
-         result
+         Some(model.foldLeft(Some(Map()): Option[State])(handleSexpr(reverseMap, reverseHash)(_,_)))
        }
        case CheckSatStatus(UnsatStatus) => None
        case CheckSatStatus(UnknownStatus) => throw Unexpected("got unknown")
