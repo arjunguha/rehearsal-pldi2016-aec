@@ -98,7 +98,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         case Some(FFile(hash)) => {
           hashToZ3.get(hash) match {
             case None => pre && FunctionApplication("is-IsFile", Seq(t))
-            case Some(h) => Equals(t, FunctionApplication("IsFile", Seq(h)))
+            case Some(h) => pre && Equals(t, FunctionApplication("IsFile", Seq(h)))
           }
         }
       }
