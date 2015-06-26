@@ -123,6 +123,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
                           Or(hashes.map(h => Equals(x, h)): _*))))
   }
 
+  val termToHash: Map[Term, String] = hashToZ3.toList.map({ case (x,y) => (y, x) }).toMap
+
   // type stat = IsDir | DoesNotExist | IsFile of hash
   process(DeclareDatatypes(Seq((SSymbol("stat"),
     Seq(Constructor(SSymbol("IsDir"), Seq()),
@@ -270,6 +272,30 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
                               Seq(FunctionApplication("hash", Seq(st.paths(src)))))))
     }
   }
+
+
+  def fstateFromTerm(term: Term): Option[Eval.FState] = term match {
+    case QualifiedIdentifier(Identifier(SSymbol("IsDir"), Seq()), _) => Some(Eval.FDir)
+    case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("IsFile"), _), _), Seq(h)) =>
+      Some(Eval.FFile(termToHash.getOrElse(term, "<unknown>")))
+    case QualifiedIdentifier(Identifier(SSymbol("DoesNotExist"), _), _) => None
+    case _ => throw Unexpected(term.toString)
+
+  }
+
+  def stateFromTerm(st: ST): Option[State] = {
+    val GetValueResponseSuccess(Seq((_,  isErr))) = process(GetValue(st.isErr, Seq()))
+    isErr match {
+      case QualifiedIdentifier(Identifier(SSymbol("true"), Seq()), _) => None
+      case QualifiedIdentifier(Identifier(SSymbol("false"), Seq()), _) => {
+        val (paths, terms) = st.paths.toList.unzip
+        val GetValueResponseSuccess(binds) = process(GetValue(terms.head, terms.tail))
+        Some(paths.zip(binds).map({ case (path, (_, t)) => fstateFromTerm(t).map(f => path -> f) }).flatten.toMap)
+      }
+      case _ => throw Unexpected("unexpected value for isErr")
+    }
+  }
+
 
   def handleSexpr(reverseMap: Map[String, Path], reverseHash: Map[String, String])(acc: Option[State], sexpr: SExpr): Option[State] =
     acc match {
