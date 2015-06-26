@@ -170,6 +170,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
         // and start over
         case None => {
           val cex = inputs.head.get
+          logger.info(s"Could not guess next, adding precondition: $cex")
           if(precond.contains(cex))
             throw Unexpected("Generated duplicate precondition")
           synth(precond + inputs.head.get, Seq(inputs.last), v1, v2)

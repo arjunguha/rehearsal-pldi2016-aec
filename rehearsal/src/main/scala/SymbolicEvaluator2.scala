@@ -284,25 +284,33 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         sexpr match {
           case DefineFun(FunDef(name, _, returnSort, body)) => {
             returnSort.id.symbol.name match {
-              case "stat" => {
-                val path = reverseMap.get(name.name).get
-                body match {
-                  case QualifiedIdentifier(Identifier(SSymbol("IsDir"), _), _) => Some(state + (path -> FDir))
-                  case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("IsFile"), _), _), List(hash)) => {
-                    reverseHash.get(hash.asInstanceOf[QualifiedIdentifier].id.symbol.name) match {
-                      case None => Some(state + (path -> FFile(s"unknown - ${hash.toString}")))
-                      case Some(data) => Some(state + (path -> FFile(data)))
+              case "stat" => 
+                reverseMap.get(name.name) match {
+                  // Ignore all paths that are not the ones in ST
+                  case None => Some(state)
+                  case Some(path) =>
+                    body match {
+                      case QualifiedIdentifier(Identifier(SSymbol("IsDir"), _), _) => Some(state + (path -> FDir))
+                      case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("IsFile"), _), _), List(hash)) => {
+                        reverseHash.get(hash.asInstanceOf[QualifiedIdentifier].id.symbol.name) match {
+                          case None => Some(state + (path -> FFile(s"unknown - ${hash.toString}")))
+                          case Some(data) => Some(state + (path -> FFile(data)))
+                        }
+                      }
+                      case QualifiedIdentifier(Identifier(SSymbol("DoesNotExist"), _), _) => Some(state)
+                      case _ => throw Unexpected(s"Unexpected body: $body in sexpr: $sexpr")
                     }
-                  }
-                  case _ => Some(state)
                 }
-              }
+
               case "Bool" => if(name.name.startsWith("isErr") && body.asInstanceOf[QualifiedIdentifier].id.symbol.name.toBoolean) { None } else { Some(state) }
               case "hash" => Some(state)
-              case _ => throw new RuntimeException(s"Unexpected definition: $sexpr")
+              case _ => throw Unexpected(s"Unexpected definition: $sexpr")
             }
           }
-          case _ => Some(state)
+          
+          case DeclareFun(_, _, Sort(SimpleIdentifier(SSymbol("hash")), _)) => Some(state)
+          case ForAll(_,_, _) => Some(state)
+          case _ => throw Unexpected(s"Unexpected sexpr: ${sexpr.getClass}")
         }
       }
     }
@@ -312,19 +320,16 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
    try {
      process(Push(1))
      val st = freshST()
-     val initialReverseMap = st.paths.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
-     
+
      assertPathConsistency(st)
      logger.info(s"preconditions: ${precond.toSet.size}")
 
-     val (preconditions, reverseMap) = 
-       precond.foldRight[(Term, Map[String, Path])]((False(), initialReverseMap))({ case (pre, (term, rm)) => {
+     val preconditions = 
+       precond.foldRight[Term](False())({ case (pre, term) => {
          val stPre = buildST(pre)
-         val termPrime = Or(term, Not(stEquals(st, stPre)))
-         val reverseMapPrime = stPre.paths.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
-         (termPrime,  rm ++ reverseMapPrime)
+         Or(term, Not(stEquals(st, stPre)))
        }})
-
+         
      if(!precond.isEmpty) {
        println(preconditions)
        println("**************************")
@@ -341,9 +346,12 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
      process(CheckSat()) match {
        case CheckSatStatus(SatStatus) => {
          val model: List[SExpr] = process(GetModel()).asInstanceOf[GetModelResponseSuccess].model
+         val reverseMap = st.paths.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
          val reverseHash = hashToZ3.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
          logger.debug(model.toString)
-         Some(model.foldLeft(Some(Map()): Option[State])(handleSexpr(reverseMap, reverseHash)(_,_)))
+         val result = Some(model.foldLeft(Some(Map()): Option[State])(handleSexpr(reverseMap, reverseHash)(_,_)))
+         println(result)
+         result
        }
        case CheckSatStatus(UnsatStatus) => None
        case CheckSatStatus(UnknownStatus) => throw Unexpected("got unknown")
