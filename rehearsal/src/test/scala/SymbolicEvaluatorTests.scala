@@ -10,7 +10,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
   import java.nio.file.Path
   import java.nio.file.Paths
 
-  import SymbolicEvaluator2.{predEquals, exprEquals, isDeterministic}
+  import SymbolicEvaluator.{predEquals, exprEquals, isDeterministic}
 
   test("simple equality") {
     val x = TestFileState(Paths.get("/usr"), IsFile)

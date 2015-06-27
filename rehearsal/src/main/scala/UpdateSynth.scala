@@ -180,7 +180,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
           val e1 = Block(v1.map(_.compile): _*)
           val eDelta = Block((delta).map(_.compile): _*)
           val e2 = Block(v2.map(_.compile): _*) // TODO(arjun): needless work
-          SymbolicEvaluator2.exprEqualsSynth(precond, e1, eDelta, e2) match {
+          SymbolicEvaluator.exprEqualsSynth(precond, e1, eDelta, e2) match {
             case None => (precond, delta)
             case Some(cex) => {
               logger.info(s"Counterexample input state: $cex")
@@ -282,9 +282,9 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     val graph1 = puppet.syntax.parse(manifest1).desugar().toGraph(Map()).head._2
     val graph2 = puppet.syntax.parse(manifest2).desugar().toGraph(Map()).head._2
 
-    assert(SymbolicEvaluator2.isDeterministic(toFileScriptGraph(graph1)),
+    assert(SymbolicEvaluator.isDeterministic(toFileScriptGraph(graph1)),
            "V1 is not deterministic")
-    assert(SymbolicEvaluator2.isDeterministic(toFileScriptGraph(graph2)),
+    assert(SymbolicEvaluator.isDeterministic(toFileScriptGraph(graph2)),
            "V2 is not deterministic")
 
     val v1 = topologicalSort(graph1).map(r => ResourceToExpr.convert(r))

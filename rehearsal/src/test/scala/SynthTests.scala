@@ -78,7 +78,6 @@ class SynthTests extends org.scalatest.FunSuite {
   testCase("Add file in sub directory",
     List(),
     List(EnsureFile("/home/jcollard", "darn")))
- 
 
   testCase("Make several changes",
 

@@ -11,7 +11,7 @@ import java.nio.file.{Path, Paths}
 import FSSyntax.{Block, Expr}
 import rehearsal.{FSSyntax => F}
 
-object SymbolicEvaluator2 {
+object SymbolicEvaluator {
 
    def exprEqualsSynth(precond: Set[State], e1: F.Expr, delta: F.Expr,
                        e2: F.Expr): Option[Option[State]] = {

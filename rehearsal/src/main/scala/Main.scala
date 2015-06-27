@@ -65,7 +65,7 @@ package object repl {
 
   def isDeterministic(g: FileScriptGraph): (Boolean, Long) = {
     val g2 = Slicing.sliceGraph(g)
-    time(SymbolicEvaluator2.isDeterministic(g2))
+    time(SymbolicEvaluator.isDeterministic(g2))
   }
 
 }
