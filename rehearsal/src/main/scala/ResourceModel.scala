@@ -59,7 +59,7 @@ object ResourceModel {
       present match {
         case true => {
           val homeCmd = if (manageHome) {
-            If(TestFileState(h, DoesNotExist), Mkdir(u), Skip)
+            If(TestFileState(h, DoesNotExist), Mkdir(h), Skip)
           }
           else {
             Skip
