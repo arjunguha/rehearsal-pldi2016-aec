@@ -33,7 +33,9 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
         case (Some(_), Some(_)) => 1.0
       })
 
-      Math.pow(vec.sum, 1.0 / vec.length.toDouble)
+      // previously: Math.pow(vec.sum, 1.0 / vec.length.toDouble)
+      // should fix the TODO above?
+      vec.sum / vec.length.toDouble
     }
 
     (s1, s2) match {
@@ -190,7 +192,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
               synth(precond, cex +: inputs, v1, v2)
             }
           }
-       } 
+       }
       }
     }
 
@@ -302,7 +304,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
       unions(all.map(allGroups)).toList)
 
     val upd = new UpdateSynth2(bounds)
-    
+
     val (precond, r) = upd.synth(Set(), Seq(initState), v1, v2)
     logger.info(s"Synthesis Preconditions: $precond")
     logger.info(s"Synthesis result: $r")
