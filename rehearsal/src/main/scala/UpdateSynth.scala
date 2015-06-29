@@ -234,8 +234,15 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     case AbsentPath(p, _) => findAllSubPaths(p)
     case Directory(p) => findAllSubPaths(p)
     case Package(_, _) => Set()
-    case Group(_, _) => Set()
-    case User(_, _, _) => Set()
+    case Group(name, _) => Set(s"/etc/groups/$name").map(Paths.get(_))
+    case User(name, _, manageHome) => if (manageHome) {
+      Set(s"/etc/users/$name",
+          s"/etc/groups/$name",
+          s"/home/$name").map(Paths.get(_))
+    } else {
+      Set(s"/etc/users/$name",
+          s"/etc/groups/$name").map(Paths.get(_))
+    }
   }
 
   def allContents(r: Res): Set[String] = r match {
