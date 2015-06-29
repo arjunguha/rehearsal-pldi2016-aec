@@ -1,6 +1,6 @@
 # Vagrant specific
-
 .vagrant
+Vagrantfile
 
 # scala specific
 project/
@@ -8,7 +8,6 @@ target/
 
 # Mac OS junk
 .DS_Store
-
 benchmarks
 
 # emacs files
@@ -16,3 +15,7 @@ benchmarks
 .[#]*
 .*
 *~
+
+# other stuff
+*.dot
+*.log
