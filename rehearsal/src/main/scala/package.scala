@@ -80,7 +80,6 @@ package object rehearsal {
   }
 
   def findPuppetFiles(repo: Path): Try[TopLevel] = {
-    println(recursiveDirListing(repo).toList)
     val ppFiles = recursiveDirListing(repo).filter(_.getFileName.toString.endsWith(".pp")).toList
     if (ppFiles.length == 0) {
       Failure(new RuntimeException("no Puppet files"))

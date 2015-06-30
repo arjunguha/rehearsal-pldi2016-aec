@@ -32,6 +32,7 @@ package repl {
           println(s"$name,$b, $t")
         }
       }
+
       case args => {
         sys.error(s"Invalid command-line arguments: $args")
       }

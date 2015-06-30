@@ -1,7 +1,7 @@
 package rehearsal
 
 /* Disk based cache to speed up apt-file */
-class PackageCache(cacheroot: java.nio.file.Path) {
+class PackageCache(cacheroot: java.nio.file.Path) extends com.typesafe.scalalogging.LazyLogging {
 
   import rehearsal._
   import java.io.File
@@ -30,6 +30,7 @@ class PackageCache(cacheroot: java.nio.file.Path) {
 
   def aptfile(pkg: String): Option[Set[Path]] = {
     val cmd = s"apt-file -F list $pkg"
+    logger.info("Running $cmd")
     val (sts, out, err) = Cmd.exec(cmd)
     if (0 == sts && out.lines.size > 0) {
       Some(out.lines.toList.map((l) => Paths.get(l.split(" ")(1))).toSet)
