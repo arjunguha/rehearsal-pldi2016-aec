@@ -286,6 +286,9 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
 
   val initState = Some(Map(Paths.get("/") -> Eval.FDir))
 
+  def filterCommon(v1: List[Res], v2: List[Res]): (List[Res], List[Res]) = (v1.filterNot(v2.contains), v2.filterNot(v1.contains))
+
+
   def calculate(manifest1: String, manifest2: String): Unit = {
     val graph1 = puppet.syntax.parse(manifest1).desugar().toGraph(Map()).head._2
     val graph2 = puppet.syntax.parse(manifest2).desugar().toGraph(Map()).head._2
@@ -295,8 +298,11 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     assert(SymbolicEvaluator.isDeterministic(toFileScriptGraph(graph2)),
            "V2 is not deterministic")
 
-    val v1 = topologicalSort(graph1).map(r => ResourceToExpr.convert(r))
-    val v2 = topologicalSort(graph2).map(r => ResourceToExpr.convert(r))
+    val ov1 = topologicalSort(graph1).map(r => ResourceToExpr.convert(r))
+    val ov2 = topologicalSort(graph2).map(r => ResourceToExpr.convert(r))
+    val (v1, v2) = filterCommon(ov1, ov2)
+    logger.info(s"Original V1: $ov1")
+    logger.info(s"Original V2: $ov2")
 
     val all = v1 ++ v2
 
