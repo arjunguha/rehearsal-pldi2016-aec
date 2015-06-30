@@ -289,8 +289,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
 
   def filterCommon(v1: List[Res], v2: List[Res]): (List[Res], List[Res]) = (v1.filterNot(v2.contains), v2.filterNot(v1.contains))
 
-
-  def calculate(manifest1: String, manifest2: String): Unit = {
+  def exec(manifest1: String, manifest2: String): (Set[State], List[Res]) = {
     val graph1 = puppet.syntax.parse(manifest1).desugar().toGraph(Map()).head._2
     val graph2 = puppet.syntax.parse(manifest2).desugar().toGraph(Map()).head._2
 
@@ -321,6 +320,11 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     val (_, precond, r) = upd.synth(Set(), Seq(initState), v1, v2)
     logger.info(s"Synthesis Preconditions: $precond")
     logger.info(s"Synthesis result: $r")
+    (precond, r)
+  }
+
+  def calculate(manifest1: String, manifest2: String): Unit = {
+    val (precond, r) = exec(manifest1, manifest2)
     println("Preconditions:")
     for(pre <- precond)
       println(s"  $pre")
