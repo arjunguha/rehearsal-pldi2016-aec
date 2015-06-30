@@ -42,5 +42,52 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
     assert(r.isDefined)
   }
 
+  test("synthesizing file with common prefix") {
+    val m1 =
+    """
+      file { '/common':
+        ensure => file,
+        content => "things",
+      }
 
+      file { '/not':
+        ensure => file,
+        content => "a",
+      }
+    """
+
+    val m2 =
+    """
+      file { '/common':
+        ensure => file,
+        content => "things",
+      }
+
+      file { '/not':
+        ensure => file,
+        content => "b",
+      }
+    """
+    assert(exec(m1, m2) == ((Set(), List(EnsureFile(Paths.get("/not"), "b")))))
+  }
+
+  test("synthesizing differences in users") {
+    val m1 =
+    """
+      user {'aaron':
+        name => 'aaron',
+        ensure => present,
+        managehome => true,
+      }
+    """
+    val m2 =
+    """
+      user {'aaron':
+        name => 'aaron',
+        ensure => present,
+        managehome => false,
+      }
+    """
+    assert(exec(m1, m2)._2 == List(AbsentPath(Paths.get("/home/aaron"), true)))
+  }
 }
