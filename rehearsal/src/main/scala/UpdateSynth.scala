@@ -238,6 +238,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     case Group(name, _) => Set()
     case User(name, _, true) => Set(Paths.get(s"/home/$name"))
     case User(_, _, false) => Set()
+    case self@SshAuthorizedKey(_, _, _, _) => Set(Paths.get(self.keyPath))
   }
 
   def allContents(r: Res): Set[String] = r match {
@@ -248,6 +249,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     case Package(_, _) => Set()
     case Group(_, _) => Set()
     case User(_, _, _) => Set()
+    case SshAuthorizedKey(_, _, _, key) => Set(key)
   }
 
   def allPackages(r: Res): Set[String] = r match {
@@ -258,6 +260,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     case Package(p, _) => Set(p)
     case Group(_, _) => Set()
     case User(_, _, _) => Set()
+    case SshAuthorizedKey(_, _, _, _) => Set()
   }
 
   def allUsers(r: Res): Set[String] = r match {
@@ -268,6 +271,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     case Package(_, _) => Set()
     case Group(_, _) => Set()
     case User(u, _, _) => Set(u)
+    case SshAuthorizedKey(_, _, _, _) => Set()
   }
 
   def allGroups(r: Res): Set[String] = r match {
@@ -278,9 +282,13 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     case Package(_, _) => Set()
     case Group(g, _) => Set(g)
     case User(_, _, _) => Set()
+    case SshAuthorizedKey(_, _, _, _) => Set()
   }
 
   val initState = Some(Map(Paths.get("/") -> Eval.FDir))
+
+  def filterCommon(v1: List[Res], v2: List[Res]): (List[Res], List[Res]) = (v1.filterNot(v2.contains), v2.filterNot(v1.contains))
+
 
   def calculate(manifest1: String, manifest2: String): Unit = {
     val graph1 = puppet.syntax.parse(manifest1).desugar().toGraph(Map()).head._2
@@ -291,8 +299,11 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     assert(SymbolicEvaluator.isDeterministic(toFileScriptGraph(graph2)),
            "V2 is not deterministic")
 
-    val v1 = topologicalSort(graph1).map(r => ResourceToExpr.convert(r))
-    val v2 = topologicalSort(graph2).map(r => ResourceToExpr.convert(r))
+    val ov1 = topologicalSort(graph1).map(r => ResourceToExpr.convert(r))
+    val ov2 = topologicalSort(graph2).map(r => ResourceToExpr.convert(r))
+    val (v1, v2) = filterCommon(ov1, ov2)
+    logger.info(s"Original V1: $ov1")
+    logger.info(s"Original V2: $ov2")
 
     val all = v1 ++ v2
 

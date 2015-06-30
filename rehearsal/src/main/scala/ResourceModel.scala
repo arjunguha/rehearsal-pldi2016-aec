@@ -21,6 +21,11 @@ object ResourceModel {
   case class Group(name: String, present: Boolean) extends Res
   case class User(name: String, present: Boolean, manageHome: Boolean) extends Res
 
+  case class SshAuthorizedKey(user: String, present: Boolean, name: String, key: String) extends Res {
+    val keyPath = s"/home/$user/.ssh/$name"
+  }
+
+
   def compile(r: Res): Expr = r match {
     case EnsureFile(p, c) =>
       If(TestFileState(p, IsFile), Rm(p), Skip) >> CreateFile(p, c)
@@ -113,6 +118,13 @@ object ResourceModel {
       If(TestFileState(pkgInstallInfoPath, DoesNotExist),
           Skip,
           Block((Rm(pkgInstallInfoPath) :: exprs) :_*))
+    }
+    case self@SshAuthorizedKey(_, present, _, key) => {
+      val p = self.keyPath
+      present match {
+        case true => If(Not(TestFileState(p, DoesNotExist)), Rm(p), Skip) >> CreateFile(p, key)
+        case false => If(Not(TestFileState(p, DoesNotExist)), Rm(p), Skip)
+      }
     }
     case _ => throw NotImplemented(r.toString)
   }
