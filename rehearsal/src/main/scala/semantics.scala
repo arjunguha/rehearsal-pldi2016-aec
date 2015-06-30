@@ -1,5 +1,7 @@
 package rehearsal
 
+import rehearsal.ResourceModel.SshAuthorizedKey
+
 /*
  * Give filesystem semantics to resources
  *
@@ -144,6 +146,8 @@ object ResourceToExpr {
     case "Package" => PuppetPackage(r)
     case "User" => User(r)
     case "Group" => Group(r)
+    case "ssh_authorized_key" => SshAuthorizedKey(r.get[String]("user").get, r.get[Boolean]("ensure").getOrElse(true),
+      r.get[String]("name").get, r.get[String]("key").get)
 //    case "Notify" => Skip
 //    case "Service" => {
 //      println("Warning: found a service resource, but treating as Skip")
