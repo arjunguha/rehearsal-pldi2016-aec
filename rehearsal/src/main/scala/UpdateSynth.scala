@@ -6,7 +6,8 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
   import ResourceModel._
   import FSSyntax.{Expr, Skip, Block}
   import Eval._
-
+  import smtlib.parser.Commands._
+  import smtlib.parser.Terms._
 
   // Calculates the "distance" between two states. The distance is in the range [0.0, 1.0], where 0.0 means
   // identical and 1.0 means "very different.
@@ -166,7 +167,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
       synthesize(inits, dists, targets, all)
     }
 
-    def synth(precond: Set[State], inputs: Seq[S], v1: List[Res], v2: List[Res]): (Set[State], List[Res]) = {
+    def synth(precond: Set[State], inputs: Seq[S], v1: List[Res], v2: List[Res]): (Option[State], Set[State], List[Res]) = {
       guess(inputs, v1, v2) match {
         // We have failed... use the latest counter example as a precondition
         // and start over
@@ -183,8 +184,8 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
           val eDelta = Block((delta).map(_.compile): _*)
           val e2 = Block(v2.map(_.compile): _*) // TODO(arjun): needless work
           SymbolicEvaluator.exprEqualsSynth(precond, e1, eDelta, e2) match {
-            case None => (precond, delta)
-            case Some(cex) => {
+            case Right(example) => (example, precond, delta)
+            case Left(cex) => {
               logger.info(s"Counterexample input state: $cex")
               logger.info(s"Running v1 on cex: ${evalErrRes(cex, v1)}")
               logger.info(s"Running v1 + delta on cex: ${evalErrRes(cex, v1 ++ delta)}")
@@ -306,7 +307,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
 
     val upd = new UpdateSynth2(bounds)
 
-    val (precond, r) = upd.synth(Set(), Seq(initState), v1, v2)
+    val (_, precond, r) = upd.synth(Set(), Seq(initState), v1, v2)
     logger.info(s"Synthesis Preconditions: $precond")
     logger.info(s"Synthesis result: $r")
     println("Preconditions:")
