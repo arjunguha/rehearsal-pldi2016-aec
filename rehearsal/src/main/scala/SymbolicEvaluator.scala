@@ -10,6 +10,7 @@ import CommandsResponses._
 import java.nio.file.{Path, Paths}
 import FSSyntax.{Block, Expr}
 import rehearsal.{FSSyntax => F}
+import scalax.collection.GraphPredef._
 
 object SymbolicEvaluator {
 
@@ -317,7 +318,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  // Given a set of preconditions checks if there exists an input for 
+  // Given a set of preconditions checks if there exists an input for
   // which e1 ++ delta /= e2. If no such input exists, a term representing
   // preconditions is returned along with a list of commands declaring the
   // filesystem it is referencing. Otherwise, an input which fails.
@@ -329,7 +330,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
      assertPathConsistency(st)
      logger.info(s"preconditions: ${precond.toSet.size}")
 
-     val preTerm = 
+     val preTerm =
        precond.foldRight[Term](True())( { case (pre, acc) => acc && Not(buildPrecondition(st, pre)) } )
      eval(Assert(preTerm))
 
@@ -337,7 +338,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
      val st1 = evalExpr(stInter, delta)
      val st2 = evalExpr(st, e2)
- 
+
      eval(Assert(Not(stEquals(stInter, st))))
      eval(Assert(Not(stEquals(st1, st2))))
      eval(CheckSat()) match {
@@ -385,33 +386,45 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
    }
  }
 
-    def allPairsCommute(lst: List[FileScriptGraph#NodeT]): Boolean = {
-      lst.combinations(2).forall {
-        case List(a,b) => a.value.commutesWith(b.value)
+  // Greedily breaks a list of expressions into groups that commute with each other
+  def commutingGroups(lst: List[Expr]): List[List[Expr]] = {
+    lst match {
+      case Nil => Nil
+      case x :: xs => {
+        val (others, commutes) = xs.foldLeft((List[Expr](), List(x))) {
+          case ((others, commutes), y) => {
+            if (commutes.forall(_.commutesWith(y))) {
+              (others, y :: commutes)
+            }
+            else {
+              (y :: others, commutes)
+            }
+          }
+        }
+        commutes :: commutingGroups(others)
       }
     }
+  }
 
     def evalGraph(st: ST, g: FileScriptGraph): ST = {
-      logger.info("in evalGraph(..)")
       val fringe = g.nodes.filter(_.inDegree == 0).toList
       if (fringe.length == 0) {
         st
       }
-      else if (allPairsCommute(fringe)) {
-        // Create a sequence of the programs in fringe. The ridiculous foldRight,
-        // which is just the identity function, is a hack to coerce the
-        // inner nodes to outer nodes in ScalaGraph.
-        val p = Block(fringe.foldRight(List[Expr]()) { (n, lst) => n :: lst }: _*)
-        evalGraph(evalExpr(st, p), g -- fringe)
-      }
       else {
-        fringe.map(p => evalGraph(evalExpr(st, p), g - p)).reduce({ (st1: ST, st2: ST) =>
-          val c = freshName("choice")
-          logger.info("Fresh name")
-          val b = eval(DeclareConst(c, BoolSort()))
-          ST(ite(c, st1.isErr, st2.isErr),
-            allPaths.map(p => p -> ite(c, st1.paths(p),st2.paths(p))).toMap)
-        })
+        val fringe1 = commutingGroups(fringe.map[Expr, List[Expr]](x => x))
+        if (fringe1.length == 1) {
+         evalExpr(st, Block(fringe1.head : _*))
+        }
+        else {
+          logger.info(s"shrunk fringe from ${fringe.length} to ${fringe1.length}")
+          fringe1.map(p => evalGraph(evalExpr(st, Block(p : _*)), g -- p)).reduce({ (st1: ST, st2: ST) =>
+            val c = freshName("choice")
+            val b = eval(DeclareConst(c, BoolSort()))
+            ST(ite(c, st1.isErr, st2.isErr),
+              allPaths.map(p => p -> ite(c, st1.paths(p),st2.paths(p))).toMap)
+          })
+        }
       }
     }
 
@@ -427,7 +440,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       val outST1 = evalGraph(inST, g)
       val outST2 = evalGraph(inST, g)
       eval(Assert(stNEq(outST1, outST2)))
-     // assertHashCardinality()
       logger.info("Checking satisfiability")
       eval(CheckSat()) match {
         case CheckSatStatus(SatStatus) => {
