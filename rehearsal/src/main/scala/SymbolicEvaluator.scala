@@ -55,6 +55,9 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   import SMT._
   import SMT.Implicits._
 
+  logger.info(s"Started with ${allPaths.size} paths and ${hashes.size} hashes")
+  logger.info(allPaths.toString)
+
   val smt = new SMT(logFile)
   import smt.eval
 

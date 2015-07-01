@@ -30,8 +30,9 @@ class PackageCache(cacheroot: java.nio.file.Path) extends com.typesafe.scalalogg
 
   def aptfile(pkg: String): Option[Set[Path]] = {
     val cmd = s"apt-file -F list $pkg"
-    logger.info("Running $cmd")
+    logger.info(s"Running $cmd")
     val (sts, out, err) = Cmd.exec(cmd)
+    logger.info(s"Finished running $cmd")
     if (0 == sts && out.lines.size > 0) {
       Some(out.lines.toList.map((l) => Paths.get(l.split(" ")(1))).toSet)
     }
