@@ -32,7 +32,12 @@ package repl {
           println(s"$name,$b, $t")
         }
       }
-
+      case "catalog-deter" :: List(catalogFile) => {
+        val rg = Catalog.parseFile(catalogFile)
+        println(rg)
+        val g = toFileScriptGraph(rg)
+        println(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)))
+      }
       case args => {
         sys.error(s"Invalid command-line arguments: $args")
       }
