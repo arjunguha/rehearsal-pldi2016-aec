@@ -67,10 +67,10 @@ object Slicing {
     case Mkdir(f) => if (paths.contains(f)) expr else Skip
     case CreateFile(f, _)  => if (paths.contains(f)) expr else Skip
     case Cp(src, dst) => if (paths.contains(src) || paths.contains(dst)) expr else Skip
-    case If(a, p, q) => (sliceRec(paths, p), sliceRec(paths, q)) match {
-      case (Skip, Error) | (Error, Skip) | (Skip, Skip) => Skip
-      case (Error, Error) => Error
-      case _ => expr
+    case If(a, p, q) => {
+      val p2 = sliceRec(paths, p)
+      val q2 = sliceRec(paths, q)
+      if(p2 == q2) p2 else If(a, p2, q2)
     }
   }
 
