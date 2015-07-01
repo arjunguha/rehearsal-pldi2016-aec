@@ -147,7 +147,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
   test("service") {
     val program = """
       file {'/foo': ensure => directory}
-      file {'/foo/bar': ensure => file}
+      file {'/foo/bar': ensure => file, before => Service['foo'] }
       service {'foo':}
                   """
     val pp = parse(program)
