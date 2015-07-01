@@ -190,7 +190,15 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   def evalExpr(st: ST, expr: F.Expr): ST = expr match {
     case F.Skip => st
     case F.Error => ST(True(), st.paths)
-    case F.Seq(p, q) => evalExpr(evalExpr(st, p), q)
+    case F.Seq(p, q) => {
+      val stInter = evalExpr(st, p)
+      val (stInter1, _) = freshST()
+      eval(Assert(Equals(stInter.isErr, stInter1.isErr)))
+      for (p <- allPaths) {
+        eval(Assert(Equals(stInter.paths(p), stInter1.paths(p))))
+      }
+      evalExpr(stInter1, q)
+    }
     case F.If(a, e1, e2) => {
       val st1 = evalExpr(st, e1)
       val st2 = evalExpr(st, e2)
@@ -384,6 +392,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
 
     def evalGraph(st: ST, g: FileScriptGraph): ST = {
+      logger.info("in evalGraph(..)")
       val fringe = g.nodes.filter(_.outDegree == 0).toList
       if (fringe.length == 0) {
         st
@@ -398,6 +407,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       else {
         fringe.map(p => evalGraph(evalExpr(st, p), g - p)).reduce({ (st1: ST, st2: ST) =>
           val c = freshName("choice")
+          logger.info("Fresh name")
           val b = eval(DeclareConst(c, BoolSort()))
           ST(ite(c, st1.isErr, st2.isErr),
             allPaths.map(p => p -> ite(c, st1.paths(p),st2.paths(p))).toMap)
@@ -405,12 +415,20 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
     }
 
+    def stNEq(st1: ST, st2: ST): Term = {
+    (st1.isErr && Not(st2.isErr)) ||
+    (st2.isErr && Not(st1.isErr)) ||
+      (Not(st1.isErr) && Not(st2.isErr) && Or(allPaths.map(p => Not(Equals(st1.paths(p), st2.paths(p)))): _*))
+  }
+
     def isDeterministic(g: FileScriptGraph): Boolean = {
       val inST = initState
+      logger.info(s"Generating constraints for a graph with ${g.nodes.size} nodes")
       val outST1 = evalGraph(inST, g)
       val outST2 = evalGraph(inST, g)
-      eval(Assert(Not(stEquals(outST1, outST2))))
+      eval(Assert(stNEq(outST1, outST2)))
      // assertHashCardinality()
+      logger.info("Checking satisfiability")
       eval(CheckSat()) match {
         case CheckSatStatus(SatStatus) => {
           eval(GetModel())

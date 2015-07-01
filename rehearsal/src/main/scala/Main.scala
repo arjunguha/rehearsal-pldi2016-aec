@@ -36,7 +36,9 @@ package repl {
         val rg = Catalog.parseFile(catalogFile)
         println(rg)
         val g = toFileScriptGraph(rg)
-        println(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)))
+        val g1 = Slicing.sliceGraph(g)
+        println(rg)
+        println(SymbolicEvaluator.isDeterministic(g))
       }
       case args => {
         sys.error(s"Invalid command-line arguments: $args")
