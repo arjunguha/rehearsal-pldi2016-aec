@@ -15,24 +15,37 @@ object SymbolicEvaluator {
 
    def exprEqualsSynth(precond: Set[State], e1: F.Expr, delta: F.Expr,
                        e2: F.Expr): Either[Option[State], Option[State]] = {
-    new SymbolicEvaluatorImpl((e1.paths union e2.paths union delta.paths).toList,
-      e1.hashes union e2.hashes union delta.hashes, Some("output.smt")).exprEqualsSynth(precond, e1,delta, e2)
+     val impl = new SymbolicEvaluatorImpl((e1.paths union e2.paths union delta.paths).toList,
+      e1.hashes union e2.hashes union delta.hashes, Some("output.smt"))
+     val result = impl.exprEqualsSynth(precond, e1,delta, e2)
+     impl.free()
+     result
   }
 
   def exprEquals(e1: F.Expr, e2: F.Expr): Option[Option[State]] = {
-    new SymbolicEvaluatorImpl((e1.paths union e2.paths).toList,
-                    e1.hashes union e2.hashes, None).exprEquals(e1, e2)
+    val impl = new SymbolicEvaluatorImpl((e1.paths union e2.paths).toList,
+      e1.hashes union e2.hashes, None)
+    val result = impl.exprEquals(e1, e2)
+    impl.free()
+    result
   }
+
   def predEquals(a: F.Pred, b: F.Pred): Boolean = {
-    new SymbolicEvaluatorImpl((a.readSet union b.readSet).toList, Set(), None).predEquals(a, b)
+    val impl =new SymbolicEvaluatorImpl((a.readSet union b.readSet).toList, Set(), None)
+    val result = impl.predEquals(a, b)
+    impl.free()
+    result
   }
   def isDeterministic(g: FileScriptGraph,
                       logFile: Option[String] = None): Boolean = {
-    new SymbolicEvaluatorImpl(
+    val impl = new SymbolicEvaluatorImpl(
       g.nodes.map(e => e.paths).reduce(_ union _).toList,
       g.nodes.map(_.hashes).reduce(_ union _),
       logFile
-      ).isDeterministic(g)
+      )
+    val result = impl.isDeterministic(g)
+    impl.free()
+    result
   }
 }
 
@@ -406,5 +419,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
 
     }
+
+  def free(): Unit = smt.free()
 
 }
