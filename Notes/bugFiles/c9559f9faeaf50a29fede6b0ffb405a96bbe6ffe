@@ -1,0 +1,1396 @@
+
+
+
+<!DOCTYPE html>
+<html lang="en" class="">
+  <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# object: http://ogp.me/ns/object# article: http://ogp.me/ns/article# profile: http://ogp.me/ns/profile#">
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Language" content="en">
+    
+    
+    <title>inserting requires for proper ordering · CumulusNetworks/cldemo@c9559f9 · GitHub</title>
+    <link rel="search" type="application/opensearchdescription+xml" href="/opensearch.xml" title="GitHub">
+    <link rel="fluid-icon" href="https://github.com/fluidicon.png" title="GitHub">
+    <link rel="apple-touch-icon" sizes="57x57" href="/apple-touch-icon-114.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="/apple-touch-icon-114.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="/apple-touch-icon-144.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/apple-touch-icon-144.png">
+    <meta property="fb:app_id" content="1401488693436528">
+
+      
+      <meta content="GitHub" property="og:site_name" /><meta content="object" property="og:type" /><meta content="https://avatars0.githubusercontent.com/u/6932299?v=3&amp;s=200" property="og:image" /><meta content="inserting requires for proper ordering · CumulusNetworks/cldemo@c9559f9" property="og:title" /><meta content="https://github.com/CumulusNetworks/cldemo/commit/c9559f9faeaf50a29fede6b0ffb405a96bbe6ffe" property="og:url" /><meta content="1402000559" property="og:updated_time" />
+      <meta name="browser-stats-url" content="https://api.github.com/_private/browser/stats">
+    <meta name="browser-errors-url" content="https://api.github.com/_private/browser/errors">
+    <link rel="assets" href="https://assets-cdn.github.com/">
+    
+    <meta name="pjax-timeout" content="1000">
+    
+
+    <meta name="msapplication-TileImage" content="/windows-tile.png">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="selected-link" value="repo_commits" data-pjax-transient>
+
+        <meta name="google-analytics" content="UA-3769691-2">
+
+    <meta content="collector.githubapp.com" name="octolytics-host" /><meta content="collector-cdn.github.com" name="octolytics-script-host" /><meta content="github" name="octolytics-app-id" /><meta content="807728C4:6D12:6D0A606:558D9B77" name="octolytics-dimension-request_id" />
+    
+    <meta content="Rails, view, commit#show" name="analytics-event" />
+    <meta class="js-ga-set" name="dimension1" content="Logged Out">
+    <meta name="is-dotcom" content="true">
+      <meta name="hostname" content="github.com">
+    <meta name="user-login" content="">
+
+      <link rel="icon" sizes="any" mask href="https://assets-cdn.github.com/pinned-octocat.svg">
+      <meta name="theme-color" content="#4078c0">
+      <link rel="icon" type="image/x-icon" href="https://assets-cdn.github.com/favicon.ico">
+
+
+    <meta content="authenticity_token" name="csrf-param" />
+<meta content="JXxcM7H7vUZzUqbxBsbXTPEjaBeO4+hmHiMimOsE8MO9vYat9Ni8OqGZNH58XFnAkPL4490G0djrHavZz87AXw==" name="csrf-token" />
+
+    <link crossorigin="anonymous" href="https://assets-cdn.github.com/assets/github/index-4157068649cead58a7dd42dc9c0f2dc5b01bcc77921bc077b357e48be23aa237.css" media="all" rel="stylesheet" />
+    <link crossorigin="anonymous" href="https://assets-cdn.github.com/assets/github2/index-13f0ac42293bae46d3491dc1c876dbb87ac502462c5f7f8fca73526a02228eb3.css" media="all" rel="stylesheet" />
+    
+    
+
+
+    <meta http-equiv="x-pjax-version" content="40b2648e36de1d600743a44ce28fe428">
+
+        <link data-pjax-transient="true" href="/CumulusNetworks/cldemo/commit/c9559f9faeaf50a29fede6b0ffb405a96bbe6ffe.diff" rel="alternate" type="text/plain+diff" />
+  <link data-pjax-transient="true" href="/CumulusNetworks/cldemo/commit/c9559f9faeaf50a29fede6b0ffb405a96bbe6ffe.patch" rel="alternate" type="text/plain+patch" />
+
+  <meta name="diff-view" content="unified" data-pjax-transient>
+
+  <meta name="description" content="Contribute to cldemo development by creating an account on GitHub.">
+  <meta name="go-import" content="github.com/CumulusNetworks/cldemo git https://github.com/CumulusNetworks/cldemo.git">
+
+  <meta content="4306877" name="octolytics-dimension-user_id" /><meta content="CumulusNetworks" name="octolytics-dimension-user_login" /><meta content="18252064" name="octolytics-dimension-repository_id" /><meta content="CumulusNetworks/cldemo" name="octolytics-dimension-repository_nwo" /><meta content="true" name="octolytics-dimension-repository_public" /><meta content="false" name="octolytics-dimension-repository_is_fork" /><meta content="18252064" name="octolytics-dimension-repository_network_root_id" /><meta content="CumulusNetworks/cldemo" name="octolytics-dimension-repository_network_root_nwo" />
+  <link href="https://github.com/CumulusNetworks/cldemo/commits/c9559f9faeaf50a29fede6b0ffb405a96bbe6ffe.atom" rel="alternate" title="Recent Commits to cldemo:c9559f9faeaf50a29fede6b0ffb405a96bbe6ffe" type="application/atom+xml">
+
+  </head>
+
+
+  <body class="logged_out  env-production  vis-public">
+    <a href="#start-of-content" tabindex="1" class="accessibility-aid js-skip-to-content">Skip to content</a>
+    <div class="wrapper">
+      
+      
+      
+
+
+        
+        <div class="header header-logged-out" role="banner">
+  <div class="container clearfix">
+
+    <a class="header-logo-wordmark" href="https://github.com/" data-ga-click="(Logged out) Header, go to homepage, icon:logo-wordmark">
+      <span class="mega-octicon octicon-logo-github"></span>
+    </a>
+
+    <div class="header-actions" role="navigation">
+        <a class="btn btn-primary" href="/join" data-ga-click="(Logged out) Header, clicked Sign up, text:sign-up">Sign up</a>
+      <a class="btn" href="/login?return_to=%2FCumulusNetworks%2Fcldemo%2Fcommit%2Fc9559f9faeaf50a29fede6b0ffb405a96bbe6ffe" data-ga-click="(Logged out) Header, clicked Sign in, text:sign-in">Sign in</a>
+    </div>
+
+    <div class="site-search repo-scope js-site-search" role="search">
+      <form accept-charset="UTF-8" action="/CumulusNetworks/cldemo/search" class="js-site-search-form" data-global-search-url="/search" data-repo-search-url="/CumulusNetworks/cldemo/search" method="get"><div style="margin:0;padding:0;display:inline"><input name="utf8" type="hidden" value="&#x2713;" /></div>
+  <label class="js-chromeless-input-container form-control">
+    <div class="scope-badge">This repository</div>
+    <input type="text"
+      class="js-site-search-focus js-site-search-field is-clearable chromeless-input"
+      data-hotkey="s"
+      name="q"
+      placeholder="Search"
+      data-global-scope-placeholder="Search GitHub"
+      data-repo-scope-placeholder="Search"
+      tabindex="1"
+      autocapitalize="off">
+  </label>
+</form>
+    </div>
+
+      <ul class="header-nav left" role="navigation">
+          <li class="header-nav-item">
+            <a class="header-nav-link" href="/explore" data-ga-click="(Logged out) Header, go to explore, text:explore">Explore</a>
+          </li>
+          <li class="header-nav-item">
+            <a class="header-nav-link" href="/features" data-ga-click="(Logged out) Header, go to features, text:features">Features</a>
+          </li>
+          <li class="header-nav-item">
+            <a class="header-nav-link" href="https://enterprise.github.com/" data-ga-click="(Logged out) Header, go to enterprise, text:enterprise">Enterprise</a>
+          </li>
+          <li class="header-nav-item">
+            <a class="header-nav-link" href="/blog" data-ga-click="(Logged out) Header, go to blog, text:blog">Blog</a>
+          </li>
+      </ul>
+
+  </div>
+</div>
+
+
+
+      <div id="start-of-content" class="accessibility-aid"></div>
+          <div class="site" itemscope itemtype="http://schema.org/WebPage">
+    <div id="js-flash-container">
+      
+    </div>
+    <div class="pagehead repohead instapaper_ignore readability-menu">
+      <div class="container">
+
+        
+<ul class="pagehead-actions">
+
+  <li>
+      <a href="/login?return_to=%2FCumulusNetworks%2Fcldemo"
+    class="btn btn-sm btn-with-count tooltipped tooltipped-n"
+    aria-label="You must be signed in to watch a repository" rel="nofollow">
+    <span class="octicon octicon-eye"></span>
+    Watch
+  </a>
+  <a class="social-count" href="/CumulusNetworks/cldemo/watchers">
+    43
+  </a>
+
+  </li>
+
+  <li>
+      <a href="/login?return_to=%2FCumulusNetworks%2Fcldemo"
+    class="btn btn-sm btn-with-count tooltipped tooltipped-n"
+    aria-label="You must be signed in to star a repository" rel="nofollow">
+    <span class="octicon octicon-star"></span>
+    Star
+  </a>
+
+    <a class="social-count js-social-count" href="/CumulusNetworks/cldemo/stargazers">
+      14
+    </a>
+
+  </li>
+
+    <li>
+      <a href="/login?return_to=%2FCumulusNetworks%2Fcldemo"
+        class="btn btn-sm btn-with-count tooltipped tooltipped-n"
+        aria-label="You must be signed in to fork a repository" rel="nofollow">
+        <span class="octicon octicon-repo-forked"></span>
+        Fork
+      </a>
+      <a href="/CumulusNetworks/cldemo/network" class="social-count">
+        8
+      </a>
+    </li>
+</ul>
+
+        <h1 itemscope itemtype="http://data-vocabulary.org/Breadcrumb" class="entry-title public">
+          <span class="mega-octicon octicon-repo"></span>
+          <span class="author"><a href="/CumulusNetworks" class="url fn" itemprop="url" rel="author"><span itemprop="title">CumulusNetworks</span></a></span><!--
+       --><span class="path-divider">/</span><!--
+       --><strong><a href="/CumulusNetworks/cldemo" data-pjax="#js-repo-pjax-container">cldemo</a></strong>
+
+          <span class="page-context-loader">
+            <img alt="" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+          </span>
+
+        </h1>
+      </div><!-- /.container -->
+    </div><!-- /.repohead -->
+
+    <div class="container">
+      <div class="repository-with-sidebar repo-container new-discussion-timeline  ">
+        <div class="repository-sidebar clearfix">
+            
+<nav class="sunken-menu repo-nav js-repo-nav js-sidenav-container-pjax js-octicon-loaders"
+     role="navigation"
+     data-pjax="#js-repo-pjax-container"
+     data-issue-count-url="/CumulusNetworks/cldemo/issues/counts">
+  <ul class="sunken-menu-group">
+    <li class="tooltipped tooltipped-w" aria-label="Code">
+      <a href="/CumulusNetworks/cldemo" aria-label="Code" class="selected js-selected-navigation-item sunken-menu-item" data-hotkey="g c" data-selected-links="repo_source repo_downloads repo_commits repo_releases repo_tags repo_branches /CumulusNetworks/cldemo">
+        <span class="octicon octicon-code"></span> <span class="full-word">Code</span>
+        <img alt="" class="mini-loader" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+</a>    </li>
+
+      <li class="tooltipped tooltipped-w" aria-label="Issues">
+        <a href="/CumulusNetworks/cldemo/issues" aria-label="Issues" class="js-selected-navigation-item sunken-menu-item" data-hotkey="g i" data-selected-links="repo_issues repo_labels repo_milestones /CumulusNetworks/cldemo/issues">
+          <span class="octicon octicon-issue-opened"></span> <span class="full-word">Issues</span>
+          <span class="js-issue-replace-counter"></span>
+          <img alt="" class="mini-loader" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+</a>      </li>
+
+    <li class="tooltipped tooltipped-w" aria-label="Pull requests">
+      <a href="/CumulusNetworks/cldemo/pulls" aria-label="Pull requests" class="js-selected-navigation-item sunken-menu-item" data-hotkey="g p" data-selected-links="repo_pulls /CumulusNetworks/cldemo/pulls">
+          <span class="octicon octicon-git-pull-request"></span> <span class="full-word">Pull requests</span>
+          <span class="js-pull-replace-counter"></span>
+          <img alt="" class="mini-loader" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+</a>    </li>
+
+  </ul>
+  <div class="sunken-menu-separator"></div>
+  <ul class="sunken-menu-group">
+
+    <li class="tooltipped tooltipped-w" aria-label="Pulse">
+      <a href="/CumulusNetworks/cldemo/pulse" aria-label="Pulse" class="js-selected-navigation-item sunken-menu-item" data-selected-links="pulse /CumulusNetworks/cldemo/pulse">
+        <span class="octicon octicon-pulse"></span> <span class="full-word">Pulse</span>
+        <img alt="" class="mini-loader" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+</a>    </li>
+
+    <li class="tooltipped tooltipped-w" aria-label="Graphs">
+      <a href="/CumulusNetworks/cldemo/graphs" aria-label="Graphs" class="js-selected-navigation-item sunken-menu-item" data-selected-links="repo_graphs repo_contributors /CumulusNetworks/cldemo/graphs">
+        <span class="octicon octicon-graph"></span> <span class="full-word">Graphs</span>
+        <img alt="" class="mini-loader" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+</a>    </li>
+  </ul>
+
+
+</nav>
+
+              <div class="only-with-full-nav">
+                  
+<div class="js-clone-url clone-url open"
+  data-protocol-type="http">
+  <h3><span class="text-emphasized">HTTPS</span> clone URL</h3>
+  <div class="input-group js-zeroclipboard-container">
+    <input type="text" class="input-mini input-monospace js-url-field js-zeroclipboard-target"
+           value="https://github.com/CumulusNetworks/cldemo.git" readonly="readonly">
+    <span class="input-group-button">
+      <button aria-label="Copy to clipboard" class="js-zeroclipboard btn btn-sm zeroclipboard-button tooltipped tooltipped-s" data-copied-hint="Copied!" type="button"><span class="octicon octicon-clippy"></span></button>
+    </span>
+  </div>
+</div>
+
+  
+<div class="js-clone-url clone-url "
+  data-protocol-type="subversion">
+  <h3><span class="text-emphasized">Subversion</span> checkout URL</h3>
+  <div class="input-group js-zeroclipboard-container">
+    <input type="text" class="input-mini input-monospace js-url-field js-zeroclipboard-target"
+           value="https://github.com/CumulusNetworks/cldemo" readonly="readonly">
+    <span class="input-group-button">
+      <button aria-label="Copy to clipboard" class="js-zeroclipboard btn btn-sm zeroclipboard-button tooltipped tooltipped-s" data-copied-hint="Copied!" type="button"><span class="octicon octicon-clippy"></span></button>
+    </span>
+  </div>
+</div>
+
+
+
+<div class="clone-options">You can clone with
+  <form accept-charset="UTF-8" action="/users/set_protocol?protocol_selector=http&amp;protocol_type=clone" class="inline-form js-clone-selector-form " data-remote="true" method="post"><div style="margin:0;padding:0;display:inline"><input name="utf8" type="hidden" value="&#x2713;" /><input name="authenticity_token" type="hidden" value="Uwl3jLcV3lt3kdT9IJartaHqcx2Qn2ca+rhfY3cAu29iIWZ5Gg6ieXWwz59jC6SDG46+mcfvmDMPIQ7B56ci3w==" /></div><button class="btn-link js-clone-selector" data-protocol="http" type="submit">HTTPS</button></form> or <form accept-charset="UTF-8" action="/users/set_protocol?protocol_selector=subversion&amp;protocol_type=clone" class="inline-form js-clone-selector-form " data-remote="true" method="post"><div style="margin:0;padding:0;display:inline"><input name="utf8" type="hidden" value="&#x2713;" /><input name="authenticity_token" type="hidden" value="m/1bm1LoXUgc/RZkUSLPH+lsLnjgXQ+G4tviEkkKFgw1wqXGTPF+dI+33yi4YXwZvh2XN7WLRPOYqy9RT0TVCw==" /></div><button class="btn-link js-clone-selector" data-protocol="subversion" type="submit">Subversion</button></form>.
+  <a href="https://help.github.com/articles/which-remote-url-should-i-use" class="help tooltipped tooltipped-n" aria-label="Get help on which URL is right for you.">
+    <span class="octicon octicon-question"></span>
+  </a>
+</div>
+
+
+
+
+                <a href="/CumulusNetworks/cldemo/archive/c9559f9faeaf50a29fede6b0ffb405a96bbe6ffe.zip"
+                   class="btn btn-sm sidebar-button"
+                   aria-label="Download the contents of CumulusNetworks/cldemo as a zip file"
+                   title="Download the contents of CumulusNetworks/cldemo as a zip file"
+                   rel="nofollow">
+                  <span class="octicon octicon-cloud-download"></span>
+                  Download ZIP
+                </a>
+              </div>
+        </div><!-- /.repository-sidebar -->
+
+        <div id="js-repo-pjax-container" class="repository-content context-loader-container" data-pjax-container>
+
+          
+<a href="/CumulusNetworks/cldemo/commit/c9559f9faeaf50a29fede6b0ffb405a96bbe6ffe" class="hidden js-permalink-shortcut" data-hotkey="y">Permalink</a>
+
+
+
+
+<div class="commit full-commit ">
+  <a href="/CumulusNetworks/cldemo/tree/c9559f9faeaf50a29fede6b0ffb405a96bbe6ffe" class="btn btn-outline right" title="Browse the repository at this point in the history" rel="nofollow">Browse files</a>
+
+    <p class="commit-title">
+      inserting requires for proper ordering
+    </p>
+
+
+  <div class="commit-branches">
+    <include-fragment src="/CumulusNetworks/cldemo/branch_commits/c9559f9faeaf50a29fede6b0ffb405a96bbe6ffe">
+      <span class="octicon octicon-git-branch"></span>
+      <ul class="branches-list">
+        <li class="loading">Loading branch information<span class="animated-ellipsis-container"><span class="animated-ellipsis">...</span></span></li>
+      </ul>
+</include-fragment>  </div>
+
+  <div class="commit-meta clearfix">
+    <span class="sha-block">commit <span class="sha js-selectable-text">c9559f9faeaf50a29fede6b0ffb405a96bbe6ffe</span></span>
+
+    <span class="sha-block" data-pjax>
+      1 parent
+        
+        <a href="/CumulusNetworks/cldemo/commit/bbece4f8381504d71bd93438493c83e0e204f678" class="sha" data-hotkey="p">bbece4f</a>
+    </span>
+
+    <div class="authorship">
+      <img alt="@LeslieCarr" class="avatar" height="24" src="https://avatars2.githubusercontent.com/u/6932299?v=3&amp;s=48" width="24" />
+      <span class="author-name"><a href="/LeslieCarr" rel="contributor">LeslieCarr</a></span>
+      
+      authored <time datetime="2014-06-05T20:35:59Z" is="relative-time">Jun 5, 2014</time>
+
+    </div>
+  </div>
+</div>
+
+
+
+
+    <a name="diff-stat"></a>
+    <div id="toc" class="details-collapse table-of-contents js-details-container">
+  <div class="btn-group right" data-ga-load="Diff, view, Viewed Unified Diff">
+  <a class="btn btn-sm selected" href="https://github.com/CumulusNetworks/cldemo/commit/c9559f9faeaf50a29fede6b0ffb405a96bbe6ffe?diff=unified">
+    Unified
+  </a>
+  <a class="btn btn-sm" href="https://github.com/CumulusNetworks/cldemo/commit/c9559f9faeaf50a29fede6b0ffb405a96bbe6ffe?diff=split">
+    Split
+  </a>
+</div>
+
+
+  <div class="toc-diff-stats">
+    <span class="octicon octicon-diff"></span>
+    Showing
+    <button type="button" class="btn-link js-details-target">
+      2 changed files
+    </button>
+    with
+    <strong>13 additions</strong>
+    and <strong>10 deletions</strong>.
+  </div>
+
+  <ol class="content collapse js-transitionable">
+    <li>
+      <span class="diffstat right">
+          <span class="text-diff-added">
+            +1
+          </span>
+          <span class="text-diff-deleted">
+            −1
+          </span>
+          <a href="#diff-57273dbdf305cd30caa4cb6f95074a28" class="tooltipped tooltipped-s" aria-label="2 lines changed">
+            <span class="diffstat-bar">
+              <span class="text-diff-added">&#xf053;</span><span class="text-diff-deleted">&#xf053;</span>&#xf053;&#xf053;&#xf053;
+            </span>
+          </a>
+      </span>
+      <span class="octicon octicon-diff-modified" title="modified"></span>
+      <a href="#diff-57273dbdf305cd30caa4cb6f95074a28">pkgs/workbench/cldemo-wbench-base-puppet/debian/DEBIAN/control</a>
+    </li>
+    <li>
+      <span class="diffstat right">
+          <span class="text-diff-added">
+            +12
+          </span>
+          <span class="text-diff-deleted">
+            −9
+          </span>
+          <a href="#diff-b60d56fe282bcba34c5000a583237067" class="tooltipped tooltipped-s" aria-label="21 lines changed">
+            <span class="diffstat-bar">
+              <span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span><span class="text-diff-deleted">&#xf053;</span><span class="text-diff-deleted">&#xf053;</span>&#xf053;
+            </span>
+          </a>
+      </span>
+      <span class="octicon octicon-diff-modified" title="modified"></span>
+      <a href="#diff-b60d56fe282bcba34c5000a583237067">pkgs/workbench/cldemo-wbench-base-puppet/debian/etc/puppet/modules/monitoring/manifests/ganglia.pp</a>
+    </li>
+  </ol>
+</div>
+
+  <div id="files" class="diff-view ">
+      <a name="diff-57273dbdf305cd30caa4cb6f95074a28"></a>
+      <div id="diff-0"
+           class="file js-details-container
+                   
+                   
+                   
+                   
+                   show-inline-notes
+                 ">
+        <div class="file-header" data-path="pkgs/workbench/cldemo-wbench-base-puppet/debian/DEBIAN/control">
+          <div class="file-actions">
+              <span class="show-file-notes">
+                <label>
+                  <input type="checkbox" checked="checked" class="js-toggle-file-notes">
+                  Show notes
+                </label>
+              </span>
+
+                <a href="/CumulusNetworks/cldemo/blob/c9559f9faeaf50a29fede6b0ffb405a96bbe6ffe/pkgs/workbench/cldemo-wbench-base-puppet/debian/DEBIAN/control" class="btn btn-sm tooltipped tooltipped-n" rel="nofollow" aria-label="View the whole file at version c9559f9 ">View</a>
+
+
+          </div>
+          <div class="file-info">
+              <span class="diffstat tooltipped tooltipped-e" aria-label="1 addition &amp; 1 deletion">2 <span class="diffstat-bar"><span class="text-diff-added">&#xf053;</span><span class="text-diff-deleted">&#xf053;</span>&#xf053;&#xf053;&#xf053;</span></span>
+
+            <span class="js-selectable-text" title="pkgs/workbench/cldemo-wbench-base-puppet/debian/DEBIAN/control">
+              pkgs/workbench/cldemo-wbench-base-puppet/debian/DEBIAN/control
+            </span>
+            
+          </div>
+        </div>
+
+            <div class="data highlight blob-wrapper">
+              <table class="diff-table tab-size  " data-tab-size="8">
+                
+      <tr data-position="0">
+    <td id="diff-57273dbdf305cd30caa4cb6f95074a28L0" class="blob-num blob-num-hunk non-expandable" data-line-number="..."></td>
+    <td id="diff-57273dbdf305cd30caa4cb6f95074a28R0" class="blob-num blob-num-hunk non-expandable" data-line-number="..."></td>
+    <td class="blob-code blob-code-inner blob-code-hunk">@@ -1,5 +1,5 @@</td>
+  </tr>
+
+    
+
+<tr>
+    <td id="diff-57273dbdf305cd30caa4cb6f95074a28L1" data-line-number="1"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-57273dbdf305cd30caa4cb6f95074a28R1" data-line-number="1"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> Package: cldemo-wbench-base-puppet</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-57273dbdf305cd30caa4cb6f95074a28L2" data-line-number="2"
+        class="blob-num blob-num-deletion js-linkable-line-number"></td>
+
+    <td class="blob-num blob-num-deletion empty-cell"></td>
+
+  <td class="blob-code blob-code-deletion">
+
+    <span class="blob-code-inner">-Version: 1.5-<span class="x x-first x-last">1</span></span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-57273dbdf305cd30caa4cb6f95074a28R2" data-line-number="2"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+Version: 1.5-<span class="x x-first x-last">2</span></span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-57273dbdf305cd30caa4cb6f95074a28L3" data-line-number="3"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-57273dbdf305cd30caa4cb6f95074a28R3" data-line-number="3"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> Section: base</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-57273dbdf305cd30caa4cb6f95074a28L4" data-line-number="4"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-57273dbdf305cd30caa4cb6f95074a28R4" data-line-number="4"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> Priority: optional</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-57273dbdf305cd30caa4cb6f95074a28L5" data-line-number="5"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-57273dbdf305cd30caa4cb6f95074a28R5" data-line-number="5"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> Architecture: all</span>
+
+  </td>
+</tr>
+
+
+  <tr class="js-expandable-line">
+   <td class="blob-num blob-num-expandable" colspan="2">
+     <a href="#diff-57273dbdf305cd30caa4cb6f95074a28"
+          class="diff-expander js-expand" title="Expand" aria-label="Expand"
+          data-url="/CumulusNetworks/cldemo/blob_excerpt/560ab6ab3ea04c2e2d6216c6068b8d4b3231dbf4?diff=unified&amp;mode=100644&amp;path=pkgs%2Fworkbench%2Fcldemo-wbench-base-puppet%2Fdebian%2FDEBIAN%2Fcontrol&amp;prev_line_num_left=5&amp;prev_line_num_right=5"
+          data-left-range="6-9"
+          data-right-range="6-9">
+       <span class="octicon octicon-unfold"></span>
+     </a>
+   </td>
+   <td class="blob-code blob-code-expandable"></td>
+  </tr>
+
+              </table>
+            </div>
+      </div>
+      <a name="diff-b60d56fe282bcba34c5000a583237067"></a>
+      <div id="diff-1"
+           class="file js-details-container
+                   
+                   
+                   
+                   
+                   show-inline-notes
+                 ">
+        <div class="file-header" data-path="pkgs/workbench/cldemo-wbench-base-puppet/debian/etc/puppet/modules/monitoring/manifests/ganglia.pp">
+          <div class="file-actions">
+              <span class="show-file-notes">
+                <label>
+                  <input type="checkbox" checked="checked" class="js-toggle-file-notes">
+                  Show notes
+                </label>
+              </span>
+
+                <a href="/CumulusNetworks/cldemo/blob/c9559f9faeaf50a29fede6b0ffb405a96bbe6ffe/pkgs/workbench/cldemo-wbench-base-puppet/debian/etc/puppet/modules/monitoring/manifests/ganglia.pp" class="btn btn-sm tooltipped tooltipped-n" rel="nofollow" aria-label="View the whole file at version c9559f9 ">View</a>
+
+
+          </div>
+          <div class="file-info">
+              <span class="diffstat tooltipped tooltipped-e" aria-label="12 additions &amp; 9 deletions">21 <span class="diffstat-bar"><span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span><span class="text-diff-deleted">&#xf053;</span><span class="text-diff-deleted">&#xf053;</span>&#xf053;</span></span>
+
+            <span class="js-selectable-text" title="pkgs/workbench/cldemo-wbench-base-puppet/debian/etc/puppet/modules/monitoring/manifests/ganglia.pp">
+              ...bench/cldemo-wbench-base-puppet/debian/etc/puppet/modules/monitoring/manifests/ganglia.pp
+            </span>
+            
+          </div>
+        </div>
+
+            <div class="data highlight blob-wrapper">
+              <table class="diff-table tab-size  " data-tab-size="8">
+                
+      <tr class="js-expandable-line" data-position="0">
+    <td class="blob-num blob-num-expandable" colspan="2">
+      <a href="#diff-b60d56fe282bcba34c5000a583237067"
+            class="diff-expander js-expand" title="Expand" aria-label="Expand"
+            data-url="/CumulusNetworks/cldemo/blob_excerpt/8a20deaee80f19d56d40069866dcdde132bc3883?diff=unified&amp;left_hunk_size=7&amp;mode=100644&amp;next_line_num_left=9&amp;next_line_num_right=9&amp;path=pkgs%2Fworkbench%2Fcldemo-wbench-base-puppet%2Fdebian%2Fetc%2Fpuppet%2Fmodules%2Fmonitoring%2Fmanifests%2Fganglia.pp&amp;prev_line_num_left=&amp;prev_line_num_right=&amp;right_hunk_size=8"
+            data-left-range="1-8" data-right-range="1-8">
+        <span class="octicon octicon-unfold"></span>
+      </a>
+    </td>
+    <td class="blob-code blob-code-inner blob-code-hunk">@@ -9,7 +9,8 @@</td>
+  </tr>
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L9" data-line-number="9"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R9" data-line-number="9"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">     <span class="pl-c1">hasstatus</span>  =&gt; true,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L10" data-line-number="10"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R10" data-line-number="10"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">     <span class="pl-c1">hasrestart</span> =&gt; true,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L11" data-line-number="11"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R11" data-line-number="11"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">     <span class="pl-c1">status</span>     =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>pgrep -u ganglia -f /usr/sbin/gmond<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L12" data-line-number="12"
+        class="blob-num blob-num-deletion js-linkable-line-number"></td>
+
+    <td class="blob-num blob-num-deletion empty-cell"></td>
+
+  <td class="blob-code blob-code-deletion">
+
+    <span class="blob-code-inner">-    <span class="pl-c1">enable</span>     =&gt; true</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R12" data-line-number="12"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+    <span class="pl-c1">enable</span>     =&gt; true,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R13" data-line-number="13"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+    <span class="pl-c1">require</span>    =&gt; Package[<span class="pl-s"><span class="pl-pds">&#39;</span>ganglia-monitor<span class="pl-pds">&#39;</span></span>]</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L13" data-line-number="13"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R14" data-line-number="14"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   }</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L14" data-line-number="14"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R15" data-line-number="15"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> </span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L15" data-line-number="15"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R16" data-line-number="16"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   <span class="pl-k">if</span> <span class="pl-smi">$gangliatype</span> == <span class="pl-s"><span class="pl-pds">&#39;</span>switch<span class="pl-pds">&#39;</span></span> {</span>
+
+  </td>
+</tr>
+
+
+      <tr class="js-expandable-line" data-position="10">
+    <td class="blob-num blob-num-expandable" colspan="2">
+      <a href="#diff-b60d56fe282bcba34c5000a583237067"
+            class="diff-expander js-expand" title="Expand" aria-label="Expand"
+            data-url="/CumulusNetworks/cldemo/blob_excerpt/8a20deaee80f19d56d40069866dcdde132bc3883?diff=unified&amp;left_hunk_size=10&amp;mode=100644&amp;next_line_num_left=33&amp;next_line_num_right=34&amp;path=pkgs%2Fworkbench%2Fcldemo-wbench-base-puppet%2Fdebian%2Fetc%2Fpuppet%2Fmodules%2Fmonitoring%2Fmanifests%2Fganglia.pp&amp;prev_line_num_left=15&amp;prev_line_num_right=16&amp;right_hunk_size=11"
+            data-left-range="16-32" data-right-range="17-33">
+        <span class="octicon octicon-unfold"></span>
+      </a>
+    </td>
+    <td class="blob-code blob-code-inner blob-code-hunk">@@ -33,10 +34,11 @@</td>
+  </tr>
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L33" data-line-number="33"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R34" data-line-number="34"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> </span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L34" data-line-number="34"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R35" data-line-number="35"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   <span class="pl-c"># include multiple interface module</span></span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L35" data-line-number="35"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R36" data-line-number="36"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   <span class="pl-k">file</span> { <span class="pl-en">&#39;/usr/lib/ganglia/python_modules/&#39;</span>:</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L36" data-line-number="36"
+        class="blob-num blob-num-deletion js-linkable-line-number"></td>
+
+    <td class="blob-num blob-num-deletion empty-cell"></td>
+
+  <td class="blob-code blob-code-deletion">
+
+    <span class="blob-code-inner">-    <span class="pl-c1">ensure</span> =&gt; directory,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L37" data-line-number="37"
+        class="blob-num blob-num-deletion js-linkable-line-number"></td>
+
+    <td class="blob-num blob-num-deletion empty-cell"></td>
+
+  <td class="blob-code blob-code-deletion">
+
+    <span class="blob-code-inner">-    <span class="pl-c1">owner</span>  =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>root<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L38" data-line-number="38"
+        class="blob-num blob-num-deletion js-linkable-line-number"></td>
+
+    <td class="blob-num blob-num-deletion empty-cell"></td>
+
+  <td class="blob-code blob-code-deletion">
+
+    <span class="blob-code-inner">-    <span class="pl-c1">group</span>  =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>root<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L39" data-line-number="39"
+        class="blob-num blob-num-deletion js-linkable-line-number"></td>
+
+    <td class="blob-num blob-num-deletion empty-cell"></td>
+
+  <td class="blob-code blob-code-deletion">
+
+    <span class="blob-code-inner">-    <span class="pl-c1">mode</span>   =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>0644<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R37" data-line-number="37"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+    <span class="pl-c1">ensure</span>  =&gt; directory,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R38" data-line-number="38"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+    <span class="pl-c1">owner</span>   =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>root<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R39" data-line-number="39"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+    <span class="pl-c1">group</span>   =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>root<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R40" data-line-number="40"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+    <span class="pl-c1">mode</span>    =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>0644<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R41" data-line-number="41"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+    <span class="pl-c1">require</span> =&gt; Package[<span class="pl-s"><span class="pl-pds">&#39;</span>ganglia-monitor<span class="pl-pds">&#39;</span></span>]</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L40" data-line-number="40"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R42" data-line-number="42"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   }</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L41" data-line-number="41"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R43" data-line-number="43"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> </span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L42" data-line-number="42"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R44" data-line-number="44"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   <span class="pl-k">file</span> { <span class="pl-en">&#39;/usr/lib/ganglia/python_modules/multi_interface.py&#39;</span>:</span>
+
+  </td>
+</tr>
+
+
+      <tr class="js-expandable-line" data-position="26">
+    <td class="blob-num blob-num-expandable" colspan="2">
+      <a href="#diff-b60d56fe282bcba34c5000a583237067"
+            class="diff-expander js-expand" title="Expand" aria-label="Expand"
+            data-url="/CumulusNetworks/cldemo/blob_excerpt/8a20deaee80f19d56d40069866dcdde132bc3883?diff=unified&amp;left_hunk_size=10&amp;mode=100644&amp;next_line_num_left=50&amp;next_line_num_right=52&amp;path=pkgs%2Fworkbench%2Fcldemo-wbench-base-puppet%2Fdebian%2Fetc%2Fpuppet%2Fmodules%2Fmonitoring%2Fmanifests%2Fganglia.pp&amp;prev_line_num_left=42&amp;prev_line_num_right=44&amp;right_hunk_size=11"
+            data-left-range="43-49" data-right-range="45-51">
+        <span class="octicon octicon-unfold"></span>
+      </a>
+    </td>
+    <td class="blob-code blob-code-inner blob-code-hunk">@@ -50,10 +52,11 @@</td>
+  </tr>
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L50" data-line-number="50"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R52" data-line-number="52"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   }</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L51" data-line-number="51"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R53" data-line-number="53"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> </span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L52" data-line-number="52"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R54" data-line-number="54"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   <span class="pl-k">file</span> { <span class="pl-en">&#39;/etc/ganglia/conf.d&#39;</span>:</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L53" data-line-number="53"
+        class="blob-num blob-num-deletion js-linkable-line-number"></td>
+
+    <td class="blob-num blob-num-deletion empty-cell"></td>
+
+  <td class="blob-code blob-code-deletion">
+
+    <span class="blob-code-inner">-    <span class="pl-c1">ensure</span> =&gt; directory,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L54" data-line-number="54"
+        class="blob-num blob-num-deletion js-linkable-line-number"></td>
+
+    <td class="blob-num blob-num-deletion empty-cell"></td>
+
+  <td class="blob-code blob-code-deletion">
+
+    <span class="blob-code-inner">-    <span class="pl-c1">owner</span>  =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>root<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L55" data-line-number="55"
+        class="blob-num blob-num-deletion js-linkable-line-number"></td>
+
+    <td class="blob-num blob-num-deletion empty-cell"></td>
+
+  <td class="blob-code blob-code-deletion">
+
+    <span class="blob-code-inner">-    <span class="pl-c1">group</span>  =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>root<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L56" data-line-number="56"
+        class="blob-num blob-num-deletion js-linkable-line-number"></td>
+
+    <td class="blob-num blob-num-deletion empty-cell"></td>
+
+  <td class="blob-code blob-code-deletion">
+
+    <span class="blob-code-inner">-    <span class="pl-c1">mode</span>   =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>0644<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R55" data-line-number="55"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+    <span class="pl-c1">ensure</span>  =&gt; directory,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R56" data-line-number="56"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+    <span class="pl-c1">owner</span>   =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>root<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R57" data-line-number="57"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+    <span class="pl-c1">group</span>   =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>root<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R58" data-line-number="58"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+    <span class="pl-c1">mode</span>    =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>0644<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R59" data-line-number="59"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+    <span class="pl-c1">require</span> =&gt; Package[<span class="pl-s"><span class="pl-pds">&#39;</span>ganglia-monitor<span class="pl-pds">&#39;</span></span>]</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L57" data-line-number="57"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R60" data-line-number="60"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   }</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L58" data-line-number="58"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R61" data-line-number="61"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> </span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-b60d56fe282bcba34c5000a583237067L59" data-line-number="59"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-b60d56fe282bcba34c5000a583237067R62" data-line-number="62"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   <span class="pl-k">file</span> { <span class="pl-en">&#39;/etc/ganglia/conf.d/multi_interface.pyconf&#39;</span>:</span>
+
+  </td>
+</tr>
+
+
+  <tr class="js-expandable-line">
+   <td class="blob-num blob-num-expandable" colspan="2">
+     <a href="#diff-b60d56fe282bcba34c5000a583237067"
+          class="diff-expander js-expand" title="Expand" aria-label="Expand"
+          data-url="/CumulusNetworks/cldemo/blob_excerpt/8a20deaee80f19d56d40069866dcdde132bc3883?diff=unified&amp;mode=100644&amp;path=pkgs%2Fworkbench%2Fcldemo-wbench-base-puppet%2Fdebian%2Fetc%2Fpuppet%2Fmodules%2Fmonitoring%2Fmanifests%2Fganglia.pp&amp;prev_line_num_left=59&amp;prev_line_num_right=62"
+          data-left-range="60-72"
+          data-right-range="63-72">
+       <span class="octicon octicon-unfold"></span>
+     </a>
+   </td>
+   <td class="blob-code blob-code-expandable"></td>
+  </tr>
+
+              </table>
+            </div>
+      </div>
+</div>
+
+<button class="js-toggle-all-file-notes" data-hotkey="i" style="display:none">Toggle all file notes</button>
+
+
+<div id="all_commit_comments" class="js-quote-selection-container">
+  <div class="commit-comments-heading">
+    
+
+  </div>
+
+  <div id="comments" class="comment-holder">
+    
+
+<!-- Rendered timeline since 2014-06-05 13:35:59 -->
+<div id="partial-timeline-marker"
+      class="js-timeline-marker js-socket-channel js-updatable-content"
+      data-channel="CumulusNetworks/cldemo:commit:c9559f9faeaf50a29fede6b0ffb405a96bbe6ffe"
+      data-url="/CumulusNetworks/cldemo/commit/c9559f9faeaf50a29fede6b0ffb405a96bbe6ffe/show_partial?partial=commit%2Ftimeline_marker&amp;since=1402000559"
+      data-last-modified="Thu, 05 Jun 2014 20:35:59 GMT">
+</div>
+
+  </div>
+
+  
+
+    Please <a href="/login?return_to=%2FCumulusNetworks%2Fcldemo%2Fcommit%2Fc9559f9faeaf50a29fede6b0ffb405a96bbe6ffe" rel="nofollow">sign in</a> to comment.
+
+</div>
+
+
+        </div>
+
+      </div><!-- /.repo-container -->
+      <div class="modal-backdrop"></div>
+    </div><!-- /.container -->
+  </div><!-- /.site -->
+
+
+    </div><!-- /.wrapper -->
+
+      <div class="container">
+  <div class="site-footer" role="contentinfo">
+    <ul class="site-footer-links right">
+        <li><a href="https://status.github.com/" data-ga-click="Footer, go to status, text:status">Status</a></li>
+      <li><a href="https://developer.github.com" data-ga-click="Footer, go to api, text:api">API</a></li>
+      <li><a href="https://training.github.com" data-ga-click="Footer, go to training, text:training">Training</a></li>
+      <li><a href="https://shop.github.com" data-ga-click="Footer, go to shop, text:shop">Shop</a></li>
+        <li><a href="https://github.com/blog" data-ga-click="Footer, go to blog, text:blog">Blog</a></li>
+        <li><a href="https://github.com/about" data-ga-click="Footer, go to about, text:about">About</a></li>
+      <li><a href="https://help.github.com" data-ga-click="Footer, go to help, text:help">Help</a></li>
+
+    </ul>
+
+    <a href="https://github.com" aria-label="Homepage">
+      <span class="mega-octicon octicon-mark-github" title="GitHub"></span>
+</a>
+    <ul class="site-footer-links">
+      <li>&copy; 2015 <span title="0.10756s from github-fe125-cp1-prd.iad.github.net">GitHub</span>, Inc.</li>
+        <li><a href="https://github.com/site/terms" data-ga-click="Footer, go to terms, text:terms">Terms</a></li>
+        <li><a href="https://github.com/site/privacy" data-ga-click="Footer, go to privacy, text:privacy">Privacy</a></li>
+        <li><a href="https://github.com/security" data-ga-click="Footer, go to security, text:security">Security</a></li>
+        <li><a href="https://github.com/contact" data-ga-click="Footer, go to contact, text:contact">Contact</a></li>
+    </ul>
+  </div>
+</div>
+
+
+    <div class="fullscreen-overlay js-fullscreen-overlay" id="fullscreen_overlay">
+  <div class="fullscreen-container js-suggester-container">
+    <div class="textarea-wrap">
+      <textarea name="fullscreen-contents" id="fullscreen-contents" class="fullscreen-contents js-fullscreen-contents" placeholder=""></textarea>
+      <div class="suggester-container">
+        <div class="suggester fullscreen-suggester js-suggester js-navigation-container"></div>
+      </div>
+    </div>
+  </div>
+  <div class="fullscreen-sidebar">
+    <a href="#" class="exit-fullscreen js-exit-fullscreen tooltipped tooltipped-w" aria-label="Exit Zen Mode">
+      <span class="mega-octicon octicon-screen-normal"></span>
+    </a>
+    <a href="#" class="theme-switcher js-theme-switcher tooltipped tooltipped-w"
+      aria-label="Switch themes">
+      <span class="octicon octicon-color-mode"></span>
+    </a>
+  </div>
+</div>
+
+
+
+    
+    
+
+    <div id="ajax-error-message" class="flash flash-error">
+      <span class="octicon octicon-alert"></span>
+      <a href="#" class="octicon octicon-x flash-close js-ajax-error-dismiss" aria-label="Dismiss error"></a>
+      Something went wrong with that request. Please try again.
+    </div>
+
+
+      <script crossorigin="anonymous" src="https://assets-cdn.github.com/assets/frameworks-808fcfcd63c9ecba3e84453f540cb1cbafde48c6b30c1d51ebd4e67e88ff66bd.js"></script>
+      <script async="async" crossorigin="anonymous" src="https://assets-cdn.github.com/assets/github/index-fadc40287934e9bb3a912a44ba68b886ac6c451314a0cb3dbd935539e5d35252.js"></script>
+      
+      
+  </body>
+</html>
+

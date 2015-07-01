@@ -155,6 +155,18 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     assert(false == isDeterministic(g))
   }  
 
+  test("blah") {
+    val program = """
+      file {'/foo': ensure => directory}
+      file {'/foo/bar': ensure => file, before => File['/etc/foo'] }
+      file {'/etc/foo': ensure => file}
+                  """
+    val pp = parse(program)
+    val g = toFileScriptGraph(pp.desugar.toGraph(Facter.emptyEnv).head._2)
+    val arg = pp.desugar.toGraph(Facter.emptyEnv).head._2
+    assert(false == isDeterministic(g))
+  }  
+
 //    val example1 = {
 //    import rehearsal.fsmodel._
 //    (And(TestFileState(Paths.get("/usr"), IsFile),

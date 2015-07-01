@@ -1,0 +1,2110 @@
+
+
+
+<!DOCTYPE html>
+<html lang="en" class="">
+  <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# object: http://ogp.me/ns/object# article: http://ogp.me/ns/article# profile: http://ogp.me/ns/profile#">
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Language" content="en">
+    
+    
+    <title>Ceph: fix more radosgw order of dependencies · wikimedia/operations-puppet@8cbfaef · GitHub</title>
+    <link rel="search" type="application/opensearchdescription+xml" href="/opensearch.xml" title="GitHub">
+    <link rel="fluid-icon" href="https://github.com/fluidicon.png" title="GitHub">
+    <link rel="apple-touch-icon" sizes="57x57" href="/apple-touch-icon-114.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="/apple-touch-icon-114.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="/apple-touch-icon-144.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/apple-touch-icon-144.png">
+    <meta property="fb:app_id" content="1401488693436528">
+
+      <meta content="@github" name="twitter:site" /><meta content="summary" name="twitter:card" /><meta content="Ceph: fix more radosgw order of dependencies · wikimedia/operations-puppet@8cbfaef" name="twitter:title" /><meta content="Upstart jobs are picky, and the Apache puppet module is just weird.
+Let&#39;s give this a shot for now.
+
+Change-Id: I7ff446fcccfaa89d21e3f803eb49e34d8f4e44f4" name="twitter:description" /><meta content="https://avatars3.githubusercontent.com/u/1330796?v=3&amp;s=200" name="twitter:image:src" />
+      <meta content="GitHub" property="og:site_name" /><meta content="object" property="og:type" /><meta content="https://avatars3.githubusercontent.com/u/1330796?v=3&amp;s=200" property="og:image" /><meta content="Ceph: fix more radosgw order of dependencies · wikimedia/operations-puppet@8cbfaef" property="og:title" /><meta content="https://github.com/wikimedia/operations-puppet/commit/8cbfaef4822b02cce449c463cb063daa67d55014" property="og:url" /><meta content="Upstart jobs are picky, and the Apache puppet module is just weird.
+Let&#39;s give this a shot for now.
+
+Change-Id: I7ff446fcccfaa89d21e3f803eb49e34d8f4e44f4" property="og:description" /><meta content="1367014029" property="og:updated_time" />
+      <meta name="browser-stats-url" content="https://api.github.com/_private/browser/stats">
+    <meta name="browser-errors-url" content="https://api.github.com/_private/browser/errors">
+    <link rel="assets" href="https://assets-cdn.github.com/">
+    
+    <meta name="pjax-timeout" content="1000">
+    
+
+    <meta name="msapplication-TileImage" content="/windows-tile.png">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="selected-link" value="repo_commits" data-pjax-transient>
+
+        <meta name="google-analytics" content="UA-3769691-2">
+
+    <meta content="collector.githubapp.com" name="octolytics-host" /><meta content="collector-cdn.github.com" name="octolytics-script-host" /><meta content="github" name="octolytics-app-id" /><meta content="807728C4:6D12:6D0A11D:558D9B71" name="octolytics-dimension-request_id" />
+    
+    <meta content="Rails, view, commit#show" name="analytics-event" />
+    <meta class="js-ga-set" name="dimension1" content="Logged Out">
+    <meta name="is-dotcom" content="true">
+      <meta name="hostname" content="github.com">
+    <meta name="user-login" content="">
+
+      <link rel="icon" sizes="any" mask href="https://assets-cdn.github.com/pinned-octocat.svg">
+      <meta name="theme-color" content="#4078c0">
+      <link rel="icon" type="image/x-icon" href="https://assets-cdn.github.com/favicon.ico">
+
+
+    <meta content="authenticity_token" name="csrf-param" />
+<meta content="OuUc4tkTcatlvEf8kwKvqdaohBpKIAcIFzBENbcnOAYXXq5nuyURc//C+iPB/uroQ0nuOXy3PS+cucaiOt+NMA==" name="csrf-token" />
+
+    <link crossorigin="anonymous" href="https://assets-cdn.github.com/assets/github/index-4157068649cead58a7dd42dc9c0f2dc5b01bcc77921bc077b357e48be23aa237.css" media="all" rel="stylesheet" />
+    <link crossorigin="anonymous" href="https://assets-cdn.github.com/assets/github2/index-13f0ac42293bae46d3491dc1c876dbb87ac502462c5f7f8fca73526a02228eb3.css" media="all" rel="stylesheet" />
+    
+    
+
+
+    <meta http-equiv="x-pjax-version" content="40b2648e36de1d600743a44ce28fe428">
+
+        <link data-pjax-transient="true" href="/wikimedia/operations-puppet/commit/8cbfaef4822b02cce449c463cb063daa67d55014.diff" rel="alternate" type="text/plain+diff" />
+  <link data-pjax-transient="true" href="/wikimedia/operations-puppet/commit/8cbfaef4822b02cce449c463cb063daa67d55014.patch" rel="alternate" type="text/plain+patch" />
+
+  <meta name="diff-view" content="unified" data-pjax-transient>
+
+  <meta name="description" content="operations-puppet - Wikimedia Foundation operates some of the largest collaborative projects in the world. This is our Puppet repo.">
+  <meta name="go-import" content="github.com/wikimedia/operations-puppet git https://github.com/wikimedia/operations-puppet.git">
+
+  <meta content="56668" name="octolytics-dimension-user_id" /><meta content="wikimedia" name="octolytics-dimension-user_login" /><meta content="8013229" name="octolytics-dimension-repository_id" /><meta content="wikimedia/operations-puppet" name="octolytics-dimension-repository_nwo" /><meta content="true" name="octolytics-dimension-repository_public" /><meta content="false" name="octolytics-dimension-repository_is_fork" /><meta content="8013229" name="octolytics-dimension-repository_network_root_id" /><meta content="wikimedia/operations-puppet" name="octolytics-dimension-repository_network_root_nwo" />
+  <link href="https://github.com/wikimedia/operations-puppet/commits/8cbfaef4822b02cce449c463cb063daa67d55014.atom" rel="alternate" title="Recent Commits to operations-puppet:8cbfaef4822b02cce449c463cb063daa67d55014" type="application/atom+xml">
+
+  </head>
+
+
+  <body class="logged_out  env-production  vis-public">
+    <a href="#start-of-content" tabindex="1" class="accessibility-aid js-skip-to-content">Skip to content</a>
+    <div class="wrapper">
+      
+      
+      
+
+
+        
+        <div class="header header-logged-out" role="banner">
+  <div class="container clearfix">
+
+    <a class="header-logo-wordmark" href="https://github.com/" data-ga-click="(Logged out) Header, go to homepage, icon:logo-wordmark">
+      <span class="mega-octicon octicon-logo-github"></span>
+    </a>
+
+    <div class="header-actions" role="navigation">
+        <a class="btn btn-primary" href="/join" data-ga-click="(Logged out) Header, clicked Sign up, text:sign-up">Sign up</a>
+      <a class="btn" href="/login?return_to=%2Fwikimedia%2Foperations-puppet%2Fcommit%2F8cbfaef4822b02cce449c463cb063daa67d55014" data-ga-click="(Logged out) Header, clicked Sign in, text:sign-in">Sign in</a>
+    </div>
+
+    <div class="site-search repo-scope js-site-search" role="search">
+      <form accept-charset="UTF-8" action="/wikimedia/operations-puppet/search" class="js-site-search-form" data-global-search-url="/search" data-repo-search-url="/wikimedia/operations-puppet/search" method="get"><div style="margin:0;padding:0;display:inline"><input name="utf8" type="hidden" value="&#x2713;" /></div>
+  <label class="js-chromeless-input-container form-control">
+    <div class="scope-badge">This repository</div>
+    <input type="text"
+      class="js-site-search-focus js-site-search-field is-clearable chromeless-input"
+      data-hotkey="s"
+      name="q"
+      placeholder="Search"
+      data-global-scope-placeholder="Search GitHub"
+      data-repo-scope-placeholder="Search"
+      tabindex="1"
+      autocapitalize="off">
+  </label>
+</form>
+    </div>
+
+      <ul class="header-nav left" role="navigation">
+          <li class="header-nav-item">
+            <a class="header-nav-link" href="/explore" data-ga-click="(Logged out) Header, go to explore, text:explore">Explore</a>
+          </li>
+          <li class="header-nav-item">
+            <a class="header-nav-link" href="/features" data-ga-click="(Logged out) Header, go to features, text:features">Features</a>
+          </li>
+          <li class="header-nav-item">
+            <a class="header-nav-link" href="https://enterprise.github.com/" data-ga-click="(Logged out) Header, go to enterprise, text:enterprise">Enterprise</a>
+          </li>
+          <li class="header-nav-item">
+            <a class="header-nav-link" href="/blog" data-ga-click="(Logged out) Header, go to blog, text:blog">Blog</a>
+          </li>
+      </ul>
+
+  </div>
+</div>
+
+
+
+      <div id="start-of-content" class="accessibility-aid"></div>
+          <div class="site" itemscope itemtype="http://schema.org/WebPage">
+    <div id="js-flash-container">
+      
+    </div>
+    <div class="pagehead repohead instapaper_ignore readability-menu">
+      <div class="container">
+
+        
+<ul class="pagehead-actions">
+
+  <li>
+      <a href="/login?return_to=%2Fwikimedia%2Foperations-puppet"
+    class="btn btn-sm btn-with-count tooltipped tooltipped-n"
+    aria-label="You must be signed in to watch a repository" rel="nofollow">
+    <span class="octicon octicon-eye"></span>
+    Watch
+  </a>
+  <a class="social-count" href="/wikimedia/operations-puppet/watchers">
+    10
+  </a>
+
+  </li>
+
+  <li>
+      <a href="/login?return_to=%2Fwikimedia%2Foperations-puppet"
+    class="btn btn-sm btn-with-count tooltipped tooltipped-n"
+    aria-label="You must be signed in to star a repository" rel="nofollow">
+    <span class="octicon octicon-star"></span>
+    Star
+  </a>
+
+    <a class="social-count js-social-count" href="/wikimedia/operations-puppet/stargazers">
+      54
+    </a>
+
+  </li>
+
+    <li>
+      <a href="/login?return_to=%2Fwikimedia%2Foperations-puppet"
+        class="btn btn-sm btn-with-count tooltipped tooltipped-n"
+        aria-label="You must be signed in to fork a repository" rel="nofollow">
+        <span class="octicon octicon-repo-forked"></span>
+        Fork
+      </a>
+      <a href="/wikimedia/operations-puppet/network" class="social-count">
+        14
+      </a>
+    </li>
+</ul>
+
+        <h1 itemscope itemtype="http://data-vocabulary.org/Breadcrumb" class="entry-title public">
+          <span class="mega-octicon octicon-repo"></span>
+          <span class="author"><a href="/wikimedia" class="url fn" itemprop="url" rel="author"><span itemprop="title">wikimedia</span></a></span><!--
+       --><span class="path-divider">/</span><!--
+       --><strong><a href="/wikimedia/operations-puppet" data-pjax="#js-repo-pjax-container">operations-puppet</a></strong>
+
+          <span class="page-context-loader">
+            <img alt="" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+          </span>
+
+        </h1>
+      </div><!-- /.container -->
+    </div><!-- /.repohead -->
+
+    <div class="container">
+      <div class="repository-with-sidebar repo-container new-discussion-timeline  ">
+        <div class="repository-sidebar clearfix">
+            
+<nav class="sunken-menu repo-nav js-repo-nav js-sidenav-container-pjax js-octicon-loaders"
+     role="navigation"
+     data-pjax="#js-repo-pjax-container"
+     data-issue-count-url="/wikimedia/operations-puppet/issues/counts">
+  <ul class="sunken-menu-group">
+    <li class="tooltipped tooltipped-w" aria-label="Code">
+      <a href="/wikimedia/operations-puppet" aria-label="Code" class="selected js-selected-navigation-item sunken-menu-item" data-hotkey="g c" data-selected-links="repo_source repo_downloads repo_commits repo_releases repo_tags repo_branches /wikimedia/operations-puppet">
+        <span class="octicon octicon-code"></span> <span class="full-word">Code</span>
+        <img alt="" class="mini-loader" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+</a>    </li>
+
+
+    <li class="tooltipped tooltipped-w" aria-label="Pull requests">
+      <a href="/wikimedia/operations-puppet/pulls" aria-label="Pull requests" class="js-selected-navigation-item sunken-menu-item" data-hotkey="g p" data-selected-links="repo_pulls /wikimedia/operations-puppet/pulls">
+          <span class="octicon octicon-git-pull-request"></span> <span class="full-word">Pull requests</span>
+          <span class="js-pull-replace-counter"></span>
+          <img alt="" class="mini-loader" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+</a>    </li>
+
+  </ul>
+  <div class="sunken-menu-separator"></div>
+  <ul class="sunken-menu-group">
+
+    <li class="tooltipped tooltipped-w" aria-label="Pulse">
+      <a href="/wikimedia/operations-puppet/pulse" aria-label="Pulse" class="js-selected-navigation-item sunken-menu-item" data-selected-links="pulse /wikimedia/operations-puppet/pulse">
+        <span class="octicon octicon-pulse"></span> <span class="full-word">Pulse</span>
+        <img alt="" class="mini-loader" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+</a>    </li>
+
+    <li class="tooltipped tooltipped-w" aria-label="Graphs">
+      <a href="/wikimedia/operations-puppet/graphs" aria-label="Graphs" class="js-selected-navigation-item sunken-menu-item" data-selected-links="repo_graphs repo_contributors /wikimedia/operations-puppet/graphs">
+        <span class="octicon octicon-graph"></span> <span class="full-word">Graphs</span>
+        <img alt="" class="mini-loader" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+</a>    </li>
+  </ul>
+
+
+</nav>
+
+              <div class="only-with-full-nav">
+                  
+<div class="js-clone-url clone-url open"
+  data-protocol-type="http">
+  <h3><span class="text-emphasized">HTTPS</span> clone URL</h3>
+  <div class="input-group js-zeroclipboard-container">
+    <input type="text" class="input-mini input-monospace js-url-field js-zeroclipboard-target"
+           value="https://github.com/wikimedia/operations-puppet.git" readonly="readonly">
+    <span class="input-group-button">
+      <button aria-label="Copy to clipboard" class="js-zeroclipboard btn btn-sm zeroclipboard-button tooltipped tooltipped-s" data-copied-hint="Copied!" type="button"><span class="octicon octicon-clippy"></span></button>
+    </span>
+  </div>
+</div>
+
+  
+<div class="js-clone-url clone-url "
+  data-protocol-type="subversion">
+  <h3><span class="text-emphasized">Subversion</span> checkout URL</h3>
+  <div class="input-group js-zeroclipboard-container">
+    <input type="text" class="input-mini input-monospace js-url-field js-zeroclipboard-target"
+           value="https://github.com/wikimedia/operations-puppet" readonly="readonly">
+    <span class="input-group-button">
+      <button aria-label="Copy to clipboard" class="js-zeroclipboard btn btn-sm zeroclipboard-button tooltipped tooltipped-s" data-copied-hint="Copied!" type="button"><span class="octicon octicon-clippy"></span></button>
+    </span>
+  </div>
+</div>
+
+
+
+<div class="clone-options">You can clone with
+  <form accept-charset="UTF-8" action="/users/set_protocol?protocol_selector=http&amp;protocol_type=clone" class="inline-form js-clone-selector-form " data-remote="true" method="post"><div style="margin:0;padding:0;display:inline"><input name="utf8" type="hidden" value="&#x2713;" /><input name="authenticity_token" type="hidden" value="lorHiHCDoL+Kyhyn5sphU/JkDDJ729VIqrjFvXWjS4Kx5Q4haj93OgNPD0QFj6bDJe7MXwVE0n3NTRhht0wZXA==" /></div><button class="btn-link js-clone-selector" data-protocol="http" type="submit">HTTPS</button></form> or <form accept-charset="UTF-8" action="/users/set_protocol?protocol_selector=subversion&amp;protocol_type=clone" class="inline-form js-clone-selector-form " data-remote="true" method="post"><div style="margin:0;padding:0;display:inline"><input name="utf8" type="hidden" value="&#x2713;" /><input name="authenticity_token" type="hidden" value="IbA7w2nRZpNLMlOaZzHtfkKXjdjpMsP2FyuBmEeB+d1g49Ma0c6+cU7dOkpagO7c1yfy4h/+mUcni5cr2HxbDA==" /></div><button class="btn-link js-clone-selector" data-protocol="subversion" type="submit">Subversion</button></form>.
+  <a href="https://help.github.com/articles/which-remote-url-should-i-use" class="help tooltipped tooltipped-n" aria-label="Get help on which URL is right for you.">
+    <span class="octicon octicon-question"></span>
+  </a>
+</div>
+
+
+
+
+                <a href="/wikimedia/operations-puppet/archive/8cbfaef4822b02cce449c463cb063daa67d55014.zip"
+                   class="btn btn-sm sidebar-button"
+                   aria-label="Download the contents of wikimedia/operations-puppet as a zip file"
+                   title="Download the contents of wikimedia/operations-puppet as a zip file"
+                   rel="nofollow">
+                  <span class="octicon octicon-cloud-download"></span>
+                  Download ZIP
+                </a>
+              </div>
+        </div><!-- /.repository-sidebar -->
+
+        <div id="js-repo-pjax-container" class="repository-content context-loader-container" data-pjax-container>
+
+          
+<a href="/wikimedia/operations-puppet/commit/8cbfaef4822b02cce449c463cb063daa67d55014" class="hidden js-permalink-shortcut" data-hotkey="y">Permalink</a>
+
+
+
+
+<div class="commit full-commit ">
+  <a href="/wikimedia/operations-puppet/tree/8cbfaef4822b02cce449c463cb063daa67d55014" class="btn btn-outline right" title="Browse the repository at this point in the history" rel="nofollow">Browse files</a>
+
+    <p class="commit-title">
+      Ceph: fix more radosgw order of dependencies
+    </p>
+
+    <div class="commit-desc"><pre>Upstart jobs are picky, and the Apache puppet module is just weird.
+Let's give this a shot for now.
+
+Change-Id: I7ff446fcccfaa89d21e3f803eb49e34d8f4e44f4</pre></div>
+
+  <div class="commit-branches">
+    <include-fragment src="/wikimedia/operations-puppet/branch_commits/8cbfaef4822b02cce449c463cb063daa67d55014">
+      <span class="octicon octicon-git-branch"></span>
+      <ul class="branches-list">
+        <li class="loading">Loading branch information<span class="animated-ellipsis-container"><span class="animated-ellipsis">...</span></span></li>
+      </ul>
+</include-fragment>  </div>
+
+  <div class="commit-meta clearfix">
+    <span class="sha-block">commit <span class="sha js-selectable-text">8cbfaef4822b02cce449c463cb063daa67d55014</span></span>
+
+    <span class="sha-block" data-pjax>
+      1 parent
+        
+        <a href="/wikimedia/operations-puppet/commit/26c11318cfa6909f9f3db81b1f89003a5209f1b7" class="sha" data-hotkey="p">26c1131</a>
+    </span>
+
+    <div class="authorship">
+      <img alt="@paravoid" class="avatar" height="24" src="https://avatars3.githubusercontent.com/u/1330796?v=3&amp;s=48" width="24" />
+      <span class="author-name"><a href="/paravoid" rel="contributor">paravoid</a></span>
+      
+      authored <time datetime="2013-04-26T22:07:09Z" is="relative-time">Apr 27, 2013</time>
+
+    </div>
+  </div>
+</div>
+
+
+
+
+    <a name="diff-stat"></a>
+    <div id="toc" class="details-collapse table-of-contents js-details-container">
+  <div class="btn-group right" data-ga-load="Diff, view, Viewed Unified Diff">
+  <a class="btn btn-sm selected" href="https://github.com/wikimedia/operations-puppet/commit/8cbfaef4822b02cce449c463cb063daa67d55014?diff=unified">
+    Unified
+  </a>
+  <a class="btn btn-sm" href="https://github.com/wikimedia/operations-puppet/commit/8cbfaef4822b02cce449c463cb063daa67d55014?diff=split">
+    Split
+  </a>
+</div>
+
+
+  <div class="toc-diff-stats">
+    <span class="octicon octicon-diff"></span>
+    Showing
+    <button type="button" class="btn-link js-details-target">
+      2 changed files
+    </button>
+    with
+    <strong>28 additions</strong>
+    and <strong>6 deletions</strong>.
+  </div>
+
+  <ol class="content collapse js-transitionable">
+    <li>
+      <span class="diffstat right">
+          <span class="text-diff-added">
+            +23
+          </span>
+          <span class="text-diff-deleted">
+            −6
+          </span>
+          <a href="#diff-1a396caf3617bd1b95a087713d9fe53a" class="tooltipped tooltipped-s" aria-label="29 lines changed">
+            <span class="diffstat-bar">
+              <span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span><span class="text-diff-deleted">&#xf053;</span>&#xf053;
+            </span>
+          </a>
+      </span>
+      <span class="octicon octicon-diff-modified" title="modified"></span>
+      <a href="#diff-1a396caf3617bd1b95a087713d9fe53a">modules/ceph/manifests/radosgw.pp</a>
+    </li>
+    <li>
+      <span class="diffstat right">
+          <span class="text-diff-added">
+            +5
+          </span>
+          <span class="text-diff-deleted">
+            −0
+          </span>
+          <a href="#diff-85b7116e9b260dc26aab5b845cb0f2b7" class="tooltipped tooltipped-s" aria-label="5 lines changed">
+            <span class="diffstat-bar">
+              <span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span>
+            </span>
+          </a>
+      </span>
+      <span class="octicon octicon-diff-modified" title="modified"></span>
+      <a href="#diff-85b7116e9b260dc26aab5b845cb0f2b7">modules/ceph/templates/radosgw/vhost.erb</a>
+    </li>
+  </ol>
+</div>
+
+  <div id="files" class="diff-view ">
+      <a name="diff-1a396caf3617bd1b95a087713d9fe53a"></a>
+      <div id="diff-0"
+           class="file js-details-container
+                   
+                   
+                   
+                   
+                   show-inline-notes
+                 ">
+        <div class="file-header" data-path="modules/ceph/manifests/radosgw.pp">
+          <div class="file-actions">
+              <span class="show-file-notes">
+                <label>
+                  <input type="checkbox" checked="checked" class="js-toggle-file-notes">
+                  Show notes
+                </label>
+              </span>
+
+                <a href="/wikimedia/operations-puppet/blob/8cbfaef4822b02cce449c463cb063daa67d55014/modules/ceph/manifests/radosgw.pp" class="btn btn-sm tooltipped tooltipped-n" rel="nofollow" aria-label="View the whole file at version 8cbfaef ">View</a>
+
+
+          </div>
+          <div class="file-info">
+              <span class="diffstat tooltipped tooltipped-e" aria-label="23 additions &amp; 6 deletions">29 <span class="diffstat-bar"><span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span><span class="text-diff-deleted">&#xf053;</span>&#xf053;</span></span>
+
+            <span class="js-selectable-text" title="modules/ceph/manifests/radosgw.pp">
+              modules/ceph/manifests/radosgw.pp
+            </span>
+            
+          </div>
+        </div>
+
+            <div class="data highlight blob-wrapper">
+              <table class="diff-table tab-size  " data-tab-size="8">
+                
+      <tr class="js-expandable-line" data-position="0">
+    <td class="blob-num blob-num-expandable" colspan="2">
+      <a href="#diff-1a396caf3617bd1b95a087713d9fe53a"
+            class="diff-expander js-expand" title="Expand" aria-label="Expand"
+            data-url="/wikimedia/operations-puppet/blob_excerpt/67b10b36101c30d42840b295667531314186c106?diff=unified&amp;left_hunk_size=13&amp;mode=100644&amp;next_line_num_left=8&amp;next_line_num_right=8&amp;path=modules%2Fceph%2Fmanifests%2Fradosgw.pp&amp;prev_line_num_left=&amp;prev_line_num_right=&amp;right_hunk_size=26"
+            data-left-range="1-7" data-right-range="1-7">
+        <span class="octicon octicon-unfold"></span>
+      </a>
+    </td>
+    <td class="blob-code blob-code-inner blob-code-hunk">@@ -8,13 +8,26 @@</td>
+  </tr>
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL8" data-line-number="8"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR8" data-line-number="8"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">         <span class="pl-c1">ensure</span> =&gt; present,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL9" data-line-number="9"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR9" data-line-number="9"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">     }</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL10" data-line-number="10"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR10" data-line-number="10"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> </span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR11" data-line-number="11"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+    <span class="pl-k">file</span> { <span class="pl-en">&#39;/var/lib/ceph/radosgw/ceph-radosgw&#39;</span>:</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR12" data-line-number="12"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+        <span class="pl-c1">ensure</span>  =&gt; directory,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR13" data-line-number="13"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+        <span class="pl-c1">owner</span>   =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>root<span class="pl-pds">&#39;</span></span>   ,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR14" data-line-number="14"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+        <span class="pl-c1">group</span>   =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>root<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR15" data-line-number="15"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+        <span class="pl-c1">require</span> =&gt; Package[<span class="pl-s"><span class="pl-pds">&#39;</span>radosgw<span class="pl-pds">&#39;</span></span>],</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR16" data-line-number="16"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+    }</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR17" data-line-number="17"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+    <span class="pl-k">file</span> { <span class="pl-en">&#39;/var/lib/ceph/radosgw/ceph-radosgw/done&#39;</span>:</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR18" data-line-number="18"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+        <span class="pl-c1">ensure</span>  =&gt; present,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR19" data-line-number="19"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+        <span class="pl-c1">owner</span>   =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>root<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR20" data-line-number="20"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+        <span class="pl-c1">group</span>   =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>root<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR21" data-line-number="21"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+        <span class="pl-c1">require</span> =&gt; File[<span class="pl-s"><span class="pl-pds">&#39;</span>/var/lib/ceph/radosgw/ceph-radosgw<span class="pl-pds">&#39;</span></span>],</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR22" data-line-number="22"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+    }</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR23" data-line-number="23"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL11" data-line-number="11"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR24" data-line-number="24"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">     <span class="pl-k">service</span> { <span class="pl-en">&#39;radosgw id=radosgw&#39;</span>:</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL12" data-line-number="12"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR25" data-line-number="25"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">         <span class="pl-c1">ensure</span>     =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>running<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL13" data-line-number="13"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR26" data-line-number="26"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">         <span class="pl-c1">hasrestart</span> =&gt; true,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL14" data-line-number="14"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR27" data-line-number="27"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">         <span class="pl-c"># upstart status is broken with id= ...</span></span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL15" data-line-number="15"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR28" data-line-number="28"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">         <span class="pl-c1">status</span>     =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>/usr/bin/pgrep radosgw<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL16" data-line-number="16"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR29" data-line-number="29"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">         <span class="pl-c1">provider</span>   =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>upstart<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL17" data-line-number="17"
+        class="blob-num blob-num-deletion js-linkable-line-number"></td>
+
+    <td class="blob-num blob-num-deletion empty-cell"></td>
+
+  <td class="blob-code blob-code-deletion">
+
+    <span class="blob-code-inner">-        <span class="pl-c1">require</span>    =&gt; <span class="x x-first">Package[</span><span class="pl-s"><span class="pl-pds x x-last">'</span>radosgw<span class="pl-pds">'</span></span>],</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR30" data-line-number="30"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+        <span class="pl-c1">require</span>    =&gt; <span class="x x-first">File[</span><span class="pl-s"><span class="pl-pds x">'</span><span class="x x-last">/var/lib/ceph/</span>radosgw<span class="x x-first x-last">/ceph-radosgw/done</span><span class="pl-pds">'</span></span>],</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL18" data-line-number="18"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR31" data-line-number="31"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">     }</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL19" data-line-number="19"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR32" data-line-number="32"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> </span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL20" data-line-number="20"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR33" data-line-number="33"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">     <span class="pl-smi">$id</span> = <span class="pl-s"><span class="pl-pds">&#39;</span>client.radosgw<span class="pl-pds">&#39;</span></span></span>
+
+  </td>
+</tr>
+
+
+      <tr class="js-expandable-line" data-position="28">
+    <td class="blob-num blob-num-expandable" colspan="2">
+      <a href="#diff-1a396caf3617bd1b95a087713d9fe53a"
+            class="diff-expander js-expand" title="Expand" aria-label="Expand"
+            data-url="/wikimedia/operations-puppet/blob_excerpt/67b10b36101c30d42840b295667531314186c106?diff=unified&amp;left_hunk_size=6&amp;mode=100644&amp;next_line_num_left=31&amp;next_line_num_right=44&amp;path=modules%2Fceph%2Fmanifests%2Fradosgw.pp&amp;prev_line_num_left=20&amp;prev_line_num_right=33&amp;right_hunk_size=8"
+            data-left-range="21-30" data-right-range="34-43">
+        <span class="octicon octicon-unfold"></span>
+      </a>
+    </td>
+    <td class="blob-code blob-code-inner blob-code-hunk">@@ -31,6 +44,8 @@</td>
+  </tr>
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL31" data-line-number="31"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR44" data-line-number="44"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">     <span class="pl-k">file</span> { <span class="pl-en">&#39;/etc/logrotate.d/radosgw&#39;</span>:</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL32" data-line-number="32"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR45" data-line-number="45"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">         <span class="pl-c1">ensure</span> =&gt; present,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL33" data-line-number="33"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR46" data-line-number="46"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">         <span class="pl-c1">source</span> =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>puppet:///modules/ceph/logrotate-radosgw<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR47" data-line-number="47"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+        <span class="pl-c1">owner</span>   =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>root<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR48" data-line-number="48"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+        <span class="pl-c1">group</span>   =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>root<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL34" data-line-number="34"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR49" data-line-number="49"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">     }</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL35" data-line-number="35"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR50" data-line-number="50"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> </span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL36" data-line-number="36"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR51" data-line-number="51"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">     <span class="pl-k">class</span> { <span class="pl-en">&#39;apache&#39;</span>:</span>
+
+  </td>
+</tr>
+
+
+      <tr class="js-expandable-line" data-position="37">
+    <td class="blob-num blob-num-expandable" colspan="2">
+      <a href="#diff-1a396caf3617bd1b95a087713d9fe53a"
+            class="diff-expander js-expand" title="Expand" aria-label="Expand"
+            data-url="/wikimedia/operations-puppet/blob_excerpt/67b10b36101c30d42840b295667531314186c106?diff=unified&amp;left_hunk_size=12&amp;mode=100644&amp;next_line_num_left=44&amp;next_line_num_right=59&amp;path=modules%2Fceph%2Fmanifests%2Fradosgw.pp&amp;prev_line_num_left=36&amp;prev_line_num_right=51&amp;right_hunk_size=10"
+            data-left-range="37-43" data-right-range="52-58">
+        <span class="octicon octicon-unfold"></span>
+      </a>
+    </td>
+    <td class="blob-code blob-code-inner blob-code-hunk">@@ -44,12 +59,10 @@</td>
+  </tr>
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL44" data-line-number="44"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR59" data-line-number="59"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> </span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL45" data-line-number="45"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR60" data-line-number="60"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">     <span class="pl-k">file</span> { <span class="pl-en">&#39;/etc/apache2/sites-available/radosgw&#39;</span>:</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL46" data-line-number="46"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR61" data-line-number="61"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">         <span class="pl-c1">ensure</span>  =&gt; present,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR62" data-line-number="62"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+        <span class="pl-c1">owner</span>   =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>root<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR63" data-line-number="63"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+        <span class="pl-c1">group</span>   =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>root<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL47" data-line-number="47"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR64" data-line-number="64"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">         <span class="pl-c1">content</span> =&gt; <span class="pl-c1">template</span>(<span class="pl-s"><span class="pl-pds">&#39;</span>ceph/radosgw/vhost.erb<span class="pl-pds">&#39;</span></span>),</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL48" data-line-number="48"
+        class="blob-num blob-num-deletion js-linkable-line-number"></td>
+
+    <td class="blob-num blob-num-deletion empty-cell"></td>
+
+  <td class="blob-code blob-code-deletion">
+
+    <span class="blob-code-inner">-        <span class="pl-c1">require</span> =&gt; [</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL49" data-line-number="49"
+        class="blob-num blob-num-deletion js-linkable-line-number"></td>
+
+    <td class="blob-num blob-num-deletion empty-cell"></td>
+
+  <td class="blob-code blob-code-deletion">
+
+    <span class="blob-code-inner">-            Package[<span class="pl-s"><span class="pl-pds">&#39;</span>apache2<span class="pl-pds">&#39;</span></span>],</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL50" data-line-number="50"
+        class="blob-num blob-num-deletion js-linkable-line-number"></td>
+
+    <td class="blob-num blob-num-deletion empty-cell"></td>
+
+  <td class="blob-code blob-code-deletion">
+
+    <span class="blob-code-inner">-            Apache::Mod[<span class="pl-s"><span class="pl-pds">&#39;</span>fastcgi<span class="pl-pds">&#39;</span></span>],</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL51" data-line-number="51"
+        class="blob-num blob-num-deletion js-linkable-line-number"></td>
+
+    <td class="blob-num blob-num-deletion empty-cell"></td>
+
+  <td class="blob-code blob-code-deletion">
+
+    <span class="blob-code-inner">-            Apache::Mod[<span class="pl-s"><span class="pl-pds">&#39;</span>rewrite<span class="pl-pds">&#39;</span></span>],</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL52" data-line-number="52"
+        class="blob-num blob-num-deletion js-linkable-line-number"></td>
+
+    <td class="blob-num blob-num-deletion empty-cell"></td>
+
+  <td class="blob-code blob-code-deletion">
+
+    <span class="blob-code-inner">-            ],</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR65" data-line-number="65"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+        <span class="pl-c1">require</span> =&gt; Package[<span class="pl-s"><span class="pl-pds">&#39;</span>apache2<span class="pl-pds">&#39;</span></span>],</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL53" data-line-number="53"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR66" data-line-number="66"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">         <span class="pl-c1">notify</span>  =&gt; Service[<span class="pl-s"><span class="pl-pds">&#39;</span>apache2<span class="pl-pds">&#39;</span></span>],</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL54" data-line-number="54"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR67" data-line-number="67"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">     }</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL55" data-line-number="55"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR68" data-line-number="68"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">     <span class="pl-k">file</span> { <span class="pl-en">&#39;/etc/apache2/sites-enabled/radosgw&#39;</span>:</span>
+
+  </td>
+</tr>
+
+
+      <tr class="js-expandable-line" data-position="53">
+    <td class="blob-num blob-num-expandable" colspan="2">
+      <a href="#diff-1a396caf3617bd1b95a087713d9fe53a"
+            class="diff-expander js-expand" title="Expand" aria-label="Expand"
+            data-url="/wikimedia/operations-puppet/blob_excerpt/67b10b36101c30d42840b295667531314186c106?diff=unified&amp;left_hunk_size=10&amp;mode=100644&amp;next_line_num_left=66&amp;next_line_num_right=79&amp;path=modules%2Fceph%2Fmanifests%2Fradosgw.pp&amp;prev_line_num_left=55&amp;prev_line_num_right=68&amp;right_hunk_size=14"
+            data-left-range="56-65" data-right-range="69-78">
+        <span class="octicon octicon-unfold"></span>
+      </a>
+    </td>
+    <td class="blob-code blob-code-inner blob-code-hunk">@@ -66,10 +79,14 @@</td>
+  </tr>
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL66" data-line-number="66"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR79" data-line-number="79"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> </span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL67" data-line-number="67"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR80" data-line-number="80"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">     <span class="pl-k">file</span> { <span class="pl-en">&#39;/var/www/monitoring&#39;</span>:</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL68" data-line-number="68"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR81" data-line-number="81"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">         <span class="pl-c1">ensure</span>  =&gt; directory,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR82" data-line-number="82"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+        <span class="pl-c1">owner</span>   =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>root<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR83" data-line-number="83"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+        <span class="pl-c1">group</span>   =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>root<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL69" data-line-number="69"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR84" data-line-number="84"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">         <span class="pl-c1">require</span> =&gt; Package[<span class="pl-s"><span class="pl-pds">&#39;</span>apache2<span class="pl-pds">&#39;</span></span>],</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL70" data-line-number="70"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR85" data-line-number="85"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">     }</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL71" data-line-number="71"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR86" data-line-number="86"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">     <span class="pl-k">file</span> { <span class="pl-en">&#39;/var/www/monitoring/frontend&#39;</span>:</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL72" data-line-number="72"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR87" data-line-number="87"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">         <span class="pl-c1">ensure</span>  =&gt; present,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR88" data-line-number="88"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+        <span class="pl-c1">owner</span>   =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>root<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR89" data-line-number="89"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+        <span class="pl-c1">group</span>   =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>root<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL73" data-line-number="73"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR90" data-line-number="90"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">         <span class="pl-c1">content</span> =&gt; <span class="pl-s"><span class="pl-pds">&quot;</span>OK<span class="pl-cce">\n</span><span class="pl-pds">&quot;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL74" data-line-number="74"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR91" data-line-number="91"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">         <span class="pl-c1">require</span> =&gt; File[<span class="pl-s"><span class="pl-pds">&#39;</span>/var/www/monitoring<span class="pl-pds">&#39;</span></span>],</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aL75" data-line-number="75"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-1a396caf3617bd1b95a087713d9fe53aR92" data-line-number="92"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">     }</span>
+
+  </td>
+</tr>
+
+
+  <tr class="js-expandable-line">
+   <td class="blob-num blob-num-expandable" colspan="2">
+     <a href="#diff-1a396caf3617bd1b95a087713d9fe53a"
+          class="diff-expander js-expand" title="Expand" aria-label="Expand"
+          data-url="/wikimedia/operations-puppet/blob_excerpt/67b10b36101c30d42840b295667531314186c106?diff=unified&amp;mode=100644&amp;path=modules%2Fceph%2Fmanifests%2Fradosgw.pp&amp;prev_line_num_left=75&amp;prev_line_num_right=92"
+          data-left-range="76-93"
+          data-right-range="93-93">
+       <span class="octicon octicon-unfold"></span>
+     </a>
+   </td>
+   <td class="blob-code blob-code-expandable"></td>
+  </tr>
+
+              </table>
+            </div>
+      </div>
+      <a name="diff-85b7116e9b260dc26aab5b845cb0f2b7"></a>
+      <div id="diff-1"
+           class="file js-details-container
+                   
+                   
+                   
+                   
+                   show-inline-notes
+                 ">
+        <div class="file-header" data-path="modules/ceph/templates/radosgw/vhost.erb">
+          <div class="file-actions">
+              <span class="show-file-notes">
+                <label>
+                  <input type="checkbox" checked="checked" class="js-toggle-file-notes">
+                  Show notes
+                </label>
+              </span>
+
+                <a href="/wikimedia/operations-puppet/blob/8cbfaef4822b02cce449c463cb063daa67d55014/modules/ceph/templates/radosgw/vhost.erb" class="btn btn-sm tooltipped tooltipped-n" rel="nofollow" aria-label="View the whole file at version 8cbfaef ">View</a>
+
+
+          </div>
+          <div class="file-info">
+              <span class="diffstat tooltipped tooltipped-e" aria-label="5 additions &amp; 0 deletions">5 <span class="diffstat-bar"><span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span></span></span>
+
+            <span class="js-selectable-text" title="modules/ceph/templates/radosgw/vhost.erb">
+              modules/ceph/templates/radosgw/vhost.erb
+            </span>
+            
+          </div>
+        </div>
+
+            <div class="data highlight blob-wrapper">
+              <table class="diff-table tab-size  " data-tab-size="8">
+                
+      <tr data-position="0">
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7L0" class="blob-num blob-num-hunk non-expandable" data-line-number="..."></td>
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R0" class="blob-num blob-num-hunk non-expandable" data-line-number="..."></td>
+    <td class="blob-code blob-code-inner blob-code-hunk">@@ -1,7 +1,10 @@</td>
+  </tr>
+
+    
+
+<tr>
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7L1" data-line-number="1"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R1" data-line-number="1"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> StartServers 5</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7L2" data-line-number="2"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R2" data-line-number="2"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> ServerLimit 50</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7L3" data-line-number="3"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R3" data-line-number="3"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> MaxClients 800</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R4" data-line-number="4"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R5" data-line-number="5"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+&lt;<span class="pl-ent">IfModule</span> <span class="pl-e">mod</span>_fastcgi.<span class="pl-e">c</span>&gt;</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7L4" data-line-number="4"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R6" data-line-number="6"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> FastCgiExternalServer /var/www/dummyradosgw.fcgi -socket /run/radosgw.sock</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R7" data-line-number="7"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+&lt;/<span class="pl-ent">IfModule</span>&gt;</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7L5" data-line-number="5"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R8" data-line-number="8"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> </span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7L6" data-line-number="6"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R9" data-line-number="9"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> LogFormat &quot;%{X-Forwarded-For}i %l %u %t \&quot;%r\&quot; %&gt;s %O \&quot;%{Referer}i\&quot; \&quot;%{User-Agent}i\&quot;&quot; proxy_combined</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7L7" data-line-number="7"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R10" data-line-number="10"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> LogFormat &quot;%{X-Forwarded-For}i %h %l %u %t \&quot;%r\&quot; %&gt;s %O \&quot;%{Referer}i\&quot; \&quot;%{User-Agent}i\&quot;&quot; proxy_debug</span>
+
+  </td>
+</tr>
+
+
+      <tr class="js-expandable-line" data-position="11">
+    <td class="blob-num blob-num-expandable" colspan="2">
+      <a href="#diff-85b7116e9b260dc26aab5b845cb0f2b7"
+            class="diff-expander js-expand" title="Expand" aria-label="Expand"
+            data-url="/wikimedia/operations-puppet/blob_excerpt/4f634c7ff66555bacd743088d52d7c50259bc31a?diff=unified&amp;left_hunk_size=10&amp;mode=100644&amp;next_line_num_left=12&amp;next_line_num_right=15&amp;path=modules%2Fceph%2Ftemplates%2Fradosgw%2Fvhost.erb&amp;prev_line_num_left=7&amp;prev_line_num_right=10&amp;right_hunk_size=12"
+            data-left-range="8-11" data-right-range="11-14">
+        <span class="octicon octicon-unfold"></span>
+      </a>
+    </td>
+    <td class="blob-code blob-code-inner blob-code-hunk">@@ -12,10 +15,12 @@ LogFormat &quot;%{X-Forwarded-For}i %h %l %u %t \&quot;%r\&quot; %&gt;s %O \&quot;%{Referer}i\&quot; \&quot;%{Use</td>
+  </tr>
+
+    
+
+<tr>
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7L12" data-line-number="12"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R15" data-line-number="15"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   ServerSignature Off</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7L13" data-line-number="13"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R16" data-line-number="16"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   DocumentRoot /var/www/</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7L14" data-line-number="14"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R17" data-line-number="17"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> </span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R18" data-line-number="18"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+  &lt;<span class="pl-ent">IfModule</span> <span class="pl-e">mod</span>_rewrite.<span class="pl-e">c</span>&gt;</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7L15" data-line-number="15"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R19" data-line-number="19"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   RewriteEngine On</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7L16" data-line-number="16"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R20" data-line-number="20"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   RewriteCond %{REQUEST_URI} !^/server-status</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7L17" data-line-number="17"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R21" data-line-number="21"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   RewriteCond %{REQUEST_URI} !^/monitoring/frontend$</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7L18" data-line-number="18"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R22" data-line-number="22"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   RewriteRule ^/(.*) /dummyradosgw.fcgi?params=$1<span class="pl-ii">&amp;</span>%{QUERY_STRING} [E=HTTP_AUTHORIZATION:%{HTTP:Authorization},L]</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R23" data-line-number="23"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+  &lt;/<span class="pl-ent">IfModule</span>&gt;</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7L19" data-line-number="19"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R24" data-line-number="24"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> </span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7L20" data-line-number="20"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R25" data-line-number="25"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   &lt;<span class="pl-ent">IfModule</span> <span class="pl-e">mod</span>_fastcgi.<span class="pl-e">c</span>&gt;</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7L21" data-line-number="21"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-85b7116e9b260dc26aab5b845cb0f2b7R26" data-line-number="26"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">     &lt;<span class="pl-ent">Directory</span> /<span class="pl-e">var</span>/<span class="pl-e">www</span>/&gt;</span>
+
+  </td>
+</tr>
+
+
+  <tr class="js-expandable-line">
+   <td class="blob-num blob-num-expandable" colspan="2">
+     <a href="#diff-85b7116e9b260dc26aab5b845cb0f2b7"
+          class="diff-expander js-expand" title="Expand" aria-label="Expand"
+          data-url="/wikimedia/operations-puppet/blob_excerpt/4f634c7ff66555bacd743088d52d7c50259bc31a?diff=unified&amp;mode=100644&amp;path=modules%2Fceph%2Ftemplates%2Fradosgw%2Fvhost.erb&amp;prev_line_num_left=21&amp;prev_line_num_right=26"
+          data-left-range="22-46"
+          data-right-range="27-46">
+       <span class="octicon octicon-unfold"></span>
+     </a>
+   </td>
+   <td class="blob-code blob-code-expandable"></td>
+  </tr>
+
+              </table>
+            </div>
+      </div>
+</div>
+
+<button class="js-toggle-all-file-notes" data-hotkey="i" style="display:none">Toggle all file notes</button>
+
+
+<div id="all_commit_comments" class="js-quote-selection-container">
+  <div class="commit-comments-heading">
+    
+
+  </div>
+
+  <div id="comments" class="comment-holder">
+    
+
+<!-- Rendered timeline since 2013-04-26 15:07:09 -->
+<div id="partial-timeline-marker"
+      class="js-timeline-marker js-socket-channel js-updatable-content"
+      data-channel="wikimedia/operations-puppet:commit:8cbfaef4822b02cce449c463cb063daa67d55014"
+      data-url="/wikimedia/operations-puppet/commit/8cbfaef4822b02cce449c463cb063daa67d55014/show_partial?partial=commit%2Ftimeline_marker&amp;since=1367014029"
+      data-last-modified="Fri, 26 Apr 2013 22:07:09 GMT">
+</div>
+
+  </div>
+
+  
+
+    Please <a href="/login?return_to=%2Fwikimedia%2Foperations-puppet%2Fcommit%2F8cbfaef4822b02cce449c463cb063daa67d55014" rel="nofollow">sign in</a> to comment.
+
+</div>
+
+
+        </div>
+
+      </div><!-- /.repo-container -->
+      <div class="modal-backdrop"></div>
+    </div><!-- /.container -->
+  </div><!-- /.site -->
+
+
+    </div><!-- /.wrapper -->
+
+      <div class="container">
+  <div class="site-footer" role="contentinfo">
+    <ul class="site-footer-links right">
+        <li><a href="https://status.github.com/" data-ga-click="Footer, go to status, text:status">Status</a></li>
+      <li><a href="https://developer.github.com" data-ga-click="Footer, go to api, text:api">API</a></li>
+      <li><a href="https://training.github.com" data-ga-click="Footer, go to training, text:training">Training</a></li>
+      <li><a href="https://shop.github.com" data-ga-click="Footer, go to shop, text:shop">Shop</a></li>
+        <li><a href="https://github.com/blog" data-ga-click="Footer, go to blog, text:blog">Blog</a></li>
+        <li><a href="https://github.com/about" data-ga-click="Footer, go to about, text:about">About</a></li>
+      <li><a href="https://help.github.com" data-ga-click="Footer, go to help, text:help">Help</a></li>
+
+    </ul>
+
+    <a href="https://github.com" aria-label="Homepage">
+      <span class="mega-octicon octicon-mark-github" title="GitHub"></span>
+</a>
+    <ul class="site-footer-links">
+      <li>&copy; 2015 <span title="0.14350s from github-fe128-cp1-prd.iad.github.net">GitHub</span>, Inc.</li>
+        <li><a href="https://github.com/site/terms" data-ga-click="Footer, go to terms, text:terms">Terms</a></li>
+        <li><a href="https://github.com/site/privacy" data-ga-click="Footer, go to privacy, text:privacy">Privacy</a></li>
+        <li><a href="https://github.com/security" data-ga-click="Footer, go to security, text:security">Security</a></li>
+        <li><a href="https://github.com/contact" data-ga-click="Footer, go to contact, text:contact">Contact</a></li>
+    </ul>
+  </div>
+</div>
+
+
+    <div class="fullscreen-overlay js-fullscreen-overlay" id="fullscreen_overlay">
+  <div class="fullscreen-container js-suggester-container">
+    <div class="textarea-wrap">
+      <textarea name="fullscreen-contents" id="fullscreen-contents" class="fullscreen-contents js-fullscreen-contents" placeholder=""></textarea>
+      <div class="suggester-container">
+        <div class="suggester fullscreen-suggester js-suggester js-navigation-container"></div>
+      </div>
+    </div>
+  </div>
+  <div class="fullscreen-sidebar">
+    <a href="#" class="exit-fullscreen js-exit-fullscreen tooltipped tooltipped-w" aria-label="Exit Zen Mode">
+      <span class="mega-octicon octicon-screen-normal"></span>
+    </a>
+    <a href="#" class="theme-switcher js-theme-switcher tooltipped tooltipped-w"
+      aria-label="Switch themes">
+      <span class="octicon octicon-color-mode"></span>
+    </a>
+  </div>
+</div>
+
+
+
+    
+    
+
+    <div id="ajax-error-message" class="flash flash-error">
+      <span class="octicon octicon-alert"></span>
+      <a href="#" class="octicon octicon-x flash-close js-ajax-error-dismiss" aria-label="Dismiss error"></a>
+      Something went wrong with that request. Please try again.
+    </div>
+
+
+      <script crossorigin="anonymous" src="https://assets-cdn.github.com/assets/frameworks-808fcfcd63c9ecba3e84453f540cb1cbafde48c6b30c1d51ebd4e67e88ff66bd.js"></script>
+      <script async="async" crossorigin="anonymous" src="https://assets-cdn.github.com/assets/github/index-fadc40287934e9bb3a912a44ba68b886ac6c451314a0cb3dbd935539e5d35252.js"></script>
+      
+      
+  </body>
+</html>
+

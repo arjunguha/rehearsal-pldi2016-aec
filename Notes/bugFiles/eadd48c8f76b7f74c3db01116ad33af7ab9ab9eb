@@ -1,0 +1,807 @@
+
+
+
+<!DOCTYPE html>
+<html lang="en" class="">
+  <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# object: http://ogp.me/ns/object# article: http://ogp.me/ns/article# profile: http://ogp.me/ns/profile#">
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Language" content="en">
+    
+    
+    <title>Fix ordering issue · arioch/puppet-redis@eadd48c · GitHub</title>
+    <link rel="search" type="application/opensearchdescription+xml" href="/opensearch.xml" title="GitHub">
+    <link rel="fluid-icon" href="https://github.com/fluidicon.png" title="GitHub">
+    <link rel="apple-touch-icon" sizes="57x57" href="/apple-touch-icon-114.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="/apple-touch-icon-114.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="/apple-touch-icon-144.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/apple-touch-icon-144.png">
+    <meta property="fb:app_id" content="1401488693436528">
+
+      
+      <meta content="GitHub" property="og:site_name" /><meta content="object" property="og:type" /><meta content="https://avatars1.githubusercontent.com/u/289522?v=3&amp;s=200" property="og:image" /><meta content="Fix ordering issue · arioch/puppet-redis@eadd48c" property="og:title" /><meta content="https://github.com/arioch/puppet-redis/commit/eadd48c8f76b7f74c3db01116ad33af7ab9ab9eb" property="og:url" /><meta content="1347631241" property="og:updated_time" />
+      <meta name="browser-stats-url" content="https://api.github.com/_private/browser/stats">
+    <meta name="browser-errors-url" content="https://api.github.com/_private/browser/errors">
+    <link rel="assets" href="https://assets-cdn.github.com/">
+    
+    <meta name="pjax-timeout" content="1000">
+    
+
+    <meta name="msapplication-TileImage" content="/windows-tile.png">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="selected-link" value="repo_commits" data-pjax-transient>
+
+        <meta name="google-analytics" content="UA-3769691-2">
+
+    <meta content="collector.githubapp.com" name="octolytics-host" /><meta content="collector-cdn.github.com" name="octolytics-script-host" /><meta content="github" name="octolytics-app-id" /><meta content="807728C4:6D12:6D0A7D5:558D9B79" name="octolytics-dimension-request_id" />
+    
+    <meta content="Rails, view, commit#show" name="analytics-event" />
+    <meta class="js-ga-set" name="dimension1" content="Logged Out">
+    <meta name="is-dotcom" content="true">
+      <meta name="hostname" content="github.com">
+    <meta name="user-login" content="">
+
+      <link rel="icon" sizes="any" mask href="https://assets-cdn.github.com/pinned-octocat.svg">
+      <meta name="theme-color" content="#4078c0">
+      <link rel="icon" type="image/x-icon" href="https://assets-cdn.github.com/favicon.ico">
+
+
+    <meta content="authenticity_token" name="csrf-param" />
+<meta content="d7usHmmowUbNWcIDCNaotCO5+hshcoazMUdd4tDAqsqAC0nlLtiFAEc+Kbez031zSYvN+IYufLq+8Vr55+D+Cg==" name="csrf-token" />
+
+    <link crossorigin="anonymous" href="https://assets-cdn.github.com/assets/github/index-4157068649cead58a7dd42dc9c0f2dc5b01bcc77921bc077b357e48be23aa237.css" media="all" rel="stylesheet" />
+    <link crossorigin="anonymous" href="https://assets-cdn.github.com/assets/github2/index-13f0ac42293bae46d3491dc1c876dbb87ac502462c5f7f8fca73526a02228eb3.css" media="all" rel="stylesheet" />
+    
+    
+
+
+    <meta http-equiv="x-pjax-version" content="40b2648e36de1d600743a44ce28fe428">
+
+        <link data-pjax-transient="true" href="/arioch/puppet-redis/commit/eadd48c8f76b7f74c3db01116ad33af7ab9ab9eb.diff" rel="alternate" type="text/plain+diff" />
+  <link data-pjax-transient="true" href="/arioch/puppet-redis/commit/eadd48c8f76b7f74c3db01116ad33af7ab9ab9eb.patch" rel="alternate" type="text/plain+patch" />
+
+  <meta name="diff-view" content="unified" data-pjax-transient>
+
+  <meta name="description" content="Contribute to puppet-redis development by creating an account on GitHub.">
+  <meta name="go-import" content="github.com/arioch/puppet-redis git https://github.com/arioch/puppet-redis.git">
+
+  <meta content="289522" name="octolytics-dimension-user_id" /><meta content="arioch" name="octolytics-dimension-user_login" /><meta content="5808081" name="octolytics-dimension-repository_id" /><meta content="arioch/puppet-redis" name="octolytics-dimension-repository_nwo" /><meta content="true" name="octolytics-dimension-repository_public" /><meta content="false" name="octolytics-dimension-repository_is_fork" /><meta content="5808081" name="octolytics-dimension-repository_network_root_id" /><meta content="arioch/puppet-redis" name="octolytics-dimension-repository_network_root_nwo" />
+  <link href="https://github.com/arioch/puppet-redis/commits/eadd48c8f76b7f74c3db01116ad33af7ab9ab9eb.atom" rel="alternate" title="Recent Commits to puppet-redis:eadd48c8f76b7f74c3db01116ad33af7ab9ab9eb" type="application/atom+xml">
+
+  </head>
+
+
+  <body class="logged_out  env-production  vis-public">
+    <a href="#start-of-content" tabindex="1" class="accessibility-aid js-skip-to-content">Skip to content</a>
+    <div class="wrapper">
+      
+      
+      
+
+
+        
+        <div class="header header-logged-out" role="banner">
+  <div class="container clearfix">
+
+    <a class="header-logo-wordmark" href="https://github.com/" data-ga-click="(Logged out) Header, go to homepage, icon:logo-wordmark">
+      <span class="mega-octicon octicon-logo-github"></span>
+    </a>
+
+    <div class="header-actions" role="navigation">
+        <a class="btn btn-primary" href="/join" data-ga-click="(Logged out) Header, clicked Sign up, text:sign-up">Sign up</a>
+      <a class="btn" href="/login?return_to=%2Farioch%2Fpuppet-redis%2Fcommit%2Feadd48c8f76b7f74c3db01116ad33af7ab9ab9eb" data-ga-click="(Logged out) Header, clicked Sign in, text:sign-in">Sign in</a>
+    </div>
+
+    <div class="site-search repo-scope js-site-search" role="search">
+      <form accept-charset="UTF-8" action="/arioch/puppet-redis/search" class="js-site-search-form" data-global-search-url="/search" data-repo-search-url="/arioch/puppet-redis/search" method="get"><div style="margin:0;padding:0;display:inline"><input name="utf8" type="hidden" value="&#x2713;" /></div>
+  <label class="js-chromeless-input-container form-control">
+    <div class="scope-badge">This repository</div>
+    <input type="text"
+      class="js-site-search-focus js-site-search-field is-clearable chromeless-input"
+      data-hotkey="s"
+      name="q"
+      placeholder="Search"
+      data-global-scope-placeholder="Search GitHub"
+      data-repo-scope-placeholder="Search"
+      tabindex="1"
+      autocapitalize="off">
+  </label>
+</form>
+    </div>
+
+      <ul class="header-nav left" role="navigation">
+          <li class="header-nav-item">
+            <a class="header-nav-link" href="/explore" data-ga-click="(Logged out) Header, go to explore, text:explore">Explore</a>
+          </li>
+          <li class="header-nav-item">
+            <a class="header-nav-link" href="/features" data-ga-click="(Logged out) Header, go to features, text:features">Features</a>
+          </li>
+          <li class="header-nav-item">
+            <a class="header-nav-link" href="https://enterprise.github.com/" data-ga-click="(Logged out) Header, go to enterprise, text:enterprise">Enterprise</a>
+          </li>
+          <li class="header-nav-item">
+            <a class="header-nav-link" href="/blog" data-ga-click="(Logged out) Header, go to blog, text:blog">Blog</a>
+          </li>
+      </ul>
+
+  </div>
+</div>
+
+
+
+      <div id="start-of-content" class="accessibility-aid"></div>
+          <div class="site" itemscope itemtype="http://schema.org/WebPage">
+    <div id="js-flash-container">
+      
+    </div>
+    <div class="pagehead repohead instapaper_ignore readability-menu">
+      <div class="container">
+
+        
+<ul class="pagehead-actions">
+
+  <li>
+      <a href="/login?return_to=%2Farioch%2Fpuppet-redis"
+    class="btn btn-sm btn-with-count tooltipped tooltipped-n"
+    aria-label="You must be signed in to watch a repository" rel="nofollow">
+    <span class="octicon octicon-eye"></span>
+    Watch
+  </a>
+  <a class="social-count" href="/arioch/puppet-redis/watchers">
+    2
+  </a>
+
+  </li>
+
+  <li>
+      <a href="/login?return_to=%2Farioch%2Fpuppet-redis"
+    class="btn btn-sm btn-with-count tooltipped tooltipped-n"
+    aria-label="You must be signed in to star a repository" rel="nofollow">
+    <span class="octicon octicon-star"></span>
+    Star
+  </a>
+
+    <a class="social-count js-social-count" href="/arioch/puppet-redis/stargazers">
+      11
+    </a>
+
+  </li>
+
+    <li>
+      <a href="/login?return_to=%2Farioch%2Fpuppet-redis"
+        class="btn btn-sm btn-with-count tooltipped tooltipped-n"
+        aria-label="You must be signed in to fork a repository" rel="nofollow">
+        <span class="octicon octicon-repo-forked"></span>
+        Fork
+      </a>
+      <a href="/arioch/puppet-redis/network" class="social-count">
+        22
+      </a>
+    </li>
+</ul>
+
+        <h1 itemscope itemtype="http://data-vocabulary.org/Breadcrumb" class="entry-title public">
+          <span class="mega-octicon octicon-repo"></span>
+          <span class="author"><a href="/arioch" class="url fn" itemprop="url" rel="author"><span itemprop="title">arioch</span></a></span><!--
+       --><span class="path-divider">/</span><!--
+       --><strong><a href="/arioch/puppet-redis" data-pjax="#js-repo-pjax-container">puppet-redis</a></strong>
+
+          <span class="page-context-loader">
+            <img alt="" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+          </span>
+
+        </h1>
+      </div><!-- /.container -->
+    </div><!-- /.repohead -->
+
+    <div class="container">
+      <div class="repository-with-sidebar repo-container new-discussion-timeline  ">
+        <div class="repository-sidebar clearfix">
+            
+<nav class="sunken-menu repo-nav js-repo-nav js-sidenav-container-pjax js-octicon-loaders"
+     role="navigation"
+     data-pjax="#js-repo-pjax-container"
+     data-issue-count-url="/arioch/puppet-redis/issues/counts">
+  <ul class="sunken-menu-group">
+    <li class="tooltipped tooltipped-w" aria-label="Code">
+      <a href="/arioch/puppet-redis" aria-label="Code" class="selected js-selected-navigation-item sunken-menu-item" data-hotkey="g c" data-selected-links="repo_source repo_downloads repo_commits repo_releases repo_tags repo_branches /arioch/puppet-redis">
+        <span class="octicon octicon-code"></span> <span class="full-word">Code</span>
+        <img alt="" class="mini-loader" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+</a>    </li>
+
+      <li class="tooltipped tooltipped-w" aria-label="Issues">
+        <a href="/arioch/puppet-redis/issues" aria-label="Issues" class="js-selected-navigation-item sunken-menu-item" data-hotkey="g i" data-selected-links="repo_issues repo_labels repo_milestones /arioch/puppet-redis/issues">
+          <span class="octicon octicon-issue-opened"></span> <span class="full-word">Issues</span>
+          <span class="js-issue-replace-counter"></span>
+          <img alt="" class="mini-loader" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+</a>      </li>
+
+    <li class="tooltipped tooltipped-w" aria-label="Pull requests">
+      <a href="/arioch/puppet-redis/pulls" aria-label="Pull requests" class="js-selected-navigation-item sunken-menu-item" data-hotkey="g p" data-selected-links="repo_pulls /arioch/puppet-redis/pulls">
+          <span class="octicon octicon-git-pull-request"></span> <span class="full-word">Pull requests</span>
+          <span class="js-pull-replace-counter"></span>
+          <img alt="" class="mini-loader" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+</a>    </li>
+
+  </ul>
+  <div class="sunken-menu-separator"></div>
+  <ul class="sunken-menu-group">
+
+    <li class="tooltipped tooltipped-w" aria-label="Pulse">
+      <a href="/arioch/puppet-redis/pulse" aria-label="Pulse" class="js-selected-navigation-item sunken-menu-item" data-selected-links="pulse /arioch/puppet-redis/pulse">
+        <span class="octicon octicon-pulse"></span> <span class="full-word">Pulse</span>
+        <img alt="" class="mini-loader" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+</a>    </li>
+
+    <li class="tooltipped tooltipped-w" aria-label="Graphs">
+      <a href="/arioch/puppet-redis/graphs" aria-label="Graphs" class="js-selected-navigation-item sunken-menu-item" data-selected-links="repo_graphs repo_contributors /arioch/puppet-redis/graphs">
+        <span class="octicon octicon-graph"></span> <span class="full-word">Graphs</span>
+        <img alt="" class="mini-loader" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+</a>    </li>
+  </ul>
+
+
+</nav>
+
+              <div class="only-with-full-nav">
+                  
+<div class="js-clone-url clone-url open"
+  data-protocol-type="http">
+  <h3><span class="text-emphasized">HTTPS</span> clone URL</h3>
+  <div class="input-group js-zeroclipboard-container">
+    <input type="text" class="input-mini input-monospace js-url-field js-zeroclipboard-target"
+           value="https://github.com/arioch/puppet-redis.git" readonly="readonly">
+    <span class="input-group-button">
+      <button aria-label="Copy to clipboard" class="js-zeroclipboard btn btn-sm zeroclipboard-button tooltipped tooltipped-s" data-copied-hint="Copied!" type="button"><span class="octicon octicon-clippy"></span></button>
+    </span>
+  </div>
+</div>
+
+  
+<div class="js-clone-url clone-url "
+  data-protocol-type="subversion">
+  <h3><span class="text-emphasized">Subversion</span> checkout URL</h3>
+  <div class="input-group js-zeroclipboard-container">
+    <input type="text" class="input-mini input-monospace js-url-field js-zeroclipboard-target"
+           value="https://github.com/arioch/puppet-redis" readonly="readonly">
+    <span class="input-group-button">
+      <button aria-label="Copy to clipboard" class="js-zeroclipboard btn btn-sm zeroclipboard-button tooltipped tooltipped-s" data-copied-hint="Copied!" type="button"><span class="octicon octicon-clippy"></span></button>
+    </span>
+  </div>
+</div>
+
+
+
+<div class="clone-options">You can clone with
+  <form accept-charset="UTF-8" action="/users/set_protocol?protocol_selector=http&amp;protocol_type=clone" class="inline-form js-clone-selector-form " data-remote="true" method="post"><div style="margin:0;padding:0;display:inline"><input name="utf8" type="hidden" value="&#x2713;" /><input name="authenticity_token" type="hidden" value="OILFTNvHZSArrQR+JbzdoPPVWNMtnu/Psy6PseLJgRWhDQfpZn6f1Z6YRY9p8g4buHvl5GbJr82q9QWL2RdDeg==" /></div><button class="btn-link js-clone-selector" data-protocol="http" type="submit">HTTPS</button></form> or <form accept-charset="UTF-8" action="/users/set_protocol?protocol_selector=subversion&amp;protocol_type=clone" class="inline-form js-clone-selector-form " data-remote="true" method="post"><div style="margin:0;padding:0;display:inline"><input name="utf8" type="hidden" value="&#x2713;" /><input name="authenticity_token" type="hidden" value="4INIKpBw5DQ2mkzI55FWGP0jduNNXrLUmDvmYNv8o9hebdbM685FYBQoRrl/sxZbOhf2HvEyrAMlI95HCXgWGw==" /></div><button class="btn-link js-clone-selector" data-protocol="subversion" type="submit">Subversion</button></form>.
+  <a href="https://help.github.com/articles/which-remote-url-should-i-use" class="help tooltipped tooltipped-n" aria-label="Get help on which URL is right for you.">
+    <span class="octicon octicon-question"></span>
+  </a>
+</div>
+
+
+
+
+                <a href="/arioch/puppet-redis/archive/eadd48c8f76b7f74c3db01116ad33af7ab9ab9eb.zip"
+                   class="btn btn-sm sidebar-button"
+                   aria-label="Download the contents of arioch/puppet-redis as a zip file"
+                   title="Download the contents of arioch/puppet-redis as a zip file"
+                   rel="nofollow">
+                  <span class="octicon octicon-cloud-download"></span>
+                  Download ZIP
+                </a>
+              </div>
+        </div><!-- /.repository-sidebar -->
+
+        <div id="js-repo-pjax-container" class="repository-content context-loader-container" data-pjax-container>
+
+          
+<a href="/arioch/puppet-redis/commit/eadd48c8f76b7f74c3db01116ad33af7ab9ab9eb" class="hidden js-permalink-shortcut" data-hotkey="y">Permalink</a>
+
+
+
+
+<div class="commit full-commit ">
+  <a href="/arioch/puppet-redis/tree/eadd48c8f76b7f74c3db01116ad33af7ab9ab9eb" class="btn btn-outline right" title="Browse the repository at this point in the history" rel="nofollow">Browse files</a>
+
+    <p class="commit-title">
+      Fix ordering issue
+    </p>
+
+
+  <div class="commit-branches">
+    <include-fragment src="/arioch/puppet-redis/branch_commits/eadd48c8f76b7f74c3db01116ad33af7ab9ab9eb">
+      <span class="octicon octicon-git-branch"></span>
+      <ul class="branches-list">
+        <li class="loading">Loading branch information<span class="animated-ellipsis-container"><span class="animated-ellipsis">...</span></span></li>
+      </ul>
+</include-fragment>  </div>
+
+  <div class="commit-meta clearfix">
+    <span class="sha-block">commit <span class="sha js-selectable-text">eadd48c8f76b7f74c3db01116ad33af7ab9ab9eb</span></span>
+
+    <span class="sha-block" data-pjax>
+      1 parent
+        
+        <a href="/arioch/puppet-redis/commit/9eeef29abac112e9f44aa2d2c0ed6ea1f2617888" class="sha" data-hotkey="p">9eeef29</a>
+    </span>
+
+    <div class="authorship">
+      <img alt="@arioch" class="avatar" height="24" src="https://avatars1.githubusercontent.com/u/289522?v=3&amp;s=48" width="24" />
+      <span class="author-name"><a href="/arioch" rel="author">arioch</a></span>
+      
+      authored <time datetime="2012-09-14T14:00:41Z" is="relative-time">Sep 14, 2012</time>
+
+    </div>
+  </div>
+</div>
+
+
+
+
+    <a name="diff-stat"></a>
+    <div id="toc" class="details-collapse table-of-contents js-details-container">
+  <div class="btn-group right" data-ga-load="Diff, view, Viewed Unified Diff">
+  <a class="btn btn-sm selected" href="https://github.com/arioch/puppet-redis/commit/eadd48c8f76b7f74c3db01116ad33af7ab9ab9eb?diff=unified">
+    Unified
+  </a>
+  <a class="btn btn-sm" href="https://github.com/arioch/puppet-redis/commit/eadd48c8f76b7f74c3db01116ad33af7ab9ab9eb?diff=split">
+    Split
+  </a>
+</div>
+
+
+  <div class="toc-diff-stats">
+    <span class="octicon octicon-diff"></span>
+    Showing
+    <button type="button" class="btn-link js-details-target">
+      1 changed file
+    </button>
+    with
+    <strong>2 additions</strong>
+    and <strong>2 deletions</strong>.
+  </div>
+
+  <ol class="content collapse js-transitionable">
+    <li>
+      <span class="diffstat right">
+          <span class="text-diff-added">
+            +2
+          </span>
+          <span class="text-diff-deleted">
+            −2
+          </span>
+          <a href="#diff-60ae41fd0a31977447947f59940ee9a4" class="tooltipped tooltipped-s" aria-label="4 lines changed">
+            <span class="diffstat-bar">
+              <span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span><span class="text-diff-deleted">&#xf053;</span><span class="text-diff-deleted">&#xf053;</span>&#xf053;
+            </span>
+          </a>
+      </span>
+      <span class="octicon octicon-diff-modified" title="modified"></span>
+      <a href="#diff-60ae41fd0a31977447947f59940ee9a4">manifests/init.pp</a>
+    </li>
+  </ol>
+</div>
+
+  <div id="files" class="diff-view ">
+      <a name="diff-60ae41fd0a31977447947f59940ee9a4"></a>
+      <div id="diff-0"
+           class="file js-details-container
+                   
+                   
+                   
+                   
+                   show-inline-notes
+                 ">
+        <div class="file-header" data-path="manifests/init.pp">
+          <div class="file-actions">
+              <span class="show-file-notes">
+                <label>
+                  <input type="checkbox" checked="checked" class="js-toggle-file-notes">
+                  Show notes
+                </label>
+              </span>
+
+                <a href="/arioch/puppet-redis/blob/eadd48c8f76b7f74c3db01116ad33af7ab9ab9eb/manifests/init.pp" class="btn btn-sm tooltipped tooltipped-n" rel="nofollow" aria-label="View the whole file at version eadd48c ">View</a>
+
+
+          </div>
+          <div class="file-info">
+              <span class="diffstat tooltipped tooltipped-e" aria-label="2 additions &amp; 2 deletions">4 <span class="diffstat-bar"><span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span><span class="text-diff-deleted">&#xf053;</span><span class="text-diff-deleted">&#xf053;</span>&#xf053;</span></span>
+
+            <span class="js-selectable-text" title="manifests/init.pp">
+              manifests/init.pp
+            </span>
+            
+          </div>
+        </div>
+
+            <div class="data highlight blob-wrapper">
+              <table class="diff-table tab-size  " data-tab-size="8">
+                
+      <tr class="js-expandable-line" data-position="0">
+    <td class="blob-num blob-num-expandable" colspan="2">
+      <a href="#diff-60ae41fd0a31977447947f59940ee9a4"
+            class="diff-expander js-expand" title="Expand" aria-label="Expand"
+            data-url="/arioch/puppet-redis/blob_excerpt/30a4c54ea5c819ba665554b7bcfaa5d2955aed43?diff=unified&amp;left_hunk_size=13&amp;mode=100644&amp;next_line_num_left=73&amp;next_line_num_right=73&amp;path=manifests%2Finit.pp&amp;prev_line_num_left=&amp;prev_line_num_right=&amp;right_hunk_size=13"
+            data-left-range="1-72" data-right-range="1-72">
+        <span class="octicon octicon-unfold"></span>
+      </a>
+    </td>
+    <td class="blob-code blob-code-inner blob-code-hunk">@@ -73,13 +73,13 @@</td>
+  </tr>
+
+    
+
+<tr>
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4L73" data-line-number="73"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4R73" data-line-number="73"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> </span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4L74" data-line-number="74"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4R74" data-line-number="74"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   <span class="pl-c"># motd::register{&#39;redis&#39;: }</span></span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4L75" data-line-number="75"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4R75" data-line-number="75"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> </span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4L76" data-line-number="76"
+        class="blob-num blob-num-deletion js-linkable-line-number"></td>
+
+    <td class="blob-num blob-num-deletion empty-cell"></td>
+
+  <td class="blob-code blob-code-deletion">
+
+    <span class="blob-code-inner">-  <span class="pl-k">include</span> install</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4L77" data-line-number="77"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4R76" data-line-number="76"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   <span class="pl-k">include</span> preinstall</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4R77" data-line-number="77"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+  <span class="pl-k">include</span> install</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4L78" data-line-number="78"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4R78" data-line-number="78"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   <span class="pl-k">include</span> config</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4L79" data-line-number="79"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4R79" data-line-number="79"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   <span class="pl-k">include</span> service</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4L80" data-line-number="80"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4R80" data-line-number="80"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> </span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4L81" data-line-number="81"
+        class="blob-num blob-num-deletion js-linkable-line-number"></td>
+
+    <td class="blob-num blob-num-deletion empty-cell"></td>
+
+  <td class="blob-code blob-code-deletion">
+
+    <span class="blob-code-inner">-  Class[<span class="pl-s"><span class="pl-pds">&#39;</span>install<span class="pl-pds">&#39;</span></span>] -&gt;</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4L82" data-line-number="82"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4R81" data-line-number="81"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   Class[<span class="pl-s"><span class="pl-pds">&#39;</span>preinstall<span class="pl-pds">&#39;</span></span>] -&gt;</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4R82" data-line-number="82"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+  Class[<span class="pl-s"><span class="pl-pds">&#39;</span>install<span class="pl-pds">&#39;</span></span>] -&gt;</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4L83" data-line-number="83"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4R83" data-line-number="83"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   Class[<span class="pl-s"><span class="pl-pds">&#39;</span>config<span class="pl-pds">&#39;</span></span>] -&gt;</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4L84" data-line-number="84"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4R84" data-line-number="84"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   Class[<span class="pl-s"><span class="pl-pds">&#39;</span>service<span class="pl-pds">&#39;</span></span>]</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4L85" data-line-number="85"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-60ae41fd0a31977447947f59940ee9a4R85" data-line-number="85"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> </span>
+
+  </td>
+</tr>
+
+
+  <tr class="js-expandable-line">
+   <td class="blob-num blob-num-expandable" colspan="2">
+     <a href="#diff-60ae41fd0a31977447947f59940ee9a4"
+          class="diff-expander js-expand" title="Expand" aria-label="Expand"
+          data-url="/arioch/puppet-redis/blob_excerpt/30a4c54ea5c819ba665554b7bcfaa5d2955aed43?diff=unified&amp;mode=100644&amp;path=manifests%2Finit.pp&amp;prev_line_num_left=85&amp;prev_line_num_right=85"
+          data-left-range="86-93"
+          data-right-range="86-93">
+       <span class="octicon octicon-unfold"></span>
+     </a>
+   </td>
+   <td class="blob-code blob-code-expandable"></td>
+  </tr>
+
+              </table>
+            </div>
+      </div>
+</div>
+
+<button class="js-toggle-all-file-notes" data-hotkey="i" style="display:none">Toggle all file notes</button>
+
+
+<div id="all_commit_comments" class="js-quote-selection-container">
+  <div class="commit-comments-heading">
+    
+
+  </div>
+
+  <div id="comments" class="comment-holder">
+    
+
+<!-- Rendered timeline since 2012-09-14 07:00:41 -->
+<div id="partial-timeline-marker"
+      class="js-timeline-marker js-socket-channel js-updatable-content"
+      data-channel="arioch/puppet-redis:commit:eadd48c8f76b7f74c3db01116ad33af7ab9ab9eb"
+      data-url="/arioch/puppet-redis/commit/eadd48c8f76b7f74c3db01116ad33af7ab9ab9eb/show_partial?partial=commit%2Ftimeline_marker&amp;since=1347631241"
+      data-last-modified="Fri, 14 Sep 2012 14:00:41 GMT">
+</div>
+
+  </div>
+
+  
+
+    Please <a href="/login?return_to=%2Farioch%2Fpuppet-redis%2Fcommit%2Feadd48c8f76b7f74c3db01116ad33af7ab9ab9eb" rel="nofollow">sign in</a> to comment.
+
+</div>
+
+
+        </div>
+
+      </div><!-- /.repo-container -->
+      <div class="modal-backdrop"></div>
+    </div><!-- /.container -->
+  </div><!-- /.site -->
+
+
+    </div><!-- /.wrapper -->
+
+      <div class="container">
+  <div class="site-footer" role="contentinfo">
+    <ul class="site-footer-links right">
+        <li><a href="https://status.github.com/" data-ga-click="Footer, go to status, text:status">Status</a></li>
+      <li><a href="https://developer.github.com" data-ga-click="Footer, go to api, text:api">API</a></li>
+      <li><a href="https://training.github.com" data-ga-click="Footer, go to training, text:training">Training</a></li>
+      <li><a href="https://shop.github.com" data-ga-click="Footer, go to shop, text:shop">Shop</a></li>
+        <li><a href="https://github.com/blog" data-ga-click="Footer, go to blog, text:blog">Blog</a></li>
+        <li><a href="https://github.com/about" data-ga-click="Footer, go to about, text:about">About</a></li>
+      <li><a href="https://help.github.com" data-ga-click="Footer, go to help, text:help">Help</a></li>
+
+    </ul>
+
+    <a href="https://github.com" aria-label="Homepage">
+      <span class="mega-octicon octicon-mark-github" title="GitHub"></span>
+</a>
+    <ul class="site-footer-links">
+      <li>&copy; 2015 <span title="0.10580s from github-fe136-cp1-prd.iad.github.net">GitHub</span>, Inc.</li>
+        <li><a href="https://github.com/site/terms" data-ga-click="Footer, go to terms, text:terms">Terms</a></li>
+        <li><a href="https://github.com/site/privacy" data-ga-click="Footer, go to privacy, text:privacy">Privacy</a></li>
+        <li><a href="https://github.com/security" data-ga-click="Footer, go to security, text:security">Security</a></li>
+        <li><a href="https://github.com/contact" data-ga-click="Footer, go to contact, text:contact">Contact</a></li>
+    </ul>
+  </div>
+</div>
+
+
+    <div class="fullscreen-overlay js-fullscreen-overlay" id="fullscreen_overlay">
+  <div class="fullscreen-container js-suggester-container">
+    <div class="textarea-wrap">
+      <textarea name="fullscreen-contents" id="fullscreen-contents" class="fullscreen-contents js-fullscreen-contents" placeholder=""></textarea>
+      <div class="suggester-container">
+        <div class="suggester fullscreen-suggester js-suggester js-navigation-container"></div>
+      </div>
+    </div>
+  </div>
+  <div class="fullscreen-sidebar">
+    <a href="#" class="exit-fullscreen js-exit-fullscreen tooltipped tooltipped-w" aria-label="Exit Zen Mode">
+      <span class="mega-octicon octicon-screen-normal"></span>
+    </a>
+    <a href="#" class="theme-switcher js-theme-switcher tooltipped tooltipped-w"
+      aria-label="Switch themes">
+      <span class="octicon octicon-color-mode"></span>
+    </a>
+  </div>
+</div>
+
+
+
+    
+    
+
+    <div id="ajax-error-message" class="flash flash-error">
+      <span class="octicon octicon-alert"></span>
+      <a href="#" class="octicon octicon-x flash-close js-ajax-error-dismiss" aria-label="Dismiss error"></a>
+      Something went wrong with that request. Please try again.
+    </div>
+
+
+      <script crossorigin="anonymous" src="https://assets-cdn.github.com/assets/frameworks-808fcfcd63c9ecba3e84453f540cb1cbafde48c6b30c1d51ebd4e67e88ff66bd.js"></script>
+      <script async="async" crossorigin="anonymous" src="https://assets-cdn.github.com/assets/github/index-fadc40287934e9bb3a912a44ba68b886ac6c451314a0cb3dbd935539e5d35252.js"></script>
+      
+      
+  </body>
+</html>
+

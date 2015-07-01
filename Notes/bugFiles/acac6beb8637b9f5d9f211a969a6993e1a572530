@@ -1,0 +1,932 @@
+
+
+
+<!DOCTYPE html>
+<html lang="en" class="">
+  <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# object: http://ogp.me/ns/object# article: http://ogp.me/ns/article# profile: http://ogp.me/ns/profile#">
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Language" content="en">
+    
+    
+    <title>Fix order, hopefully. · kumina/puppet-kbp@acac6be · GitHub</title>
+    <link rel="search" type="application/opensearchdescription+xml" href="/opensearch.xml" title="GitHub">
+    <link rel="fluid-icon" href="https://github.com/fluidicon.png" title="GitHub">
+    <link rel="apple-touch-icon" sizes="57x57" href="/apple-touch-icon-114.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="/apple-touch-icon-114.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="/apple-touch-icon-144.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/apple-touch-icon-144.png">
+    <meta property="fb:app_id" content="1401488693436528">
+
+      
+      <meta content="GitHub" property="og:site_name" /><meta content="object" property="og:type" /><meta content="https://avatars3.githubusercontent.com/u/729432?v=3&amp;s=200" property="og:image" /><meta content="Fix order, hopefully. · kumina/puppet-kbp@acac6be" property="og:title" /><meta content="https://github.com/kumina/puppet-kbp/commit/acac6beb8637b9f5d9f211a969a6993e1a572530" property="og:url" /><meta content="1391432952" property="og:updated_time" />
+      <meta name="browser-stats-url" content="https://api.github.com/_private/browser/stats">
+    <meta name="browser-errors-url" content="https://api.github.com/_private/browser/errors">
+    <link rel="assets" href="https://assets-cdn.github.com/">
+    
+    <meta name="pjax-timeout" content="1000">
+    
+
+    <meta name="msapplication-TileImage" content="/windows-tile.png">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="selected-link" value="repo_commits" data-pjax-transient>
+
+        <meta name="google-analytics" content="UA-3769691-2">
+
+    <meta content="collector.githubapp.com" name="octolytics-host" /><meta content="collector-cdn.github.com" name="octolytics-script-host" /><meta content="github" name="octolytics-app-id" /><meta content="807728C4:6D12:6D0A363:558D9B74" name="octolytics-dimension-request_id" />
+    
+    <meta content="Rails, view, commit#show" name="analytics-event" />
+    <meta class="js-ga-set" name="dimension1" content="Logged Out">
+    <meta name="is-dotcom" content="true">
+      <meta name="hostname" content="github.com">
+    <meta name="user-login" content="">
+
+      <link rel="icon" sizes="any" mask href="https://assets-cdn.github.com/pinned-octocat.svg">
+      <meta name="theme-color" content="#4078c0">
+      <link rel="icon" type="image/x-icon" href="https://assets-cdn.github.com/favicon.ico">
+
+
+    <meta content="authenticity_token" name="csrf-param" />
+<meta content="IkCMC8oVKPbZIGLy8DTPDmdEf0wS7cjEwx1E0Nkm75xDZ8wsnUwMxz2rCg9UQ4+yiuvypqMJfqigA4rYnxMWPQ==" name="csrf-token" />
+
+    <link crossorigin="anonymous" href="https://assets-cdn.github.com/assets/github/index-4157068649cead58a7dd42dc9c0f2dc5b01bcc77921bc077b357e48be23aa237.css" media="all" rel="stylesheet" />
+    <link crossorigin="anonymous" href="https://assets-cdn.github.com/assets/github2/index-13f0ac42293bae46d3491dc1c876dbb87ac502462c5f7f8fca73526a02228eb3.css" media="all" rel="stylesheet" />
+    
+    
+
+
+    <meta http-equiv="x-pjax-version" content="40b2648e36de1d600743a44ce28fe428">
+
+        <link data-pjax-transient="true" href="/kumina/puppet-kbp/commit/acac6beb8637b9f5d9f211a969a6993e1a572530.diff" rel="alternate" type="text/plain+diff" />
+  <link data-pjax-transient="true" href="/kumina/puppet-kbp/commit/acac6beb8637b9f5d9f211a969a6993e1a572530.patch" rel="alternate" type="text/plain+patch" />
+
+  <meta name="diff-view" content="unified" data-pjax-transient>
+
+  <meta name="description" content="puppet-kbp - Kumina Best Practises">
+  <meta name="go-import" content="github.com/kumina/puppet-kbp git https://github.com/kumina/puppet-kbp.git">
+
+  <meta content="729422" name="octolytics-dimension-user_id" /><meta content="kumina" name="octolytics-dimension-user_login" /><meta content="1618377" name="octolytics-dimension-repository_id" /><meta content="kumina/puppet-kbp" name="octolytics-dimension-repository_nwo" /><meta content="true" name="octolytics-dimension-repository_public" /><meta content="false" name="octolytics-dimension-repository_is_fork" /><meta content="1618377" name="octolytics-dimension-repository_network_root_id" /><meta content="kumina/puppet-kbp" name="octolytics-dimension-repository_network_root_nwo" />
+  <link href="https://github.com/kumina/puppet-kbp/commits/acac6beb8637b9f5d9f211a969a6993e1a572530.atom" rel="alternate" title="Recent Commits to puppet-kbp:acac6beb8637b9f5d9f211a969a6993e1a572530" type="application/atom+xml">
+
+  </head>
+
+
+  <body class="logged_out  env-production  vis-public">
+    <a href="#start-of-content" tabindex="1" class="accessibility-aid js-skip-to-content">Skip to content</a>
+    <div class="wrapper">
+      
+      
+      
+
+
+        
+        <div class="header header-logged-out" role="banner">
+  <div class="container clearfix">
+
+    <a class="header-logo-wordmark" href="https://github.com/" data-ga-click="(Logged out) Header, go to homepage, icon:logo-wordmark">
+      <span class="mega-octicon octicon-logo-github"></span>
+    </a>
+
+    <div class="header-actions" role="navigation">
+        <a class="btn btn-primary" href="/join" data-ga-click="(Logged out) Header, clicked Sign up, text:sign-up">Sign up</a>
+      <a class="btn" href="/login?return_to=%2Fkumina%2Fpuppet-kbp%2Fcommit%2Facac6beb8637b9f5d9f211a969a6993e1a572530" data-ga-click="(Logged out) Header, clicked Sign in, text:sign-in">Sign in</a>
+    </div>
+
+    <div class="site-search repo-scope js-site-search" role="search">
+      <form accept-charset="UTF-8" action="/kumina/puppet-kbp/search" class="js-site-search-form" data-global-search-url="/search" data-repo-search-url="/kumina/puppet-kbp/search" method="get"><div style="margin:0;padding:0;display:inline"><input name="utf8" type="hidden" value="&#x2713;" /></div>
+  <label class="js-chromeless-input-container form-control">
+    <div class="scope-badge">This repository</div>
+    <input type="text"
+      class="js-site-search-focus js-site-search-field is-clearable chromeless-input"
+      data-hotkey="s"
+      name="q"
+      placeholder="Search"
+      data-global-scope-placeholder="Search GitHub"
+      data-repo-scope-placeholder="Search"
+      tabindex="1"
+      autocapitalize="off">
+  </label>
+</form>
+    </div>
+
+      <ul class="header-nav left" role="navigation">
+          <li class="header-nav-item">
+            <a class="header-nav-link" href="/explore" data-ga-click="(Logged out) Header, go to explore, text:explore">Explore</a>
+          </li>
+          <li class="header-nav-item">
+            <a class="header-nav-link" href="/features" data-ga-click="(Logged out) Header, go to features, text:features">Features</a>
+          </li>
+          <li class="header-nav-item">
+            <a class="header-nav-link" href="https://enterprise.github.com/" data-ga-click="(Logged out) Header, go to enterprise, text:enterprise">Enterprise</a>
+          </li>
+          <li class="header-nav-item">
+            <a class="header-nav-link" href="/blog" data-ga-click="(Logged out) Header, go to blog, text:blog">Blog</a>
+          </li>
+      </ul>
+
+  </div>
+</div>
+
+
+
+      <div id="start-of-content" class="accessibility-aid"></div>
+          <div class="site" itemscope itemtype="http://schema.org/WebPage">
+    <div id="js-flash-container">
+      
+    </div>
+    <div class="pagehead repohead instapaper_ignore readability-menu">
+      <div class="container">
+
+        
+<ul class="pagehead-actions">
+
+  <li>
+      <a href="/login?return_to=%2Fkumina%2Fpuppet-kbp"
+    class="btn btn-sm btn-with-count tooltipped tooltipped-n"
+    aria-label="You must be signed in to watch a repository" rel="nofollow">
+    <span class="octicon octicon-eye"></span>
+    Watch
+  </a>
+  <a class="social-count" href="/kumina/puppet-kbp/watchers">
+    3
+  </a>
+
+  </li>
+
+  <li>
+      <a href="/login?return_to=%2Fkumina%2Fpuppet-kbp"
+    class="btn btn-sm btn-with-count tooltipped tooltipped-n"
+    aria-label="You must be signed in to star a repository" rel="nofollow">
+    <span class="octicon octicon-star"></span>
+    Star
+  </a>
+
+    <a class="social-count js-social-count" href="/kumina/puppet-kbp/stargazers">
+      21
+    </a>
+
+  </li>
+
+    <li>
+      <a href="/login?return_to=%2Fkumina%2Fpuppet-kbp"
+        class="btn btn-sm btn-with-count tooltipped tooltipped-n"
+        aria-label="You must be signed in to fork a repository" rel="nofollow">
+        <span class="octicon octicon-repo-forked"></span>
+        Fork
+      </a>
+      <a href="/kumina/puppet-kbp/network" class="social-count">
+        3
+      </a>
+    </li>
+</ul>
+
+        <h1 itemscope itemtype="http://data-vocabulary.org/Breadcrumb" class="entry-title public">
+          <span class="mega-octicon octicon-repo"></span>
+          <span class="author"><a href="/kumina" class="url fn" itemprop="url" rel="author"><span itemprop="title">kumina</span></a></span><!--
+       --><span class="path-divider">/</span><!--
+       --><strong><a href="/kumina/puppet-kbp" data-pjax="#js-repo-pjax-container">puppet-kbp</a></strong>
+
+          <span class="page-context-loader">
+            <img alt="" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+          </span>
+
+        </h1>
+      </div><!-- /.container -->
+    </div><!-- /.repohead -->
+
+    <div class="container">
+      <div class="repository-with-sidebar repo-container new-discussion-timeline  ">
+        <div class="repository-sidebar clearfix">
+            
+<nav class="sunken-menu repo-nav js-repo-nav js-sidenav-container-pjax js-octicon-loaders"
+     role="navigation"
+     data-pjax="#js-repo-pjax-container"
+     data-issue-count-url="/kumina/puppet-kbp/issues/counts">
+  <ul class="sunken-menu-group">
+    <li class="tooltipped tooltipped-w" aria-label="Code">
+      <a href="/kumina/puppet-kbp" aria-label="Code" class="selected js-selected-navigation-item sunken-menu-item" data-hotkey="g c" data-selected-links="repo_source repo_downloads repo_commits repo_releases repo_tags repo_branches /kumina/puppet-kbp">
+        <span class="octicon octicon-code"></span> <span class="full-word">Code</span>
+        <img alt="" class="mini-loader" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+</a>    </li>
+
+      <li class="tooltipped tooltipped-w" aria-label="Issues">
+        <a href="/kumina/puppet-kbp/issues" aria-label="Issues" class="js-selected-navigation-item sunken-menu-item" data-hotkey="g i" data-selected-links="repo_issues repo_labels repo_milestones /kumina/puppet-kbp/issues">
+          <span class="octicon octicon-issue-opened"></span> <span class="full-word">Issues</span>
+          <span class="js-issue-replace-counter"></span>
+          <img alt="" class="mini-loader" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+</a>      </li>
+
+    <li class="tooltipped tooltipped-w" aria-label="Pull requests">
+      <a href="/kumina/puppet-kbp/pulls" aria-label="Pull requests" class="js-selected-navigation-item sunken-menu-item" data-hotkey="g p" data-selected-links="repo_pulls /kumina/puppet-kbp/pulls">
+          <span class="octicon octicon-git-pull-request"></span> <span class="full-word">Pull requests</span>
+          <span class="js-pull-replace-counter"></span>
+          <img alt="" class="mini-loader" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+</a>    </li>
+
+  </ul>
+  <div class="sunken-menu-separator"></div>
+  <ul class="sunken-menu-group">
+
+    <li class="tooltipped tooltipped-w" aria-label="Pulse">
+      <a href="/kumina/puppet-kbp/pulse" aria-label="Pulse" class="js-selected-navigation-item sunken-menu-item" data-selected-links="pulse /kumina/puppet-kbp/pulse">
+        <span class="octicon octicon-pulse"></span> <span class="full-word">Pulse</span>
+        <img alt="" class="mini-loader" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+</a>    </li>
+
+    <li class="tooltipped tooltipped-w" aria-label="Graphs">
+      <a href="/kumina/puppet-kbp/graphs" aria-label="Graphs" class="js-selected-navigation-item sunken-menu-item" data-selected-links="repo_graphs repo_contributors /kumina/puppet-kbp/graphs">
+        <span class="octicon octicon-graph"></span> <span class="full-word">Graphs</span>
+        <img alt="" class="mini-loader" height="16" src="https://assets-cdn.github.com/images/spinners/octocat-spinner-32.gif" width="16" />
+</a>    </li>
+  </ul>
+
+
+</nav>
+
+              <div class="only-with-full-nav">
+                  
+<div class="js-clone-url clone-url open"
+  data-protocol-type="http">
+  <h3><span class="text-emphasized">HTTPS</span> clone URL</h3>
+  <div class="input-group js-zeroclipboard-container">
+    <input type="text" class="input-mini input-monospace js-url-field js-zeroclipboard-target"
+           value="https://github.com/kumina/puppet-kbp.git" readonly="readonly">
+    <span class="input-group-button">
+      <button aria-label="Copy to clipboard" class="js-zeroclipboard btn btn-sm zeroclipboard-button tooltipped tooltipped-s" data-copied-hint="Copied!" type="button"><span class="octicon octicon-clippy"></span></button>
+    </span>
+  </div>
+</div>
+
+  
+<div class="js-clone-url clone-url "
+  data-protocol-type="subversion">
+  <h3><span class="text-emphasized">Subversion</span> checkout URL</h3>
+  <div class="input-group js-zeroclipboard-container">
+    <input type="text" class="input-mini input-monospace js-url-field js-zeroclipboard-target"
+           value="https://github.com/kumina/puppet-kbp" readonly="readonly">
+    <span class="input-group-button">
+      <button aria-label="Copy to clipboard" class="js-zeroclipboard btn btn-sm zeroclipboard-button tooltipped tooltipped-s" data-copied-hint="Copied!" type="button"><span class="octicon octicon-clippy"></span></button>
+    </span>
+  </div>
+</div>
+
+
+
+<div class="clone-options">You can clone with
+  <form accept-charset="UTF-8" action="/users/set_protocol?protocol_selector=http&amp;protocol_type=clone" class="inline-form js-clone-selector-form " data-remote="true" method="post"><div style="margin:0;padding:0;display:inline"><input name="utf8" type="hidden" value="&#x2713;" /><input name="authenticity_token" type="hidden" value="Hp6bCv+RJAw/yPjdMVV2wie6S9cXhbCFuJVpaOaBPooWI6xK8Yv7I2la/dqx1sR4PX2kItRCMEUR+4hHsYTQPw==" /></div><button class="btn-link js-clone-selector" data-protocol="http" type="submit">HTTPS</button></form> or <form accept-charset="UTF-8" action="/users/set_protocol?protocol_selector=subversion&amp;protocol_type=clone" class="inline-form js-clone-selector-form " data-remote="true" method="post"><div style="margin:0;padding:0;display:inline"><input name="utf8" type="hidden" value="&#x2713;" /><input name="authenticity_token" type="hidden" value="4AnFXDsyLKH+nj3A9p9AsQ9+/efWspWjTavw6ZieIU6hRCDIs9TaxHlll2wiK6CjS1NRyi980PC3WMgT6chjqw==" /></div><button class="btn-link js-clone-selector" data-protocol="subversion" type="submit">Subversion</button></form>.
+  <a href="https://help.github.com/articles/which-remote-url-should-i-use" class="help tooltipped tooltipped-n" aria-label="Get help on which URL is right for you.">
+    <span class="octicon octicon-question"></span>
+  </a>
+</div>
+
+
+
+
+                <a href="/kumina/puppet-kbp/archive/acac6beb8637b9f5d9f211a969a6993e1a572530.zip"
+                   class="btn btn-sm sidebar-button"
+                   aria-label="Download the contents of kumina/puppet-kbp as a zip file"
+                   title="Download the contents of kumina/puppet-kbp as a zip file"
+                   rel="nofollow">
+                  <span class="octicon octicon-cloud-download"></span>
+                  Download ZIP
+                </a>
+              </div>
+        </div><!-- /.repository-sidebar -->
+
+        <div id="js-repo-pjax-container" class="repository-content context-loader-container" data-pjax-container>
+
+          
+<a href="/kumina/puppet-kbp/commit/acac6beb8637b9f5d9f211a969a6993e1a572530" class="hidden js-permalink-shortcut" data-hotkey="y">Permalink</a>
+
+
+
+
+<div class="commit full-commit ">
+  <a href="/kumina/puppet-kbp/tree/acac6beb8637b9f5d9f211a969a6993e1a572530" class="btn btn-outline right" title="Browse the repository at this point in the history" rel="nofollow">Browse files</a>
+
+    <p class="commit-title">
+      Fix order, hopefully.
+    </p>
+
+
+  <div class="commit-branches">
+    <include-fragment src="/kumina/puppet-kbp/branch_commits/acac6beb8637b9f5d9f211a969a6993e1a572530">
+      <span class="octicon octicon-git-branch"></span>
+      <ul class="branches-list">
+        <li class="loading">Loading branch information<span class="animated-ellipsis-container"><span class="animated-ellipsis">...</span></span></li>
+      </ul>
+</include-fragment>  </div>
+
+  <div class="commit-meta clearfix">
+    <span class="sha-block">commit <span class="sha js-selectable-text">acac6beb8637b9f5d9f211a969a6993e1a572530</span></span>
+
+    <span class="sha-block" data-pjax>
+      1 parent
+        
+        <a href="/kumina/puppet-kbp/commit/44418c6706bec31cad660ba9babefa49fa0a4fdd" class="sha" data-hotkey="p">44418c6</a>
+    </span>
+
+    <div class="authorship">
+      <img alt="@timstoop" class="avatar" height="24" src="https://avatars2.githubusercontent.com/u/729432?v=3&amp;s=48" width="24" />
+      <span class="author-name"><a href="/timstoop" rel="contributor">timstoop</a></span>
+      
+      authored <time datetime="2014-02-03T13:09:12Z" is="relative-time">Feb 3, 2014</time>
+
+    </div>
+  </div>
+</div>
+
+
+
+
+    <a name="diff-stat"></a>
+    <div id="toc" class="details-collapse table-of-contents js-details-container">
+  <div class="btn-group right" data-ga-load="Diff, view, Viewed Unified Diff">
+  <a class="btn btn-sm selected" href="https://github.com/kumina/puppet-kbp/commit/acac6beb8637b9f5d9f211a969a6993e1a572530?diff=unified">
+    Unified
+  </a>
+  <a class="btn btn-sm" href="https://github.com/kumina/puppet-kbp/commit/acac6beb8637b9f5d9f211a969a6993e1a572530?diff=split">
+    Split
+  </a>
+</div>
+
+
+  <div class="toc-diff-stats">
+    <span class="octicon octicon-diff"></span>
+    Showing
+    <button type="button" class="btn-link js-details-target">
+      1 changed file
+    </button>
+    with
+    <strong>8 additions</strong>
+    and <strong>2 deletions</strong>.
+  </div>
+
+  <ol class="content collapse js-transitionable">
+    <li>
+      <span class="diffstat right">
+          <span class="text-diff-added">
+            +8
+          </span>
+          <span class="text-diff-deleted">
+            −2
+          </span>
+          <a href="#diff-76749c35d56c62e1836388b42c88a7da" class="tooltipped tooltipped-s" aria-label="10 lines changed">
+            <span class="diffstat-bar">
+              <span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span><span class="text-diff-deleted">&#xf053;</span>
+            </span>
+          </a>
+      </span>
+      <span class="octicon octicon-diff-modified" title="modified"></span>
+      <a href="#diff-76749c35d56c62e1836388b42c88a7da">kbp_munin/manifests/init.pp</a>
+    </li>
+  </ol>
+</div>
+
+  <div id="files" class="diff-view ">
+      <a name="diff-76749c35d56c62e1836388b42c88a7da"></a>
+      <div id="diff-0"
+           class="file js-details-container
+                   
+                   
+                   
+                   
+                   show-inline-notes
+                 ">
+        <div class="file-header" data-path="kbp_munin/manifests/init.pp">
+          <div class="file-actions">
+              <span class="show-file-notes">
+                <label>
+                  <input type="checkbox" checked="checked" class="js-toggle-file-notes">
+                  Show notes
+                </label>
+              </span>
+
+                <a href="/kumina/puppet-kbp/blob/acac6beb8637b9f5d9f211a969a6993e1a572530/kbp_munin/manifests/init.pp" class="btn btn-sm tooltipped tooltipped-n" rel="nofollow" aria-label="View the whole file at version acac6be ">View</a>
+
+
+          </div>
+          <div class="file-info">
+              <span class="diffstat tooltipped tooltipped-e" aria-label="8 additions &amp; 2 deletions">10 <span class="diffstat-bar"><span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span><span class="text-diff-added">&#xf053;</span><span class="text-diff-deleted">&#xf053;</span></span></span>
+
+            <span class="js-selectable-text" title="kbp_munin/manifests/init.pp">
+              kbp_munin/manifests/init.pp
+            </span>
+            
+          </div>
+        </div>
+
+            <div class="data highlight blob-wrapper">
+              <table class="diff-table tab-size  " data-tab-size="8">
+                
+      <tr class="js-expandable-line" data-position="0">
+    <td class="blob-num blob-num-expandable" colspan="2">
+      <a href="#diff-76749c35d56c62e1836388b42c88a7da"
+            class="diff-expander js-expand" title="Expand" aria-label="Expand"
+            data-url="/kumina/puppet-kbp/blob_excerpt/4d101bc0b7eabcca42546e1c278de9f35aff64be?diff=unified&amp;left_hunk_size=7&amp;mode=100644&amp;next_line_num_left=267&amp;next_line_num_right=267&amp;path=kbp_munin%2Fmanifests%2Finit.pp&amp;prev_line_num_left=&amp;prev_line_num_right=&amp;right_hunk_size=10"
+            data-left-range="1-266" data-right-range="1-266">
+        <span class="octicon octicon-unfold"></span>
+      </a>
+    </td>
+    <td class="blob-code blob-code-inner blob-code-hunk">@@ -267,7 +267,10 @@</td>
+  </tr>
+
+    
+
+<tr>
+    <td id="diff-76749c35d56c62e1836388b42c88a7daL267" data-line-number="267"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-76749c35d56c62e1836388b42c88a7daR267" data-line-number="267"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   }</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-76749c35d56c62e1836388b42c88a7daL268" data-line-number="268"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-76749c35d56c62e1836388b42c88a7daR268" data-line-number="268"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> </span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-76749c35d56c62e1836388b42c88a7daL269" data-line-number="269"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-76749c35d56c62e1836388b42c88a7daR269" data-line-number="269"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   <span class="pl-k">package</span> { <span class="pl-en">&#39;munin-plugins-kumina&#39;</span>:</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-76749c35d56c62e1836388b42c88a7daL270" data-line-number="270"
+        class="blob-num blob-num-deletion js-linkable-line-number"></td>
+
+    <td class="blob-num blob-num-deletion empty-cell"></td>
+
+  <td class="blob-code blob-code-deletion">
+
+    <span class="blob-code-inner">-    <span class="pl-c1">notify</span> =&gt; Service[<span class="pl-s"><span class="pl-pds">&#39;</span>munin-node<span class="pl-pds">&#39;</span></span>],</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-76749c35d56c62e1836388b42c88a7daR270" data-line-number="270"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+    <span class="pl-c1">notify</span> =&gt; <span class="pl-smi">$ensure</span> ? {</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-76749c35d56c62e1836388b42c88a7daR271" data-line-number="271"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+      <span class="pl-s"><span class="pl-pds">&#39;</span>present<span class="pl-pds">&#39;</span></span> =&gt; Service[<span class="pl-s"><span class="pl-pds">&#39;</span>munin-node<span class="pl-pds">&#39;</span></span>],</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-76749c35d56c62e1836388b42c88a7daR272" data-line-number="272"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+      <span class="pl-s"><span class="pl-pds">&#39;</span>absent<span class="pl-pds">&#39;</span></span>  =&gt; undef,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-76749c35d56c62e1836388b42c88a7daR273" data-line-number="273"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+    },</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-76749c35d56c62e1836388b42c88a7daL271" data-line-number="271"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-76749c35d56c62e1836388b42c88a7daR274" data-line-number="274"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">     <span class="pl-c1">ensure</span> =&gt; <span class="pl-smi">$ensure</span> ? {</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-76749c35d56c62e1836388b42c88a7daL272" data-line-number="272"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-76749c35d56c62e1836388b42c88a7daR275" data-line-number="275"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">       <span class="pl-s"><span class="pl-pds">&#39;</span>present<span class="pl-pds">&#39;</span></span> =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>latest<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-76749c35d56c62e1836388b42c88a7daL273" data-line-number="273"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-76749c35d56c62e1836388b42c88a7daR276" data-line-number="276"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">       <span class="pl-s"><span class="pl-pds">&#39;</span>absent<span class="pl-pds">&#39;</span></span>  =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>absent<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+      <tr class="js-expandable-line" data-position="12">
+    <td class="blob-num blob-num-expandable" colspan="2">
+      <a href="#diff-76749c35d56c62e1836388b42c88a7da"
+            class="diff-expander js-expand" title="Expand" aria-label="Expand"
+            data-url="/kumina/puppet-kbp/blob_excerpt/4d101bc0b7eabcca42546e1c278de9f35aff64be?diff=unified&amp;left_hunk_size=7&amp;mode=100644&amp;next_line_num_left=297&amp;next_line_num_right=300&amp;path=kbp_munin%2Fmanifests%2Finit.pp&amp;prev_line_num_left=273&amp;prev_line_num_right=276&amp;right_hunk_size=10"
+            data-left-range="274-296" data-right-range="277-299">
+        <span class="octicon octicon-unfold"></span>
+      </a>
+    </td>
+    <td class="blob-code blob-code-inner blob-code-hunk">@@ -297,7 +300,10 @@</td>
+  </tr>
+
+    
+
+<tr>
+    <td id="diff-76749c35d56c62e1836388b42c88a7daL297" data-line-number="297"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-76749c35d56c62e1836388b42c88a7daR300" data-line-number="300"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   }</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-76749c35d56c62e1836388b42c88a7daL298" data-line-number="298"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-76749c35d56c62e1836388b42c88a7daR301" data-line-number="301"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner"> </span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-76749c35d56c62e1836388b42c88a7daL299" data-line-number="299"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-76749c35d56c62e1836388b42c88a7daR302" data-line-number="302"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">   <span class="pl-k">package</span> { <span class="pl-en">&#39;munin-plugins-kumina&#39;</span>:</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-76749c35d56c62e1836388b42c88a7daL300" data-line-number="300"
+        class="blob-num blob-num-deletion js-linkable-line-number"></td>
+
+    <td class="blob-num blob-num-deletion empty-cell"></td>
+
+  <td class="blob-code blob-code-deletion">
+
+    <span class="blob-code-inner">-    <span class="pl-c1">notify</span> =&gt; Service[<span class="pl-s"><span class="pl-pds">&#39;</span>munin-node<span class="pl-pds">&#39;</span></span>],</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-76749c35d56c62e1836388b42c88a7daR303" data-line-number="303"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+    <span class="pl-c1">notify</span> =&gt; <span class="pl-smi">$ensure</span> ? {</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-76749c35d56c62e1836388b42c88a7daR304" data-line-number="304"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+      <span class="pl-s"><span class="pl-pds">&#39;</span>present<span class="pl-pds">&#39;</span></span> =&gt; Service[<span class="pl-s"><span class="pl-pds">&#39;</span>munin-node<span class="pl-pds">&#39;</span></span>],</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-76749c35d56c62e1836388b42c88a7daR305" data-line-number="305"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+      <span class="pl-s"><span class="pl-pds">&#39;</span>absent<span class="pl-pds">&#39;</span></span>  =&gt; undef,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td class="blob-num blob-num-addition empty-cell"></td>
+
+    <td id="diff-76749c35d56c62e1836388b42c88a7daR306" data-line-number="306"
+        class="blob-num blob-num-addition js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-addition">
+
+    <span class="blob-code-inner">+    },</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-76749c35d56c62e1836388b42c88a7daL301" data-line-number="301"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-76749c35d56c62e1836388b42c88a7daR307" data-line-number="307"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">     <span class="pl-c1">ensure</span> =&gt; <span class="pl-smi">$ensure</span> ? {</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-76749c35d56c62e1836388b42c88a7daL302" data-line-number="302"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-76749c35d56c62e1836388b42c88a7daR308" data-line-number="308"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">       <span class="pl-s"><span class="pl-pds">&#39;</span>present<span class="pl-pds">&#39;</span></span> =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>latest<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+    
+
+<tr>
+    <td id="diff-76749c35d56c62e1836388b42c88a7daL303" data-line-number="303"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+    <td id="diff-76749c35d56c62e1836388b42c88a7daR309" data-line-number="309"
+        class="blob-num blob-num-context js-linkable-line-number"></td>
+
+  <td class="blob-code blob-code-context">
+
+    <span class="blob-code-inner">       <span class="pl-s"><span class="pl-pds">&#39;</span>absent<span class="pl-pds">&#39;</span></span>  =&gt; <span class="pl-s"><span class="pl-pds">&#39;</span>absent<span class="pl-pds">&#39;</span></span>,</span>
+
+  </td>
+</tr>
+
+
+  <tr class="js-expandable-line">
+   <td class="blob-num blob-num-expandable" colspan="2">
+     <a href="#diff-76749c35d56c62e1836388b42c88a7da"
+          class="diff-expander js-expand" title="Expand" aria-label="Expand"
+          data-url="/kumina/puppet-kbp/blob_excerpt/4d101bc0b7eabcca42546e1c278de9f35aff64be?diff=unified&amp;mode=100644&amp;path=kbp_munin%2Fmanifests%2Finit.pp&amp;prev_line_num_left=303&amp;prev_line_num_right=309"
+          data-left-range="304-753"
+          data-right-range="310-753">
+       <span class="octicon octicon-unfold"></span>
+     </a>
+   </td>
+   <td class="blob-code blob-code-expandable"></td>
+  </tr>
+
+              </table>
+            </div>
+      </div>
+</div>
+
+<button class="js-toggle-all-file-notes" data-hotkey="i" style="display:none">Toggle all file notes</button>
+
+
+<div id="all_commit_comments" class="js-quote-selection-container">
+  <div class="commit-comments-heading">
+    
+
+  </div>
+
+  <div id="comments" class="comment-holder">
+    
+
+<!-- Rendered timeline since 2014-02-03 05:09:12 -->
+<div id="partial-timeline-marker"
+      class="js-timeline-marker js-socket-channel js-updatable-content"
+      data-channel="kumina/puppet-kbp:commit:acac6beb8637b9f5d9f211a969a6993e1a572530"
+      data-url="/kumina/puppet-kbp/commit/acac6beb8637b9f5d9f211a969a6993e1a572530/show_partial?partial=commit%2Ftimeline_marker&amp;since=1391432952"
+      data-last-modified="Mon, 03 Feb 2014 13:09:12 GMT">
+</div>
+
+  </div>
+
+  
+
+    Please <a href="/login?return_to=%2Fkumina%2Fpuppet-kbp%2Fcommit%2Facac6beb8637b9f5d9f211a969a6993e1a572530" rel="nofollow">sign in</a> to comment.
+
+</div>
+
+
+        </div>
+
+      </div><!-- /.repo-container -->
+      <div class="modal-backdrop"></div>
+    </div><!-- /.container -->
+  </div><!-- /.site -->
+
+
+    </div><!-- /.wrapper -->
+
+      <div class="container">
+  <div class="site-footer" role="contentinfo">
+    <ul class="site-footer-links right">
+        <li><a href="https://status.github.com/" data-ga-click="Footer, go to status, text:status">Status</a></li>
+      <li><a href="https://developer.github.com" data-ga-click="Footer, go to api, text:api">API</a></li>
+      <li><a href="https://training.github.com" data-ga-click="Footer, go to training, text:training">Training</a></li>
+      <li><a href="https://shop.github.com" data-ga-click="Footer, go to shop, text:shop">Shop</a></li>
+        <li><a href="https://github.com/blog" data-ga-click="Footer, go to blog, text:blog">Blog</a></li>
+        <li><a href="https://github.com/about" data-ga-click="Footer, go to about, text:about">About</a></li>
+      <li><a href="https://help.github.com" data-ga-click="Footer, go to help, text:help">Help</a></li>
+
+    </ul>
+
+    <a href="https://github.com" aria-label="Homepage">
+      <span class="mega-octicon octicon-mark-github" title="GitHub"></span>
+</a>
+    <ul class="site-footer-links">
+      <li>&copy; 2015 <span title="0.16307s from github-fe116-cp1-prd.iad.github.net">GitHub</span>, Inc.</li>
+        <li><a href="https://github.com/site/terms" data-ga-click="Footer, go to terms, text:terms">Terms</a></li>
+        <li><a href="https://github.com/site/privacy" data-ga-click="Footer, go to privacy, text:privacy">Privacy</a></li>
+        <li><a href="https://github.com/security" data-ga-click="Footer, go to security, text:security">Security</a></li>
+        <li><a href="https://github.com/contact" data-ga-click="Footer, go to contact, text:contact">Contact</a></li>
+    </ul>
+  </div>
+</div>
+
+
+    <div class="fullscreen-overlay js-fullscreen-overlay" id="fullscreen_overlay">
+  <div class="fullscreen-container js-suggester-container">
+    <div class="textarea-wrap">
+      <textarea name="fullscreen-contents" id="fullscreen-contents" class="fullscreen-contents js-fullscreen-contents" placeholder=""></textarea>
+      <div class="suggester-container">
+        <div class="suggester fullscreen-suggester js-suggester js-navigation-container"></div>
+      </div>
+    </div>
+  </div>
+  <div class="fullscreen-sidebar">
+    <a href="#" class="exit-fullscreen js-exit-fullscreen tooltipped tooltipped-w" aria-label="Exit Zen Mode">
+      <span class="mega-octicon octicon-screen-normal"></span>
+    </a>
+    <a href="#" class="theme-switcher js-theme-switcher tooltipped tooltipped-w"
+      aria-label="Switch themes">
+      <span class="octicon octicon-color-mode"></span>
+    </a>
+  </div>
+</div>
+
+
+
+    
+    
+
+    <div id="ajax-error-message" class="flash flash-error">
+      <span class="octicon octicon-alert"></span>
+      <a href="#" class="octicon octicon-x flash-close js-ajax-error-dismiss" aria-label="Dismiss error"></a>
+      Something went wrong with that request. Please try again.
+    </div>
+
+
+      <script crossorigin="anonymous" src="https://assets-cdn.github.com/assets/frameworks-808fcfcd63c9ecba3e84453f540cb1cbafde48c6b30c1d51ebd4e67e88ff66bd.js"></script>
+      <script async="async" crossorigin="anonymous" src="https://assets-cdn.github.com/assets/github/index-fadc40287934e9bb3a912a44ba68b886ac6c451314a0cb3dbd935539e5d35252.js"></script>
+      
+      
+  </body>
+</html>
+

@@ -393,7 +393,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
     def evalGraph(st: ST, g: FileScriptGraph): ST = {
       logger.info("in evalGraph(..)")
-      val fringe = g.nodes.filter(_.outDegree == 0).toList
+      val fringe = g.nodes.filter(_.inDegree == 0).toList
       if (fringe.length == 0) {
         st
       }
