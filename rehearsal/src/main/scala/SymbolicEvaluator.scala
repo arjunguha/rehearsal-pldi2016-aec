@@ -415,12 +415,18 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
     }
 
+    def stNEq(st1: ST, st2: ST): Term = {
+    (st1.isErr && Not(st2.isErr)) ||
+    (st2.isErr && Not(st1.isErr)) ||
+      (Not(st1.isErr) && Not(st2.isErr) && Or(allPaths.map(p => Not(Equals(st1.paths(p), st2.paths(p)))): _*))
+  }
+
     def isDeterministic(g: FileScriptGraph): Boolean = {
       val inST = initState
       logger.info(s"Generating constraints for a graph with ${g.nodes.size} nodes")
       val outST1 = evalGraph(inST, g)
       val outST2 = evalGraph(inST, g)
-      eval(Assert(Not(stEquals(outST1, outST2))))
+      eval(Assert(stNEq(outST1, outST2)))
      // assertHashCardinality()
       logger.info("Checking satisfiability")
       eval(CheckSat()) match {
