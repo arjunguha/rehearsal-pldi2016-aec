@@ -62,7 +62,7 @@ object CatalogImpl {
           val require = optJsArray(params.getOrElse("require", JsArray())).convertTo[Seq[Ref]]
           val before = optJsArray(params.getOrElse("before", JsArray())).convertTo[Seq[Ref]]
           val notify = optJsArray(params.getOrElse("notify", JsArray())).convertTo[Seq[Ref]]
-          val attrs = (params - "require" - "before" - "notify").mapValues(x => x.convertTo[Value])
+          val attrs = (params - "require" - "before" - "notify" - "type").mapValues(x => x.convertTo[Value])
           Res(typ.toLowerCase, title.toLowerCase, require, before ++ notify, attrs)
         }
         case _ => throw new DeserializationException("Could not deserialize resource")
@@ -90,7 +90,7 @@ object CatalogImpl {
 
   }
 
-  val toElim = Set("Stage", "Class")
+  val toElim = Set("stage", "class")
 
   def elimCompoundResources(g: Graph[Ref, DiEdge]): Unit = {
     for (ref <- g.nodes.toList; if (toElim.contains(ref.typ))) {
