@@ -20,6 +20,9 @@ object ResourceModel {
   case class Package(name: String, present: Boolean) extends Res
   case class Group(name: String, present: Boolean) extends Res
   case class User(name: String, present: Boolean, manageHome: Boolean) extends Res
+  case class Service(name: String) extends Res {
+    val path = s"/etc/init.d/$name"
+  }
 
   case class SshAuthorizedKey(user: String, present: Boolean, name: String, key: String) extends Res {
     val keyPath = s"/home/$user/.ssh/$name"
@@ -126,6 +129,7 @@ object ResourceModel {
         case false => If(Not(TestFileState(p, DoesNotExist)), Rm(p), Skip)
       }
     }
+    case self@Service(name) => If(TestFileState(self.path, IsFile), Skip, Error)
     case _ => throw NotImplemented(r.toString)
   }
 

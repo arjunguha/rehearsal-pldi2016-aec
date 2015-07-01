@@ -239,6 +239,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     case User(name, _, true) => Set(Paths.get(s"/home/$name"))
     case User(_, _, false) => Set()
     case self@SshAuthorizedKey(_, _, _, _) => Set(Paths.get(self.keyPath))
+    case self@(Service(_)) => Set(Paths.get(self.path))
   }
 
   def allContents(r: Res): Set[String] = r match {
@@ -250,6 +251,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     case Group(_, _) => Set()
     case User(_, _, _) => Set()
     case SshAuthorizedKey(_, _, _, key) => Set(key)
+    case Service(_) => Set()
   }
 
   def allPackages(r: Res): Set[String] = r match {
@@ -261,6 +263,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     case Group(_, _) => Set()
     case User(_, _, _) => Set()
     case SshAuthorizedKey(_, _, _, _) => Set()
+    case Service(_) => Set()
   }
 
   def allUsers(r: Res): Set[String] = r match {
@@ -272,6 +275,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     case Group(_, _) => Set()
     case User(u, _, _) => Set(u)
     case SshAuthorizedKey(_, _, _, _) => Set()
+    case Service(_) => Set()
   }
 
   def allGroups(r: Res): Set[String] = r match {
@@ -283,6 +287,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     case Group(g, _) => Set(g)
     case User(_, _, _) => Set()
     case SshAuthorizedKey(_, _, _, _) => Set()
+    case Service(_) => Set()
   }
 
   val initState = Some(Map(Paths.get("/") -> Eval.FDir))

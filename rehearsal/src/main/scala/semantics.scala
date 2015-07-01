@@ -87,7 +87,8 @@ object ResourceToExpr {
         case (Some("file"), Some(p), None, Some(c), false) => R.EnsureFile(p, c)
         case (Some("file"), Some(p), None, None, false) => R.EnsureFile(p, "")
         case (Some("directory"), Some(p), _, _, _) => R.Directory(p)
-       case _ => throw Unexpected(s"ensure attribute missing for file ${r.name}")
+       case (Some("link"), Some(p),_,  _, _) => R.File(p, r.get[String]("target").get, true)
+       case _ => throw Unexpected(s"ensure attribute missing for file ${r.name}, attrs = ${r.attributes} ${props("ensure")}")
      }
   }
 
@@ -141,18 +142,15 @@ object ResourceToExpr {
     }
   }
   
-  def convert(r: Resource): ResourceModel.Res = r.typ match {
-    case "File" => File(r)
-    case "Package" => PuppetPackage(r)
-    case "User" => User(r)
-    case "Group" => Group(r)
+  def convert(r: Resource): ResourceModel.Res = r.typ.toLowerCase match {
+    case "file" => File(r)
+    case "package" => PuppetPackage(r)
+    case "user" => User(r)
+    case "group" => Group(r)
     case "ssh_authorized_key" => SshAuthorizedKey(r.get[String]("user").get, r.get[Boolean]("ensure").getOrElse(true),
       r.get[String]("name").get, r.get[String]("key").get)
+    case "service" => R.Service(r.title)
 //    case "Notify" => Skip
-//    case "Service" => {
-//      println("Warning: found a service resource, but treating as Skip")
-//      Skip
-//    }
 //    case "Exec" => {
 //      println("WARNING: found an exec resource, but treating as Skip")
 //      Skip
