@@ -19,3 +19,7 @@ benchmarks
 # other stuff
 *.dot
 *.log
+
+# Intellij IDEA
+*.ipr
+*.iws
