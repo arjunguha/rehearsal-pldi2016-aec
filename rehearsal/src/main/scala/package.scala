@@ -92,5 +92,15 @@ package object rehearsal {
     }
   }
 
+  def isDeterministic(repo: String): Boolean = {
+    val topLevel = findPuppetFiles(Paths.get(repo)).get
+    val resourceGraph = topLevel.desugar.toGraph(Map()).head._2
+    val fsGraph = toFileScriptGraph(resourceGraph)
+    SymbolicEvaluator.isDeterministic(fsGraph)
+  }
+
+
+
+
 
 }

@@ -21,7 +21,8 @@ libraryDependencies ++= Seq(
   "edu.umass.cs" %% "scala-puppet" % "0.2.5",
   "org.scala-lang" % "scala-compiler" % "2.11.5",
   "jline" % "jline" % "2.11",
-  "scala-smt-lib" %% "scala-smt-lib" % "0.1")
+  "scala-smt-lib" %% "scala-smt-lib" % "0.1",
+  "io.spray" %%  "spray-json" % "1.3.2")
 
 parallelExecution in Test := false
 
