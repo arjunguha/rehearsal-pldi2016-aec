@@ -48,6 +48,16 @@ object SymbolicEvaluator {
     impl.free()
     result
   }
+  def isDeterministicError(g: FileScriptGraph): Boolean = {
+    val impl = new SymbolicEvaluatorImpl(
+      g.nodes.map(e => e.paths).reduce(_ union _).toList,
+      g.nodes.map(_.hashes).reduce(_ union _),
+      None
+    )
+    val result = impl.isDeterministic(g)
+    impl.free()
+    result
+  }
 }
 
 class SymbolicEvaluatorImpl(allPaths: List[Path],
@@ -453,6 +463,33 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
     }
 
+    // def isDeterministicError(g: FileScriptGraph): Boolean = {
+    //   if(!isDeterministic(g))  false
+
+    //   topologicalSort(g)
+
+    // }
+
+    def isDeterministicError(g: FileScriptGraph): Boolean = {
+      val inST = initState
+      val sort = topologicalSort(g)
+      val outST1 = evalGraph(inST, g)
+      val outST2 = evalGraph(inST, g)
+
+      //eval(Assert(stNEq(outST1, outST2))) //g is deterministic
+      eval(Assert(Not(outST1.isErr))) //g will always produce an error
+      eval(CheckSat()) match{
+        case CheckSatStatus(SatStatus) => {
+          println(eval(GetModel()))
+          false
+        }
+        case CheckSatStatus(UnsatStatus) => true
+        case CheckSatStatus(UnknownStatus) => throw new RuntimeException("got unknown")
+        case s => throw Unexpected(s"got $s from check-sat")
+      }
+    }
+
   def free(): Unit = smt.free()
 
 }
+

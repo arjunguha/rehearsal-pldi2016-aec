@@ -1,22 +1,23 @@
 class CatalogTests extends org.scalatest.FunSuite {
   import rehearsal._
+  import SymbolicEvaluator.{isDeterministic, isDeterministicError}
 
   val dir = "rehearsal/src/test/catalogs"
 
   // Why do these tests check that nodes.size > 5? It is a dumb sanity check. We could write more rigorous tests,
   // but I've eyeballed the results enough.
 
-  test("SpikyIRC.json") {
+  ignore("SpikyIRC.json") {
     val g = Catalog.parseFile(s"$dir/SpikyIRC.json")
     assert(g.nodes.size > 5)
   }
 
-  test("puppet-account.json") {
+  ignore("puppet-account.json") {
     val g = Catalog.parseFile(s"$dir/puppet-account.json")
     assert(g.nodes.size > 5)
   }
 
-  test("puppet-hosting.json") {
+  ignore("puppet-hosting.json") {
     val g = Catalog.parseFile(s"$dir/puppet-hosting.json")
     assert(g.nodes.size > 5)
   }
@@ -24,9 +25,13 @@ class CatalogTests extends org.scalatest.FunSuite {
   test("puppet-monit.json") {
     val g = Catalog.parseFile(s"$dir/puppet-monit.json")
     assert(g.nodes.size > 5)
+    val g2 = toFileScriptGraph(g)
+    println(g)
+    
+    assert(true == isDeterministicError(g2))
   }
 
-  test("puppet-powerdns.json") {
+  ignore("puppet-powerdns.json") {
     val g = Catalog.parseFile(s"$dir/puppet-powerdns.json")
     assert(g.nodes.size > 5)
   }
