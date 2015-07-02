@@ -63,10 +63,14 @@ object Slicing {
     case Error => Error
     case Skip => Skip
     case Seq(p, q) => sliceRec(paths, p) >> sliceRec(paths, q)
-    case Rm(f) => if (paths.contains(f)) expr else Skip
-    case Mkdir(f) => if (paths.contains(f)) expr else Skip
-    case CreateFile(f, _)  => if (paths.contains(f)) expr else Skip
-    case Cp(src, dst) => if (paths.contains(src) || paths.contains(dst)) expr else Skip
+    case Rm(f) => {
+      val descendants = paths.filter(p => p != f && p.startsWith(f))
+      if (paths.contains(f) || !descendants.isEmpty) expr else Skip
+    }
+    case Mkdir(f) => if (paths.contains(f) || paths.contains(f.getParent)) expr else Skip
+    case CreateFile(f, _)  => if (paths.contains(f) || paths.contains(f.getParent)) expr else Skip
+    case Cp(src, dst) => if (paths.contains(src) || paths.contains(dst) || 
+        paths.contains(dst.getParent)) expr else Skip
     case If(a, p, q) => {
       val p2 = sliceRec(paths, p)
       val q2 = sliceRec(paths, q)
