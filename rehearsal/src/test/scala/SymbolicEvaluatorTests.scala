@@ -10,7 +10,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
   import java.nio.file.Path
   import java.nio.file.Paths
 
-  import SymbolicEvaluator.{predEquals, exprEquals, isDeterministic}
+  import SymbolicEvaluator.{predEquals, exprEquals, isDeterministic, isDeterministicError}
 
   test("simple equality") {
     val x = TestFileState(Paths.get("/usr"), IsFile)
@@ -93,8 +93,10 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
   }
 
   test("Is a singleton graph deterministic") {
-    isDeterministic(Graph[Expr, DiEdge](If(TestFileState(Paths.get("/foo"), IsDir), Skip,
-                                        Mkdir(Paths.get("/foo")))))
+    val g = Graph[Expr, DiEdge](If(TestFileState(Paths.get("/foo"), IsDir), Skip,
+                                            Mkdir(Paths.get("/foo"))))
+    assert(true == isDeterministic(g))
+    assert(false == isDeterministicError(g))
   }
 
   test("Two-node non-deterministic graph") {
