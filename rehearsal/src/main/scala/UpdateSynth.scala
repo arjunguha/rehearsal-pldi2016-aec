@@ -83,6 +83,85 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
 
   object DomainBounds {
     val empty = DomainBounds(List(), List(), List(), List(), List())
+
+    // TODO(arjun): Is the allpaths function in package.scala the same? If so, remove this duplicate.
+    def findAllSubPaths(p: Path): Set[Path] =
+      p.toString.split('/').drop(1).foldLeft[List[String]](List())( {
+        case (paths, next) => paths match {
+          case List() => List(s"/$next")
+          case parent :: _ => s"$parent/$next" :: paths
+        }
+      }).map(Paths.get(_)).toSet
+
+    private def allPaths(r: Res): Set[Path] = r match {
+      case File(p, _, _) => findAllSubPaths(p)
+      case EnsureFile(p, _) => findAllSubPaths(p)
+      case AbsentPath(p, _) => findAllSubPaths(p)
+      case Directory(p) => findAllSubPaths(p)
+      case Package(_, _) => Set()
+      case Group(name, _) => Set()
+      case User(name, _, true) => Set(Paths.get(s"/home/$name"))
+      case User(_, _, false) => Set()
+      case self@SshAuthorizedKey(_, _, _, _) => Set(Paths.get(self.keyPath))
+      case self@(Service(_)) => Set(Paths.get(self.path))
+    }
+
+    private def allContents(r: Res): Set[String] = r match {
+      case File(_, c, _) => Set(c)
+      case EnsureFile(_, c) => Set(c)
+      case AbsentPath(_, _) => Set()
+      case Directory(_) => Set()
+      case Package(_, _) => Set()
+      case Group(_, _) => Set()
+      case User(_, _, _) => Set()
+      case SshAuthorizedKey(_, _, _, key) => Set(key)
+      case Service(_) => Set()
+    }
+
+    private def allPackages(r: Res): Set[String] = r match {
+      case File(_, _, _) => Set()
+      case EnsureFile(_, _) => Set()
+      case AbsentPath(_, _) => Set()
+      case Directory(_) => Set()
+      case Package(p, _) => Set(p)
+      case Group(_, _) => Set()
+      case User(_, _, _) => Set()
+      case SshAuthorizedKey(_, _, _, _) => Set()
+      case Service(_) => Set()
+    }
+
+    private def allUsers(r: Res): Set[String] = r match {
+      case File(_, _, _) => Set()
+      case EnsureFile(_, _) => Set()
+      case AbsentPath(_, _) => Set()
+      case Directory(_) => Set()
+      case Package(_, _) => Set()
+      case Group(_, _) => Set()
+      case User(u, _, _) => Set(u)
+      case SshAuthorizedKey(_, _, _, _) => Set()
+      case Service(_) => Set()
+    }
+
+    private def allGroups(r: Res): Set[String] = r match {
+      case File(_, _, _) => Set()
+      case EnsureFile(_, _) => Set()
+      case AbsentPath(_, _) => Set()
+      case Directory(_) => Set()
+      case Package(_, _) => Set()
+      case Group(g, _) => Set(g)
+      case User(_, _, _) => Set()
+      case SshAuthorizedKey(_, _, _, _) => Set()
+      case Service(_) => Set()
+    }
+
+    def fromResources(lst: Seq[Res]): DomainBounds = {
+      apply(unions(lst.map(allPaths)).toList,
+            unions(lst.map(allContents)).toList,
+            unions(lst.map(allPackages)).toList,
+            unions(lst.map(allUsers)).toList,
+            unions(lst.map(allGroups)).toList)
+    }
+
   }
 
   trait Synthesizer {
@@ -221,75 +300,6 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
 
   class UpdateSynth(val bounds: DomainBounds) extends SynthesizeVerify with GreedySynthesizer
 
-  def findAllSubPaths(p: Path): Set[Path] =
-    p.toString.split('/').drop(1).foldLeft[List[String]](List())( {
-      case (paths, next) => paths match {
-        case List() => List(s"/$next")
-        case parent :: _ => s"$parent/$next" :: paths
-      }
-    }).map(Paths.get(_)).toSet
-
-  def allPaths(r: Res): Set[Path] = r match {
-    case File(p, _, _) => findAllSubPaths(p)
-    case EnsureFile(p, _) => findAllSubPaths(p)
-    case AbsentPath(p, _) => findAllSubPaths(p)
-    case Directory(p) => findAllSubPaths(p)
-    case Package(_, _) => Set()
-    case Group(name, _) => Set()
-    case User(name, _, true) => Set(Paths.get(s"/home/$name"))
-    case User(_, _, false) => Set()
-    case self@SshAuthorizedKey(_, _, _, _) => Set(Paths.get(self.keyPath))
-    case self@(Service(_)) => Set(Paths.get(self.path))
-  }
-
-  def allContents(r: Res): Set[String] = r match {
-    case File(_, c, _) => Set(c)
-    case EnsureFile(_, c) => Set(c)
-    case AbsentPath(_, _) => Set()
-    case Directory(_) => Set()
-    case Package(_, _) => Set()
-    case Group(_, _) => Set()
-    case User(_, _, _) => Set()
-    case SshAuthorizedKey(_, _, _, key) => Set(key)
-    case Service(_) => Set()
-  }
-
-  def allPackages(r: Res): Set[String] = r match {
-    case File(_, _, _) => Set()
-    case EnsureFile(_, _) => Set()
-    case AbsentPath(_, _) => Set()
-    case Directory(_) => Set()
-    case Package(p, _) => Set(p)
-    case Group(_, _) => Set()
-    case User(_, _, _) => Set()
-    case SshAuthorizedKey(_, _, _, _) => Set()
-    case Service(_) => Set()
-  }
-
-  def allUsers(r: Res): Set[String] = r match {
-    case File(_, _, _) => Set()
-    case EnsureFile(_, _) => Set()
-    case AbsentPath(_, _) => Set()
-    case Directory(_) => Set()
-    case Package(_, _) => Set()
-    case Group(_, _) => Set()
-    case User(u, _, _) => Set(u)
-    case SshAuthorizedKey(_, _, _, _) => Set()
-    case Service(_) => Set()
-  }
-
-  def allGroups(r: Res): Set[String] = r match {
-    case File(_, _, _) => Set()
-    case EnsureFile(_, _) => Set()
-    case AbsentPath(_, _) => Set()
-    case Directory(_) => Set()
-    case Package(_, _) => Set()
-    case Group(g, _) => Set(g)
-    case User(_, _, _) => Set()
-    case SshAuthorizedKey(_, _, _, _) => Set()
-    case Service(_) => Set()
-  }
-
   val initState = Some(Map(Paths.get("/") -> Eval.FDir))
 
   def filterCommon(v1: List[Res], v2: List[Res]): (List[Res], List[Res]) = (v1.filterNot(v2.contains), v2.filterNot(v1.contains))
@@ -299,17 +309,10 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     logger.info(s"Original V1: $ov1")
     logger.info(s"Original V2: $ov2")
 
-    val all = v1 ++ v2
-
     logger.info(s"V1: $v1")
     logger.info(s"V2: $v2")
 
-    val bounds = DomainBounds(unions(all.map(allPaths)).toList,
-      unions(all.map(allContents)).toList,
-      unions(all.map(allPackages)).toList,
-      unions(all.map(allUsers)).toList,
-      unions(all.map(allGroups)).toList)
-
+    val bounds = DomainBounds.fromResources(v1 ++ v2)
     val upd = new UpdateSynth(bounds)
 
     val (_, precond, r) = upd.synth(Set(), Seq(initState), v1, v2)

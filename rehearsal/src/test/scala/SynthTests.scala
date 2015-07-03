@@ -32,11 +32,7 @@ class SynthTests extends org.scalatest.FunSuite {
  
       val all = e1 ++ e2
 
-      val bounds = DomainBounds(unions(all.map(allPaths)).toList,
-        unions(all.map(allContents)).toList,
-        unions(all.map(allPackages)).toList,
-        unions(all.map(allUsers)).toList,
-        unions(all.map(allGroups)).toList) 
+      val bounds = DomainBounds.fromResources(e1 ++ e2)
 
       val update = new UpdateSynth(bounds)
       
