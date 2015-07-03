@@ -88,7 +88,5 @@ class SynthTests extends org.scalatest.FunSuite {
       EnsureFile("/home/arjun/bin/doom", "classic binary")
         
     ))
-  
-
 
 }

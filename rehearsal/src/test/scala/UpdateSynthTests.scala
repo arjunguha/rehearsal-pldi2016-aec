@@ -90,4 +90,21 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
     """
     assert(exec(m1, m2)._2 == List(AbsentPath(Paths.get("/home/aaron"), true)))
   }
+
+  test("m1 and m2 are equivalent only when /foo and /foo/bar are directories") {
+    val m1 = """
+      file{'/foo': ensure => directory }
+      file{'/foo/bar': ensure => directory }
+      File['/foo'] ~> File['/foo/bar']
+    """
+
+    val m2 = """
+      file{'/foo': ensure => directory }
+      file{'/foo/bar': ensure => directory }
+      File['/foo/bar'] ~> File['/foo']
+    """
+
+    // The precondition should be non-empty
+    assert(exec(m1, m2)._1.isEmpty == false)
+  }
 }
