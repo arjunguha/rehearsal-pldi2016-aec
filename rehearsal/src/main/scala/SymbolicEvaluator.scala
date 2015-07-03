@@ -14,15 +14,6 @@ import scalax.collection.GraphPredef._
 
 object SymbolicEvaluator {
 
-  def exprEqualsSynth(precond: Set[State], e1: F.Expr, delta: F.Expr,
-                      e2: F.Expr): Either[Option[State], Option[State]] = {
-    val impl = new SymbolicEvaluatorImpl((e1.paths union e2.paths union delta.paths).toList,
-      e1.hashes union e2.hashes union delta.hashes, Some("output.smt"))
-    val result = impl.exprEqualsSynth(precond, e1,delta, e2)
-    impl.free()
-    result
-  }
-
   def exprEquals(e1: F.Expr, e2: F.Expr): Option[Option[State]] = {
     val impl = new SymbolicEvaluatorImpl((e1.paths union e2.paths).toList,
       e1.hashes union e2.hashes, None)
@@ -366,111 +357,10 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  def handleSexpr(acc: Option[State], sexpr: SExpr): Option[State] =
-    acc match {
-      case None => None
-      case Some(state) => {
-        sexpr match {
-          case DefineFun(FunDef(name, _, returnSort, body)) => {
-            returnSort.id.symbol.name match {
-              case "stat" =>
-                reverseMap.get(name.name) match {
-                  // Ignore all paths that are not the ones in ST
-                  case None => Some(state)
-                  case Some(path) =>
-                    body match {
-                      case QualifiedIdentifier(Identifier(SSymbol("IsDir"), _), _) => Some(state + (path -> FDir))
-                      case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("IsFile"), _), _), List(hash)) => {
-                        reverseHash.get(hash.asInstanceOf[QualifiedIdentifier].id.symbol.name) match {
-                          case None => {
-                            println("unknown file")
-                            Some(state + (path -> FFile(s"unknown - ${hash.toString}")))
-                          }
-                          case Some(data) => Some(state + (path -> FFile(data)))
-                        }
-                      }
-                      case QualifiedIdentifier(Identifier(SSymbol("DoesNotExist"), _), _) => Some(state)
-                      case _ => throw Unexpected(s"Unexpected body: $body in sexpr: $sexpr")
-                    }
-                }
-
-              case "Bool" => if(name.name.startsWith("isErr") && body.asInstanceOf[QualifiedIdentifier].id.symbol.name.toBoolean) { None } else { Some(state) }
-              case "hash" => Some(state)
-              case _ => throw Unexpected(s"Unexpected definition: $sexpr")
-            }
-          }
-
-          case DeclareFun(_, _, Sort(SimpleIdentifier(SSymbol("hash")), _)) => Some(state)
-          case ForAll(_,_, _) => Some(state)
-          case _ => throw Unexpected(s"Unexpected sexpr: ${sexpr.getClass}")
-        }
-      }
-    }
-
-  def extractExampleInput(precond: Term): Option[State] = {
-    eval(Assert(precond))
-    eval(CheckSat()) match {
-      case CheckSatStatus(SatStatus) => {
-        val model: List[SExpr] = eval(GetModel()).asInstanceOf[GetModelResponseSuccess].model
-        logger.debug(model.toString)
-        model.foldLeft(Some(Map()): Option[State])(handleSexpr(_,_))
-      }
-      case CheckSatStatus(UnsatStatus) => {
-        throw Unexpected(s"Could not generate example input.")
-      }
-      case CheckSatStatus(UnknownStatus) => throw Unexpected("got unknown")
-      case s => throw Unexpected(s"got $s from check-sat")
-    }
-  }
-
-  // Given a set of preconditions checks if there exists an input for
-  // which e1 ++ delta /= e2. If no such input exists, a term representing
-  // preconditions is returned along with a list of commands declaring the
-  // filesystem it is referencing. Otherwise, an input which fails.
-  def exprEqualsSynth(precond: Set[State], e1: F.Expr, delta: F.Expr,
-                      e2: F.Expr): Either[Option[State], Option[State]] = {
-    try {
-      eval(Push(1))
-      val st = initState
-      assertPathConsistency(st)
-      logger.info(s"preconditions: ${precond.toSet.size}")
-
-      val preTerm =
-        precond.foldRight[Term](True())( { case (pre, acc) => acc && Not(buildPrecondition(st, pre)) } )
-      eval(Assert(preTerm))
-
-      val stInter = evalExpr(st, e1)
-
-      val st1 = evalExpr(stInter, delta)
-      val st2 = evalExpr(st, e2)
-
-      eval(Assert(Not(stEquals(stInter, st))))
-      eval(Assert(Not(stEquals(st1, st2))))
-      eval(CheckSat()) match {
-        case CheckSatStatus(SatStatus) => {
-          val model: List[SExpr] = eval(GetModel()).asInstanceOf[GetModelResponseSuccess].model
-          logger.debug(model.toString)
-          Left(model.foldLeft(Some(Map()): Option[State])(handleSexpr(_,_)))
-        }
-        case CheckSatStatus(UnsatStatus) => {
-          eval(Pop(1))
-          val result = Right(extractExampleInput(preTerm))
-          eval(Push(1))
-          result
-        }
-        case CheckSatStatus(UnknownStatus) => throw Unexpected("got unknown")
-        case s => throw Unexpected(s"got $s from check-sat")
-      }
-    }
-    finally {
-      eval(Pop(1))
-    }
-  }
-
-
   def exprEquals(e1: F.Expr, e2: F.Expr): Option[Option[State]] = {
     try {
       eval(Push(1))
+      // TODO(arjun): Must rule out error as the initial state
       val st = initState
       val st1 = evalExpr(st, e1)
       val st2 = evalExpr(st, e2)
@@ -479,7 +369,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       eval(CheckSat()) match {
         case CheckSatStatus(SatStatus) => {
           val model: List[SExpr] = eval(GetModel()).asInstanceOf[GetModelResponseSuccess].model
-          Some(model.foldLeft(Some(Map()): Option[State])(handleSexpr(_,_)))
+          Some(Some(stateFromTerm(st)))
         }
         case CheckSatStatus(UnsatStatus) => None
         case CheckSatStatus(UnknownStatus) => throw Unexpected("got unknown")
