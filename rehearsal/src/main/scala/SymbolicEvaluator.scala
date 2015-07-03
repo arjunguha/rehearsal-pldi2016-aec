@@ -14,13 +14,13 @@ import scalax.collection.GraphPredef._
 
 object SymbolicEvaluator {
 
-   def exprEqualsSynth(precond: Set[State], e1: F.Expr, delta: F.Expr,
-                       e2: F.Expr): Either[Option[State], Option[State]] = {
-     val impl = new SymbolicEvaluatorImpl((e1.paths union e2.paths union delta.paths).toList,
+  def exprEqualsSynth(precond: Set[State], e1: F.Expr, delta: F.Expr,
+                      e2: F.Expr): Either[Option[State], Option[State]] = {
+    val impl = new SymbolicEvaluatorImpl((e1.paths union e2.paths union delta.paths).toList,
       e1.hashes union e2.hashes union delta.hashes, Some("output.smt"))
-     val result = impl.exprEqualsSynth(precond, e1,delta, e2)
-     impl.free()
-     result
+    val result = impl.exprEqualsSynth(precond, e1,delta, e2)
+    impl.free()
+    result
   }
 
   def exprEquals(e1: F.Expr, e2: F.Expr): Option[Option[State]] = {
@@ -43,7 +43,7 @@ object SymbolicEvaluator {
       g.nodes.map(e => e.paths).reduce(_ union _).toList,
       g.nodes.map(_.hashes).reduce(_ union _),
       logFile
-      )
+    )
     val result = impl.isDeterministic(g)
     impl.free()
     result
@@ -87,7 +87,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     eval(Assert(FunctionApplication("distinct", hashes)))
     val x = freshName("h")
     eval(Assert(ForAll(SortedVar(x, hashSort), Seq(),
-                          Or(hashes.map(h => Equals(x, h)): _*))))
+      Or(hashes.map(h => Equals(x, h)): _*))))
   }
 
   val termToHash: Map[Term, String] = hashToZ3.toList.map({ case (x,y) => (y, x) }).toMap
@@ -115,8 +115,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
       else {
         eval(Assert(Implies(FunctionApplication("is-IsFile", Seq(st.paths(p))) ||
-                            FunctionApplication("is-IsDir", Seq(st.paths(p))),
-                               FunctionApplication("is-IsDir", Seq(st.paths(p.getParent))))))
+          FunctionApplication("is-IsDir", Seq(st.paths(p))),
+          FunctionApplication("is-IsDir", Seq(st.paths(p.getParent))))))
       }
     }
   }
@@ -246,7 +246,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         Equals(st.paths(dst), "DoesNotExist")
       ST(st.isErr || Not(pre),
         st.paths + (dst -> FunctionApplication("IsFile",
-                              Seq(FunctionApplication("hash", Seq(st.paths(src)))))))
+          Seq(FunctionApplication("hash", Seq(st.paths(src)))))))
     }
   }
 
@@ -281,7 +281,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         sexpr match {
           case DefineFun(FunDef(name, _, returnSort, body)) => {
             returnSort.id.symbol.name match {
-              case "stat" => 
+              case "stat" =>
                 reverseMap.get(name.name) match {
                   // Ignore all paths that are not the ones in ST
                   case None => Some(state)
@@ -304,7 +304,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
               case _ => throw Unexpected(s"Unexpected definition: $sexpr")
             }
           }
-          
+
           case DeclareFun(_, _, Sort(SimpleIdentifier(SSymbol("hash")), _)) => Some(state)
           case ForAll(_,_, _) => Some(state)
           case _ => throw Unexpected(s"Unexpected sexpr: ${sexpr.getClass}")
@@ -320,9 +320,9 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         logger.debug(model.toString)
         model.foldLeft(Some(Map()): Option[State])(handleSexpr(_,_))
       }
-        case CheckSatStatus(UnsatStatus) => {
-          throw Unexpected(s"Could not generate example input.")
-        }
+      case CheckSatStatus(UnsatStatus) => {
+        throw Unexpected(s"Could not generate example input.")
+      }
       case CheckSatStatus(UnknownStatus) => throw Unexpected("got unknown")
       case s => throw Unexpected(s"got $s from check-sat")
     }
@@ -332,69 +332,69 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   // which e1 ++ delta /= e2. If no such input exists, a term representing
   // preconditions is returned along with a list of commands declaring the
   // filesystem it is referencing. Otherwise, an input which fails.
- def exprEqualsSynth(precond: Set[State], e1: F.Expr, delta: F.Expr,
-                     e2: F.Expr): Either[Option[State], Option[State]] = {
-   try {
-     eval(Push(1))
-     val st = initState
-     assertPathConsistency(st)
-     logger.info(s"preconditions: ${precond.toSet.size}")
+  def exprEqualsSynth(precond: Set[State], e1: F.Expr, delta: F.Expr,
+                      e2: F.Expr): Either[Option[State], Option[State]] = {
+    try {
+      eval(Push(1))
+      val st = initState
+      assertPathConsistency(st)
+      logger.info(s"preconditions: ${precond.toSet.size}")
 
-     val preTerm =
-       precond.foldRight[Term](True())( { case (pre, acc) => acc && Not(buildPrecondition(st, pre)) } )
-     eval(Assert(preTerm))
+      val preTerm =
+        precond.foldRight[Term](True())( { case (pre, acc) => acc && Not(buildPrecondition(st, pre)) } )
+      eval(Assert(preTerm))
 
-     val stInter = evalExpr(st, e1)
+      val stInter = evalExpr(st, e1)
 
-     val st1 = evalExpr(stInter, delta)
-     val st2 = evalExpr(st, e2)
+      val st1 = evalExpr(stInter, delta)
+      val st2 = evalExpr(st, e2)
 
-     eval(Assert(Not(stEquals(stInter, st))))
-     eval(Assert(Not(stEquals(st1, st2))))
-     eval(CheckSat()) match {
-       case CheckSatStatus(SatStatus) => {
-         val model: List[SExpr] = eval(GetModel()).asInstanceOf[GetModelResponseSuccess].model
-         logger.debug(model.toString)
-         Left(model.foldLeft(Some(Map()): Option[State])(handleSexpr(_,_)))
-       }
-       case CheckSatStatus(UnsatStatus) => {
-         eval(Pop(1))
-         val result = Right(extractExampleInput(preTerm))
-         eval(Push(1))
-         result
-       }
-       case CheckSatStatus(UnknownStatus) => throw Unexpected("got unknown")
-       case s => throw Unexpected(s"got $s from check-sat")
-     }
-   }
-   finally {
-     eval(Pop(1))
-   }
- }
+      eval(Assert(Not(stEquals(stInter, st))))
+      eval(Assert(Not(stEquals(st1, st2))))
+      eval(CheckSat()) match {
+        case CheckSatStatus(SatStatus) => {
+          val model: List[SExpr] = eval(GetModel()).asInstanceOf[GetModelResponseSuccess].model
+          logger.debug(model.toString)
+          Left(model.foldLeft(Some(Map()): Option[State])(handleSexpr(_,_)))
+        }
+        case CheckSatStatus(UnsatStatus) => {
+          eval(Pop(1))
+          val result = Right(extractExampleInput(preTerm))
+          eval(Push(1))
+          result
+        }
+        case CheckSatStatus(UnknownStatus) => throw Unexpected("got unknown")
+        case s => throw Unexpected(s"got $s from check-sat")
+      }
+    }
+    finally {
+      eval(Pop(1))
+    }
+  }
 
 
- def exprEquals(e1: F.Expr, e2: F.Expr): Option[Option[State]] = {
-   try {
-     eval(Push(1))
-     val st = initState
-     val st1 = evalExpr(st, e1)
-     val st2 = evalExpr(st, e2)
+  def exprEquals(e1: F.Expr, e2: F.Expr): Option[Option[State]] = {
+    try {
+      eval(Push(1))
+      val st = initState
+      val st1 = evalExpr(st, e1)
+      val st2 = evalExpr(st, e2)
 
-     eval(Assert(Not(stEquals(st1, st2))))
-     eval(CheckSat()) match {
-       case CheckSatStatus(SatStatus) => {
-         val model: List[SExpr] = eval(GetModel()).asInstanceOf[GetModelResponseSuccess].model
-         Some(model.foldLeft(Some(Map()): Option[State])(handleSexpr(_,_)))
-       }
-       case CheckSatStatus(UnsatStatus) => None
-       case CheckSatStatus(UnknownStatus) => throw Unexpected("got unknown")
-       case s => throw Unexpected(s"got $s from check-sat")
-     }
-   }
-   finally {
-     eval(Pop(1))
-   }
- }
+      eval(Assert(Not(stEquals(st1, st2))))
+      eval(CheckSat()) match {
+        case CheckSatStatus(SatStatus) => {
+          val model: List[SExpr] = eval(GetModel()).asInstanceOf[GetModelResponseSuccess].model
+          Some(model.foldLeft(Some(Map()): Option[State])(handleSexpr(_,_)))
+        }
+        case CheckSatStatus(UnsatStatus) => None
+        case CheckSatStatus(UnknownStatus) => throw Unexpected("got unknown")
+        case s => throw Unexpected(s"got $s from check-sat")
+      }
+    }
+    finally {
+      eval(Pop(1))
+    }
+  }
 
   // Greedily breaks a list of expressions into groups that commute with each other
   def commutingGroups(lst: List[Expr]): List[List[Expr]] = {
@@ -416,78 +416,70 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-    def evalGraph(st: ST, g: FileScriptGraph): ST = {
-      val fringe = g.nodes.filter(_.inDegree == 0).toList
-      if (fringe.length == 0) {
-        st
+  def evalGraph(st: ST, g: FileScriptGraph): ST = {
+    val fringe = g.nodes.filter(_.inDegree == 0).toList
+    if (fringe.length == 0) {
+      st
+    }
+    else {
+      val fringe1 = commutingGroups(fringe.map[Expr, List[Expr]](x => x))
+      if (fringe1.length == 1) {
+        evalExpr(st, Block(fringe1.head : _*))
       }
       else {
-        val fringe1 = commutingGroups(fringe.map[Expr, List[Expr]](x => x))
-        if (fringe1.length == 1) {
-         evalExpr(st, Block(fringe1.head : _*))
-        }
-        else {
-          logger.info(s"shrunk fringe from ${fringe.length} to ${fringe1.length}")
-          fringe1.map(p => evalGraph(evalExpr(st, Block(p : _*)), g -- p)).reduce({ (st1: ST, st2: ST) =>
-            val c = freshName("choice")
-            val b = eval(DeclareConst(c, BoolSort()))
-            ST(ite(c, st1.isErr, st2.isErr),
-              allPaths.map(p => p -> ite(c, st1.paths(p),st2.paths(p))).toMap)
-          })
-        }
+        fringe1.map(p => evalGraph(evalExpr(st, Block(p : _*)), g -- p)).reduce({ (st1: ST, st2: ST) =>
+          val c = freshName("choice")
+          val b = eval(DeclareConst(c, BoolSort()))
+          ST(ite(c, st1.isErr, st2.isErr),
+            allPaths.map(p => p -> ite(c, st1.paths(p),st2.paths(p))).toMap)
+        })
       }
     }
+  }
 
-    def stNEq(st1: ST, st2: ST): Term = {
+  def stNEq(st1: ST, st2: ST): Term = {
     (st1.isErr && Not(st2.isErr)) ||
-    (st2.isErr && Not(st1.isErr)) ||
+      (st2.isErr && Not(st1.isErr)) ||
       (Not(st1.isErr) && Not(st2.isErr) && Or(allPaths.map(p => Not(Equals(st1.paths(p), st2.paths(p)))): _*))
   }
 
-    def isDeterministic(g: FileScriptGraph): Boolean = {
-      val inST = initState
-      logger.info(s"Generating constraints for a graph with ${g.nodes.size} nodes")
-      val outST1 = evalGraph(inST, g)
-      val outST2 = evalGraph(inST, g)
-      eval(Assert(stNEq(outST1, outST2)))
-      logger.info("Checking satisfiability")
-      eval(CheckSat()) match {
-        case CheckSatStatus(SatStatus) => {
-          eval(GetModel())
-          false
-        }
-        case CheckSatStatus(UnsatStatus) => true
-        case CheckSatStatus(UnknownStatus) => throw new RuntimeException("got unknown")
-        case s => throw Unexpected(s"got $s from check-sat")
+  def isDeterministic(g: FileScriptGraph): Boolean = {
+    val inST = initState
+    logger.info(s"Generating constraints for a graph with ${g.nodes.size} nodes")
+    val outST1 = evalGraph(inST, g)
+    val outST2 = evalGraph(inST, g)
+    eval(Assert(stNEq(outST1, outST2)))
+    logger.info("Checking satisfiability")
+    eval(CheckSat()) match {
+      case CheckSatStatus(SatStatus) => {
+        eval(GetModel())
+        false
       }
-
+      case CheckSatStatus(UnsatStatus) => true
+      case CheckSatStatus(UnknownStatus) => throw new RuntimeException("got unknown")
+      case s => throw Unexpected(s"got $s from check-sat")
     }
 
-    // def isDeterministicError(g: FileScriptGraph): Boolean = {
-    //   if(!isDeterministic(g))  false
+  }
 
-    //   topologicalSort(g)
+  def isDeterministicError(g: FileScriptGraph): Boolean = {
+    val inST = initState
+    val sort = topologicalSort(g)
+    val outST1 = evalGraph(inST, g)
+    val outST2 = evalGraph(inST, g)
 
-    // }
-
-    def isDeterministicError(g: FileScriptGraph): Boolean = {
-      val inST = initState
-      val sort = topologicalSort(g)
-      val outST1 = evalGraph(inST, g)
-      val outST2 = evalGraph(inST, g)
-
-      //eval(Assert(stNEq(outST1, outST2))) //g is deterministic
-      eval(Assert(Not(outST1.isErr))) //g will always produce an error
-      eval(CheckSat()) match{
-        case CheckSatStatus(SatStatus) => {
-          println(eval(GetModel()))
-          false
-        }
-        case CheckSatStatus(UnsatStatus) => true
-        case CheckSatStatus(UnknownStatus) => throw new RuntimeException("got unknown")
-        case s => throw Unexpected(s"got $s from check-sat")
+    //eval(Assert(stNEq(outST1, outST2))) //g is deterministic
+    eval(Assert(Not(outST1.isErr))) //g will always produce an error
+    eval(CheckSat()) match{
+      case CheckSatStatus(SatStatus) => {
+        println(eval(GetModel()))
+        false
       }
+      case CheckSatStatus(UnsatStatus) => true
+      case CheckSatStatus(UnknownStatus) => throw new RuntimeException("got unknown")
+      case s => throw Unexpected(s"got $s from check-sat")
     }
+  }
 
   def free(): Unit = smt.free()
 
