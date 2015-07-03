@@ -113,6 +113,7 @@ class SMT(outputFile: Option[String]) extends smtlib.Interpreter with com.typesa
   import java.nio.file._
   import smtlib.parser.Commands._
   import smtlib.parser.CommandsResponses._
+  import smtlib.parser.Terms._
   import smtlib.interpreters.Z3Interpreter
 
   private val interpreter = Z3Interpreter.buildDefault
@@ -125,6 +126,25 @@ class SMT(outputFile: Option[String]) extends smtlib.Interpreter with com.typesa
 
   def interrupt(): Unit = {
     interpreter.interrupt()
+  }
+
+  def pushPop[A](thunk: => A): A = {
+    try {
+      eval(Push(1))
+      thunk
+    }
+    finally {
+      eval(Pop(1))
+    }
+  }
+
+  def getModel(): List[SExpr] = eval(GetModel()).asInstanceOf[GetModelResponseSuccess].model
+
+  def checkSat(): Status = eval(CheckSat()).asInstanceOf[CheckSatStatus].status
+
+  def getValue(terms: Seq[Term]): Seq[(Term, Term)] = terms match {
+    case Seq() => Seq()
+    case _ => eval(GetValue(terms.head, terms.tail)).asInstanceOf[GetValueResponseSuccess].valuationPairs
   }
 
   def eval(command: Command) : CommandResponse = {

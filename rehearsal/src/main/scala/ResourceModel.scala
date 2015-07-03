@@ -78,13 +78,13 @@ object ResourceModel {
         }
         case false => {
           val homeCmd = if (manageHome) {
-            If(TestFileState(h, IsDir), Rm(h), Skip)
+            If(TestFileState(h, DoesNotExist), Skip, Rm(h))
           }
           else {
             Skip
           }
-          If(TestFileState(u, IsDir), Rm(u), Skip) >>
-          If(TestFileState(g, IsDir), Rm(g), Skip) >>
+          If(TestFileState(u, DoesNotExist), Skip, Rm(u)) >>
+          If(TestFileState(g, DoesNotExist), Skip, Rm(g)) >>
           homeCmd
         }
       }

@@ -68,12 +68,14 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
         content => "b",
       }
     """
-    assert(exec(m1, m2) == ((Set(), List(EnsureFile(Paths.get("/not"), "b")))))
+    assert(exec(m1, m2) == ((PrecondTrue, List(EnsureFile(Paths.get("/not"), "b")))))
   }
 
   test("synthesizing differences in users") {
     val m1 =
     """
+      file{'/home': ensure => directory, before => User['aaron'] }
+
       user {'aaron':
         name => 'aaron',
         ensure => present,
@@ -82,6 +84,8 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
     """
     val m2 =
     """
+      file{'/home': ensure => directory, before => User['aaron'] }
+
       user {'aaron':
         name => 'aaron',
         ensure => present,
@@ -105,6 +109,6 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
     """
 
     // The precondition should be non-empty
-    assert(exec(m1, m2)._1.isEmpty == false)
+    println(exec(m1, m2))
   }
 }

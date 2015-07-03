@@ -52,7 +52,7 @@ package object rehearsal {
       // Check if we have already solved this problem
       if (!result(p)) {
         p.getParent match {
-          case null => result
+          case null => result + p.normalize
           case parent: Path => loop(parent, result + p.normalize)
         }
       }
