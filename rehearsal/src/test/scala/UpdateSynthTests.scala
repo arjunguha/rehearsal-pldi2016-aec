@@ -9,7 +9,7 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
   val bounds = DomainBounds.empty.withPaths(Paths.get("/a"), Paths.get("/b")).withContents("hello", "bye")
 
   test("trivial guess") {
-    val upd = new UpdateSynth2(bounds)
+    val upd = new UpdateSynth(bounds)
 
     import upd._
     val r = guess(Seq(Some(Map(Paths.get("/") -> FDir))),
@@ -21,7 +21,7 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
   }
 
   test("trivial guess with a state that leads to error") {
-    val upd = new UpdateSynth2(bounds)
+    val upd = new UpdateSynth(bounds)
     import upd._
     val r = guess(Seq(Some(Map(Paths.get("/") -> FDir)),
                        Some(Map())),
@@ -32,7 +32,7 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
   }
 
   test("trivial guess with error as input") {
-    val upd = new UpdateSynth2(bounds)
+    val upd = new UpdateSynth(bounds)
     import upd._
     val r = guess(Seq(Some(Map(Paths.get("/") -> FDir)),
                        None),

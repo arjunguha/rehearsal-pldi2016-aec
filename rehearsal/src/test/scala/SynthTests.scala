@@ -38,7 +38,7 @@ class SynthTests extends org.scalatest.FunSuite {
         unions(all.map(allUsers)).toList,
         unions(all.map(allGroups)).toList) 
 
-      val update = new UpdateSynth2(bounds)
+      val update = new UpdateSynth(bounds)
       
 
       val (exampleState, precond, result) = update.synth(Set(), Seq(Some(initState)), e1, e2)

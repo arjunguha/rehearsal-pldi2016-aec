@@ -219,7 +219,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     // 7. minimize the candidate by attempting to remove each element and checking if dist = 0
   }
 
-  class UpdateSynth2(val bounds: DomainBounds) extends SynthesizeVerify with GreedySynthesizer
+  class UpdateSynth(val bounds: DomainBounds) extends SynthesizeVerify with GreedySynthesizer
 
   def findAllSubPaths(p: Path): Set[Path] =
     p.toString.split('/').drop(1).foldLeft[List[String]](List())( {
@@ -310,7 +310,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
       unions(all.map(allUsers)).toList,
       unions(all.map(allGroups)).toList)
 
-    val upd = new UpdateSynth2(bounds)
+    val upd = new UpdateSynth(bounds)
 
     val (_, precond, r) = upd.synth(Set(), Seq(initState), v1, v2)
     logger.info(s"Synthesis Preconditions: $precond")
