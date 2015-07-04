@@ -195,23 +195,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       (Not(st1.isErr) && Not(st2.isErr) && And(allPaths.map(p => Equals(st1.paths(p), st2.paths(p))): _*))
   }
 
-  def stEvalExprEquals(st: ST, e1: F.Expr, e2: F.Expr): Boolean = {
-    try {
-      eval(Push(1))
-      eval(Assert(stNEq(evalExpr(st, e1), evalExpr(st, e2))))
-      smt.checkSat() match {
-        case SatStatus => {
-          eval(GetModel())
-          false
-        }
-        case UnsatStatus => true
-        case UnknownStatus => throw Unexpected("got unknown")
-      }
-    } finally {
-      eval(Pop(1))
-    }
-  }
-
   def evalPred(st: ST, pred: F.Pred): Term = pred match {
     case F.True => True()
     case F.False => False()
