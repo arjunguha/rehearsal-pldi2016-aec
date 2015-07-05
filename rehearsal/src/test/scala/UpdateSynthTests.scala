@@ -4,6 +4,7 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
   import rehearsal._
   import ResourceModel._
   import UpdateSynth._
+  import TranslationValidation._
   import Eval._
 
   val bounds = DomainBounds.empty.withPaths(Paths.get("/a"), Paths.get("/b")).withContents("hello", "bye")
@@ -110,5 +111,12 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
 
     // The precondition should be non-empty
     println(exec(m1, m2))
+  }
+
+  test("translation validation") {
+    val r1 = List(User("aaron", true, true))
+    val r2 = List(User("aaron", true, false))
+    val (eval, precond, delta) = execLists(r1, r2)
+    assert(validate(eval, precond, r1, delta, r2))
   }
 }

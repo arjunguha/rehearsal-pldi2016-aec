@@ -305,7 +305,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
 
   def filterCommon(v1: List[Res], v2: List[Res]): (List[Res], List[Res]) = (v1.filterNot(v2.contains), v2.filterNot(v1.contains))
 
-  def execLists(ov1: List[Res], ov2: List[Res]): (Precond, List[Res]) = {
+  def execLists(ov1: List[Res], ov2: List[Res]): (SymbolicEvaluatorImpl, Precond, List[Res]) = {
     val (v1, v2) = (ov1, ov2) // filterCommon(ov1, ov2)
     logger.info(s"Original V1: $ov1")
     logger.info(s"Original V2: $ov2")
@@ -327,7 +327,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
 
     logger.info(s"Synthesis Preconditions: $precond")
     logger.info(s"Synthesis result: $r")
-    (precond, r)
+    (eval, precond, r)
   }
 
   def exec(manifest1: String, manifest2: String): (Precond, List[Res]) = {
@@ -341,7 +341,9 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
 
     val ov1 = topologicalSort(graph1).map(r => ResourceToExpr.convert(r))
     val ov2 = topologicalSort(graph2).map(r => ResourceToExpr.convert(r))
-    execLists(ov1, ov2)
+    execLists(ov1, ov2) match {
+      case (_, precond, rs) => (precond, rs)
+    }
   }
 
   def calculate(manifest1: String, manifest2: String): Unit = {
