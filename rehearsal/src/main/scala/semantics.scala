@@ -99,7 +99,9 @@ object ResourceToExpr {
     val ensure = validVal(r, "ensure", validEnsureVals) getOrElse "installed"
     val provider = r.get[String]("provider")
 
-    if(provider.isDefined && provider.get != "apt") {
+    val supportedProviders = Set("apt", "rpm")
+
+    if(provider.isDefined && !supportedProviders.contains(provider.get)) {
       throw Unexpected(s"""package(${r.name}): "${provider.get}" provider not supported""")
     }
 
@@ -141,7 +143,7 @@ object ResourceToExpr {
       case _ => throw Unexpected(s"ensure value is $ensure")
     }
   }
-  
+
   def convert(r: Resource): ResourceModel.Res = r.typ.toLowerCase match {
     case "file" => File(r)
     case "package" => PuppetPackage(r)
@@ -156,8 +158,8 @@ object ResourceToExpr {
 //      Skip
 //    }
     case _ => throw NotImplemented("Resource type \"%s\" not supported yet".format(r.typ))
-  } 
+  }
 
   def apply(r: Resource): Expr = convert(r).compile
-    
+
 }

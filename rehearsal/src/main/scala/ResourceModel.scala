@@ -114,7 +114,14 @@ object ResourceModel {
          Skip)
     }
     case Package(name, false) => {
-      val files = pkgcache.files(name).getOrElse(Set()).toList
+      // TODO(arjun): Quick hack to avoid changing the resource model to have
+      // a provider field.
+      val files = pkgcache.files(name) match {
+        case Some(paths) => paths.toList
+        case None => {
+          pkgcache.rpm(name).getOrElse(Set()).toList
+        }
+      }
       val exprs = files.map(f => If(TestFileState(f, DoesNotExist), Skip, Rm(f)))
       val pkgInstallInfoPath = s"/packages/$name"
       // Append at end
