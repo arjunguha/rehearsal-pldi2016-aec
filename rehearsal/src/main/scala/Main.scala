@@ -5,9 +5,10 @@ package repl {
   import scala.tools.nsc.interpreter._
   import scala.tools.nsc.Settings
   import java.nio.file.Paths
+  import UpdateSynth._
 
   private object Main extends App {
-
+    def uncurry[A, B, C](f: (A, B) => C)(t: (A, B)): C = f(t._1, t._2)
     args.toList match {
       case List() => {
         def repl = new ILoop
@@ -25,6 +26,49 @@ package repl {
       }
       case List("update", manifest1, manifest2) => {
         UpdateSynth.calculate(Paths.get(manifest1), Paths.get(manifest2))
+      }
+      case List("benchmark", "prefix", count) => { // approx. 50
+        // Synthesize the delta between two distinct manifests of size 3 with a common prefix of size n.
+        println("count,time")
+        0.to(Integer.parseInt(count)).map(x => {
+          val pre = genPrefix(x)
+          val start = java.lang.System.currentTimeMillis()
+          uncurry(execLists)(gen(3) match {
+            case (a, b) =>  (pre ++ a, pre ++ b)
+          })
+          val end = java.lang.System.currentTimeMillis()
+          println(s"$x,${end - start}")
+        })
+      }
+      case List("benchmark", "second", count) => { // approx. 10
+        // Grow a manifest of size n and synthesize a delta from an empty manifest.
+        println("count,time")
+        0.to(Integer.parseInt(count)).map(x => {
+          val start = java.lang.System.currentTimeMillis()
+          uncurry(execLists)(gen(0, x * 5))
+          val end = java.lang.System.currentTimeMillis()
+          println(s"${x*5},${end - start}")
+        })
+      }
+      case List("benchmark", "first", count) => { // approx. 5
+        // Grow a manifest of size n and synthesize a delta to an empty manifest.
+        println("count,time")
+        0.to(Integer.parseInt(count)).map(x => {
+          val start = java.lang.System.currentTimeMillis()
+          uncurry(execLists)(gen(x, 0))
+          val end = java.lang.System.currentTimeMillis()
+          println(s"$x,${end - start}")
+        })
+      }
+      case List("benchmark", "both", count) => { // approx. 5
+        // Grow two distinct manifests of the same size and find a delta.
+        println("count,time")
+        0.to(Integer.parseInt(count)).map(x => {
+          val start = java.lang.System.currentTimeMillis()
+          uncurry(execLists)(gen(x))
+          val end = java.lang.System.currentTimeMillis()
+          println(s"$x,${end - start}")
+        })
       }
       case "is-module-deterministic" :: modules => {
         for (name <- modules) {
