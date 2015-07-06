@@ -1,0 +1,145 @@
+{
+  "data": {
+    "resources": [
+      {
+        "aliases": [
+          "rsyslog"
+        ],
+        "sourceline": 3,
+        "parameters": {
+
+        },
+        "exported": false,
+        "title": "Rsyslog",
+        "type": "Class",
+        "sourcefile": "/catalog/xdrum-rsyslog/manifests/site.pp",
+        "tags": [
+
+        ]
+      },
+      {
+        "aliases": [
+          "rsyslog"
+        ],
+        "sourceline": 29,
+        "parameters": {
+          "ensure": "present",
+          "name": "rsyslog",
+          "provider": "apt"
+        },
+        "exported": false,
+        "title": "rsyslog",
+        "type": "Package",
+        "sourcefile": "/catalog/xdrum-rsyslog/modules/rsyslog/manifests/init.pp",
+        "tags": [
+          "rsyslog",
+          "params",
+          "package",
+          "rsyslog::params"
+        ]
+      },
+      {
+        "aliases": [
+          "rsyslog"
+        ],
+        "sourceline": 33,
+        "parameters": {
+          "ensure": "running",
+          "hasrestart": true,
+          "require": [
+            "File[/etc/rsyslog.conf]",
+            "Class[rsyslog::params]",
+            "Package[rsyslog]"
+          ],
+          "hasstatus": true,
+          "enable": true
+        },
+        "exported": false,
+        "title": "rsyslog",
+        "type": "Service",
+        "sourcefile": "/catalog/xdrum-rsyslog/modules/rsyslog/manifests/init.pp",
+        "tags": [
+          "rsyslog",
+          "service",
+          "params",
+          "rsyslog::params"
+        ]
+      },
+      {
+        "aliases": [
+          "rsyslog::params"
+        ],
+        "sourceline": 3,
+        "parameters": {
+
+        },
+        "exported": false,
+        "title": "Rsyslog::Params",
+        "type": "Class",
+        "sourcefile": "/catalog/xdrum-rsyslog/manifests/site.pp",
+        "tags": [
+
+        ]
+      },
+      {
+        "aliases": [
+          "/etc/rsyslog.d"
+        ],
+        "sourceline": 72,
+        "parameters": {
+          "group": "root",
+          "ensure": "directory",
+          "path": "/etc/rsyslog.d",
+          "recurse": "true",
+          "force": "true",
+          "mode": "0755",
+          "owner": "root",
+          "purge": "true"
+        },
+        "exported": false,
+        "title": "/etc/rsyslog.d",
+        "type": "File",
+        "sourcefile": "/catalog/xdrum-rsyslog/modules/rsyslog/manifests/init.pp",
+        "tags": [
+          "rsyslog",
+          "params",
+          "rsyslog::params",
+          "file"
+        ]
+      },
+      {
+        "aliases": [
+          "/etc/rsyslog.conf"
+        ],
+        "sourceline": 63,
+        "parameters": {
+          "group": "root",
+          "ensure": "present",
+          "path": "/etc/rsyslog.conf",
+          "mode": "0444",
+          "owner": "root",
+          "content": "# HEADER: Warning: This file is managed by puppet,\n# HEADER: *do not* edit manually.\n\n$ModLoad immark.so\n$ModLoad imuxsock.so\n$ModLoad imklog.so\n\n$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat\n$AbortOnUncleanConfig off\n$RepeatedMsgReduction off\n\n$FileOwner root\n$FileGroup root\n$FileCreateMode 0640\n$Umask 0022\n#$PrivDropToUser syslog\n#$PrivDropToGroup syslog\n\n$IncludeConfig /etc/rsyslog.d/*.conf\n"
+        },
+        "exported": false,
+        "title": "/etc/rsyslog.conf",
+        "type": "File",
+        "sourcefile": "/catalog/xdrum-rsyslog/modules/rsyslog/manifests/init.pp",
+        "tags": [
+          "rsyslog",
+          "params",
+          "rsyslog::params",
+          "file"
+        ]
+      }
+    ],
+    "transaction-uuid": "uiid",
+    "name": "test",
+    "version": "version",
+    "edges": [
+
+    ]
+  },
+  "metadata": {
+    "api_version": 1
+  }
+}

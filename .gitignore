@@ -23,3 +23,5 @@ benchmarks
 # Intellij IDEA
 *.ipr
 *.iws
+.idea
+*.iml

@@ -29,14 +29,7 @@ libraryDependencies in ThisBuild ++= {
   )
 }
 
-
-lazy val installer = project.dependsOn(common)
-
-lazy val common = project
-
 lazy val bdd = project
-
-lazy val synth = project
 
 lazy val rehearsal = project.dependsOn(bdd)
 

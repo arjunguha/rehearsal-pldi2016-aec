@@ -26,7 +26,7 @@ class SynthPerformance extends org.scalatest.FunSuite {
 
   println("Grow first manifest")
   println("-=-=-=-=-=-=--=-=-=")
-  0.to(10).map(x => {
+  0.to(5).map(x => {
     val start = java.lang.System.currentTimeMillis()
     uncurry(execLists)(gen(x, 0))
     val end = java.lang.System.currentTimeMillis()
@@ -35,7 +35,7 @@ class SynthPerformance extends org.scalatest.FunSuite {
 
   println("Grow both manifests")
   println("-=-=-=-=-=-=-=-=-=-")
-  0.to(3).map(x => {
+  0.to(5).map(x => {
     val start = java.lang.System.currentTimeMillis()
     uncurry(execLists)(gen(x))
     val end = java.lang.System.currentTimeMillis()

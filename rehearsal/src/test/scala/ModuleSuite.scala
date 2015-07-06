@@ -33,7 +33,9 @@ class ModuleSuite extends org.scalatest.FunSuite {
           test(name) {
             println(s">>> $name")
             // val myBdd = bdd.Bdd[TestFileState]((x, y) => x < y)
-            // val fileScriptGraph = Slicing.sliceGraph(g)
+            val g_ = Slicing.sliceGraph(g)
+            val b = SymbolicEvaluator.isDeterministic(g_)
+            println(s"$name: $b")
             // //val pre = WeakestPreconditions.wpGraphBdd(myBdd)(fileScriptGraph, myBdd.bddTrue)
             // val isDeter = Z3Evaluator.isDeterministic(myBdd)(myBdd.bddTrue, fileScriptGraph)
             // println(s"$name -> $isDeter")

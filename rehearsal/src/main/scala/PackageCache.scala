@@ -8,6 +8,8 @@ class PackageCache(cacheroot: java.nio.file.Path) extends com.typesafe.scalalogg
   import java.nio.file.{Path, Paths, Files}
   import java.nio.charset.StandardCharsets
   import scala.util.Try
+  import java.nio.charset.StandardCharsets.UTF_8
+  import scala.collection.JavaConversions._
 
   val root = cacheroot.normalize().toAbsolutePath()
   require(Files.exists(root) && Files.isDirectory(root),
@@ -31,12 +33,19 @@ class PackageCache(cacheroot: java.nio.file.Path) extends com.typesafe.scalalogg
   def aptfile(pkg: String): Option[Set[Path]] = {
     val cmd = s"apt-file -F list $pkg"
     logger.info(s"Running $cmd")
-    val (sts, out, err) = Cmd.exec(cmd)
+    val (status, out, err) = Cmd.exec(cmd)
     logger.info(s"Finished running $cmd")
-    if (0 == sts && out.lines.size > 0) {
+    if (status != 0) {
+      logger.error(s"$cmd returned exit code $status")
+      None
+    }
+    else if (out.lines.size == 0) {
+      logger.error(s"$cmd returned empty output")
+      None
+    }
+    else {
       Some(out.lines.toList.map((l) => Paths.get(l.split(" ")(1))).toSet)
     }
-    else None
   }
 
   def files(pkg: String): Option[Set[Path]] = {
@@ -57,9 +66,21 @@ class PackageCache(cacheroot: java.nio.file.Path) extends com.typesafe.scalalogg
     val cachepath = s"${root}/${pkg}"
     Files.exists(Paths.get(cachepath))
   }
+
+  def rpm(name: String): Option[Set[Path]] = {
+    val p = cacheroot.resolve("rpm-packages").resolve(name)
+    if (Files.isRegularFile(p)) {
+      Some(Files.readAllLines(p, UTF_8).map(s => Paths.get(s)).toSet)
+    }
+    else {
+      logger.error(s"could not find file $p")
+      None
+    }
+  }
+
 }
 
-object PackageCache {
+object PackageCache extends com.typesafe.scalalogging.LazyLogging {
 
   import java.nio.file._
 
@@ -74,5 +95,4 @@ object PackageCache {
     }
     new PackageCache(pkgcacheDir)
   }
-
 }
