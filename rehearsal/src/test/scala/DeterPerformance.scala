@@ -9,6 +9,7 @@ import scalax.collection.GraphEdge.DiEdge
 class DeterPerformance extends org.scalatest.FunSuite {
   val maxPathComponentLen = 10
   val maxFileLen = 10
+  val paths = Seq()
 
   def randAlphaNumString(length: Int) = {
     val rand = new Random()
@@ -27,7 +28,7 @@ class DeterPerformance extends org.scalatest.FunSuite {
     for(i <- 1 to pathLen-1){
       path += "/" + randAlphaNumString(maxPathComponentLen)
     }
-
+    paths = path :: paths
     Paths.get(path)
   }
 
@@ -38,10 +39,10 @@ class DeterPerformance extends org.scalatest.FunSuite {
       x = x.:::(List(CreateFile(genRandomPath(maxPathLen), randAlphaNumString(maxFileLen))))
     }
 
-    x.foldRight(Skip: Expr)((e, expr) => Seq(e, expr))
+    x.foldRight(Skip: Expr)((e, expr) => FSSyntax.Seq(e, expr))
   }
 
-  def genRandomGraph(numProgs: Int, progLength: Int, maxPathLen: Int) = {
+  def genRandomGraph(numProgs: Int, progLength: Int, maxPathLen: Int, overlap: Int) = {
     val g = Graph[Expr, DiEdge]()
     for(i <- 1 to numProgs){
       g.add(genRandomProg(progLength, maxPathLen))
