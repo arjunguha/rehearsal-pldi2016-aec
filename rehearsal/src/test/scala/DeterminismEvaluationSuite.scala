@@ -5,16 +5,10 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
 
   val root = "rehearsal/src/test/catalogs"
 
-  test("puppet-account.json") {
-    val rg = Catalog.parseFile(s"$root/puppet-account.json")
-    val g = toFileScriptGraph(rg)
-    assert(SymbolicEvaluator.isDeterministic(g) == false)
-  }
-
   test("puppet-monit.json") {
     val rg = Catalog.parseFile(s"$root/puppet-monit.json")
     val g = toFileScriptGraph(rg)
-    assert(SymbolicEvaluator.isDeterministic(g) == false)
+    assert(SymbolicEvaluator.isDeterministicError(g) == true)
   }
 
   test("puppet-bind.json") {
