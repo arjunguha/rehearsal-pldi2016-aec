@@ -92,6 +92,9 @@ package repl {
         println(rg)
         println(SymbolicEvaluator.isDeterministic(g))
       }
+      case List("detersuite") => DeterminismBenchmarks.run()
+      case List("detersizes") => DeterminismSizeTables.run()
+      case List("deterstress") => DeterStressBenchmark.run()
       case args => {
         sys.error(s"Invalid command-line arguments: $args")
       }
@@ -114,13 +117,6 @@ package object repl {
     val include = parse(s"include $likelyClassName")
     val pp = TopLevel(mod.items ++ include.items)
     toFileScriptGraph(pp.desugar.toGraph(puppet.Facter.emptyEnv).head._2)
-  }
-
-  def time[A](thunk: => A): (A, Long) = {
-    val start = System.currentTimeMillis
-    val r = thunk
-    val duration = System.currentTimeMillis - start
-    r -> duration
   }
 
   def isDeterministic(g: FileScriptGraph): (Boolean, Long) = {

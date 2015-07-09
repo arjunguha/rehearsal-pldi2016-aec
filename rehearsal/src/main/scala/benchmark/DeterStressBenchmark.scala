@@ -1,14 +1,14 @@
-import rehearsal._
+package rehearsal
+
 import FSSyntax._
 import scala.util.Random
 import java.nio.file.Paths
 import java.nio.file.Path
 import scalax.collection.Graph
 import scalax.collection.GraphEdge.DiEdge
-import SymbolicEvaluator.isDeterministic
 
+object DeterStressBenchmark {
 
-class DeterPerformance extends org.scalatest.FunSuite {
   val maxPathComponentLen = 3
   val maxFileLen = 10
   var paths: List[Path] = List()
@@ -73,31 +73,19 @@ class DeterPerformance extends org.scalatest.FunSuite {
     }
     g
   }
-  var m = 0
   val progLen = 5
   val pathLen = 3
-  var startTime = 0
-  var endTime = 0
 
-  println("n, m, time")
+  def run(): Unit = {
 
-  for(n <- 10 to 100 by 10){
-    val g = genRandomGraph(n, progLen, pathLen, m)
-    val startTime = java.lang.System.currentTimeMillis()
-    val res = isDeterministic(g)
-    val endTime = java.lang.System.currentTimeMillis()
-    println(n + ", " + m + ", " + (endTime - startTime))
+    println("Resources, Overlapping Paths, Time")
+
+    for (m <- 0 to 10) { // m overlapping paths
+      for(n <- 1 to 10) { // n resources
+        val g = genRandomGraph(n, progLen, pathLen, m)
+        val (res, t) = time(SymbolicEvaluator.isDeterministic(g))
+        println(s"$n, $m, $t")
+      }
+    }
   }
-
-  val n = 100
-  for(m <- 0 to n by 10){
-    val g = genRandomGraph(n, progLen, pathLen, m)
-    val startTime = java.lang.System.currentTimeMillis()
-    val res = isDeterministic(g)
-    val endTime = java.lang.System.currentTimeMillis()
-    println(n + ", " + m + ", " + (endTime - startTime)) 
-  }
-
-  genRandomGraph(10, 3, 3, 2)
-  println(paths)
 }

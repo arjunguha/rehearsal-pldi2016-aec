@@ -13,9 +13,12 @@ package object rehearsal {
   import scala.util.{Try, Success, Failure}
   import puppet.syntax.{TopLevel, parse}
 
-
   def toFileScriptGraph(resourceGraph: ResourceGraph): FileScriptGraph = {
     nodeMap((r: Resource) => ResourceToExpr(r), resourceGraph)
+  }
+
+  def fileScriptGraphSize(g: FileScriptGraph): Int = {
+    g.nodes.map(_.size).reduce(_ + _) + g.edges.size
   }
 
   def nodeMap[A,B](f: A => B, inG: Graph[A, DiEdge])(implicit tag: TypeTag[B]): Graph[B, DiEdge] = {
@@ -99,8 +102,11 @@ package object rehearsal {
     SymbolicEvaluator.isDeterministic(fsGraph)
   }
 
-
-
-
+  def time[A](thunk: => A): (A, Long) = {
+    val start = System.currentTimeMillis
+    val r = thunk
+    val duration = System.currentTimeMillis - start
+    r -> duration
+  }
 
 }
