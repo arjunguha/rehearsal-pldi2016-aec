@@ -5,6 +5,7 @@ import java.nio.file.Paths
 import java.nio.file.Path
 import scalax.collection.Graph
 import scalax.collection.GraphEdge.DiEdge
+import SymbolicEvaluator.isDeterministic
 
 
 class DeterPerformance extends org.scalatest.FunSuite {
@@ -35,15 +36,16 @@ class DeterPerformance extends org.scalatest.FunSuite {
 
   def getRandomPath() = {
     val rand = new Random()
-    val i = rand.nextInt(paths.length - 1)
-    if(i ==0){
-      paths = paths.drop(i)
-    }else if(i == paths.length-1){
-      paths = paths.dropRight(i)
+    if(paths.length == 1){
+      val path = paths(0)
+      paths = List()
+      path
     }else{
-      paths = paths.dropRight(i) ++ paths.drop(i)
-    }    
-    paths(i)
+      val i = rand.nextInt(paths.length - 1)
+      val path = paths(i)
+      paths = paths.patch(i, Nil, 1)
+      path
+    }
   }
 
   def genRandomProg(length: Int, pathLen: Int) = {
@@ -71,8 +73,31 @@ class DeterPerformance extends org.scalatest.FunSuite {
     }
     g
   }
+  var m = 0
+  val progLen = 5
+  val pathLen = 3
+  var startTime = 0
+  var endTime = 0
 
-  val rand = new Random()
+  println("n, m, time")
+
+  for(n <- 10 to 100 by 10){
+    val g = genRandomGraph(n, progLen, pathLen, m)
+    val startTime = java.lang.System.currentTimeMillis()
+    val res = isDeterministic(g)
+    val endTime = java.lang.System.currentTimeMillis()
+    println(n + ", " + m + ", " + (endTime - startTime))
+  }
+
+  val n = 100
+  for(m <- 0 to n by 10){
+    val g = genRandomGraph(n, progLen, pathLen, m)
+    val startTime = java.lang.System.currentTimeMillis()
+    val res = isDeterministic(g)
+    val endTime = java.lang.System.currentTimeMillis()
+    println(n + ", " + m + ", " + (endTime - startTime)) 
+  }
+
   genRandomGraph(10, 3, 3, 2)
   println(paths)
 }
