@@ -358,8 +358,15 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
               new String(Files.readAllBytes(manifest2)))
   }
 
-  def genRes(x: Int): Res = EnsureFile(Paths.get("/" + x.toString.hashCode.toString), x.toString.hashCode.toString)
+  val fileResources = Stream.from(0).map { n =>
+    EnsureFile(Paths.get(s"/$n"), "contents")
+  }
+
+  def genRes(x: Int): Res = EnsureFile(Paths.get("/" + x.toString.hashCode.toString), "contents")
   def genPrefix(size: Int): List[Res] = 0.to(size).map(genRes).toList
-  def gen(n: Int, m: Int): (List[Res], List[Res]) = (0.to(n).map(genRes).toList, n.to(m + n).map(genRes).toList)
+  def gen(n: Int, m: Int): (List[Res], List[Res]) = {
+
+    (0.to(n).map(genRes).toList, n.to(m + n).map(genRes).toList)
+  }
   def gen(n: Int): (List[Res], List[Res]) = gen(n, n)
 }

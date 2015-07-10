@@ -45,38 +45,37 @@ package repl {
       case List("benchmark", "second", n, trial) => { // approx. 10
         // Grow a manifest of size n and synthesize a delta from an empty manifest.
         println("count,time")
-        0.until(Integer.parseInt(trial)).map(_ => {
-          0.to(Integer.parseInt(n)).map(x => {
-            val start = java.lang.System.currentTimeMillis()
-            uncurry(execLists)(gen(0, x * 5))
-            val end = java.lang.System.currentTimeMillis()
-            println(s"${x*5},${end - start}")
-          })
-        })
+        0.until(trial.toInt) foreach { _ =>
+          0.to(n.toInt) foreach { n =>
+            val lst2 = fileResources.take(n).toList
+            val (_, t) = time(execLists(List(), lst2))
+            println(s"$n, $t")
+          }
+        }
       }
       case List("benchmark", "first", n, trial) => { // approx. 5
         // Grow a manifest of size n and synthesize a delta to an empty manifest.
         println("count,time")
-        0.until(Integer.parseInt(trial)).map(_ => {
-          0.to(Integer.parseInt(n)).map(x => {
-            val start = java.lang.System.currentTimeMillis()
-            uncurry(execLists)(gen(x, 0))
-            val end = java.lang.System.currentTimeMillis()
-            println(s"$x,${end - start}")
-          })
-        })
+        val x = 23
+        0.until(trial.toInt) foreach { _ =>
+          0.to(n.toInt) foreach { n =>
+            val lst1 = fileResources.take(n).toList
+            val (_, t) = time(execLists(lst1, List()))
+            println(s"$n,$t")
+          }
+        }
       }
       case List("benchmark", "both", n, trial) => { // approx. 5
         // Grow two distinct manifests of the same size and find a delta.
         println("count,time")
-        0.until(Integer.parseInt(trial)).map(_ => {
-          0.to(Integer.parseInt(n)).map(x => {
-            val start = java.lang.System.currentTimeMillis()
-            uncurry(execLists)(gen(x))
-            val end = java.lang.System.currentTimeMillis()
-            println(s"$x,${end - start}")
+        0.until(trial.toInt) foreach { _ =>
+          0.to(n.toInt) foreach { n =>
+            val lst1 = fileResources.take(n).toList
+            val lst2 = fileResources.drop(n).take(n).toList
+            val (_, t) = time(execLists(lst1, lst2))
+            println(s"$n,$t")
           })
-        })
+        }
       }
       case "is-module-deterministic" :: modules => {
         for (name <- modules) {
