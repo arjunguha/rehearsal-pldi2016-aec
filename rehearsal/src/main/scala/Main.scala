@@ -27,6 +27,22 @@ package repl {
       case List("update", manifest1, manifest2) => {
         UpdateSynth.calculate(Paths.get(manifest1), Paths.get(manifest2))
       }
+      case List("synthbench", n, trial) => {
+        println("Delta, Type, Time")
+        0.until(trial.toInt) foreach { _ =>
+          0.to(n.toInt) foreach { n =>
+            val lst = fileResources.take(n).toList
+
+            val (_, t1) = time(execLists(List(), lst))
+            println(s"$n, Add,$t1")
+            val (_, t2) = time(execLists(lst, List()))
+            println(s"$n, Remove, $t2")
+            val x = n / 2
+            val (_, t3) = time(execLists(lst.take(x), lst.drop(x)))
+            println(s"$n, Add/Remove, $t3")
+          }
+        }
+      }
       case List("benchmark", "prefix", n, trial) => { // approx. 50
         // Synthesize the delta between two distinct manifests of size 3 with a common prefix of size n.
         println("count,time")
@@ -49,7 +65,7 @@ package repl {
           0.to(n.toInt) foreach { n =>
             val lst2 = fileResources.take(n).toList
             val (_, t) = time(execLists(List(), lst2))
-            println(s"$n, $t")
+            println(s"$n, both,$t")
           }
         }
       }
@@ -61,7 +77,7 @@ package repl {
           0.to(n.toInt) foreach { n =>
             val lst1 = fileResources.take(n).toList
             val (_, t) = time(execLists(lst1, List()))
-            println(s"$n,$t")
+            println(s"$n,first,$t")
           }
         }
       }
@@ -73,8 +89,8 @@ package repl {
             val lst1 = fileResources.take(n).toList
             val lst2 = fileResources.drop(n).take(n).toList
             val (_, t) = time(execLists(lst1, lst2))
-            println(s"$n,$t")
-          })
+            println(s"$n,both,$t")
+          }
         }
       }
       case "is-module-deterministic" :: modules => {
