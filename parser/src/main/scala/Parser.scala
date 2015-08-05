@@ -17,7 +17,9 @@ private class Parser extends RegexParsers with PackratParsers {
 
   lazy val id: P[String] = "" ~> "[a-z_][a-zA-Z0-9_]*".r
 
-  lazy val vari: P[Atom] = "$" ~> id ^^ (AVar(_))
+  lazy val varName: P[String] =  "$" ~> id
+
+  lazy val vari: P[Atom] = varName ^^ (AVar(_))
 
   lazy val symbol: P[Atom] = "present" ^^ (ASymbol(_)) |
                              "absent"  ^^ (ASymbol(_))
@@ -30,7 +32,7 @@ private class Parser extends RegexParsers with PackratParsers {
   lazy val attribute: P[Attribute] =
     attributeName ~ ("=>" ~> atom) ^^  { case name ~ value => Attribute(name, value) }
 
-  lazy val attributes: P[Seq[Attribute]] = repsep(attribute, ",")
+  lazy val attributes: P[Seq[Attribute]] = repsep(attribute, ",") <~ opt(",")
 
   // Puppet doesn't tell us what a valid resource type is other than a "word."
   lazy val resourceType: P[String] = "" ~> "[a-zA-Z]+".r
@@ -49,7 +51,21 @@ private class Parser extends RegexParsers with PackratParsers {
 
   lazy val edge: P[Expr] = leftEdge | rightEdge
 
-  lazy val expr: P[Expr] = resource | edge
+  lazy val dataType: P[String] = "" ~> "[A-Z][a-zA-Z]+".r
+
+  lazy val argument: P[Argument] = opt(dataType) ~ varName ~ opt("=" ~> atom) ^^ {
+    case Some(typ) ~ id ~ default => Argument(id, typ, default)
+    case None ~ id ~ default => Argument(id, "Any", default)
+  }
+
+  lazy val arguments: P[Seq[Argument]] = "(" ~> repsep(argument, ",") <~ ")"
+
+  lazy val define = "define" ~> resourceType ~ opt(arguments) ~ ("{" ~> prog <~ "}") ^^ {
+    case name ~ Some(args) ~ body => Define(name, args, body)
+    case name ~ None ~ body => Define(name, Seq(), body)
+  }
+
+  lazy val expr: P[Expr] = define | resource | edge
 
   lazy val prog: P[Seq[Expr]] = rep(expr)
 

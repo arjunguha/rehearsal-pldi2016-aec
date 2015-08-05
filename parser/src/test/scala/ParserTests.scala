@@ -25,6 +25,14 @@ class ParserTestSuite extends org.scalatest.FunSuite {
     assert(parseExpr("Q <~ P") == RightEdge("P", "Q"))
   }
 
+  test("defines") {
+    assert(parseExpr("""define foo($bar = 'baz') {
+      file { 'foo':
+        ensure => present,
+      }
+    }""") == Define("foo", Seq(Argument("bar", "Any", Some(AString("baz")))), Seq(Resource("foo", "file", Seq(Attribute("ensure", ASymbol("present")))))))
+  }
+
   test("programs") {
     val prog =
       """
