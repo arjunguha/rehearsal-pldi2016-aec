@@ -2,6 +2,7 @@ package parser
 
 object Internal {
   case class Attribute(name: String, value: Atom)
+  case class Argument(id: String, typ: String, default: Option[Atom])
 
   sealed trait Atom
   case class ASymbol(name: String) extends Atom

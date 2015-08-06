@@ -21,8 +21,9 @@ class ParserTestSuite extends org.scalatest.FunSuite {
   }
 
   test("edges") {
-    assert(parseExpr("P ~> Q") == LeftEdge("P", "Q"))
-    assert(parseExpr("Q <~ P") == RightEdge("P", "Q"))
+    assert(parseExpr("File['P'] -> File['Q']") == LeftEdge(ARes("File", "P"), ARes("File", "Q")))
+    assert(parseExpr("Package['Q'] <- Package['P']") == 
+      RightEdge(ARes("Package", "P"), ARes("Package", "Q")))
   }
 
   test("defines") {
@@ -40,13 +41,13 @@ class ParserTestSuite extends org.scalatest.FunSuite {
           ensure => present,
           foo => 'bar'
         }
-        P ~> Q
-        Q <~ P
+        Package['P'] -> File['Q']
+        File['Q'] <- Package['P']
       """
     val res = Seq(
       Resource("awe", "user", Seq(Attribute("ensure", ASymbol("present")), Attribute("foo", AString("bar")))),
-      LeftEdge("P", "Q"),
-      RightEdge("P", "Q")
+      LeftEdge(ARes("Package", "P"), ARes("File", "Q")),
+      RightEdge(ARes("Package", "P"), ARes("File", "Q"))
     )
     assert(parse(prog) == res)
   }

@@ -24,13 +24,16 @@ private class Parser extends RegexParsers with PackratParsers {
   lazy val symbol: P[Atom] = "present" ^^ (ASymbol(_)) |
                              "absent"  ^^ (ASymbol(_))
 
-  lazy val atom: P[Atom] = bool | symbol | vari | string
+  lazy val resAtom: P[ARes] = 
+    resourceType ~ ("[" ~> stringVal <~ "]") ^^ { case typ ~ id => ARes(typ, id) }
+
+  lazy val atom: P[Atom] = bool | resAtom | symbol | vari | string
 
   // What is a "word," Puppet? Does it include numbers?
   lazy val attributeName: P[String] = "" ~> "[a-z]+".r
 
   lazy val attribute: P[Attribute] =
-    attributeName ~ ("=>" ~> atom) ^^  { case name ~ value => Attribute(name, value) }
+    attributeName ~ ("=>" ~> atom) ^^ { case name ~ value => Attribute(name, value) }
 
   lazy val attributes: P[Seq[Attribute]] = repsep(attribute, ",") <~ opt(",")
 
@@ -44,10 +47,10 @@ private class Parser extends RegexParsers with PackratParsers {
   lazy val resourceName: P[String] = "" ~> "[a-zA-Z]+".r
 
   lazy val leftEdge: P[Expr] =
-    resourceName ~ ("->" ~> resourceName) ^^ { case parent ~ child => LeftEdge(parent, child) }
+    resAtom ~ ("->" ~> resAtom) ^^ { case parent ~ child => LeftEdge(parent, child) }
 
   lazy val rightEdge: P[Expr] =
-    resourceName ~ ("<-" ~> resourceName) ^^ { case child ~ parent => RightEdge(parent, child) }
+    resAtom ~ ("<-" ~> resAtom) ^^ { case child ~ parent => RightEdge(parent, child) }
 
   lazy val edge: P[Expr] = leftEdge | rightEdge
 
