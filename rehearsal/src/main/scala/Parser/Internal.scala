@@ -12,4 +12,5 @@ object Internal {
   sealed trait Expr
   case class Resource(name: String, typ: String, attributes: Seq[Attribute]) extends Expr
   case class Edge(parent: String, child: String) extends Expr
+  case class Define(name: String, args: Seq[Argument], body: Seq[Expr]) extends Expr
 }
