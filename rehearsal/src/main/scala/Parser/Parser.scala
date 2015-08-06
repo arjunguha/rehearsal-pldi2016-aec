@@ -29,6 +29,21 @@ private class Parser extends RegexParsers with PackratParsers {
 
   lazy val atom: P[Atom] = bool | resAtom | symbol | vari | string
 
+  lazy val batom: P[BoolOps] = bnot | atom ^^ (BAtom(_))
+
+  lazy val band: P[BoolOps] = band ~ ("and" ~> batom) ^^ { case lhs ~ rhs => BAnd(lhs, rhs) } | batom
+
+  lazy val bor: P[BoolOps] = bor ~ ("or" ~> band) ^^ { case lhs ~ rhs => BOr(lhs, rhs) } | band
+
+  lazy val bnot: P[BoolOps] = ("!" ~> batom) ^^ { BNot(_) }
+
+  lazy val bop: P[BoolOps] = bop ~ ("==" ~> bor) ^^ { case lhs ~ rhs => BEq(lhs, rhs) } | 
+                             bop ~ ("!=" ~> bor) ^^ { case lhs ~ rhs => BNEq(lhs, rhs) } | 
+                             bop ~ ("=~" ~> bor) ^^ { case lhs ~ rhs => BMatch(lhs, rhs) } | 
+                             bop ~ ("!~" ~> bor) ^^ { case lhs ~ rhs => BNMatch(lhs, rhs) } | 
+                             bop ~ ("in" ~> bor) ^^ { case lhs ~ rhs => BIn(lhs, rhs) } | 
+                             bor 
+
   // What is a "word," Puppet? Does it include numbers?
   lazy val attributeName: P[String] = "" ~> "[a-z]+".r
 
@@ -63,14 +78,19 @@ private class Parser extends RegexParsers with PackratParsers {
 
   lazy val arguments: P[Seq[Argument]] = "(" ~> repsep(argument, ",") <~ ")"
 
-  lazy val define = "define" ~> resourceType ~ opt(arguments) ~ ("{" ~> prog <~ "}") ^^ {
+  lazy val define: P[Expr] = "define" ~> resourceType ~ opt(arguments) ~ body ^^ {
     case name ~ Some(args) ~ body => Define(name, args, body)
     case name ~ None ~ body => Define(name, Seq(), body)
   }
+//TODO: elsif
+  lazy val ite: P[Expr] = "if" ~> bop ~ body ~ /*opt("elsif" ~> bop ~ body) ~*/ opt("else" ~> body) ^^
+    { case pred ~ thn ~ els => ITE(pred, thn, els) }
 
-  lazy val expr: P[Expr] = define | resource | edge
+  lazy val expr: P[Expr] = define | resource | edge | ite
 
   lazy val prog: P[Seq[Expr]] = rep(expr)
+
+  lazy val body: P[Seq[Expr]] = "{" ~> prog <~ "}"
 
   def parseString[A](expr: String, parser: Parser[A]): A = {
     parseAll(parser, expr) match {

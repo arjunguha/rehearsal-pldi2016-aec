@@ -51,4 +51,26 @@ class ParserTestSuite extends org.scalatest.FunSuite {
     )
     assert(parse(prog) == res)
   }
+
+  test("if") {
+    val prog = 
+      """
+        if true {
+          user { 'awe':
+            ensure => present,
+            foo => 'bar'
+          }
+        } else {
+          user { 'awe':
+            ensure => present,
+            foo => 'bar'
+          }          
+        }
+      """
+    val res = Seq(ITE(BAtom(ABool(true)), 
+      Seq(Resource("awe", "user", Seq(Attribute("ensure", ASymbol("present")), Attribute("foo", AString("bar"))))),
+      Some(Seq(Resource("awe", "user", Seq(Attribute("ensure", ASymbol("present")), Attribute("foo", AString("bar"))))))
+    ))
+    assert(parse(prog) == res)
+  }
 }
