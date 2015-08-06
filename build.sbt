@@ -31,8 +31,6 @@ libraryDependencies in ThisBuild ++= {
 
 lazy val bdd = project
 
-lazy val parser = project
-
 lazy val rehearsal = project.dependsOn(bdd)
 
 lazy val  root = project.in(file("."))
