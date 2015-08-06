@@ -44,10 +44,10 @@ private class Parser extends RegexParsers with PackratParsers {
   lazy val resourceName: P[String] = "" ~> "[a-zA-Z]+".r
 
   lazy val leftEdge: P[Expr] =
-    resourceName ~ ("~>" ~> resourceName) ^^ { case parent ~ child => LeftEdge(parent, child) }
+    resourceName ~ ("->" ~> resourceName) ^^ { case parent ~ child => LeftEdge(parent, child) }
 
   lazy val rightEdge: P[Expr] =
-    resourceName ~ ("<~" ~> resourceName) ^^ { case child ~ parent => RightEdge(parent, child) }
+    resourceName ~ ("<-" ~> resourceName) ^^ { case child ~ parent => RightEdge(parent, child) }
 
   lazy val edge: P[Expr] = leftEdge | rightEdge
 
