@@ -73,4 +73,20 @@ class ParserTestSuite extends org.scalatest.FunSuite {
     ))
     assert(parse(prog) == res)
   }
+
+  test("class"){
+    val prog = 
+      """
+        class apache (String $version = 'latest'){
+            package {'httpd':
+              ensure => $version, 
+              before => File['/etc/httpd.conf'],
+            }
+        }
+      """
+    val res = Seq(Class("apache", Seq(Argument("version", "String", Some(AString("latest")))), 
+                        Seq(Resource("httpd", "package", Seq(Attribute("ensure", AVar("version")), 
+                                                             Attribute("before", ARes("File", "/etc/httpd.conf")))))))
+    assert(parse(prog) == res)
+  }
 }

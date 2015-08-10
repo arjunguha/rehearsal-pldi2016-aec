@@ -30,6 +30,7 @@ object Syntax {
   case class RightEdge(parent: ARes, child: ARes) extends Expr
   case class Define(name: String, args: Seq[Argument], body: Seq[Expr]) extends Expr
   case class ITE(pred: BoolOps, thn: Seq[Expr], els: Option[Seq[Expr]]) extends Expr
+  case class Class(name: String, parameters: Seq[Argument], body: Seq[Expr]) extends Expr
 
   def convertAtom(atom: Atom): I.Atom = atom match {
     case ASymbol(name) => I.ASymbol(name)
@@ -75,6 +76,7 @@ object Syntax {
     case RightEdge(ARes(ptyp, pid), ARes(ctyp, cid)) => I.Edge(I.ARes(ptyp, pid), I.ARes(ctyp, cid))
     case Define(name, args, body) => I.Define(name, convertArguments(args), convertAll(body))
     case ITE(pred, thn, els) => I.ITE(convertBoolOps(pred), convertAll(thn), els.map(convertAll))
+    case Class(name, args, body) => I.Class(name, convertArguments(args), convertAll(body))
   }
 
   def convertAll(exprs: Seq[Expr]): Seq[I.Expr] = exprs.map(convert)

@@ -86,7 +86,12 @@ private class Parser extends RegexParsers with PackratParsers {
   lazy val ite: P[Expr] = "if" ~> bop ~ body ~ /*opt("elsif" ~> bop ~ body) ~*/ opt("else" ~> body) ^^
     { case pred ~ thn ~ els => ITE(pred, thn, els) }
 
-  lazy val expr: P[Expr] = define | resource | edge | ite
+  lazy val classDef: P[Expr] = "class" ~> id ~ opt(arguments) ~ body ^^ {
+    case name ~ Some(args) ~ body => Class(name, args, body) 
+    case name ~ None ~ body => Class(name, Seq(), body) 
+  }
+
+  lazy val expr: P[Expr] = define | resource | edge | ite | classDef
 
   lazy val prog: P[Seq[Expr]] = rep(expr)
 

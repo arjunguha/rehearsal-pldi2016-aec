@@ -25,4 +25,5 @@ object Internal {
   case class Edge(parent: ARes, child: ARes) extends Expr
   case class Define(name: String, args: Seq[Argument], body: Seq[Expr]) extends Expr
   case class ITE(pred: BoolOps, thn: Seq[Expr], els: Option[Seq[Expr]]) extends Expr
+  case class Class(name: String, parameters: Seq[Argument], body: Seq[Expr]) extends Expr
 }
