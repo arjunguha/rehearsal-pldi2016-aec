@@ -22,7 +22,7 @@ class ParserTestSuite extends org.scalatest.FunSuite {
 
   test("edges") {
     assert(parseExpr("File['P'] -> File['Q']") == LeftEdge(ARes("File", "P"), ARes("File", "Q")))
-    assert(parseExpr("Package['Q'] <- Package['P']") == 
+    assert(parseExpr("Package['Q'] <- Package['P']") ==
       RightEdge(ARes("Package", "P"), ARes("Package", "Q")))
   }
 
@@ -53,7 +53,7 @@ class ParserTestSuite extends org.scalatest.FunSuite {
   }
 
   test("if") {
-    val prog = 
+    val prog =
       """
         if true {
           user { 'awe':
@@ -64,28 +64,53 @@ class ParserTestSuite extends org.scalatest.FunSuite {
           user { 'awe':
             ensure => present,
             foo => 'bar'
-          }          
+          }
         }
       """
-    val res = Seq(ITE(BAtom(ABool(true)), 
+    val res = Seq(ITE(BAtom(ABool(true)),
       Seq(Resource("awe", "user", Seq(Attribute("ensure", ASymbol("present")), Attribute("foo", AString("bar"))))),
       Some(Seq(Resource("awe", "user", Seq(Attribute("ensure", ASymbol("present")), Attribute("foo", AString("bar"))))))
     ))
     assert(parse(prog) == res)
   }
 
+  test("elsif") {
+    val prog =
+      """
+        if true {
+          File['P'] -> File['Q']
+        } elsif false {
+          File['Q'] <- File['P']
+        } else {
+          File['Q'] -> File['P']
+        }
+      """
+    val res = Seq(
+      ITE(BAtom(ABool(true)),
+          Seq(LeftEdge(ARes("File", "P"), ARes("File", "Q"))),
+          Some(Seq(
+            ITE(BAtom(ABool(false)),
+                Seq(RightEdge(ARes("File", "P"), ARes("File", "Q"))),
+                Some(Seq(LeftEdge(ARes("File", "Q"), ARes("File", "P"))))
+            )
+          ))
+      )
+    )
+    assert(parse(prog) == res)
+  }
+
   test("class"){
-    val prog = 
+    val prog =
       """
         class apache (String $version = 'latest'){
             package {'httpd':
-              ensure => $version, 
+              ensure => $version,
               before => File['/etc/httpd.conf'],
             }
         }
       """
-    val res = Seq(Class("apache", Seq(Argument("version", "String", Some(AString("latest")))), 
-                        Seq(Resource("httpd", "package", Seq(Attribute("ensure", AVar("version")), 
+    val res = Seq(Class("apache", Seq(Argument("version", "String", Some(AString("latest")))),
+                        Seq(Resource("httpd", "package", Seq(Attribute("ensure", AVar("version")),
                                                              Attribute("before", ARes("File", "/etc/httpd.conf")))))))
     assert(parse(prog) == res)
   }

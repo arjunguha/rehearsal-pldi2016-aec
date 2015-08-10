@@ -24,7 +24,7 @@ private class Parser extends RegexParsers with PackratParsers {
   lazy val symbol: P[Atom] = "present" ^^ (ASymbol(_)) |
                              "absent"  ^^ (ASymbol(_))
 
-  lazy val resAtom: P[ARes] = 
+  lazy val resAtom: P[ARes] =
     resourceType ~ ("[" ~> stringVal <~ "]") ^^ { case typ ~ id => ARes(typ, id) }
 
   lazy val atom: P[Atom] = bool | resAtom | symbol | vari | string
@@ -37,12 +37,12 @@ private class Parser extends RegexParsers with PackratParsers {
 
   lazy val bnot: P[BoolOps] = ("!" ~> batom) ^^ { BNot(_) }
 
-  lazy val bop: P[BoolOps] = bop ~ ("==" ~> bor) ^^ { case lhs ~ rhs => BEq(lhs, rhs) } | 
-                             bop ~ ("!=" ~> bor) ^^ { case lhs ~ rhs => BNEq(lhs, rhs) } | 
-                             bop ~ ("=~" ~> bor) ^^ { case lhs ~ rhs => BMatch(lhs, rhs) } | 
-                             bop ~ ("!~" ~> bor) ^^ { case lhs ~ rhs => BNMatch(lhs, rhs) } | 
-                             bop ~ ("in" ~> bor) ^^ { case lhs ~ rhs => BIn(lhs, rhs) } | 
-                             bor 
+  lazy val bop: P[BoolOps] = bop ~ ("==" ~> bor) ^^ { case lhs ~ rhs => BEq(lhs, rhs) } |
+                             bop ~ ("!=" ~> bor) ^^ { case lhs ~ rhs => BNEq(lhs, rhs) } |
+                             bop ~ ("=~" ~> bor) ^^ { case lhs ~ rhs => BMatch(lhs, rhs) } |
+                             bop ~ ("!~" ~> bor) ^^ { case lhs ~ rhs => BNMatch(lhs, rhs) } |
+                             bop ~ ("in" ~> bor) ^^ { case lhs ~ rhs => BIn(lhs, rhs) } |
+                             bor
 
   // What is a "word," Puppet? Does it include numbers?
   lazy val attributeName: P[String] = "" ~> "[a-z]+".r
@@ -82,13 +82,18 @@ private class Parser extends RegexParsers with PackratParsers {
     case name ~ Some(args) ~ body => Define(name, args, body)
     case name ~ None ~ body => Define(name, Seq(), body)
   }
-//TODO: elsif
-  lazy val ite: P[Expr] = "if" ~> bop ~ body ~ /*opt("elsif" ~> bop ~ body) ~*/ opt("else" ~> body) ^^
-    { case pred ~ thn ~ els => ITE(pred, thn, els) }
+
+  lazy val elsif: P[(BoolOps, Seq[Expr])] = "elsif" ~> bop ~ body ^^ { case pred ~ body => (pred, body) }
+
+  lazy val ite: P[Expr] = "if" ~> bop ~ body ~ rep(elsif) ~ opt("else" ~> body) ^^ {
+    case pred ~ thn ~ elsifs ~ els => ITE(pred, thn, elsifs.foldRight(els) {
+      case ((pred, body), acc) => Some(Seq(ITE(pred, body, acc)))
+    })
+  }
 
   lazy val classDef: P[Expr] = "class" ~> id ~ opt(arguments) ~ body ^^ {
-    case name ~ Some(args) ~ body => Class(name, args, body) 
-    case name ~ None ~ body => Class(name, Seq(), body) 
+    case name ~ Some(args) ~ body => Class(name, args, body)
+    case name ~ None ~ body => Class(name, Seq(), body)
   }
 
   lazy val expr: P[Expr] = define | resource | edge | ite | classDef
