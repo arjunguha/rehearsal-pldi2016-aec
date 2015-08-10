@@ -26,4 +26,23 @@ object Internal {
   case class Define(name: String, args: Seq[Argument], body: Seq[Expr]) extends Expr
   case class ITE(pred: BoolOps, thn: Seq[Expr], els: Option[Seq[Expr]]) extends Expr
   case class Class(name: String, parameters: Seq[Argument], body: Seq[Expr]) extends Expr
+
+  def simplifyAttributes(lst: Seq[Attribute], src: ARes): (Seq[Attribute], Seq[Expr]) = 
+  	lst.foldRight[(Seq[Attribute], Seq[Expr])]((Seq(), Seq())) {
+  		case (Attribute("before", res@ARes(_, _)), (attrs, exprs)) => (attrs, Edge(src, res) +: exprs)
+  		case (Attribute("require", res@ARes(_, _)), (attrs, exprs)) => (attrs, Edge(res, src) +: exprs)
+  		case (attr, (attrs, exprs)) => (attr +: attrs, exprs)
+  	}
+
+  def desugar(lst: Seq[Expr]): Seq[Expr] = 
+  	lst.foldRight[Seq[Expr]](Seq()) {
+  		case (Resource(name, typ, attrs), acc) => simplifyAttributes(attrs, ARes(typ.capitalize, name)) match {
+  			case (attrs, exprs) => Resource(name, typ, attrs) +: (exprs ++ acc)
+  		}
+  		case (Define(name, args, body), acc) => Define(name, args, desugar(body)) +: acc
+  		case (ITE(pred, thn, els), acc) => ITE(pred, desugar(thn), els.map(desugar)) +: acc
+  		case (Class(name, parameters, body), acc) => Class(name, parameters, desugar(body)) +: acc
+  		case (edge@Edge(_, _), acc) => edge +: acc 
+  	}
+
 }
