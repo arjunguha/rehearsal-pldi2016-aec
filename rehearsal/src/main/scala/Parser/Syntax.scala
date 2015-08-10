@@ -25,7 +25,7 @@ object Syntax {
   case class BIn(lhs: BoolOps, rhs: BoolOps) extends BoolOps
 
   sealed trait Expr
-  case class Resource(name: String, typ: String, attributes: Seq[Attribute]) extends Expr
+  case class Resource(id: Atom, typ: String, attributes: Seq[Attribute]) extends Expr
   case class LeftEdge(parent: ARes, child: ARes) extends Expr
   case class RightEdge(parent: ARes, child: ARes) extends Expr
   case class Define(name: String, args: Seq[Argument], body: Seq[Expr]) extends Expr
@@ -71,7 +71,7 @@ object Syntax {
   def convertArguments(args: Seq[Argument]): Seq[I.Argument] = args.map(convertArgument)
 
   def convert(expr: Expr): I.Expr = expr match {
-    case Resource(name, typ, attributes) => I.Resource(name, typ, convertAttributes(attributes))
+    case Resource(id, typ, attributes) => I.Resource(convertAtom(id), typ, convertAttributes(attributes))
     case LeftEdge(ARes(ptyp, pid), ARes(ctyp, cid)) => I.Edge(I.ARes(ptyp, pid), I.ARes(ctyp, cid))
     case RightEdge(ARes(ptyp, pid), ARes(ctyp, cid)) => I.Edge(I.ARes(ptyp, pid), I.ARes(ctyp, cid))
     case Define(name, args, body) => I.Define(name, convertArguments(args), convertAll(body))

@@ -16,13 +16,16 @@ private class Parser extends RegexParsers with PackratParsers {
   lazy val string: P[Atom] = stringVal ^^ (AString(_))
 
   lazy val id: P[String] = "" ~> "[a-z_][a-zA-Z0-9_]*".r
-
+ 
   lazy val varName: P[String] =  "$" ~> id
 
   lazy val vari: P[Atom] = varName ^^ (AVar(_))
 
-  lazy val symbol: P[Atom] = "present" ^^ (ASymbol(_)) |
-                             "absent"  ^^ (ASymbol(_))
+  lazy val symbol: P[Atom] = "present" ^^ (ASymbol(_))    |
+                             "absent"  ^^ (ASymbol(_))    |
+                             "file"  ^^ (ASymbol(_))      |
+                             "directory"  ^^ (ASymbol(_)) |
+                             "link"  ^^ (ASymbol(_))
 
   lazy val resAtom: P[ARes] =
     resourceType ~ ("[" ~> stringVal <~ "]") ^^ { case typ ~ id => ARes(typ, id) }
@@ -55,8 +58,8 @@ private class Parser extends RegexParsers with PackratParsers {
   // Puppet doesn't tell us what a valid resource type is other than a "word."
   lazy val resourceType: P[String] = "" ~> "[a-zA-Z]+".r
 
-  lazy val resource: P[Expr] = resourceType ~ ("{" ~> stringVal <~ ":") ~ (attributes <~ "}") ^^ {
-    case typ ~ name ~ attr => Resource(name, typ, attr)
+  lazy val resource: P[Expr] = resourceType ~ ("{" ~> atom <~ ":") ~ (attributes <~ "}") ^^ {
+    case typ ~ id ~ attr => Resource(id, typ, attr)
   }
 
   lazy val resourceName: P[String] = "" ~> "[a-zA-Z]+".r

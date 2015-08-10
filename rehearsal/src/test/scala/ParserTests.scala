@@ -16,8 +16,8 @@ class ParserTestSuite extends org.scalatest.FunSuite {
   }
 
   test("resources") {
-    assert(parseExpr("user { 'awe': ensure => present }") == Resource("awe", "user", Seq(Attribute("ensure", ASymbol("present")))))
-    assert(parseExpr("user { 'awe': ensure => present, foo => 'bar' }") == Resource("awe", "user", Seq(Attribute("ensure", ASymbol("present")), Attribute("foo", AString("bar")))))
+    assert(parseExpr("user { 'awe': ensure => present }") == Resource(AString("awe"), "user", Seq(Attribute("ensure", ASymbol("present")))))
+    assert(parseExpr("user { 'awe': ensure => present, foo => 'bar' }") == Resource(AString("awe"), "user", Seq(Attribute("ensure", ASymbol("present")), Attribute("foo", AString("bar")))))
   }
 
   test("edges") {
@@ -31,7 +31,9 @@ class ParserTestSuite extends org.scalatest.FunSuite {
       file { 'foo':
         ensure => present,
       }
-    }""") == Define("foo", Seq(Argument("bar", "Any", Some(AString("baz")))), Seq(Resource("foo", "file", Seq(Attribute("ensure", ASymbol("present")))))))
+    }""") == 
+    Define("foo", Seq(Argument("bar", "Any", Some(AString("baz")))), 
+            Seq(Resource(AString("foo"), "file", Seq(Attribute("ensure", ASymbol("present")))))))
   }
 
   test("programs") {
@@ -45,7 +47,8 @@ class ParserTestSuite extends org.scalatest.FunSuite {
         File['Q'] <- Package['P']
       """
     val res = Seq(
-      Resource("awe", "user", Seq(Attribute("ensure", ASymbol("present")), Attribute("foo", AString("bar")))),
+      Resource(AString("awe"), "user", Seq(Attribute("ensure", ASymbol("present")), 
+                                           Attribute("foo", AString("bar")))),
       LeftEdge(ARes("Package", "P"), ARes("File", "Q")),
       RightEdge(ARes("Package", "P"), ARes("File", "Q"))
     )
@@ -67,9 +70,10 @@ class ParserTestSuite extends org.scalatest.FunSuite {
           }
         }
       """
+
     val res = Seq(ITE(BAtom(ABool(true)),
-      Seq(Resource("awe", "user", Seq(Attribute("ensure", ASymbol("present")), Attribute("foo", AString("bar"))))),
-      Some(Seq(Resource("awe", "user", Seq(Attribute("ensure", ASymbol("present")), Attribute("foo", AString("bar"))))))
+      Seq(Resource(AString("awe"), "user", Seq(Attribute("ensure", ASymbol("present")), Attribute("foo", AString("bar"))))),
+      Some(Seq(Resource(AString("awe"), "user", Seq(Attribute("ensure", ASymbol("present")), Attribute("foo", AString("bar"))))))
     ))
     assert(parse(prog) == res)
   }
@@ -109,9 +113,11 @@ class ParserTestSuite extends org.scalatest.FunSuite {
             }
         }
       """
-    val res = Seq(Class("apache", Seq(Argument("version", "String", Some(AString("latest")))),
-                        Seq(Resource("httpd", "package", Seq(Attribute("ensure", AVar("version")),
-                                                             Attribute("before", ARes("File", "/etc/httpd.conf")))))))
+    val res = Seq(Class("apache", Seq(Argument("version", "String", Some(AString("latest")))), 
+                        Seq(Resource(AString("httpd"), "package", 
+                                     Seq(Attribute("ensure", AVar("version")), 
+                                         Attribute("before", ARes("File", "/etc/httpd.conf")))))))
     assert(parse(prog) == res)
   }
+
 }

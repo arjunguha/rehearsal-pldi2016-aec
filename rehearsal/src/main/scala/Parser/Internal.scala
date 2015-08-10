@@ -21,7 +21,7 @@ object Internal {
   case class BIn(lhs: BoolOps, rhs: BoolOps) extends BoolOps
 
   sealed trait Expr
-  case class Resource(name: String, typ: String, attributes: Seq[Attribute]) extends Expr
+  case class Resource(id: Atom, typ: String, attributes: Seq[Attribute]) extends Expr
   case class Edge(parent: ARes, child: ARes) extends Expr
   case class Define(name: String, args: Seq[Argument], body: Seq[Expr]) extends Expr
   case class ITE(pred: BoolOps, thn: Seq[Expr], els: Option[Seq[Expr]]) extends Expr
@@ -36,8 +36,11 @@ object Internal {
 
   def desugar(lst: Seq[Expr]): Seq[Expr] = 
   	lst.foldRight[Seq[Expr]](Seq()) {
-  		case (Resource(name, typ, attrs), acc) => simplifyAttributes(attrs, ARes(typ.capitalize, name)) match {
-  			case (attrs, exprs) => Resource(name, typ, attrs) +: (exprs ++ acc)
+  		case (Resource(AString(id), typ, attrs), acc) => simplifyAttributes(attrs, ARes(typ.capitalize, id)) match {
+  			case (attrs, exprs) => Resource(AString(id), typ, attrs) +: (exprs ++ acc)
+  		}
+  		case (Resource(id, typ, attrs), acc) => simplifyAttributes(attrs, ARes(typ.capitalize, "__" + id.toString + "__")) match {
+  			case (attrs, exprs) => Resource(id, typ, attrs) +: (exprs ++ acc)
   		}
   		case (Define(name, args, body), acc) => Define(name, args, desugar(body)) +: acc
   		case (ITE(pred, thn, els), acc) => ITE(pred, desugar(thn), els.map(desugar)) +: acc

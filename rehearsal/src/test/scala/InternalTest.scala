@@ -13,8 +13,8 @@ class InternalTestSuite extends org.scalatest.FunSuite {
   }
 
   test("desugar"){
-    assert(desugar(Seq(Resource("foo", "file", Seq(Attribute("require", ARes("File", "bar")))))) ==
-      Seq(Resource("foo", "file", Seq()), Edge(ARes("File", "bar"), ARes("File", "foo"))))
+    assert(desugar(Seq(Resource(AString("foo"), "file", Seq(Attribute("require", ARes("File", "bar")))))) ==
+      Seq(Resource(AString("foo"), "file", Seq()), Edge(ARes("File", "bar"), ARes("File", "foo"))))
   }
 
 }
