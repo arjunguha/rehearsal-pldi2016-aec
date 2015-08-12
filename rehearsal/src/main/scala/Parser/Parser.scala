@@ -86,11 +86,11 @@ private class Parser extends RegexParsers with PackratParsers {
     case name ~ None ~ body => Define(name, Seq(), body)
   }
 
-  lazy val elsif: P[(BoolOps, Seq[Expr])] = "elsif" ~> bop ~ body ^^ { case pred ~ body => (pred, body) }
+  lazy val elsif: P[(BoolOps, Expr)] = "elsif" ~> bop ~ body ^^ { case pred ~ body => (pred, body) }
 
   lazy val ite: P[Expr] = "if" ~> bop ~ body ~ rep(elsif) ~ opt("else" ~> body) ^^ {
-    case pred ~ thn ~ elsifs ~ els => ITE(pred, thn, elsifs.foldRight(els) {
-      case ((pred, body), acc) => Some(Seq(ITE(pred, body, acc)))
+    case pred ~ thn ~ elsifs ~ els => ITE(pred, thn, elsifs.foldRight(els.getOrElse(EmptyExpr)) {
+      case ((pred, body), acc) => ITE(pred, body, acc)
     })
   }
 
@@ -101,9 +101,13 @@ private class Parser extends RegexParsers with PackratParsers {
 
   lazy val expr: P[Expr] = define | resource | edge | ite | classDef
 
-  lazy val prog: P[Seq[Expr]] = rep(expr)
+  lazy val prog: P[Expr] = rep(expr) ^^ { case exprs => blockExprs(exprs) }
 
-  lazy val body: P[Seq[Expr]] = "{" ~> prog <~ "}"
+  lazy val body: P[Expr] = "{" ~> prog <~ "}"
+
+  def blockExprs(exprs: Seq[Expr]): Expr = exprs.init.foldRight[Expr](exprs.last) {
+    case (e1, e2) => Block(e1, e2)
+  }
 
   def parseString[A](expr: String, parser: Parser[A]): A = {
     parseAll(parser, expr) match {
@@ -119,5 +123,5 @@ object Parser {
   def parseAtom(str: String): Atom = parser.parseString(str, parser.atom)
   def parseAttribute(str: String): Attribute = parser.parseString(str, parser.attribute)
   def parseExpr(str: String): Expr = parser.parseString(str, parser.expr)
-  def parse(str: String): Seq[Expr] = parser.parseString(str, parser.prog)
+  def parse(str: String): Expr = parser.parseString(str, parser.prog)
 }
