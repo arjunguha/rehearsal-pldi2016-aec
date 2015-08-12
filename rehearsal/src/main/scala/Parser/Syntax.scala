@@ -24,15 +24,15 @@ object Syntax {
   case class BNMatch(lhs: BoolOps, rhs: BoolOps) extends BoolOps
   case class BIn(lhs: BoolOps, rhs: BoolOps) extends BoolOps
 
-  sealed trait Expr
-  case object EmptyExpr extends Expr
-  case class Block(e1: Expr, e2: Expr) extends Expr
-  case class Resource(id: Atom, typ: String, attributes: Seq[Attribute]) extends Expr
-  case class LeftEdge(parent: ARes, child: ARes) extends Expr
-  case class RightEdge(parent: ARes, child: ARes) extends Expr
-  case class Define(name: String, args: Seq[Argument], body: Expr) extends Expr
-  case class ITE(pred: BoolOps, thn: Expr, els: Expr) extends Expr
-  case class Class(name: String, parameters: Seq[Argument], body: Expr) extends Expr
+  sealed trait Manifest
+  case object EmptyExpr extends Manifest
+  case class Block(e1: Manifest, e2: Manifest) extends Manifest
+  case class Resource(id: Atom, typ: String, attributes: Seq[Attribute]) extends Manifest
+  case class LeftEdge(parent: ARes, child: ARes) extends Manifest
+  case class RightEdge(parent: ARes, child: ARes) extends Manifest
+  case class Define(name: String, args: Seq[Argument], body: Manifest) extends Manifest
+  case class ITE(pred: BoolOps, thn: Manifest, els: Manifest) extends Manifest
+  case class Class(name: String, parameters: Seq[Argument], body: Manifest) extends Manifest
 
   def convertAtom(atom: Atom): I.Atom = atom match {
     case ASymbol(name) => I.ASymbol(name)
@@ -45,13 +45,13 @@ object Syntax {
   def convertBoolOps(bop: BoolOps): I.BoolOps = bop match {
     case BAtom(atom) => I.BAtom(convertAtom(atom))
     case BAnd(lhs, rhs) => (convertBoolOps(lhs), convertBoolOps(rhs)) match {
-      case (ilhs, irhs) => I.BNAnd(I.BNAnd(ilhs, irhs), I.BNAnd(ilhs, irhs))
+      case (ilhs, irhs) => I.BAnd(ilhs, irhs)
     }
     case BOr(lhs, rhs) => (convertBoolOps(lhs), convertBoolOps(rhs)) match {
-      case (ilhs, irhs) => I.BNAnd(I.BNAnd(ilhs, ilhs), I.BNAnd(irhs, irhs))
+      case (ilhs, irhs) => I.BOr(ilhs, ilhs)
     }
     case BNot(arg) => convertBoolOps(arg) match {
-      case iarg => I.BNAnd(iarg, iarg)
+      case iarg => I.BNot(iarg)
     }
     case BEq(lhs, rhs) => I.BEq(convertBoolOps(lhs), convertBoolOps(rhs))
     case BNEq(lhs, rhs) => I.BNEq(convertBoolOps(lhs), convertBoolOps(rhs))
@@ -72,7 +72,7 @@ object Syntax {
 
   def convertArguments(args: Seq[Argument]): Seq[I.Argument] = args.map(convertArgument)
 
-  def convert(expr: Expr): I.Expr = expr match {
+  def convert(expr: Manifest): I.Manifest = expr match {
     case EmptyExpr => I.EmptyExpr
     case Block(e1, e2) => I.Block(convert(e1), convert(e2))
     case Resource(id, typ, attributes) => I.Resource(convertAtom(id), typ, convertAttributes(attributes))

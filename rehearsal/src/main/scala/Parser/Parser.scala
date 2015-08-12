@@ -58,19 +58,19 @@ private class Parser extends RegexParsers with PackratParsers {
   // Puppet doesn't tell us what a valid resource type is other than a "word."
   lazy val resourceType: P[String] = "" ~> "[a-zA-Z]+".r
 
-  lazy val resource: P[Expr] = resourceType ~ ("{" ~> atom <~ ":") ~ (attributes <~ "}") ^^ {
+  lazy val resource: P[Manifest] = resourceType ~ ("{" ~> atom <~ ":") ~ (attributes <~ "}") ^^ {
     case typ ~ id ~ attr => Resource(id, typ, attr)
   }
 
   lazy val resourceName: P[String] = "" ~> "[a-zA-Z]+".r
 
-  lazy val leftEdge: P[Expr] =
+  lazy val leftEdge: P[Manifest] =
     resAtom ~ ("->" ~> resAtom) ^^ { case parent ~ child => LeftEdge(parent, child) }
 
-  lazy val rightEdge: P[Expr] =
+  lazy val rightEdge: P[Manifest] =
     resAtom ~ ("<-" ~> resAtom) ^^ { case child ~ parent => RightEdge(parent, child) }
 
-  lazy val edge: P[Expr] = leftEdge | rightEdge
+  lazy val edge: P[Manifest] = leftEdge | rightEdge
 
   lazy val dataType: P[String] = "" ~> "[A-Z][a-zA-Z]+".r
 
@@ -81,31 +81,31 @@ private class Parser extends RegexParsers with PackratParsers {
 
   lazy val arguments: P[Seq[Argument]] = "(" ~> repsep(argument, ",") <~ ")"
 
-  lazy val define: P[Expr] = "define" ~> resourceType ~ opt(arguments) ~ body ^^ {
+  lazy val define: P[Manifest] = "define" ~> resourceType ~ opt(arguments) ~ body ^^ {
     case name ~ Some(args) ~ body => Define(name, args, body)
     case name ~ None ~ body => Define(name, Seq(), body)
   }
 
-  lazy val elsif: P[(BoolOps, Expr)] = "elsif" ~> bop ~ body ^^ { case pred ~ body => (pred, body) }
+  lazy val elsif: P[(BoolOps, Manifest)] = "elsif" ~> bop ~ body ^^ { case pred ~ body => (pred, body) }
 
-  lazy val ite: P[Expr] = "if" ~> bop ~ body ~ rep(elsif) ~ opt("else" ~> body) ^^ {
+  lazy val ite: P[Manifest] = "if" ~> bop ~ body ~ rep(elsif) ~ opt("else" ~> body) ^^ {
     case pred ~ thn ~ elsifs ~ els => ITE(pred, thn, elsifs.foldRight(els.getOrElse(EmptyExpr)) {
       case ((pred, body), acc) => ITE(pred, body, acc)
     })
   }
 
-  lazy val classDef: P[Expr] = "class" ~> id ~ opt(arguments) ~ body ^^ {
+  lazy val classDef: P[Manifest] = "class" ~> id ~ opt(arguments) ~ body ^^ {
     case name ~ Some(args) ~ body => Class(name, args, body)
     case name ~ None ~ body => Class(name, Seq(), body)
   }
 
-  lazy val expr: P[Expr] = define | resource | edge | ite | classDef
+  lazy val expr: P[Manifest] = define | resource | edge | ite | classDef
 
-  lazy val prog: P[Expr] = rep(expr) ^^ { case exprs => blockExprs(exprs) }
+  lazy val prog: P[Manifest] = rep(expr) ^^ { case exprs => blockExprs(exprs) }
 
-  lazy val body: P[Expr] = "{" ~> prog <~ "}"
+  lazy val body: P[Manifest] = "{" ~> prog <~ "}"
 
-  def blockExprs(exprs: Seq[Expr]): Expr = exprs.init.foldRight[Expr](exprs.last) {
+  def blockExprs(exprs: Seq[Manifest]): Manifest = exprs.init.foldRight[Manifest](exprs.last) {
     case (e1, e2) => Block(e1, e2)
   }
 
@@ -122,6 +122,6 @@ object Parser {
 
   def parseAtom(str: String): Atom = parser.parseString(str, parser.atom)
   def parseAttribute(str: String): Attribute = parser.parseString(str, parser.attribute)
-  def parseExpr(str: String): Expr = parser.parseString(str, parser.expr)
-  def parse(str: String): Expr = parser.parseString(str, parser.prog)
+  def parseExpr(str: String): Manifest = parser.parseString(str, parser.expr)
+  def parse(str: String): Manifest = parser.parseString(str, parser.prog)
 }
