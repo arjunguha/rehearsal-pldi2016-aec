@@ -25,12 +25,14 @@ object Syntax {
   case class BIn(lhs: BoolOps, rhs: BoolOps) extends BoolOps
 
   sealed trait Expr
+  case object EmptyExpr extends Expr
+  case class Block(e1: Expr, e2: Expr) extends Expr
   case class Resource(id: Atom, typ: String, attributes: Seq[Attribute]) extends Expr
   case class LeftEdge(parent: ARes, child: ARes) extends Expr
   case class RightEdge(parent: ARes, child: ARes) extends Expr
-  case class Define(name: String, args: Seq[Argument], body: Seq[Expr]) extends Expr
-  case class ITE(pred: BoolOps, thn: Seq[Expr], els: Option[Seq[Expr]]) extends Expr
-  case class Class(name: String, parameters: Seq[Argument], body: Seq[Expr]) extends Expr
+  case class Define(name: String, args: Seq[Argument], body: Expr) extends Expr
+  case class ITE(pred: BoolOps, thn: Expr, els: Expr) extends Expr
+  case class Class(name: String, parameters: Seq[Argument], body: Expr) extends Expr
 
   def convertAtom(atom: Atom): I.Atom = atom match {
     case ASymbol(name) => I.ASymbol(name)
@@ -71,13 +73,13 @@ object Syntax {
   def convertArguments(args: Seq[Argument]): Seq[I.Argument] = args.map(convertArgument)
 
   def convert(expr: Expr): I.Expr = expr match {
+    case EmptyExpr => I.EmptyExpr
+    case Block(e1, e2) => I.Block(convert(e1), convert(e2))
     case Resource(id, typ, attributes) => I.Resource(convertAtom(id), typ, convertAttributes(attributes))
     case LeftEdge(ARes(ptyp, pid), ARes(ctyp, cid)) => I.Edge(I.ARes(ptyp, pid), I.ARes(ctyp, cid))
     case RightEdge(ARes(ptyp, pid), ARes(ctyp, cid)) => I.Edge(I.ARes(ptyp, pid), I.ARes(ctyp, cid))
-    case Define(name, args, body) => I.Define(name, convertArguments(args), convertAll(body))
-    case ITE(pred, thn, els) => I.ITE(convertBoolOps(pred), convertAll(thn), els.map(convertAll))
-    case Class(name, args, body) => I.Class(name, convertArguments(args), convertAll(body))
+    case Define(name, args, body) => I.Define(name, convertArguments(args), convert(body))
+    case ITE(pred, thn, els) => I.ITE(convertBoolOps(pred), convert(thn), convert(els))
+    case Class(name, args, body) => I.Class(name, convertArguments(args), convert(body))
   }
-
-  def convertAll(exprs: Seq[Expr]): Seq[I.Expr] = exprs.map(convert)
 }
