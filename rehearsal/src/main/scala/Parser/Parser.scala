@@ -72,6 +72,8 @@ private class Parser extends RegexParsers with PackratParsers {
 
   lazy val edge: P[Manifest] = leftEdge | rightEdge
 
+  lazy val let: P[Manifest] = varName ~ ("=" ~> atom) ~ opt(prog) ^^ { case id ~ value ~ body => Let(id, value, body.getOrElse(EmptyExpr)) }
+
   lazy val dataType: P[String] = "" ~> "[A-Z][a-zA-Z]+".r
 
   lazy val argument: P[Argument] = opt(dataType) ~ varName ~ opt("=" ~> atom) ^^ {
@@ -99,7 +101,7 @@ private class Parser extends RegexParsers with PackratParsers {
     case name ~ None ~ body => Class(name, Seq(), body)
   }
 
-  lazy val expr: P[Manifest] = define | resource | edge | ite | classDef
+  lazy val expr: P[Manifest] = let | define | resource | edge | ite | classDef
 
   lazy val prog: P[Manifest] = rep(expr) ^^ { case exprs => blockExprs(exprs) }
 

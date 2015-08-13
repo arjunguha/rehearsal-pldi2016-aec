@@ -26,6 +26,15 @@ class ParserTestSuite extends org.scalatest.FunSuite {
       RightEdge(ARes("Package", "P"), ARes("Package", "Q")))
   }
 
+  test("let"){
+    val prog = """
+      $x = 'hi!'
+      file { $x: ensure => present }
+    """ 
+    val res = Let("x", AString("hi!"), Resource(AVar("x"), "file", Seq(Attribute("ensure", ASymbol("present")))))
+    assert(parse(prog) == res)
+  }
+
   test("defines") {
     val expr = """
       define foo($bar = 'baz') {

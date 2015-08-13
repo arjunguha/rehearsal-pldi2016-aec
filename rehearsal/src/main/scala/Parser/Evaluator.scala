@@ -34,6 +34,8 @@ object Eval {
 		case Resource(AVar(x), typ, attrs) if x == id => Resource(value, typ, subAttrs(id, value, attrs))
 		case Resource(name, typ, attrs) => Resource(name, typ, subAttrs(id, value, attrs))
 		case Block(e1, e2) => Block(sub(id, value, e1), sub(id, value, e2))
+		case Let(i, AVar(x), body) if x == id => Let(i, value, sub(id, value, body))
+		case Let(i, v, body) => Let(i, v, sub(id, value, body))
 		case Define(name, args, body) => Define(name, subArgs(id, value, args), sub(id, value, body))
 		case ITE(pred, e1, e2) => ITE(subPred(id, value, pred), sub(id, value, e1), sub(id, value, e2))
 		case Class(name, params, body) => Class(name, subArgs(id, value, params), sub(id, value, body))
@@ -72,6 +74,7 @@ object Eval {
 		case Block(e1, e2) => Block(eval(e1), eval(e2))
 		case Resource(_, _, _) => mani
 		case Edge(_, _) => mani
+		case Let(id, value, body) => sub(id, value, body)
 		case Define(name, args, body) => Define(name, args, eval(body))
 		case ITE(pred, thn, els) => if(evalPred(pred)) eval(thn) else eval(els)
 		case Class(name, args, body) => Class(name, args, eval(body))

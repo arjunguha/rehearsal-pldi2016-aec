@@ -27,6 +27,7 @@ object Internal {
   case class Block(e1: Manifest, e2: Manifest) extends Manifest
   case class Resource(id: Atom, typ: String, attributes: Seq[Attribute]) extends Manifest
   case class Edge(parent: ARes, child: ARes) extends Manifest
+  case class Let(id: String, value: Atom, body: Manifest) extends Manifest
   case class Define(name: String, args: Seq[Argument], body: Manifest) extends Manifest
   case class ITE(pred: BoolOps, thn: Manifest, els: Manifest) extends Manifest
   case class Class(name: String, parameters: Seq[Argument], body: Manifest) extends Manifest
@@ -50,9 +51,10 @@ object Internal {
       case (attrs, EmptyExpr) => Resource(id, typ, attrs)
       case (attrs, expr) => Block(Resource(id, typ, attrs), expr)
     }
+    case Let(id, value, body) => Let(id, value, desugar(body))
     case Define(name, args, body) => Define(name, args, desugar(body))
     case ITE(pred, thn, els) => ITE(pred, desugar(thn), desugar(els))
     case Class(name, parameters, body) => Class(name, parameters, desugar(body))
-    case edge@Edge(_, _) => edge
+    case Edge(_, _) => expr
   }
 }

@@ -58,5 +58,12 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 		"""
 		assert(eval(desugar(convert(parse(prog)))) == 
 			Resource(AString("foo"), "file", Seq(Attribute("ensure", ASymbol("present")))))
+		val prog2 = """
+			$x = 'hi!'
+      		file { $x: ensure => present }
+		"""
+
+		assert(eval(desugar(convert(parse(prog)))) == 
+			Resource(AString("hi!"), "file", Seq(Attribute("ensure", ASymbol("present")))))
 	}
 }
