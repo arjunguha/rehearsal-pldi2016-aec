@@ -43,9 +43,11 @@ object Internal {
     case EmptyExpr => EmptyExpr
     case Block(e1, e2) => Block(desugar(e1), desugar(e2))
     case Resource(AString(id), typ, attrs) => simplifyAttributes(attrs, ARes(typ.capitalize, id)) match {
+      case (attrs, EmptyExpr) => Resource(AString(id), typ, attrs)
       case (attrs, expr) => Block(Resource(AString(id), typ, attrs), expr)
     }
     case Resource(id, typ, attrs) => simplifyAttributes(attrs, ARes(typ.capitalize, "__" + id.toString + "__")) match {
+      case (attrs, EmptyExpr) => Resource(id, typ, attrs)
       case (attrs, expr) => Block(Resource(id, typ, attrs), expr)
     }
     case Define(name, args, body) => Define(name, args, desugar(body))

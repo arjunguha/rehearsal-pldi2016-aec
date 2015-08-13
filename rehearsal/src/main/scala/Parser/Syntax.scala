@@ -74,6 +74,8 @@ object Syntax {
 
   def convert(expr: Manifest): I.Manifest = expr match {
     case EmptyExpr => I.EmptyExpr
+    case Block(e1, EmptyExpr) => convert(e1)
+    case Block(EmptyExpr, e2) => convert(e2)
     case Block(e1, e2) => I.Block(convert(e1), convert(e2))
     case Resource(id, typ, attributes) => I.Resource(convertAtom(id), typ, convertAttributes(attributes))
     case LeftEdge(ARes(ptyp, pid), ARes(ctyp, cid)) => I.Edge(I.ARes(ptyp, pid), I.ARes(ctyp, cid))

@@ -105,8 +105,11 @@ private class Parser extends RegexParsers with PackratParsers {
 
   lazy val body: P[Manifest] = "{" ~> prog <~ "}"
 
-  def blockExprs(exprs: Seq[Manifest]): Manifest = exprs.init.foldRight[Manifest](exprs.last) {
-    case (e1, e2) => Block(e1, e2)
+  def blockExprs(exprs: Seq[Manifest]): Manifest = exprs.init match {
+    case Seq() => exprs.last
+    case init => init.foldRight[Manifest](exprs.last) {
+      case (e1, e2) => Block(e1, e2)
+    }
   }
 
   def parseString[A](expr: String, parser: Parser[A]): A = {
@@ -122,6 +125,7 @@ object Parser {
 
   def parseAtom(str: String): Atom = parser.parseString(str, parser.atom)
   def parseAttribute(str: String): Attribute = parser.parseString(str, parser.attribute)
+  def parseBoolOps(str: String): BoolOps = parser.parseString(str, parser.bop)
   def parseExpr(str: String): Manifest = parser.parseString(str, parser.expr)
   def parse(str: String): Manifest = parser.parseString(str, parser.prog)
 }

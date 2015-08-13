@@ -1,3 +1,5 @@
+package eval
+
 import parser.Internal._
 
 object Eval {
@@ -6,14 +8,14 @@ object Eval {
 
 	def subPred(id: String, value: Atom, pred: BoolOps): BoolOps = pred match {
 		case BAtom(AVar(i)) if i == id => BAtom(value)
-		case BAnd(lhs, rhs) => BAnd(subPred(id, value, pred), subPred(id, value, pred))
-		case BOr(lhs, rhs) => BOr(subPred(id, value, pred), subPred(id, value, pred))
+		case BAnd(lhs, rhs) => BAnd(subPred(id, value, lhs), subPred(id, value, rhs))
+		case BOr(lhs, rhs) => BOr(subPred(id, value, lhs), subPred(id, value, rhs))
 		case BNot(arg) => BNot(subPred(id, value, arg))
-		case BEq(lhs, rhs) => BEq(subPred(id, value, pred), subPred(id, value, pred))
-		case BNEq(lhs, rhs) => BNEq(subPred(id, value, pred), subPred(id, value, pred))
-		case BMatch(lhs, rhs) => BMatch(subPred(id, value, pred), subPred(id, value, pred))
-		case BNMatch(lhs, rhs) => BNMatch(subPred(id, value, pred), subPred(id, value, pred))
-		case BIn(lhs, rhs) => BIn(subPred(id, value, pred), subPred(id, value, pred))
+		case BEq(lhs, rhs) => BEq(subPred(id, value, lhs), subPred(id, value, rhs))
+		case BNEq(lhs, rhs) => BNEq(subPred(id, value, lhs), subPred(id, value, rhs))
+		case BMatch(lhs, rhs) => BMatch(subPred(id, value, lhs), subPred(id, value, rhs))
+		case BNMatch(lhs, rhs) => BNMatch(subPred(id, value, lhs), subPred(id, value, rhs))
+		case BIn(lhs, rhs) => BIn(subPred(id, value, lhs), subPred(id, value, rhs))
 	}	
 
 	def subArgs(id: String, value: Atom, args: Seq[Argument]): Seq[Argument] = 
@@ -21,13 +23,16 @@ object Eval {
 			case (Argument(n, t, Some(AVar(v))), acc) if v == id => Argument(n, t, Some(value)) +: acc
 			case (arg, acc) => arg +: acc
 		}
+
+	def subAttrs(id: String, value: Atom, attrs: Seq[Attribute]) = 
+		attrs.foldRight[Seq[Attribute]](Seq()){
+			case (Attribute(n, AVar(v)), acc) if v == id => Attribute(n, value) +: acc
+			case (attr, acc) => attr +: acc
+		}
 	
 	def sub(id: String, value: Atom, mani: Manifest): Manifest = mani match {
-		case Resource(name, typ, attrs) => 
-			Resource(name, typ, attrs.foldRight[Seq[Attribute]](Seq()){
-					case (Attribute(n, AVar(v)), acc) if v == id => Attribute(n, value) +: acc
-					case (attr, acc) => attr +: acc
-				})
+		case Resource(AVar(x), typ, attrs) if x == id => Resource(value, typ, subAttrs(id, value, attrs))
+		case Resource(name, typ, attrs) => Resource(name, typ, subAttrs(id, value, attrs))
 		case Block(e1, e2) => Block(sub(id, value, e1), sub(id, value, e2))
 		case Define(name, args, body) => Define(name, subArgs(id, value, args), sub(id, value, body))
 		case ITE(pred, e1, e2) => ITE(subPred(id, value, pred), sub(id, value, e1), sub(id, value, e2))
