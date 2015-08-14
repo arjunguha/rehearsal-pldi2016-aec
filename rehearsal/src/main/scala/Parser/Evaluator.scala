@@ -16,20 +16,20 @@ object Eval {
 		case BMatch(lhs, rhs) => BMatch(subPred(id, value, lhs), subPred(id, value, rhs))
 		case BNMatch(lhs, rhs) => BNMatch(subPred(id, value, lhs), subPred(id, value, rhs))
 		case BIn(lhs, rhs) => BIn(subPred(id, value, lhs), subPred(id, value, rhs))
-	}	
+	}
 
-	def subArgs(id: String, value: Atom, args: Seq[Argument]): Seq[Argument] = 
+	def subArgs(id: String, value: Atom, args: Seq[Argument]): Seq[Argument] =
 		args.foldRight[Seq[Argument]](Seq()){
 			case (Argument(n, t, Some(AVar(v))), acc) if v == id => Argument(n, t, Some(value)) +: acc
 			case (arg, acc) => arg +: acc
 		}
 
-	def subAttrs(id: String, value: Atom, attrs: Seq[Attribute]) = 
+	def subAttrs(id: String, value: Atom, attrs: Seq[Attribute]) =
 		attrs.foldRight[Seq[Attribute]](Seq()){
 			case (Attribute(n, AVar(v)), acc) if v == id => Attribute(n, value) +: acc
 			case (attr, acc) => attr +: acc
 		}
-	
+
 	def sub(id: String, value: Atom, mani: Manifest): Manifest = mani match {
 		case Resource(AVar(x), typ, attrs) if x == id => Resource(value, typ, subAttrs(id, value, attrs))
 		case Resource(name, typ, attrs) => Resource(name, typ, subAttrs(id, value, attrs))
@@ -39,8 +39,11 @@ object Eval {
 		case Define(name, args, body) => Define(name, subArgs(id, value, args), sub(id, value, body))
 		case ITE(pred, e1, e2) => ITE(subPred(id, value, pred), sub(id, value, e1), sub(id, value, e2))
 		case Class(name, params, body) => Class(name, subArgs(id, value, params), sub(id, value, body))
+                case Edge(AVar(x), AVar(y)) if x == id && y == id => Edge(value, value)
+                case Edge(AVar(x), child) if x == id => Edge(value, child)
+                case Edge(parent, AVar(x)) if x == id => Edge(parent, value)
 		case _ => mani
-	}	
+	}
 
 	def evalPred(pred: BoolOps): Boolean = pred match {
 		case BAtom(ABool(b)) => b
@@ -79,6 +82,6 @@ object Eval {
 		case ITE(pred, thn, els) => if(evalPred(pred)) eval(thn) else eval(els)
 		case Class(name, args, body) => Class(name, args, eval(body))
 	}
-	
-	
+
+
 }
