@@ -16,7 +16,7 @@ private class Parser extends RegexParsers with PackratParsers {
   lazy val string: P[Atom] = stringVal ^^ (AString(_))
 
   lazy val id: P[String] = "" ~> "[a-z_][a-zA-Z0-9_]*".r
- 
+
   lazy val varName: P[String] =  "$" ~> id
 
   lazy val vari: P[Atom] = varName ^^ (AVar(_))
@@ -65,10 +65,10 @@ private class Parser extends RegexParsers with PackratParsers {
   lazy val resourceName: P[String] = "" ~> "[a-zA-Z]+".r
 
   lazy val leftEdge: P[Manifest] =
-    resAtom ~ ("->" ~> resAtom) ^^ { case parent ~ child => LeftEdge(parent, child) }
+    atom ~ ("->" ~> atom) ^^ { case parent ~ child => LeftEdge(parent, child) }
 
   lazy val rightEdge: P[Manifest] =
-    resAtom ~ ("<-" ~> resAtom) ^^ { case child ~ parent => RightEdge(parent, child) }
+    atom ~ ("<-" ~> atom) ^^ { case child ~ parent => RightEdge(parent, child) }
 
   lazy val edge: P[Manifest] = leftEdge | rightEdge
 
