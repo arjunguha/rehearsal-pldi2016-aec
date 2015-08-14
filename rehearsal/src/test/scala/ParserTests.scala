@@ -24,13 +24,14 @@ class ParserTestSuite extends org.scalatest.FunSuite {
     assert(parseExpr("File['P'] -> File['Q']") == LeftEdge(ARes("File", "P"), ARes("File", "Q")))
     assert(parseExpr("Package['Q'] <- Package['P']") ==
       RightEdge(ARes("Package", "P"), ARes("Package", "Q")))
+    assert(parseExpr("$foo -> $bar") == LeftEdge(AVar("foo"), AVar("bar")))
   }
 
   test("let"){
     val prog = """
       $x = 'hi!'
       file { $x: ensure => present }
-    """ 
+    """
     val res = Let("x", AString("hi!"), Resource(AVar("x"), "file", Seq(Attribute("ensure", ASymbol("present")))))
     assert(parse(prog) == res)
   }
@@ -43,13 +44,13 @@ class ParserTestSuite extends org.scalatest.FunSuite {
         }
       }
     """
-    val res = Define("foo", 
-                      Seq(Argument("bar", "Any", Some(AString("baz")))), 
+    val res = Define("foo",
+                      Seq(Argument("bar", "Any", Some(AString("baz")))),
                       Resource(AString("foo"), "file", Seq(Attribute("ensure", ASymbol("present"))))
                       )
 
     assert(parseExpr(expr) == res)
-    
+
   }
 
   test("programs") {
@@ -63,7 +64,7 @@ class ParserTestSuite extends org.scalatest.FunSuite {
         File['Q'] <- Package['P']
       """
     val res = Block(
-      Resource(AString("awe"), "user", Seq(Attribute("ensure", ASymbol("present")), 
+      Resource(AString("awe"), "user", Seq(Attribute("ensure", ASymbol("present")),
                                            Attribute("foo", AString("bar")))),
       Block(LeftEdge(ARes("Package", "P"), ARes("File", "Q")),
       RightEdge(ARes("Package", "P"), ARes("File", "Q")))
@@ -105,7 +106,7 @@ class ParserTestSuite extends org.scalatest.FunSuite {
           File['Q'] -> File['P']
         }
       """
-    val res = 
+    val res =
       ITE(BAtom(ABool(true)),
           LeftEdge(ARes("File", "P"), ARes("File", "Q")),
             ITE(BAtom(ABool(false)),
@@ -126,9 +127,9 @@ class ParserTestSuite extends org.scalatest.FunSuite {
             }
         }
       """
-    val res = Class("apache", Seq(Argument("version", "String", Some(AString("latest")))), 
-                        Resource(AString("httpd"), "package", 
-                                     Seq(Attribute("ensure", AVar("version")), 
+    val res = Class("apache", Seq(Argument("version", "String", Some(AString("latest")))),
+                        Resource(AString("httpd"), "package",
+                                     Seq(Attribute("ensure", AVar("version")),
                                          Attribute("before", ARes("File", "/etc/httpd.conf")))))
     assert(parse(prog) == res)
   }
