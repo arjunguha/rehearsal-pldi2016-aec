@@ -35,6 +35,8 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 			== Resource(AString("foo"), "file", Seq(Attribute("ensure", ABool(true)))))
 		assert(sub("x", AString("foo"), Resource(AVar("x"), "file", Seq(Attribute("ensure", ABool(true)))))
 			== Resource(AString("foo"), "file", Seq(Attribute("ensure", ABool(true)))))
+                assert(sub("x", AString("foo"), Edge(AVar("x"), AVar("y")))
+                        == Edge(AString("foo"), AVar("y")))
 	}
 
 	test("evalPred"){
