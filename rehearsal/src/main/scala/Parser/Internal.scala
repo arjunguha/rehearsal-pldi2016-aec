@@ -10,6 +10,7 @@ object Internal {
   case class AString(value: String) extends Atom
   case class AVar(id: String) extends Atom
   case class ARes(typ: String, id: String) extends Atom
+  case class ALambda(args: Seq[Argument], body: Manifest) extends Atom
 
   sealed trait BoolOps
   case class BAtom(atom: Atom) extends BoolOps
@@ -28,6 +29,7 @@ object Internal {
   case class Resource(id: Atom, typ: String, attributes: Seq[Attribute]) extends Manifest
   case class Edge(parent: Atom, child: Atom) extends Manifest
   case class Let(id: String, value: Atom, body: Manifest) extends Manifest
+  case class App(id: Atom, args: Seq[Atom]) extends Manifest
   case class Define(name: String, args: Seq[Argument], body: Manifest) extends Manifest
   case class ITE(pred: BoolOps, thn: Manifest, els: Manifest) extends Manifest
   case class Class(name: String, parameters: Seq[Argument], body: Manifest) extends Manifest
@@ -52,6 +54,7 @@ object Internal {
       case (attrs, expr) => Block(Resource(id, typ, attrs), expr)
     }
     case Let(id, value, body) => Let(id, value, desugar(body))
+    case App(_, _) => expr
     case Define(name, args, body) => Define(name, args, desugar(body))
     case ITE(pred, thn, els) => ITE(pred, desugar(thn), desugar(els))
     case Class(name, parameters, body) => Class(name, parameters, desugar(body))

@@ -31,6 +31,7 @@ object Syntax {
   case class LeftEdge(parent: Atom, child: Atom) extends Manifest
   case class RightEdge(parent: Atom, child: Atom) extends Manifest
   case class Let(id: String, value: Atom, body: Manifest) extends Manifest
+  case class App(name: String, args: Seq[Atom]) extends Manifest
   case class Define(name: String, args: Seq[Argument], body: Manifest) extends Manifest
   case class ITE(pred: BoolOps, thn: Manifest, els: Manifest) extends Manifest
   case class Class(name: String, parameters: Seq[Argument], body: Manifest) extends Manifest
@@ -82,6 +83,7 @@ object Syntax {
     case LeftEdge(parent, child) => I.Edge(convertAtom(parent), convertAtom(child))
     case RightEdge(parent, child) => I.Edge(convertAtom(parent), convertAtom(child))
     case Let(id, value, body) => I.Let(id, convertAtom(value), convert(body))
+    case App(name, args) => I.App(I.AString(name), args.map(convertAtom))
     case Define(name, args, body) => I.Define(name, convertArguments(args), convert(body))
     case ITE(pred, thn, els) => I.ITE(convertBoolOps(pred), convert(thn), convert(els))
     case Class(name, args, body) => I.Class(name, convertArguments(args), convert(body))
