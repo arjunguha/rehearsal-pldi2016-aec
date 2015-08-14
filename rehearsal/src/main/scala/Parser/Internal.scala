@@ -26,7 +26,7 @@ object Internal {
   case object EmptyExpr extends Manifest
   case class Block(e1: Manifest, e2: Manifest) extends Manifest
   case class Resource(id: Atom, typ: String, attributes: Seq[Attribute]) extends Manifest
-  case class Edge(parent: ARes, child: ARes) extends Manifest
+  case class Edge(parent: Atom, child: Atom) extends Manifest
   case class Let(id: String, value: Atom, body: Manifest) extends Manifest
   case class Define(name: String, args: Seq[Argument], body: Manifest) extends Manifest
   case class ITE(pred: BoolOps, thn: Manifest, els: Manifest) extends Manifest

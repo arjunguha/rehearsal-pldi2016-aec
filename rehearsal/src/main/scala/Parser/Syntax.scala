@@ -28,8 +28,8 @@ object Syntax {
   case object EmptyExpr extends Manifest
   case class Block(e1: Manifest, e2: Manifest) extends Manifest
   case class Resource(id: Atom, typ: String, attributes: Seq[Attribute]) extends Manifest
-  case class LeftEdge(parent: ARes, child: ARes) extends Manifest
-  case class RightEdge(parent: ARes, child: ARes) extends Manifest
+  case class LeftEdge(parent: Atom, child: Atom) extends Manifest
+  case class RightEdge(parent: Atom, child: Atom) extends Manifest
   case class Let(id: String, value: Atom, body: Manifest) extends Manifest
   case class Define(name: String, args: Seq[Argument], body: Manifest) extends Manifest
   case class ITE(pred: BoolOps, thn: Manifest, els: Manifest) extends Manifest
@@ -79,8 +79,8 @@ object Syntax {
     case Block(EmptyExpr, e2) => convert(e2)
     case Block(e1, e2) => I.Block(convert(e1), convert(e2))
     case Resource(id, typ, attributes) => I.Resource(convertAtom(id), typ, convertAttributes(attributes))
-    case LeftEdge(ARes(ptyp, pid), ARes(ctyp, cid)) => I.Edge(I.ARes(ptyp, pid), I.ARes(ctyp, cid))
-    case RightEdge(ARes(ptyp, pid), ARes(ctyp, cid)) => I.Edge(I.ARes(ptyp, pid), I.ARes(ctyp, cid))
+    case LeftEdge(parent, child) => I.Edge(convertAtom(parent), convertAtom(child))
+    case RightEdge(parent, child) => I.Edge(convertAtom(parent), convertAtom(child))
     case Let(id, value, body) => I.Let(id, convertAtom(value), convert(body))
     case Define(name, args, body) => I.Define(name, convertArguments(args), convert(body))
     case ITE(pred, thn, els) => I.ITE(convertBoolOps(pred), convert(thn), convert(els))
