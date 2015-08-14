@@ -1,10 +1,88 @@
 package eval
 
 import parser.Internal._
+import scalax.collection.Graph
+import scalax.collection.Graph._
+import scalax.collection.GraphEdge._
 
 object Eval {
 
 	case class EvalError(msg: String) extends RuntimeException(msg)
+
+	type ManifestGraph = Graph[Manifest, DiEdge]
+	sealed trait Direction
+	case object Left extends Direction
+	case object Right extends Direction
+	case object NoDep extends Direction
+
+	//ToDo: INCOMPLETE: must look at args, attrs, & pred
+	def isIn(name: String, e: Manifest): Boolean = e match {
+		case EmptyExpr => false
+		case Block(e1, e2) => isIn(name, e1) || isIn(name, e2)
+		case Resource(id, _, _) if id == name => true
+		case Resource(_, _, _) => false
+		case Edge(e1, e2) if e1 == name || e2 == name => true
+		case Edge(_, _) => false
+		case Let(_, _, body) => isIn(name, body)
+		case App(id, _) if id == name => true
+		case Define(n, _, _) if n == name => true
+		case Define(_, _, body) => isIn(name, body)
+		case ITE(_, thn, els) => isIn(name, thn) || isIn(name, els)
+		case Class(n, _, _) if n == name => true
+		case Class(_, _, body) => isIn(name, body)
+	}
+
+	/* if e2 depends on e1: return true
+	 * o.w. false
+	 */
+	def depends(e1: Manifest, e2: Manifest): Boolean = e1 match {
+		case EmptyExpr => false
+		case Resource(_, _, _) => false
+		case Edge(_, _) => false
+		case Let(_, _, _) => false
+		case App(_, _) => false
+		case Define(name, args, body) if isIn(name, e2) => true
+		case Define(_, _, _) => false
+		case ITE(_, _, _) => false
+		case Class(name, args, body) if isIn(name, e2) => true
+		case Block(e11, e12) => depends(e11, e2) || depends(e12, e2)
+	}
+	
+	/* Sketch
+
+	e1 match {
+		case EmptyExpr => NoDep
+		case Resource => NoDep
+		case Edge => NoDep
+		case Let => NoDep
+		case App => NoDep
+		case Define(n, a, b) if n IN e2 => Left
+		case Define => NoDep
+		case ITE => NoDep
+		case Class(n, a, b) if n IN e2 => Left
+		case Class => NoDep
+		case Block(e11, e12) => depends(e11, e2) == Left || depends(e12, e2) == Left => Left
+	}
+
+	 */
+
+	def manifestToGraph(m: Manifest): ManifestGraph = m match {
+		case EmptyExpr => Graph()
+		case Resource(_, _, _) => Graph(m)
+		case Edge(_, _) => Graph(m)
+		case App(_, _) => Graph(m)
+		case Let(_, _, _) => Graph(m)
+		case Define(_, _, _) => Graph(m)
+		case ITE(_, _, _) => Graph(m)
+		case Class(_, _, _) => Graph(m)
+		case Block(e1, e2) => {
+			val (g1, g2) = (manifestToGraph(e1), manifestToGraph(e2))
+			val nodes =  g1.nodes ++ g2.nodes
+			val edges = g1.edges ++ g2.edges
+			if(depends(e1, e2)) e1~>e2 + edges else if(depends(e2, e1)) e2~>e1 + edges
+			Graph.from(nodes, edges)
+		}
+	}
 
 	def subPred(id: String, value: Atom, pred: BoolOps): BoolOps = pred match {
 		case BAtom(AVar(i)) if i == id => BAtom(value)
@@ -78,6 +156,7 @@ object Eval {
 		case Resource(_, _, _) => mani
 		case Edge(_, _) => mani
 		case Let(id, value, body) => sub(id, value, body)
+		case App(_, _) => mani
 		case Define(name, args, body) => Define(name, args, eval(body))
 		case ITE(pred, thn, els) => if(evalPred(pred)) eval(thn) else eval(els)
 		case Class(name, args, body) => Class(name, args, eval(body))

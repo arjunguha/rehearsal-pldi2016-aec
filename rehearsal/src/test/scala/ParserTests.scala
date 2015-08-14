@@ -36,6 +36,14 @@ class ParserTestSuite extends org.scalatest.FunSuite {
     assert(parse(prog) == res)
   }
 
+  test("app"){
+    val prog = """
+      hello($x, $y)
+    """
+    val res = App("hello", Seq(AVar("x"), AVar("y")))
+    assert(parse(prog) == res)
+  }
+
   test("defines") {
     val expr = """
       define foo($bar = 'baz') {
