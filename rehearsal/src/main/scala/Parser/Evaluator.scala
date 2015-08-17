@@ -1,8 +1,8 @@
 package eval
 
 import parser.Internal._
-import scalax.collection.Graph
-import scalax.collection.Graph._
+import scalax.collection.mutable.Graph
+import scalax.collection.mutable.Graph._
 import scalax.collection.GraphEdge._
 
 object Eval {
@@ -65,7 +65,7 @@ object Eval {
 	}
 
 	 */
-
+	 //TODO: fix and uncomment if statement
 	def manifestToGraph(m: Manifest): ManifestGraph = m match {
 		case EmptyExpr => Graph()
 		case Resource(_, _, _) => Graph(m)
@@ -77,10 +77,9 @@ object Eval {
 		case Class(_, _, _) => Graph(m)
 		case Block(e1, e2) => {
 			val (g1, g2) = (manifestToGraph(e1), manifestToGraph(e2))
-			val nodes =  g1.nodes ++ g2.nodes
-			val edges = g1.edges ++ g2.edges
-			if(depends(e1, e2)) e1~>e2 + edges else if(depends(e2, e1)) e2~>e1 + edges
-			Graph.from(nodes, edges)
+			val g3: ManifestGraph = g1 ++ g2
+			//if(depends(e1, e2)) g3 += e1 ~> e2 else if(depends(e2, e1)) g3 += e2 ~> e1
+			g3
 		}
 	}
 
