@@ -32,5 +32,5 @@ object Syntax2 {
 	case class Or(e1: Expr, e2: Expr) extends Op2
 	case class Eq(e1: Expr, e2: Expr) extends Op2
 	case class Match(e1: Expr, e2: Expr) extends Op2
-	case class BIn(e1: Expr, e2: Expr) extends Op2
+	case class In(e1: Expr, e2: Expr) extends Op2
 }
