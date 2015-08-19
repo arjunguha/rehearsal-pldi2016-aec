@@ -15,9 +15,9 @@ private class Parser2 extends RegexParsers with PackratParsers{
 	lazy val varName: P[String] =  "$" ~> id
 
 	//Manifest
-	lazy val manifest: P[Manifest] = block |/* let | define | */resource | /*edge |*/ ite 
+	lazy val manifest: P[Manifest] = edge | let | define | resource | ite 
 
-	lazy val body: P[Manifest] = "{" ~> expr <~ "}"
+	lazy val body: P[Manifest] = "{" ~> prog <~ "}"
 
 	lazy val argument: P[Argument] = opt(dataType) ~ varName ~ opt("=" ~> expr) ^^ {
 		case Some(typ) ~ id ~ default => Argument(id)
@@ -25,14 +25,6 @@ private class Parser2 extends RegexParsers with PackratParsers{
 	}
 
 	lazy val arguments: P[Seq[Argument]] = "(" ~> repsep(argument, ",") <~ ")"
-
-	lazy val block: P[Manifest] = rep(expr) ^^ { case exprs => exprs.init match {
-			case Seq() => exprs.last
-			case init => init.foldRight[Manifest](exprs.last) {
-				case(e1, e2) => Block(e1, e2)
-			}
-		} 
-	}
 
 	lazy val resource: P[Manifest] = word ~ ("{" ~> expr <~ ":") ~ (attributes <~ "}") ^^ {
 		case typ ~ id ~ attr => Resource(typ, attr)
@@ -65,29 +57,30 @@ private class Parser2 extends RegexParsers with PackratParsers{
 	lazy val attributes: P[Seq[Attribute]] = repsep(attribute, ",") <~ opt(",")
 
 	//Expr
-	lazy val expr: P[Expr] = res | vari | constant | op1 | op2 | nbop
+	lazy val expr: P[Expr] = res | vari | constant | bop
 
 	lazy val res: P[Expr] = word ~ ("[" ~> expr <~ "]") ^^ { case typ ~ e => Res(typ, e) }
 
 	lazy val vari: P[Expr] = varName ^^ (Var(_))
 
 	//Operators
-	lazy val op1: P[Op1] = not
-	lazy val op2: P[Op2] = and | or | bop
+	// lazy val ops: P[Expr] = not | bop
 
-	lazy val not: P[Op1] = ("!" ~> expr) ^^ { Not(_) }
+	lazy val atom = bool | res | vari | string
+	lazy val batom = not | atom
 
-	lazy val and: P[Op2] = and ~ ("and" ~> expr) ^^ { case lhs ~ rhs => And(lhs, rhs) } 
+	lazy val not: P[Expr] = ("!" ~> expr) ^^ { Not(_) }
 
-	lazy val or: P[Op2] = or ~ ("or" ~> and) ^^ { case lhs ~ rhs => Or(lhs, rhs) } | and
+	lazy val and: P[Expr] = and ~ ("and" ~> batom) ^^ { case lhs ~ rhs => And(lhs, rhs) } | batom
 
-	lazy val bop: P[Op2] = 	bop ~ ("==" ~> or) ^^ { case lhs ~ rhs => Eq(lhs, rhs) } |
-                           	bop ~ ("=~" ~> or) ^^ { case lhs ~ rhs => Match(lhs, rhs) } |
-                           	bop ~ ("in" ~> or) ^^ { case lhs ~ rhs => In(lhs, rhs) } |
-                           	or
+	lazy val or: P[Expr] = or ~ ("or" ~> and) ^^ { case lhs ~ rhs => Or(lhs, rhs) } | and
 
-    lazy val nbop: P[Expr] = bop ~ ("!=" ~> or) ^^ { case lhs ~ rhs => Not(Eq(lhs, rhs)) } |
-    						bop ~ ("!~" ~> or) ^^ { case lhs ~ rhs => Not(Match(lhs, rhs)) }
+	lazy val bop: P[Expr] = 	bop ~ ("==" ~> or) ^^ { case lhs ~ rhs => Eq(lhs, rhs) } |
+							bop ~ ("!=" ~> or) ^^ { case lhs ~ rhs => Not(Eq(lhs, rhs)) } |
+							bop ~ ("=~" ~> or) ^^ { case lhs ~ rhs => Match(lhs, rhs) } |
+							bop ~ ("!~" ~> or) ^^ { case lhs ~ rhs => Not(Match(lhs, rhs)) } |
+							bop ~ ("in" ~> or) ^^ { case lhs ~ rhs => In(lhs, rhs) } |
+							or
 
 	//Constants
 	lazy val constant: P[Constant] = bool | string
@@ -97,4 +90,32 @@ private class Parser2 extends RegexParsers with PackratParsers{
 
 	lazy val string: P[Constant] = stringVal ^^ (Str(_))
 
+	//Program
+	lazy val prog: P[Manifest] = rep(manifest) ^^ { case exprs => blockExprs(exprs) }
+
+	def blockExprs(exprs: Seq[Manifest]): Manifest = exprs.init match {
+		case Seq() => exprs.last
+		case init => init.foldRight[Manifest](exprs.last) {
+			case (e1, e2) => Block(e1, e2)
+		}
+	}
+
+	def parseString[A](expr: String, parser: Parser[A]): A = {
+		parseAll(parser, expr) match{
+			case Success(r, _) => r
+			case m => throw new RuntimeException(s"$m")
+		}
+	}
+}
+
+object Parser2 {
+	private val parser = new Parser2()
+
+	def parseConst(str: String): Constant = parser.parseString(str, parser.constant)
+	def parseOps(str: String): Expr = parser.parseString(str, parser.bop)
+	def parseExpr(str: String): Expr = parser.parseString(str, parser.expr)
+	def parseAttribute(str: String): Attribute = parser.parseString(str, parser.attribute)
+	def parseArgument(str: String): Argument = parser.parseString(str, parser.argument)
+	def parseManifest(str: String): Manifest = parser.parseString(str, parser.manifest)
+	def parse(str: String): Manifest = parser.parseString(str, parser.prog)
 }
