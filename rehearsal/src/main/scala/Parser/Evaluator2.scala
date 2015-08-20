@@ -8,7 +8,7 @@ import scalax.collection.GraphEdge._
 object Evaluator2 {
 
 	case class EvalError(msg: String) extends RuntimeException(msg)
-	type ManifestGraph = Graph[Manifest, DiEdge]
+		type ManifestGraph = Graph[Manifest, DiEdge]
 
 	def subExpr(varName: String, e: Expr, body: Expr): Expr = body match {
 		case Str(_) => body
@@ -93,5 +93,25 @@ object Evaluator2 {
 		case Define(_, _, _) => m
 		case Let(varName, e, body) => eval(sub(varName, e, body))
 		case E(e) => E(evalExpr(e))
+	}\
+
+	def addEdges(g: ManifestGraph, e: Edge): ManifestGraph = e match {
+		case Edge(Block(m11, m12), m2) => addEdges(g, Edge(m11, m2)) + addEdges(g, Edge(m12, m2))
+		case Edge(m1, Block(m21, m22)) => addEdges(g, Edge(m1, m21)) + addEdges(g, Edge(m1, m22))
+		case Edge(m1, m2) => g += DiEdge(m1, m2)
 	}
+	
+
+	def toGraph(g: ManifestGraph, m: Manifest): ManifestGraph = m match {
+		case Empty => g
+		//******TODO: Write Block case
+		case Block(m1, m2) => g
+		// *****
+		case Resource(_, _) => g + m
+		case Edge(_, _) => addEdges(g, m)
+		//******TODO: what if there are edges in the body?
+		case Define(n, p, b) => g + m
+		// *****
+		case _ => g + m
+	}	
 }
