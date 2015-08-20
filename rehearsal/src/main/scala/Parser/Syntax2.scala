@@ -13,21 +13,22 @@ object Syntax2 {
 	case class Edge(m1: Manifest, m2: Manifest) extends Manifest
 	case class Define(name: String, params: Seq[Argument], body: Manifest) extends Manifest
 	case class Let(varName: String, e: Expr, body: Manifest) extends Manifest
+	case class E(e: Expr) extends Manifest
 
-	sealed trait Expr extends Manifest
+	sealed trait Expr
+	case class Str(s: String) extends Expr
 	case class Res(typ: String, e: Expr) extends Expr
 	case class Var(name: String) extends Expr
 
-	sealed trait Constant extends Expr
-	case class Str(s: String) extends Constant
-	case class Bool(b: Boolean) extends Constant
+	sealed trait Pred extends Expr
+	case class Bool(b: Boolean) extends Pred	
 
 	//Unary operators
-	sealed trait Op1 extends Expr
+	sealed trait Op1 extends Pred
 	case class Not(e: Expr) extends Op1
 
 	//binary operators
-	sealed trait Op2 extends Expr
+	sealed trait Op2 extends Pred
 	case class And(e1: Expr, e2: Expr) extends Op2
 	case class Or(e1: Expr, e2: Expr) extends Op2
 	case class Eq(e1: Expr, e2: Expr) extends Op2

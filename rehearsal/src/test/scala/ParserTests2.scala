@@ -8,10 +8,10 @@ class ParserTestSuite2 extends org.scalatest.FunSuite {
 		val bool2 = "false"
 		val str1 = "\"hello\""
 		val str2 = "'hello'"
-		assert(parseConst(bool1) == Bool(true))
-		assert(parseConst(bool2) == Bool(false))
-		assert(parseConst(str1) == Str("hello"))
-		assert(parseConst(str2) == Str("hello"))
+		assert(parseBool(bool1) == Bool(true))
+		assert(parseBool(bool2) == Bool(false))
+		assert(parseStr(str1) == Str("hello"))
+		assert(parseStr(str2) == Str("hello"))
 	}
 
 	test("op1"){
@@ -124,5 +124,12 @@ class ParserTestSuite2 extends org.scalatest.FunSuite {
 																					 Attribute(Str("foo"), Str("bar"))))
 		)
 		assert(parse(prog) == res)
+	}
+
+	test("E"){
+		val resourceRef = "file['/bin']"
+		val vari = "$x"
+		assert(parse(resourceRef) == E(Res("file", Str("/bin"))))
+		assert(parse(vari) == E(Var("x")))
 	}
 }

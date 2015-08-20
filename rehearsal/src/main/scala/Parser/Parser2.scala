@@ -15,7 +15,7 @@ private class Parser2 extends RegexParsers with PackratParsers{
 	lazy val varName: P[String] =  "$" ~> id
 
 	//Manifest
-	lazy val manifest: P[Manifest] = edge | let | define | resource | ite 
+	lazy val manifest: P[Manifest] = edge | let | define | resource | ite | exprMan
 
 	lazy val body: P[Manifest] = "{" ~> prog <~ "}"
 
@@ -57,7 +57,9 @@ private class Parser2 extends RegexParsers with PackratParsers{
 	lazy val attributes: P[Seq[Attribute]] = repsep(attribute, ",") <~ opt(",")
 
 	//Expr
-	lazy val expr: P[Expr] = res | vari | constant | bop
+	lazy val exprMan: P[Manifest] = expr ^^ (E(_))
+
+	lazy val expr: P[Expr] = res | vari | bool | string | bop
 
 	lazy val res: P[Expr] = word ~ ("[" ~> expr <~ "]") ^^ { case typ ~ e => Res(typ, e) }
 
@@ -67,28 +69,28 @@ private class Parser2 extends RegexParsers with PackratParsers{
 	// lazy val ops: P[Expr] = not | bop
 
 	lazy val atom = bool | res | vari | string
-	lazy val batom = not | atom
+	lazy val batom = not | bool
 
-	lazy val not: P[Expr] = ("!" ~> expr) ^^ { Not(_) }
+	lazy val not: P[Pred] = ("!" ~> expr) ^^ { Not(_) }
 
-	lazy val and: P[Expr] = and ~ ("and" ~> batom) ^^ { case lhs ~ rhs => And(lhs, rhs) } | batom
+	lazy val and: P[Pred] = and ~ ("and" ~> batom) ^^ { case lhs ~ rhs => And(lhs, rhs) } | batom
 
-	lazy val or: P[Expr] = or ~ ("or" ~> and) ^^ { case lhs ~ rhs => Or(lhs, rhs) } | and
+	lazy val or: P[Pred] = or ~ ("or" ~> and) ^^ { case lhs ~ rhs => Or(lhs, rhs) } | and
 
-	lazy val bop: P[Expr] = 	bop ~ ("==" ~> or) ^^ { case lhs ~ rhs => Eq(lhs, rhs) } |
-							bop ~ ("!=" ~> or) ^^ { case lhs ~ rhs => Not(Eq(lhs, rhs)) } |
-							bop ~ ("=~" ~> or) ^^ { case lhs ~ rhs => Match(lhs, rhs) } |
-							bop ~ ("!~" ~> or) ^^ { case lhs ~ rhs => Not(Match(lhs, rhs)) } |
-							bop ~ ("in" ~> or) ^^ { case lhs ~ rhs => In(lhs, rhs) } |
+	lazy val bop: P[Pred] = 	(bop | atom) ~ ("==" ~> (or | atom)) ^^ { case lhs ~ rhs => Eq(lhs, rhs) } |
+							(bop | atom) ~ ("!=" ~> (or | atom)) ^^ { case lhs ~ rhs => Not(Eq(lhs, rhs)) } |
+							(bop | atom) ~ ("=~" ~> (or | atom)) ^^ { case lhs ~ rhs => Match(lhs, rhs) } |
+							(bop | atom) ~ ("!~" ~> (or | atom)) ^^ { case lhs ~ rhs => Not(Match(lhs, rhs)) } |
+							(bop | atom) ~ ("in" ~> (or | atom)) ^^ { case lhs ~ rhs => In(lhs, rhs) } |
 							or
 
 	//Constants
-	lazy val constant: P[Constant] = bool | string
+	// lazy val constant: P[Constant] = bool | string
 
-	lazy val bool: P[Constant] = "true" ^^ { _ => Bool(true) } |
+	lazy val bool: P[Pred] = "true" ^^ { _ => Bool(true) } |
 								"false" ^^ { _ => Bool(false) }
 
-	lazy val string: P[Constant] = stringVal ^^ (Str(_))
+	lazy val string: P[Str] = stringVal ^^ (Str(_))
 
 	//Program
 	lazy val prog: P[Manifest] = rep(manifest) ^^ { case exprs => blockExprs(exprs) }
@@ -111,8 +113,10 @@ private class Parser2 extends RegexParsers with PackratParsers{
 object Parser2 {
 	private val parser = new Parser2()
 
-	def parseConst(str: String): Constant = parser.parseString(str, parser.constant)
-	def parseOps(str: String): Expr = parser.parseString(str, parser.bop)
+	// def parseConst(str: String): Constant = parser.parseString(str, parser.constant)
+	def parseBool(str: String): Pred = parser.parseString(str, parser.bool)
+	def parseStr(str: String): Str = parser.parseString(str, parser.string)
+	def parseOps(str: String): Pred = parser.parseString(str, parser.bop)
 	def parseExpr(str: String): Expr = parser.parseString(str, parser.expr)
 	def parseAttribute(str: String): Attribute = parser.parseString(str, parser.attribute)
 	def parseArgument(str: String): Argument = parser.parseString(str, parser.argument)
