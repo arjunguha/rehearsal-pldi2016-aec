@@ -93,25 +93,38 @@ object Evaluator2 {
 		case Define(_, _, _) => m
 		case Let(varName, e, body) => eval(sub(varName, e, body))
 		case E(e) => E(evalExpr(e))
-	}\
+	}
 
 	def addEdges(g: ManifestGraph, e: Edge): ManifestGraph = e match {
-		case Edge(Block(m11, m12), m2) => addEdges(g, Edge(m11, m2)) + addEdges(g, Edge(m12, m2))
-		case Edge(m1, Block(m21, m22)) => addEdges(g, Edge(m1, m21)) + addEdges(g, Edge(m1, m22))
+		case Edge(Block(m11, m12), m2) => addEdges(g, Edge(m11, m2)) ++ addEdges(g, Edge(m12, m2))
+		case Edge(m1, Block(m21, m22)) => addEdges(g, Edge(m1, m21)) ++ addEdges(g, Edge(m1, m22))
 		case Edge(m1, m2) => g += DiEdge(m1, m2)
-	}
-	
+	}	
 
 	def toGraph(g: ManifestGraph, m: Manifest): ManifestGraph = m match {
 		case Empty => g
-		//******TODO: Write Block case
-		case Block(m1, m2) => g
-		// *****
+		case Block(m1, m2) => toGraph(g, m1) ++ toGraph(g, m2)
 		case Resource(_, _) => g + m
-		case Edge(_, _) => addEdges(g, m)
-		//******TODO: what if there are edges in the body?
-		case Define(n, p, b) => g + m
-		// *****
+		case e@Edge(_, _) => addEdges(g, e)
+		case Define(n, p, b) => g
 		case _ => g + m
 	}	
+
+	def expand(m: Manifest, d: Define): Manifest = m match {
+		case Empty => Empty
+		case Block(m1, m2) => Block(expand(m1, d), expand(m2, d))
+		case Resource(typ, attrs) => d match {
+			//*****************TODO: deal with arguments/attrs/params
+			case Define(name, params, body) if name == typ => body
+			case _ => m //otherwise do nothing
+		}
+		
+		case ITE(pred, thn, els) => ITE(pred, expand(thn, d), expand(els, d))
+		case Edge(m1, m2) => Edge(expand(m1, d), expand(m2, d))
+		case Define(name, params, body) => Define(name, params, expand(body, d)) //do I need to say if(d.name != name)?
+		case Let(x, e, body) => Let(x, e, expand(body, d))
+		case E(Res(typ, e)) => m //do something?
+		case E(_) => m
+	}
+	
 }
