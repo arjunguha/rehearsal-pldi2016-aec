@@ -110,15 +110,27 @@ object Evaluator2 {
 		case _ => g + m
 	}	
 
+	/*what to do if instance contains an attribute that doens't have corresponding parameter in deefine? : 
+	  		ignoring for now */
+	def subArgs(params: Seq[Argument], args: Seq[Attribute], body: Manifest): Manifest = 
+		(params, args) match {
+			case (Seq(), _) => body
+			case (Argument(paramName) :: paramsT, Attribute(Str(attrName), value) :: argsT) => {
+				if(paramName == attrName) subArgs(paramsT, argsT, sub(paramName, value, body))
+				else 											subArgs(params, argsT, body)
+			}
+			case (_, Seq()) => throw EvalError(s"""Not enough attributes for 
+				defined type instantiation: params = $params; body = $body""")
+			case _ => throw EvalError(s"Unexpected pattern in subArgs params = $params; args = $args; body = $body")
+		}
+
 	def expand(m: Manifest, d: Define): Manifest = m match {
 		case Empty => Empty
 		case Block(m1, m2) => Block(expand(m1, d), expand(m2, d))
 		case Resource(typ, attrs) => d match {
-			//*****************TODO: deal with arguments/attrs/params
-			case Define(name, params, body) if name == typ => body
+			case Define(name, params, body) if name == typ => subArgs(params, attrs, body)
 			case _ => m //otherwise do nothing
-		}
-		
+		}		
 		case ITE(pred, thn, els) => ITE(pred, expand(thn, d), expand(els, d))
 		case Edge(m1, m2) => Edge(expand(m1, d), expand(m2, d))
 		case Define(name, params, body) => Define(name, params, expand(body, d)) //do I need to say if(d.name != name)?
