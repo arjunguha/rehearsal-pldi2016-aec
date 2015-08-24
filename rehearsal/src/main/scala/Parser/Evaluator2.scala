@@ -106,11 +106,11 @@ object Evaluator2 {
 		case Block(m1, m2) => toGraph(g, m1) ++ toGraph(g, m2)
 		case Resource(_, _) => g + m
 		case e@Edge(_, _) => addEdges(g, e)
-		case Define(n, p, b) => g
+		case Define(n, p, b) => g //??
 		case _ => g + m
 	}	
 
-	/*what to do if instance contains an attribute that doens't have corresponding parameter in deefine? : 
+	/*what to do if instance contains an attribute that doens't have corresponding parameter in define? : 
 	  		ignoring for now */
 	def subArgs(params: Seq[Argument], args: Seq[Attribute], body: Manifest): Manifest = 
 		(params, args) match {
@@ -139,4 +139,11 @@ object Evaluator2 {
 		case E(_) => m
 	}
 	
+	/*
+		evalAll(m){
+			m' = eval(m)
+			m'' = for every define (d) in m', expand(m', d)
+			toGraph(Graph(), m'')
+		}
+	*/
 }
