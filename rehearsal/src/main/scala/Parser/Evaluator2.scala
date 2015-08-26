@@ -6,9 +6,11 @@ import scalax.collection.mutable.Graph._
 import scalax.collection.GraphEdge._
 
 object Evaluator2 {
+	//pipeline: toGraph(Graph(), eval(expandAll(parse(m))))
 
 	case class EvalError(msg: String) extends RuntimeException(msg)
-		type ManifestGraph = Graph[Manifest, DiEdge]
+	case class GraphError(msg: String) extends RuntimeException(msg)
+	type ManifestGraph = Graph[Manifest, DiEdge]
 
 	def subExpr(varName: String, e: Expr, body: Expr): Expr = body match {
 		case Str(_) => body
@@ -37,10 +39,8 @@ object Evaluator2 {
 		case Define(name, params, m) => Define(name, params, sub(varName, e, m))
 		case Let(v, expr, b) => Let(v, subExpr(varName, e, expr), sub(varName, e, b))
 		case E(expr) => E(subExpr(varName, e, expr))
-	}
-	
+	}	
 
-	//a.name -> Str; a.value -> Constant|Res
 	def evalAttr(a: Attribute): Attribute = a match {
 		case Attribute(name, value) => Attribute(evalExpr(name), evalExpr(value))
 	}
@@ -75,13 +75,6 @@ object Evaluator2 {
 		case In(e1, e2) => throw EvalError(s"Cannot evaluate: Invalid argument(s) for In: $e1, $e2")
 	}
 	
-	/*eval :: m => m'
-		m' ::= m1';m2'
-					| typ{a1'...an'}
-					| m1' -> m2'
-					| typ1[str1] -> typ2[str2]
-					| define f(x1...xn){m}
-	*/
 	def eval(m: Manifest): Manifest = m match {
 		case Empty => Empty
 		case Block(Empty, m2) => eval(m2)
@@ -97,7 +90,7 @@ object Evaluator2 {
 		case E(e) => E(evalExpr(e))
 	}
 
-	/*what to do if instance contains an attribute that doens't have corresponding parameter in define? : 
+	/*what to do if instance contains an attribute that doesn't have corresponding parameter in define? : 
 	  		ignoring for now */
 	def subArgs(params: Seq[Argument], args: Seq[Attribute], body: Manifest): Manifest = 
 		(params, args) match {
@@ -112,7 +105,7 @@ object Evaluator2 {
 			}
 			case (_, Seq()) => throw EvalError(s"""Not enough attributes for 
 				defined type instantiation: params = $params; body = $body""")
-			case _ => throw EvalError(s"Unexpected pattern in subArgs params = $params; args = $args; body = $body")
+			case _ => throw EvalError(s"Unexpected attribute pattern: attrs = $args")
 		}
 
 	def expand(m: Manifest, d: Define): Manifest = (m, d) match {
@@ -129,24 +122,6 @@ object Evaluator2 {
 		case (E(_), _) => m
 	}
 
-	/*
-		expandAll(m){
-			for every define (d) in m, expand(m, d)
-		}
-		pipeline: toGraph(Graph(), eval(evalAll(eval(parse(m)))))
-	*/
-
-	// def expandAll(m: Manifest): Manifest = expandAllRec(m, m)
-
-	// def expandAllRec(m: Manifest, inner: Manifest): Manifest = inner match {
-	// 	case d@Define(_, _, _) => expand(m, d)
-	// 	case Block(m1, m2) => Block(expandAllRec(m, m1), expandAllRec(m, m2))
-	// 	case Edge(m1, m2) => Edge(expandAllRec(m, m1), expandAllRec(m, m2))
-	// 	case Let(v, e, body) => Let(v, e, expandAllRec(m, body))
-	// 	case ITE(pred, m1, m2) => ITE(pred, expandAllRec(m, m1), expandAllRec(m, m2))
-	// 	case _ => inner
-	// }	
-
 	def findDefine(m: Manifest): Option[Define] = m match {
 		case d@Define(_, _, _) => Some(d)
 		case Block(m1, m2) => {
@@ -157,7 +132,12 @@ object Evaluator2 {
 			val m1res = findDefine(m1)
 			if(m1res == None) findDefine(m2) else m1res
 		}
-		case _ => None
+		case ITE(_, m1, m2) => {
+			val m1res = findDefine(m1)
+			if(m1res == None) findDefine(m2) else m1res
+		}
+		case Let(_, _, body) => findDefine(body)
+		case Empty|E(_)|Resource(_, _) => None
 	}
 
 	def expandAll(m: Manifest): Manifest = {
@@ -181,9 +161,9 @@ object Evaluator2 {
 	def toGraph(g: ManifestGraph, m: Manifest): ManifestGraph = m match {
 		case Empty => g
 		case Block(m1, m2) => toGraph(g, m1) ++ toGraph(g, m2)
-		case Resource(_, _) => g + m
 		case e@Edge(_, _) => addEdges(g, e)
-		case Define(n, p, b) => g //??
-		case _ => g + m
+		case Resource(_, _) | E(Res(_, _)) | E(Str(_)) | E(Bool(_)) => g + m
+		case ITE(_, _, _) | Let(_, _, _) | E(_) | Define(_, _, _) => 
+			throw GraphError(s"m is not fully evaluated $m")
 	}	
 }

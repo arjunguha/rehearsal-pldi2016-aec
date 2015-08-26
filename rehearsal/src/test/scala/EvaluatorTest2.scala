@@ -104,4 +104,30 @@ class EvaluatorTestSuite2 extends org.scalatest.FunSuite {
 		val res = Resource("file", Seq(Attribute(Str("content"), Str("one"))))
 		assert(eval(expandAll(parse(prog))) == res)
 	}
+
+	test("expandAll - 2 instances"){
+		val prog = """
+			f { "instance": 
+				$a => "one",
+				$b => "two",
+				$c => true
+			}
+			define f($a, $b, $c){
+				if $c {
+					file { "1": "content" => $a }
+				}else{
+					file { "2": "content" => $b }
+				}
+			}
+			f { "instance2": 
+				$a => "purple",
+				$b => "yellow",
+				$c => false
+			}
+		"""
+		val res = Block(Resource("file", Seq(Attribute(Str("content"), Str("one")))), 
+										Resource("file", Seq(Attribute(Str("content"), Str("yellow")))))
+		assert(eval(expandAll(parse(prog))) == res)
+	}
+
 }
