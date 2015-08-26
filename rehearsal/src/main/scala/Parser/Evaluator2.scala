@@ -144,10 +144,8 @@ object Evaluator2 {
 		var d: Option[Define] = findDefine(m)
 		var m2: Manifest = m
 		while(d != None){
-			println(s"m = $m2, d = $d")
 			m2 = expand(m2, d.get)
 			d = findDefine(m2)
-			println(s"m = $m2, d = $d")
 		}
 		m2
 	}
