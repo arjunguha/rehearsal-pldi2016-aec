@@ -2,12 +2,14 @@ package parser
 
 object Syntax2 {
 
+	//TODO parse 'before' and 'requires' into edges
 	case class Attribute(name: Expr, value: Expr)
 	case class Argument(id: String) //ignoring types and default values for now
 
 	sealed trait Manifest
 	case object Empty extends Manifest
 	case class Block(m1: Manifest, m2: Manifest) extends Manifest
+	//TODO: allow typ to be a variable
 	case class Resource(typ: String, attrs: Seq[Attribute]) extends Manifest
 	case class ITE(pred: Expr, m1: Manifest, m2: Manifest) extends Manifest
 	case class Edge(m1: Manifest, m2: Manifest) extends Manifest

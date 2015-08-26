@@ -108,6 +108,11 @@ class ParserTestSuite2 extends org.scalatest.FunSuite {
 
 	test("block"){
 		val prog = """
+			define foo($bar = 'baz') {
+				file { 'foo':
+					'ensure' => 'present',
+				}
+			}
 			user { 'awe':
 				'ensure' => 'present',
 				'foo' => 'bar'
@@ -117,11 +122,13 @@ class ParserTestSuite2 extends org.scalatest.FunSuite {
 				'foo' => 'bar'
 			}
 		"""
-		val res = Block(
-			Resource("user", Seq(Attribute(Str("ensure"), Str("present")),
-																					 Attribute(Str("foo"), Str("bar")))),
-			Resource("file", Seq(Attribute(Str("ensure"), Str("present")),
-																					 Attribute(Str("foo"), Str("bar"))))
+		val res = Block(Define("foo",	Seq(Argument("bar")),
+								Resource("file", Seq(Attribute(Str("ensure"), Str("present"))))
+							), Block(
+					Resource("user", Seq(Attribute(Str("ensure"), Str("present")),
+																							 Attribute(Str("foo"), Str("bar")))),
+					Resource("file", Seq(Attribute(Str("ensure"), Str("present")),
+																							 Attribute(Str("foo"), Str("bar")))))
 		)
 		assert(parse(prog) == res)
 	}

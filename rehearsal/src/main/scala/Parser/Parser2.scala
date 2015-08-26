@@ -30,7 +30,7 @@ private class Parser2 extends RegexParsers with PackratParsers{
 		case typ ~ id ~ attr => Resource(typ, attr)
 	}
 
-	lazy val ite: P[Manifest] = "if" ~> bop ~ body ~ rep(elsif) ~ opt("else" ~> body) ^^ {
+	lazy val ite: P[Manifest] = "if" ~> (bop | vari) ~ body ~ rep(elsif) ~ opt("else" ~> body) ^^ {
 		case pred ~ thn ~ elsifs ~ els => ITE(pred, thn, elsifs.foldRight(els.getOrElse(Empty)) {
 			case ((pred, body), acc) => ITE(pred, body, acc)
 		})
@@ -69,7 +69,7 @@ private class Parser2 extends RegexParsers with PackratParsers{
 	// lazy val ops: P[Expr] = not | bop
 
 	lazy val atom = bool | res | vari | string
-	lazy val batom = not | bool
+	lazy val batom = not | bool 
 
 	lazy val not: P[Pred] = ("!" ~> expr) ^^ { Not(_) }
 
