@@ -84,6 +84,8 @@ object Evaluator2 {
 	*/
 	def eval(m: Manifest): Manifest = m match {
 		case Empty => Empty
+		case Block(Empty, m2) => eval(m2)
+		case Block(m1, Empty) => eval(m1)
 		case Block(m1, m2) => Block(eval(m1), eval(m2))
 		case Resource(typ, attrs) => Resource(typ, attrs.map(evalAttr))
 		case ITE(pred, m1, m2) if(evalExpr(pred) == Bool(true))  => eval(m1)
@@ -93,6 +95,81 @@ object Evaluator2 {
 		case Define(_, _, _) => m
 		case Let(varName, e, body) => eval(sub(varName, e, body))
 		case E(e) => E(evalExpr(e))
+	}
+
+	/*what to do if instance contains an attribute that doens't have corresponding parameter in define? : 
+	  		ignoring for now */
+	def subArgs(params: Seq[Argument], args: Seq[Attribute], body: Manifest): Manifest = 
+		(params, args) match {
+			case (Seq(), _) => body
+			case (Argument(paramName) :: paramsT, Attribute(Str(attrName), value) :: argsT) => {
+				if(paramName == attrName) subArgs(paramsT, argsT, sub(paramName, value, body))
+				else 											subArgs(params, argsT, body)
+			}
+			case (Argument(paramName) :: paramsT, Attribute(Var(attrName), value) :: argsT) => {
+				if(paramName == attrName) subArgs(paramsT, argsT, sub(paramName, value, body))
+				else 											subArgs(params, argsT, body)
+			}
+			case (_, Seq()) => throw EvalError(s"""Not enough attributes for 
+				defined type instantiation: params = $params; body = $body""")
+			case _ => throw EvalError(s"Unexpected pattern in subArgs params = $params; args = $args; body = $body")
+		}
+
+	def expand(m: Manifest, d: Define): Manifest = (m, d) match {
+		case (Empty, _) => Empty
+		case (Block(m1, m2), _) => Block(expand(m1, d), expand(m2, d))
+		case (Resource(typ, attrs), Define(name, params, body)) if name == typ => subArgs(params, attrs, body)
+		case (Resource(typ, attrs), _) => m //do nothing
+		case (ITE(pred, thn, els), _) => ITE(pred, expand(thn, d), expand(els, d))
+		case (Edge(m1, m2), _) => Edge(expand(m1, d), expand(m2, d))
+		case (Define(name1, _, _), Define(name2, _, _)) if name1 == name2 => Empty //remove define declaration
+		case (Define(name, params, body), _) => Define(name, params, expand(body, d))
+		case (Let(x, e, body), _) => Let(x, e, expand(body, d))
+		case (E(Res(typ, e)), _) => m //do something?
+		case (E(_), _) => m
+	}
+
+	/*
+		expandAll(m){
+			for every define (d) in m, expand(m, d)
+		}
+		pipeline: toGraph(Graph(), eval(evalAll(eval(parse(m)))))
+	*/
+
+	// def expandAll(m: Manifest): Manifest = expandAllRec(m, m)
+
+	// def expandAllRec(m: Manifest, inner: Manifest): Manifest = inner match {
+	// 	case d@Define(_, _, _) => expand(m, d)
+	// 	case Block(m1, m2) => Block(expandAllRec(m, m1), expandAllRec(m, m2))
+	// 	case Edge(m1, m2) => Edge(expandAllRec(m, m1), expandAllRec(m, m2))
+	// 	case Let(v, e, body) => Let(v, e, expandAllRec(m, body))
+	// 	case ITE(pred, m1, m2) => ITE(pred, expandAllRec(m, m1), expandAllRec(m, m2))
+	// 	case _ => inner
+	// }	
+
+	def findDefine(m: Manifest): Option[Define] = m match {
+		case d@Define(_, _, _) => Some(d)
+		case Block(m1, m2) => {
+			val m1res = findDefine(m1)
+			if(m1res == None) findDefine(m2) else m1res
+		}
+		case Edge(m1, m2) => {
+			val m1res = findDefine(m1)
+			if(m1res == None) findDefine(m2) else m1res
+		}
+		case _ => None
+	}
+
+	def expandAll(m: Manifest): Manifest = {
+		var d: Option[Define] = findDefine(m)
+		var m2: Manifest = m
+		while(d != None){
+			println(s"m = $m2, d = $d")
+			m2 = expand(m2, d.get)
+			d = findDefine(m2)
+			println(s"m = $m2, d = $d")
+		}
+		m2
 	}
 
 	def addEdges(g: ManifestGraph, e: Edge): ManifestGraph = e match {
@@ -109,41 +186,4 @@ object Evaluator2 {
 		case Define(n, p, b) => g //??
 		case _ => g + m
 	}	
-
-	/*what to do if instance contains an attribute that doens't have corresponding parameter in define? : 
-	  		ignoring for now */
-	def subArgs(params: Seq[Argument], args: Seq[Attribute], body: Manifest): Manifest = 
-		(params, args) match {
-			case (Seq(), _) => body
-			case (Argument(paramName) :: paramsT, Attribute(Str(attrName), value) :: argsT) => {
-				if(paramName == attrName) subArgs(paramsT, argsT, sub(paramName, value, body))
-				else 											subArgs(params, argsT, body)
-			}
-			case (_, Seq()) => throw EvalError(s"""Not enough attributes for 
-				defined type instantiation: params = $params; body = $body""")
-			case _ => throw EvalError(s"Unexpected pattern in subArgs params = $params; args = $args; body = $body")
-		}
-
-	def expand(m: Manifest, d: Define): Manifest = m match {
-		case Empty => Empty
-		case Block(m1, m2) => Block(expand(m1, d), expand(m2, d))
-		case Resource(typ, attrs) => d match {
-			case Define(name, params, body) if name == typ => subArgs(params, attrs, body)
-			case _ => m //otherwise do nothing
-		}		
-		case ITE(pred, thn, els) => ITE(pred, expand(thn, d), expand(els, d))
-		case Edge(m1, m2) => Edge(expand(m1, d), expand(m2, d))
-		case Define(name, params, body) => Define(name, params, expand(body, d)) //do I need to say if(d.name != name)?
-		case Let(x, e, body) => Let(x, e, expand(body, d))
-		case E(Res(typ, e)) => m //do something?
-		case E(_) => m
-	}
-	
-	/*
-		evalAll(m){
-			m' = eval(m)
-			m'' = for every define (d) in m', expand(m', d)
-			toGraph(Graph(), m'')
-		}
-	*/
 }

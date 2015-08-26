@@ -67,4 +67,41 @@ class EvaluatorTestSuite2 extends org.scalatest.FunSuite {
 		assert(expand(i, d) == Resource("foo", Seq(Attribute(Str("requires"), Str("A")), 
 																							 Attribute(Str("before"), Str("B")))))
 	}
+
+	test("expandAll"){
+		val d1 = Define("fun1", Seq(Argument("a"), Argument("b")), 
+										Resource("foo", Seq(Attribute(Str("requires"), Var("a")), 
+																				Attribute(Str("before"), Var("b")))))
+		val d2 = Define("fun2", Seq(Argument("a"), Argument("b")), 
+										Resource("foo", Seq(Attribute(Str("requires"), Var("a")), 
+																				Attribute(Str("before"), Var("b")))))
+		val i1 = Resource("fun1", Seq(Attribute(Str("a"), Str("apple")), Attribute(Str("b"), Str("banana"))))
+		val i2 = Resource("fun2", Seq(Attribute(Str("a"), Str("A")), Attribute(Str("b"), Str("B"))))
+		val prog = Block(d1, Block(d2, Block(i1, i2)))
+		val res = Block(Resource("foo", Seq(Attribute(Str("requires"), Str("apple")), 
+																				Attribute(Str("before"), Str("banana")))),
+										Resource("foo", Seq(Attribute(Str("requires"), Str("A")), 
+																				Attribute(Str("before"), Str("B")))))
+		assert(eval(expandAll(eval(prog))) == res)
+	}
+
+	test("eval-expandAll"){
+		val prog = """
+			define f($a, $b, $c){
+				if $c {
+					file { "1": "content" => $a }
+				}else{
+					file { "2": "content" => $b }
+				}
+			}
+
+			f { "instance": 
+				$a => "one",
+				$b => "two",
+				$c => true
+			}
+		"""
+		val res = Resource("file", Seq(Attribute(Str("content"), Str("one"))))
+		assert(eval(expandAll(parse(prog))) == res)
+	}
 }
