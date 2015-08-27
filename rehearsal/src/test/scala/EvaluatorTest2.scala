@@ -130,4 +130,28 @@ class EvaluatorTestSuite2 extends org.scalatest.FunSuite {
 		assert(eval(expandAll(parse(prog))) == res)
 	}
 
+	test("expandAll - instance in define"){
+		val prog = """
+			define f($a, $b, $c){
+				if $c {
+					file { "1": "content" => $a }
+				}else{
+					file { "2": "content" => $b }
+				}
+			}
+			define g($pred){
+				f { "instance1": 
+					$a => "purple",
+					$b => "yellow",
+					$c => $pred
+				}
+			}
+			g { "instance2":
+				$pred => true
+			}
+		"""
+		val res = "file { '1': 'content' => 'purple' }"
+		assert(eval(expandAll(parse(prog))) == parse(res))
+	}
+
 }

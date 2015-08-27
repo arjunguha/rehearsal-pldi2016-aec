@@ -3,6 +3,7 @@ package parser
 object Syntax2 {
 
 	//TODO parse 'before' and 'requires' into edges
+	//TODO Attritute name must allow ids that are neither vars nor strings for arguments to defined types
 	case class Attribute(name: Expr, value: Expr)
 	case class Argument(id: String) //ignoring types and default values for now
 
