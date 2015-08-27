@@ -19,12 +19,12 @@ private class Parser2 extends RegexParsers with PackratParsers{
 
 	lazy val body: P[Manifest] = "{" ~> prog <~ "}"
 
-	lazy val argument: P[Argument] = opt(dataType) ~ varName ~ opt("=" ~> expr) ^^ {
+	lazy val parameter: P[Argument] = opt(dataType) ~ varName ~ opt("=" ~> expr) ^^ {
 		case Some(typ) ~ id ~ default => Argument(id)
 		case None ~ id ~ default => Argument(id)
 	}
 
-	lazy val arguments: P[Seq[Argument]] = "(" ~> repsep(argument, ",") <~ ")"
+	lazy val parameters: P[Seq[Argument]] = "(" ~> repsep(parameter, ",") <~ ")"
 
 	lazy val resource: P[Manifest] = word ~ ("{" ~> expr <~ ":") ~ (attributes <~ "}") ^^ {
 		case typ ~ id ~ attr => Resource(id, typ, attr)
@@ -42,7 +42,7 @@ private class Parser2 extends RegexParsers with PackratParsers{
 		manifest ~ ("->" ~> manifest) ^^ { case parent ~ child => Edge(parent, child) } |
 		manifest ~ ("<-" ~> manifest) ^^ { case child ~ parent => Edge(parent, child) }
 
-	lazy val define: P[Manifest] = "define" ~> word ~ opt(arguments) ~ body ^^ {
+	lazy val define: P[Manifest] = "define" ~> word ~ opt(parameters) ~ body ^^ {
 		case name ~ Some(args) ~ body => Define(name, args, body)
 		case name ~ None ~ body => Define(name, Seq(), body)
 	}
@@ -51,8 +51,9 @@ private class Parser2 extends RegexParsers with PackratParsers{
 								{ case id ~ e ~ body => Let(id, e, body.getOrElse(Empty)) }
 
 	//Attribute
+	lazy val argument: P[Var] = id ^^ { Var(_) } //used for passing arguments to defined types
 	lazy val attribute: P[Attribute] = 
-		expr ~ ("=>" ~> expr) ^^ { case name ~ value => Attribute(name, value) }
+		(expr | argument) ~ ("=>" ~> expr) ^^ { case name ~ value => Attribute(name, value) }
 
 	lazy val attributes: P[Seq[Attribute]] = repsep(attribute, ",") <~ opt(",")
 
@@ -66,8 +67,6 @@ private class Parser2 extends RegexParsers with PackratParsers{
 	lazy val vari: P[Expr] = varName ^^ (Var(_))
 
 	//Operators
-	// lazy val ops: P[Expr] = not | bop
-
 	lazy val atom = bool | res | vari | string
 	lazy val batom = not | bool 
 
@@ -85,8 +84,6 @@ private class Parser2 extends RegexParsers with PackratParsers{
 							or
 
 	//Constants
-	// lazy val constant: P[Constant] = bool | string
-
 	lazy val bool: P[Pred] = "true" ^^ { _ => Bool(true) } |
 								"false" ^^ { _ => Bool(false) }
 
@@ -113,13 +110,12 @@ private class Parser2 extends RegexParsers with PackratParsers{
 object Parser2 {
 	private val parser = new Parser2()
 
-	// def parseConst(str: String): Constant = parser.parseString(str, parser.constant)
 	def parseBool(str: String): Pred = parser.parseString(str, parser.bool)
 	def parseStr(str: String): Str = parser.parseString(str, parser.string)
 	def parseOps(str: String): Pred = parser.parseString(str, parser.bop)
 	def parseExpr(str: String): Expr = parser.parseString(str, parser.expr)
 	def parseAttribute(str: String): Attribute = parser.parseString(str, parser.attribute)
-	def parseArgument(str: String): Argument = parser.parseString(str, parser.argument)
+	def parseArgument(str: String): Argument = parser.parseString(str, parser.parameter)
 	def parseManifest(str: String): Manifest = parser.parseString(str, parser.manifest)
 	def parse(str: String): Manifest = parser.parseString(str, parser.prog)
 }

@@ -3,7 +3,7 @@ package parser
 object Syntax2 {
 
 	//TODO parse 'before' and 'requires' into edges
-	//TODO Attritute name must allow ids that are neither vars nor strings for arguments to defined types
+	//TODO allow 'before' and 'require' on lhs w/o quotes
 	case class Attribute(name: Expr, value: Expr)
 	case class Argument(id: String) //ignoring types and default values for now
 
@@ -22,6 +22,7 @@ object Syntax2 {
 	case class Res(typ: String, e: Expr) extends Expr
 	case class Var(name: String) extends Expr
 
+	//TODO: get rid of Pred, Op1, and Op2
 	sealed trait Pred extends Expr
 	case class Bool(b: Boolean) extends Pred	
 

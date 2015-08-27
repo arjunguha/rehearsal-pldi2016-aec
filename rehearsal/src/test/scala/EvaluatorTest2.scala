@@ -96,9 +96,9 @@ class EvaluatorTestSuite2 extends org.scalatest.FunSuite {
 			}
 
 			f { "instance": 
-				$a => "one",
-				$b => "two",
-				$c => true
+				a => "one",
+				b => "two",
+				c => true
 			}
 		"""
 		val res = Resource(Str("1"), "file", Seq(Attribute(Str("content"), Str("one"))))
@@ -108,9 +108,9 @@ class EvaluatorTestSuite2 extends org.scalatest.FunSuite {
 	test("expandAll - 2 instances"){
 		val prog = """
 			f { "instance": 
-				$a => "one",
-				$b => "two",
-				$c => true
+				a => "one",
+				b => "two",
+				c => true
 			}
 			define f($a, $b, $c){
 				if $c {
@@ -120,9 +120,9 @@ class EvaluatorTestSuite2 extends org.scalatest.FunSuite {
 				}
 			}
 			f { "instance2": 
-				$a => "purple",
-				$b => "yellow",
-				$c => false
+				a => "purple",
+				b => "yellow",
+				c => false
 			}
 		"""
 		val res = Block(Resource(Str("1"), "file", Seq(Attribute(Str("content"), Str("one")))), 
@@ -141,9 +141,9 @@ class EvaluatorTestSuite2 extends org.scalatest.FunSuite {
 			}
 			define g($pred){
 				f { "instance1": 
-					$a => "purple",
-					$b => "yellow",
-					$c => $pred
+					a => "purple",
+					b => "yellow",
+					c => $pred
 				}
 			}
 			g { "instance2":
