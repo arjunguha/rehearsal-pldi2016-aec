@@ -57,7 +57,7 @@ class ParserTestSuite2 extends org.scalatest.FunSuite {
 
 	test("resource"){
 		val prog = "user { 'awe': 'ensure' => 'present' }"
-		val res = Resource("user", Seq(Attribute(Str("ensure"), Str("present"))))
+		val res = Resource(Str("awe"), "user", Seq(Attribute(Str("ensure"), Str("present"))))
 		assert(parseManifest(prog) == res)
 	}
 
@@ -68,18 +68,18 @@ class ParserTestSuite2 extends org.scalatest.FunSuite {
 			}
 		"""
 		assert(parseManifest(prog) == ITE(Bool(true), 
-			Resource("user", Seq(Attribute(Str("ensure"), Str("present")))), Empty))
+			Resource(Str("awe"), "user", Seq(Attribute(Str("ensure"), Str("present")))), Empty))
 	}
 
 	test("edge"){
 		val edge1 = "user { 'awe': 'ensure' => 'present' } -> file { '/home': 'ensure' => 'present' }"
 		val edge2 = "user { 'awe': 'ensure' => 'present' } <- file { '/home': 'ensure' => 'present' } "
 		assert(parseManifest(edge1) == 
-			Edge(Resource("user", Seq(Attribute(Str("ensure"), Str("present")))), 
-					 Resource("file", Seq(Attribute(Str("ensure"), Str("present"))))))
+			Edge(Resource(Str("awe"), "user", Seq(Attribute(Str("ensure"), Str("present")))), 
+					 Resource(Str("/home"), "file", Seq(Attribute(Str("ensure"), Str("present"))))))
 		assert(parseManifest(edge2) == 
-			Edge(Resource("file", Seq(Attribute(Str("ensure"), Str("present")))), 
-					 Resource("user", Seq(Attribute(Str("ensure"), Str("present"))))))
+			Edge(Resource(Str("/home"), "file", Seq(Attribute(Str("ensure"), Str("present")))), 
+					 Resource(Str("awe"), "user", Seq(Attribute(Str("ensure"), Str("present"))))))
 	}
 
 	test("define"){
@@ -92,7 +92,7 @@ class ParserTestSuite2 extends org.scalatest.FunSuite {
 		"""
 		val res = Define("foo",
 								Seq(Argument("bar")),
-								Resource("file", Seq(Attribute(Str("ensure"), Str("present"))))
+								Resource(Str("foo"), "file", Seq(Attribute(Str("ensure"), Str("present"))))
 							)
 		assert(parseManifest(expr) == res)
 	}
@@ -102,7 +102,7 @@ class ParserTestSuite2 extends org.scalatest.FunSuite {
 			$x = 'hi!'
 			file { $x: 'ensure' => 'present' }
 		"""
-		val res = Let("x", Str("hi!"), Resource("file", Seq(Attribute(Str("ensure"), Str("present")))))
+		val res = Let("x", Str("hi!"), Resource(Var("x"), "file", Seq(Attribute(Str("ensure"), Str("present")))))
 		assert(parseManifest(prog) == res)
 	}
 
@@ -123,11 +123,11 @@ class ParserTestSuite2 extends org.scalatest.FunSuite {
 			}
 		"""
 		val res = Block(Define("foo",	Seq(Argument("bar")),
-								Resource("file", Seq(Attribute(Str("ensure"), Str("present"))))
+								Resource(Str("foo"), "file", Seq(Attribute(Str("ensure"), Str("present"))))
 							), Block(
-					Resource("user", Seq(Attribute(Str("ensure"), Str("present")),
+					Resource(Str("awe"), "user", Seq(Attribute(Str("ensure"), Str("present")),
 																							 Attribute(Str("foo"), Str("bar")))),
-					Resource("file", Seq(Attribute(Str("ensure"), Str("present")),
+					Resource(Str("/foo"), "file", Seq(Attribute(Str("ensure"), Str("present")),
 																							 Attribute(Str("foo"), Str("bar")))))
 		)
 		assert(parse(prog) == res)

@@ -38,49 +38,49 @@ class EvaluatorTestSuite2 extends org.scalatest.FunSuite {
 	}
 
 	test("graph resource"){
-		assert(toGraph(Graph(), Resource("typ", Seq(Attribute(Str("ensure"), Str("present"))))) == 
-			Graph(Resource("typ", Seq(Attribute(Str("ensure"), Str("present"))))))
+		assert(toGraph(Graph(), Resource(Str("1"), "typ", Seq(Attribute(Str("ensure"), Str("present"))))) == 
+			Graph(Resource(Str("1"), "typ", Seq(Attribute(Str("ensure"), Str("present"))))))
 	}
 
 	test("graph edge"){
-		assert(toGraph(Graph(), Edge(Resource("1", Seq()), Resource("2", Seq()))) == 
-			Graph(Resource("1", Seq()), Resource("2", Seq()), 
-						DiEdge(Resource("1", Seq()), Resource("2", Seq()))))
+		assert(toGraph(Graph(), Edge(Resource(Str("1"), "1", Seq()), Resource(Str("2"), "2", Seq()))) == 
+			Graph(Resource(Str("1"), "1", Seq()), Resource(Str("2"), "2", Seq()), 
+						DiEdge(Resource(Str("1"), "1", Seq()), Resource(Str("2"), "2", Seq()))))
 	}
 
 	test("graph block"){
-		assert(toGraph(Graph(), Block(Resource("1", Seq()), Resource("2", Seq()))) == 
-			Graph(Resource("1", Seq()), Resource("2", Seq())))
+		assert(toGraph(Graph(), Block(Resource(Str("1"), "1", Seq()), Resource(Str("2"), "2", Seq()))) == 
+			Graph(Resource(Str("1"), "1", Seq()), Resource(Str("2"), "2", Seq())))
 	}
 
 	test("expand: no arguments"){
-		val d = Define("fun", Seq(), Resource("hello", Seq(Attribute(Str("a"), Str("b")))))
-		val i = Resource("fun", Seq())
-		assert(expand(i, d) == Resource("hello", Seq(Attribute(Str("a"), Str("b")))))
+		val d = Define("fun", Seq(), Resource(Str("define"), "hello", Seq(Attribute(Str("a"), Str("b")))))
+		val i = Resource(Str("i"), "fun", Seq())
+		assert(expand(i, d) == Resource(Str("define"), "hello", Seq(Attribute(Str("a"), Str("b")))))
 	}
 
 	test("expand"){
 		val d = Define("fun", Seq(Argument("a"), Argument("b")), 
-										Resource("foo", Seq(Attribute(Str("requires"), Var("a")), 
+										Resource(Str("define"), "foo", Seq(Attribute(Str("requires"), Var("a")), 
 																				Attribute(Str("before"), Var("b")))))
-		val i = Resource("fun", Seq(Attribute(Str("a"), Str("A")), Attribute(Str("b"), Str("B"))))
-		assert(expand(i, d) == Resource("foo", Seq(Attribute(Str("requires"), Str("A")), 
+		val i = Resource(Str("define"), "fun", Seq(Attribute(Str("a"), Str("A")), Attribute(Str("b"), Str("B"))))
+		assert(expand(i, d) == Resource(Str("define"), "foo", Seq(Attribute(Str("requires"), Str("A")), 
 																							 Attribute(Str("before"), Str("B")))))
 	}
 
 	test("expandAll"){
 		val d1 = Define("fun1", Seq(Argument("a"), Argument("b")), 
-										Resource("foo", Seq(Attribute(Str("requires"), Var("a")), 
+										Resource(Str("1"), "foo", Seq(Attribute(Str("requires"), Var("a")), 
 																				Attribute(Str("before"), Var("b")))))
 		val d2 = Define("fun2", Seq(Argument("a"), Argument("b")), 
-										Resource("foo", Seq(Attribute(Str("requires"), Var("a")), 
+										Resource(Str("2"), "foo", Seq(Attribute(Str("requires"), Var("a")), 
 																				Attribute(Str("before"), Var("b")))))
-		val i1 = Resource("fun1", Seq(Attribute(Str("a"), Str("apple")), Attribute(Str("b"), Str("banana"))))
-		val i2 = Resource("fun2", Seq(Attribute(Str("a"), Str("A")), Attribute(Str("b"), Str("B"))))
+		val i1 = Resource(Str("i1"), "fun1", Seq(Attribute(Str("a"), Str("apple")), Attribute(Str("b"), Str("banana"))))
+		val i2 = Resource(Str("i2"), "fun2", Seq(Attribute(Str("a"), Str("A")), Attribute(Str("b"), Str("B"))))
 		val prog = Block(d1, Block(d2, Block(i1, i2)))
-		val res = Block(Resource("foo", Seq(Attribute(Str("requires"), Str("apple")), 
+		val res = Block(Resource(Str("1"), "foo", Seq(Attribute(Str("requires"), Str("apple")), 
 																				Attribute(Str("before"), Str("banana")))),
-										Resource("foo", Seq(Attribute(Str("requires"), Str("A")), 
+										Resource(Str("2"), "foo", Seq(Attribute(Str("requires"), Str("A")), 
 																				Attribute(Str("before"), Str("B")))))
 		assert(eval(expandAll(eval(prog))) == res)
 	}
@@ -101,7 +101,7 @@ class EvaluatorTestSuite2 extends org.scalatest.FunSuite {
 				$c => true
 			}
 		"""
-		val res = Resource("file", Seq(Attribute(Str("content"), Str("one"))))
+		val res = Resource(Str("1"), "file", Seq(Attribute(Str("content"), Str("one"))))
 		assert(eval(expandAll(parse(prog))) == res)
 	}
 
@@ -125,8 +125,8 @@ class EvaluatorTestSuite2 extends org.scalatest.FunSuite {
 				$c => false
 			}
 		"""
-		val res = Block(Resource("file", Seq(Attribute(Str("content"), Str("one")))), 
-										Resource("file", Seq(Attribute(Str("content"), Str("yellow")))))
+		val res = Block(Resource(Str("1"), "file", Seq(Attribute(Str("content"), Str("one")))), 
+										Resource(Str("2"), "file", Seq(Attribute(Str("content"), Str("yellow")))))
 		assert(eval(expandAll(parse(prog))) == res)
 	}
 

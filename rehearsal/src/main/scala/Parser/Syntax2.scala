@@ -9,8 +9,7 @@ object Syntax2 {
 	sealed trait Manifest
 	case object Empty extends Manifest
 	case class Block(m1: Manifest, m2: Manifest) extends Manifest
-	//TODO: allow typ to be a variable
-	case class Resource(typ: String, attrs: Seq[Attribute]) extends Manifest
+	case class Resource(title: Expr, typ: String, attrs: Seq[Attribute]) extends Manifest
 	case class ITE(pred: Expr, m1: Manifest, m2: Manifest) extends Manifest
 	case class Edge(m1: Manifest, m2: Manifest) extends Manifest
 	case class Define(name: String, params: Seq[Argument], body: Manifest) extends Manifest

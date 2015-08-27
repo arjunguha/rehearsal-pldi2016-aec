@@ -27,7 +27,7 @@ private class Parser2 extends RegexParsers with PackratParsers{
 	lazy val arguments: P[Seq[Argument]] = "(" ~> repsep(argument, ",") <~ ")"
 
 	lazy val resource: P[Manifest] = word ~ ("{" ~> expr <~ ":") ~ (attributes <~ "}") ^^ {
-		case typ ~ id ~ attr => Resource(typ, attr)
+		case typ ~ id ~ attr => Resource(id, typ, attr)
 	}
 
 	lazy val ite: P[Manifest] = "if" ~> (bop | vari) ~ body ~ rep(elsif) ~ opt("else" ~> body) ^^ {

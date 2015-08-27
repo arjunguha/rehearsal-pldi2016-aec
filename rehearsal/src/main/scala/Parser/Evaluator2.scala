@@ -33,7 +33,7 @@ object Evaluator2 {
 	def sub(varName: String, e: Expr, body: Manifest): Manifest = body match {
 		case Empty => body
 		case Block(m1, m2) => Block(sub(varName, e, m1), sub(varName, e, m2))
-		case Resource(typ, attrs) => Resource(typ, attrs.map(attr => subAttr(varName, e, attr)))
+		case Resource(title, typ, attrs) => Resource(title, typ, attrs.map(attr => subAttr(varName, e, attr)))
 		case ITE(pred, m1, m2) => ITE(subExpr(varName, e, pred), sub(varName, e, m1), sub(varName, e, m2))
 		case Edge(m1, m2) => Edge(sub(varName, e, m1), sub(varName, e, m2))
 		case Define(name, params, m) => Define(name, params, sub(varName, e, m))
@@ -80,7 +80,7 @@ object Evaluator2 {
 		case Block(Empty, m2) => eval(m2)
 		case Block(m1, Empty) => eval(m1)
 		case Block(m1, m2) => Block(eval(m1), eval(m2))
-		case Resource(typ, attrs) => Resource(typ, attrs.map(evalAttr))
+		case Resource(title, typ, attrs) => Resource(title, typ, attrs.map(evalAttr))
 		case ITE(pred, m1, m2) if(evalExpr(pred) == Bool(true))  => eval(m1)
 		case ITE(pred, m1, m2) if(evalExpr(pred) == Bool(false)) => eval(m2)
 		case ITE(pred, _, _) => throw EvalError(s"Cannot evaluate: Invalid Predicate for if: $pred")
@@ -111,8 +111,9 @@ object Evaluator2 {
 	def expand(m: Manifest, d: Define): Manifest = (m, d) match {
 		case (Empty, _) => Empty
 		case (Block(m1, m2), _) => Block(expand(m1, d), expand(m2, d))
-		case (Resource(typ, attrs), Define(name, params, body)) if name == typ => subArgs(params, attrs, body)
-		case (Resource(typ, attrs), _) => m //do nothing
+		case (Resource(_, typ, attrs), Define(name, params, body)) if name == typ => 
+			subArgs(params, attrs, body)
+		case (Resource(_, _, _), _) => m //do nothing
 		case (ITE(pred, thn, els), _) => ITE(pred, expand(thn, d), expand(els, d))
 		case (Edge(m1, m2), _) => Edge(expand(m1, d), expand(m2, d))
 		case (Define(name1, _, _), Define(name2, _, _)) if name1 == name2 => Empty //remove define declaration
@@ -137,7 +138,7 @@ object Evaluator2 {
 			if(m1res == None) findDefine(m2) else m1res
 		}
 		case Let(_, _, body) => findDefine(body)
-		case Empty|E(_)|Resource(_, _) => None
+		case Empty|E(_)|Resource(_, _, _) => None
 	}
 
 	def expandAll(m: Manifest): Manifest = {
@@ -160,7 +161,7 @@ object Evaluator2 {
 		case Empty => g
 		case Block(m1, m2) => toGraph(g, m1) ++ toGraph(g, m2)
 		case e@Edge(_, _) => addEdges(g, e)
-		case Resource(_, _) | E(Res(_, _)) | E(Str(_)) | E(Bool(_)) => g + m
+		case Resource(_, _, _) | E(Res(_, _)) | E(Str(_)) | E(Bool(_)) => g + m
 		case ITE(_, _, _) | Let(_, _, _) | E(_) | Define(_, _, _) => 
 			throw GraphError(s"m is not fully evaluated $m")
 	}	
