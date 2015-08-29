@@ -70,13 +70,13 @@ private class Parser2 extends RegexParsers with PackratParsers{
 	lazy val atom = bool | res | vari | string
 	lazy val batom = not | bool 
 
-	lazy val not: P[Pred] = ("!" ~> expr) ^^ { Not(_) }
+	lazy val not: P[Expr] = ("!" ~> expr) ^^ { Not(_) }
 
-	lazy val and: P[Pred] = and ~ ("and" ~> batom) ^^ { case lhs ~ rhs => And(lhs, rhs) } | batom
+	lazy val and: P[Expr] = and ~ ("and" ~> batom) ^^ { case lhs ~ rhs => And(lhs, rhs) } | batom
 
-	lazy val or: P[Pred] = or ~ ("or" ~> and) ^^ { case lhs ~ rhs => Or(lhs, rhs) } | and
+	lazy val or: P[Expr] = or ~ ("or" ~> and) ^^ { case lhs ~ rhs => Or(lhs, rhs) } | and
 
-	lazy val bop: P[Pred] = 	(bop | atom) ~ ("==" ~> (or | atom)) ^^ { case lhs ~ rhs => Eq(lhs, rhs) } |
+	lazy val bop: P[Expr] = 	(bop | atom) ~ ("==" ~> (or | atom)) ^^ { case lhs ~ rhs => Eq(lhs, rhs) } |
 							(bop | atom) ~ ("!=" ~> (or | atom)) ^^ { case lhs ~ rhs => Not(Eq(lhs, rhs)) } |
 							(bop | atom) ~ ("=~" ~> (or | atom)) ^^ { case lhs ~ rhs => Match(lhs, rhs) } |
 							(bop | atom) ~ ("!~" ~> (or | atom)) ^^ { case lhs ~ rhs => Not(Match(lhs, rhs)) } |
@@ -84,7 +84,7 @@ private class Parser2 extends RegexParsers with PackratParsers{
 							or
 
 	//Constants
-	lazy val bool: P[Pred] = "true" ^^ { _ => Bool(true) } |
+	lazy val bool: P[Expr] = "true" ^^ { _ => Bool(true) } |
 								"false" ^^ { _ => Bool(false) }
 
 	lazy val string: P[Str] = stringVal ^^ (Str(_))
@@ -110,9 +110,9 @@ private class Parser2 extends RegexParsers with PackratParsers{
 object Parser2 {
 	private val parser = new Parser2()
 
-	def parseBool(str: String): Pred = parser.parseString(str, parser.bool)
+	def parseBool(str: String): Expr = parser.parseString(str, parser.bool)
 	def parseStr(str: String): Str = parser.parseString(str, parser.string)
-	def parseOps(str: String): Pred = parser.parseString(str, parser.bop)
+	def parseOps(str: String): Expr = parser.parseString(str, parser.bop)
 	def parseExpr(str: String): Expr = parser.parseString(str, parser.expr)
 	def parseAttribute(str: String): Attribute = parser.parseString(str, parser.attribute)
 	def parseArgument(str: String): Argument = parser.parseString(str, parser.parameter)

@@ -21,20 +21,11 @@ object Syntax2 {
 	case class Str(s: String) extends Expr
 	case class Res(typ: String, e: Expr) extends Expr
 	case class Var(name: String) extends Expr
-
-	//TODO: get rid of Pred, Op1, and Op2
-	sealed trait Pred extends Expr
-	case class Bool(b: Boolean) extends Pred	
-
-	//Unary operators
-	sealed trait Op1 extends Pred
-	case class Not(e: Expr) extends Op1
-
-	//binary operators
-	sealed trait Op2 extends Pred
-	case class And(e1: Expr, e2: Expr) extends Op2
-	case class Or(e1: Expr, e2: Expr) extends Op2
-	case class Eq(e1: Expr, e2: Expr) extends Op2
-	case class Match(e1: Expr, e2: Expr) extends Op2
-	case class In(e1: Expr, e2: Expr) extends Op2
+	case class Bool(b: Boolean) extends Expr	
+	case class Not(e: Expr) extends Expr
+	case class And(e1: Expr, e2: Expr) extends Expr
+	case class Or(e1: Expr, e2: Expr) extends Expr
+	case class Eq(e1: Expr, e2: Expr) extends Expr
+	case class Match(e1: Expr, e2: Expr) extends Expr
+	case class In(e1: Expr, e2: Expr) extends Expr
 }
