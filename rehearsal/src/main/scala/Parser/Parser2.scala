@@ -89,6 +89,20 @@ private class Parser2 extends RegexParsers with PackratParsers{
 
 	lazy val string: P[Str] = stringVal ^^ (Str(_))
 
+	def desugarAttrs(r: Resource, attrs: Seq[Attribute]): Manifest = (r, attrs) match {
+		case (_, Seq()) => r
+		case (Resource(name, typ, _), Attribute(Str("before"), child)::t) => 
+			Block(desugarAttrs(Resource(name, typ, t), t), Edge(r, E(child)))
+		case (Resource(name, typ, _), Attribute(Str("require"), child)::t) => 
+			Block(desugarAttrs(Resource(name, typ, t), t), Edge(E(child), r))
+		case _ => r
+	}
+	
+	def desugar(m: Manifest): Manifest = m match {
+		case r@Resource(id, typ, attrs) => desugarAttrs(r, attrs)
+		case _ => m //do nothing
+	}
+	
 	//Program
 	lazy val prog: P[Manifest] = rep(manifest) ^^ { case exprs => blockExprs(exprs) }
 
@@ -104,7 +118,7 @@ private class Parser2 extends RegexParsers with PackratParsers{
 			case Success(r, _) => r
 			case m => throw new RuntimeException(s"$m")
 		}
-	}
+	}	
 }
 
 object Parser2 {
@@ -117,5 +131,5 @@ object Parser2 {
 	def parseAttribute(str: String): Attribute = parser.parseString(str, parser.attribute)
 	def parseArgument(str: String): Argument = parser.parseString(str, parser.parameter)
 	def parseManifest(str: String): Manifest = parser.parseString(str, parser.manifest)
-	def parse(str: String): Manifest = parser.parseString(str, parser.prog)
+	def parse(str: String): Manifest = parser.desugar(parser.parseString(str, parser.prog))
 }

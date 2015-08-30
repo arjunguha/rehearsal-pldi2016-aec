@@ -53,39 +53,52 @@ class EvaluatorTestSuite2 extends org.scalatest.FunSuite {
 			Graph(Resource(Str("1"), "1", Seq()), Resource(Str("2"), "2", Seq())))
 	}
 
-	test("expand: no arguments"){
-		val d = Define("fun", Seq(), Resource(Str("define"), "hello", Seq(Attribute(Str("a"), Str("b")))))
-		val i = Resource(Str("i"), "fun", Seq())
-		assert(expand(i, d) == Resource(Str("define"), "hello", Seq(Attribute(Str("a"), Str("b")))))
+	test("eval-expandAll: no arguments"){
+		val prog = """
+			define fun(){
+				hello { "foo": "a" => "b" }
+			}
+			fun { 'i': }
+		"""
+		assert(eval(expandAll(parse(prog))) == Resource(Str("foo"), "hello", Seq(Attribute(Str("a"), Str("b")))))
 	}
 
-	test("expand"){
-		val d = Define("fun", Seq(Argument("a"), Argument("b")), 
-										Resource(Str("define"), "foo", Seq(Attribute(Str("requires"), Var("a")), 
-																				Attribute(Str("before"), Var("b")))))
-		val i = Resource(Str("define"), "fun", Seq(Attribute(Str("a"), Str("A")), Attribute(Str("b"), Str("B"))))
-		assert(expand(i, d) == Resource(Str("define"), "foo", Seq(Attribute(Str("requires"), Str("A")), 
-																							 Attribute(Str("before"), Str("B")))))
+	test("eval-expandAll 1"){
+		val prog = """
+			define fun($a, $b){
+				foo { '/home': 
+					"require" => $a,
+					"before" => $b
+				}
+			}
+			fun {'instance': 
+				a => "A",
+				b => "B"
+			}
+		"""
+		assert(eval(expandAll(parse(prog))) == Block(Block(Resource(Str("/home"), "foo", Seq()), 
+																											 Edge(Resource(Str("/home"), "foo", Seq()), E(Str("B")))),
+																								 Edge(E(Str("B")), Resource(Str("/home"), "foo", Seq()))))
 	}
 
-	test("expandAll"){
+	test("expandAll: 2 defines"){
 		val d1 = Define("fun1", Seq(Argument("a"), Argument("b")), 
-										Resource(Str("1"), "foo", Seq(Attribute(Str("requires"), Var("a")), 
+										Resource(Str("1"), "foo", Seq(Attribute(Str("require"), Var("a")), 
 																				Attribute(Str("before"), Var("b")))))
 		val d2 = Define("fun2", Seq(Argument("a"), Argument("b")), 
-										Resource(Str("2"), "foo", Seq(Attribute(Str("requires"), Var("a")), 
+										Resource(Str("2"), "foo", Seq(Attribute(Str("require"), Var("a")), 
 																				Attribute(Str("before"), Var("b")))))
 		val i1 = Resource(Str("i1"), "fun1", Seq(Attribute(Str("a"), Str("apple")), Attribute(Str("b"), Str("banana"))))
 		val i2 = Resource(Str("i2"), "fun2", Seq(Attribute(Str("a"), Str("A")), Attribute(Str("b"), Str("B"))))
 		val prog = Block(d1, Block(d2, Block(i1, i2)))
-		val res = Block(Resource(Str("1"), "foo", Seq(Attribute(Str("requires"), Str("apple")), 
+		val res = Block(Resource(Str("1"), "foo", Seq(Attribute(Str("require"), Str("apple")), 
 																				Attribute(Str("before"), Str("banana")))),
-										Resource(Str("2"), "foo", Seq(Attribute(Str("requires"), Str("A")), 
+										Resource(Str("2"), "foo", Seq(Attribute(Str("require"), Str("A")), 
 																				Attribute(Str("before"), Str("B")))))
 		assert(eval(expandAll(eval(prog))) == res)
 	}
 
-	test("eval-expandAll"){
+	test("eval-expandAll2"){
 		val prog = """
 			define f($a, $b, $c){
 				if $c {
