@@ -1,9 +1,9 @@
 package parser
 
 import scala.util.parsing.combinator._
-import Syntax2._
+import Syntax._
 
-private class Parser2 extends RegexParsers with PackratParsers{
+private class Parser extends RegexParsers with PackratParsers{
 	type P[+T] = PackratParser[T]
 
 	lazy val stringVal: P[String] = "\"" ~> "[^\"]*".r <~ "\"" |
@@ -153,8 +153,8 @@ private class Parser2 extends RegexParsers with PackratParsers{
 	}	
 }
 
-object Parser2 {
-	private val parser = new Parser2()
+object Parser {
+	private val parser = new Parser()
 
 	def parseBool(str: String): Expr = parser.parseString(str, parser.bool)
 	def parseStr(str: String): Str = parser.parseString(str, parser.string)

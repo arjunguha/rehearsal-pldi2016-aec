@@ -1,6 +1,6 @@
-import parser.Parser2._
-import parser.Syntax2._
-import parser.Evaluator2._
+import parser.Parser._
+import parser.Syntax._
+import parser.Evaluator._
 import scalax.collection.mutable.Graph
 import scalax.collection.mutable.Graph._
 import scalax.collection.GraphEdge._

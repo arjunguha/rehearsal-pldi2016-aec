@@ -1,6 +1,6 @@
 package parser
 
-object Syntax2 {
+object Syntax {
 
 	//TODO parse 'before' and 'requires' into edges
 	//TODO allow 'before' and 'require' on lhs w/o quotes

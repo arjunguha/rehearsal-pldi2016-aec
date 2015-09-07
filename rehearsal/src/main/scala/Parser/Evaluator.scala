@@ -1,11 +1,11 @@
 package parser
 
-import Syntax2._
+import Syntax._
 import scalax.collection.mutable.Graph
 import scalax.collection.mutable.Graph._
 import scalax.collection.GraphEdge._
 
-object Evaluator2 {
+object Evaluator {
 	//pipeline: toGraph(Graph(), eval(expandAll(parse(m))))
 
 	case class EvalError(msg: String) extends RuntimeException(msg)

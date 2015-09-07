@@ -1,5 +1,5 @@
-import parser.Syntax2._
-import parser.Parser2._
+import parser.Syntax._
+import parser.Parser._
 
 class ParserTestSuite2 extends org.scalatest.FunSuite {
 
