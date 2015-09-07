@@ -76,9 +76,9 @@ class EvaluatorTestSuite2 extends org.scalatest.FunSuite {
 				b => "B"
 			}
 		"""
-		assert(eval(expandAll(parse(prog))) == Block(Block(Resource(Str("/home"), "foo", Seq()), 
-																											 Edge(Resource(Str("/home"), "foo", Seq()), E(Str("B")))),
-																								 Edge(E(Str("B")), Resource(Str("/home"), "foo", Seq()))))
+		assert(eval(expandAll(parse(prog))) == Block(Resource(Str("/home"),"foo",List()),
+																								 Block(Edge(E(Str("A")),E(Res("Foo",Str("/home")))),
+																								 			 Edge(E(Res("Foo",Str("/home"))),E(Str("B"))))))
 	}
 
 	test("expandAll: 2 defines"){
