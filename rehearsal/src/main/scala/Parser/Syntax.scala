@@ -2,8 +2,6 @@ package parser
 
 object Syntax {
 
-	//TODO parse 'before' and 'requires' into edges
-	//TODO allow 'before' and 'require' on lhs w/o quotes
 	case class Attribute(name: Expr, value: Expr)
 	case class Argument(id: String) //ignoring types and default values for now
 

@@ -6,7 +6,7 @@ import scalax.collection.mutable.Graph._
 import scalax.collection.GraphEdge._
 
 
-class EvaluatorTestSuite2 extends org.scalatest.FunSuite {
+class EvaluatorTestSuite extends org.scalatest.FunSuite {
 
 	test("test1"){
 		val prog = Let("x", Bool(true), 
@@ -82,20 +82,31 @@ class EvaluatorTestSuite2 extends org.scalatest.FunSuite {
 	}
 
 	test("expandAll: 2 defines"){
-		val d1 = Define("fun1", Seq(Argument("a"), Argument("b")), 
-										Resource(Str("1"), "foo", Seq(Attribute(Str("require"), Var("a")), 
-																				Attribute(Str("before"), Var("b")))))
-		val d2 = Define("fun2", Seq(Argument("a"), Argument("b")), 
-										Resource(Str("2"), "foo", Seq(Attribute(Str("require"), Var("a")), 
-																				Attribute(Str("before"), Var("b")))))
-		val i1 = Resource(Str("i1"), "fun1", Seq(Attribute(Str("a"), Str("apple")), Attribute(Str("b"), Str("banana"))))
-		val i2 = Resource(Str("i2"), "fun2", Seq(Attribute(Str("a"), Str("A")), Attribute(Str("b"), Str("B"))))
-		val prog = Block(d1, Block(d2, Block(i1, i2)))
-		val res = Block(Resource(Str("1"), "foo", Seq(Attribute(Str("require"), Str("apple")), 
-																				Attribute(Str("before"), Str("banana")))),
-										Resource(Str("2"), "foo", Seq(Attribute(Str("require"), Str("A")), 
-																				Attribute(Str("before"), Str("B")))))
-		assert(eval(expandAll(eval(prog))) == res)
+		val prog = """
+			define funOne($a, $b){
+				foo { "1": 
+					require => $a,
+					before => $b
+				}
+			}
+			define funTwo($a){
+				foo { "2": "attr" => $a }
+			}
+			funOne { "i1": 
+				a => "apple",
+				b => "banana"
+			}
+			funTwo { "i2": a => "A" }
+		"""
+
+		val res = """
+			foo { "1": 
+				require => "apple",
+				before => "banana"
+			}
+			foo { "2": "attr" => "A" }
+		"""
+		assert(eval(expandAll(eval(parse(prog)))) == parse(res))
 	}
 
 	test("eval-expandAll2"){
