@@ -157,9 +157,11 @@ object Evaluator {
 		case Edge(m1, m2) => g += DiEdge(m1, m2)
 	}	
 
-	def toGraph(g: ManifestGraph, m: Manifest): ManifestGraph = m match {
+	def toGraph(m: Manifest): ManifestGraph = toGraphRec(Graph(), m)
+
+	def toGraphRec(g: ManifestGraph, m: Manifest): ManifestGraph = m match {
 		case Empty => g
-		case Block(m1, m2) => toGraph(g, m1) ++ toGraph(g, m2)
+		case Block(m1, m2) => toGraphRec(g, m1) ++ toGraphRec(g, m2)
 		case e@Edge(_, _) => addEdges(g, e)
 		case Resource(_, _, _) | E(Res(_, _)) | E(Str(_)) | E(Bool(_)) => g + m
 		case ITE(_, _, _) | Let(_, _, _) | E(_) | Define(_, _, _) => 

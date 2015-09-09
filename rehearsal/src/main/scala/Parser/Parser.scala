@@ -51,9 +51,11 @@ private class Parser extends RegexParsers with PackratParsers{
 								{ case id ~ e ~ body => Let(id, e, body.getOrElse(Empty)) }
 
 	//Attribute
+	lazy val before: P[Str] = "before" ^^ { Str(_) }
+	lazy val require: P[Str] = "require" ^^ { Str(_) }
 	lazy val argument: P[Var] = id ^^ { Var(_) } //used for passing arguments to defined types
 	lazy val attribute: P[Attribute] = 
-		(expr | argument) ~ ("=>" ~> expr) ^^ { case name ~ value => Attribute(name, value) }
+		(before | require | expr | argument) ~ ("=>" ~> expr) ^^ { case name ~ value => Attribute(name, value) }
 
 	lazy val attributes: P[Seq[Attribute]] = repsep(attribute, ",") <~ opt(",")
 
@@ -88,26 +90,6 @@ private class Parser extends RegexParsers with PackratParsers{
 								"false" ^^ { _ => Bool(false) }
 
 	lazy val string: P[Str] = stringVal ^^ (Str(_))
-
-	// def desugarAttrs(r: Resource, attrs: Seq[Attribute]): Manifest = (r, attrs) match {
-	// 	case (_, Seq()) => r
-	// 	case (Resource(name, typ, _), Attribute(Str("before"), child)::t) => 
-	// 		Block(desugarAttrs(Resource(name, typ, t), t), Edge(r, E(child)))
-	// 	case (Resource(name, typ, _), Attribute(Str("require"), child)::t) => 
-	// 		Block(desugarAttrs(Resource(name, typ, t), t), Edge(E(child), r))
-	// 	case _ => r
-	// }
-
-	// def desugarAttrs(r: Resource, attrs: Seq[Attribute]): (Seq[Attribute], Manifest) = (r, attrs) match {
-	// 	case (_, Seq()) => (Seq(), Empty)
-	// 	case (_, Attribute(Str("before"), child) :: t) => 
-	// 	case (_, Attribute(Str("require"), parent) :: t) => 
-	// 	case _ => (attrs, Empty)
-	// }	
-	
-	// def desugar(m: Manifest): Manifest = m match {
-		
-	// }
 
 	def simplifyAttributes(lst: Seq[Attribute], src: Res): (Seq[Attribute], Manifest) = {
 		lst.foldRight[(Seq[Attribute], Manifest)]((Seq(), Empty)) {

@@ -30,26 +30,26 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 	}
 
 	test("graphEmpty"){
-		assert(toGraph(Graph(), Empty) == Graph())
+		assert(toGraph(Empty) == Graph())
 	}
 
 	test("graph empty block"){
-		assert(toGraph(Graph(), Block(Empty, Empty)) == Graph())
+		assert(toGraph(Block(Empty, Empty)) == Graph())
 	}
 
 	test("graph resource"){
-		assert(toGraph(Graph(), Resource(Str("1"), "typ", Seq(Attribute(Str("ensure"), Str("present"))))) == 
-			Graph(Resource(Str("1"), "typ", Seq(Attribute(Str("ensure"), Str("present"))))))
+		assert(toGraph(Resource(Str("1"), "typ", Seq(Attribute(Str("ensure"), Str("present"))))) 
+			== Graph(Resource(Str("1"), "typ", Seq(Attribute(Str("ensure"), Str("present"))))))
 	}
 
 	test("graph edge"){
-		assert(toGraph(Graph(), Edge(Resource(Str("1"), "1", Seq()), Resource(Str("2"), "2", Seq()))) == 
+		assert(toGraph(Edge(Resource(Str("1"), "1", Seq()), Resource(Str("2"), "2", Seq()))) == 
 			Graph(Resource(Str("1"), "1", Seq()), Resource(Str("2"), "2", Seq()), 
 						DiEdge(Resource(Str("1"), "1", Seq()), Resource(Str("2"), "2", Seq()))))
 	}
 
 	test("graph block"){
-		assert(toGraph(Graph(), Block(Resource(Str("1"), "1", Seq()), Resource(Str("2"), "2", Seq()))) == 
+		assert(toGraph(Block(Resource(Str("1"), "1", Seq()), Resource(Str("2"), "2", Seq()))) == 
 			Graph(Resource(Str("1"), "1", Seq()), Resource(Str("2"), "2", Seq())))
 	}
 
@@ -60,7 +60,8 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 			}
 			fun { 'i': }
 		"""
-		assert(eval(expandAll(parse(prog))) == Resource(Str("foo"), "hello", Seq(Attribute(Str("a"), Str("b")))))
+		val res = "hello {'foo': 'a' => 'b' }"
+		assert(toGraph(eval(expandAll(parse(prog)))) == toGraph(parse(res)))
 	}
 
 	test("eval-expandAll 1"){
@@ -76,9 +77,12 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 				b => "B"
 			}
 		"""
-		assert(eval(expandAll(parse(prog))) == Block(Resource(Str("/home"),"foo",List()),
-																								 Block(Edge(E(Str("A")),E(Res("Foo",Str("/home")))),
-																								 			 Edge(E(Res("Foo",Str("/home"))),E(Str("B"))))))
+		val res = """
+			foo { '/home': }
+			'A' -> Foo['/home']
+			'B' <- Foo['/home']
+		"""
+		assert(toGraph(eval(expandAll(parse(prog)))) == toGraph(parse(res)))
 	}
 
 	test("expandAll: 2 defines"){
@@ -90,7 +94,7 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 				}
 			}
 			define funTwo($a){
-				foo { "2": "attr" => $a }
+				bar { "2": "attr" => $a }
 			}
 			funOne { "i1": 
 				a => "apple",
@@ -100,13 +104,12 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 		"""
 
 		val res = """
-			foo { "1": 
-				require => "apple",
-				before => "banana"
-			}
-			foo { "2": "attr" => "A" }
+			foo { "1": }
+			"apple" -> Foo["1"]
+			Foo["1"] -> "banana"
+			bar { "2": "attr" => "A" }
 		"""
-		assert(eval(expandAll(eval(parse(prog)))) == parse(res))
+		assert(toGraph(eval(expandAll(eval(parse(prog))))) == toGraph(parse(res)))
 	}
 
 	test("eval-expandAll2"){
@@ -125,8 +128,10 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 				c => true
 			}
 		"""
+		val evald = eval(expandAll(parse(prog)))
 		val res = Resource(Str("1"), "file", Seq(Attribute(Str("content"), Str("one"))))
-		assert(eval(expandAll(parse(prog))) == res)
+		assert(evald == res)
+		assert(toGraph(evald) == toGraph(res))
 	}
 
 	test("expandAll - 2 instances"){
@@ -149,9 +154,13 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 				c => false
 			}
 		"""
+		val evald = eval(expandAll(parse(prog)))
 		val res = Block(Resource(Str("1"), "file", Seq(Attribute(Str("content"), Str("one")))), 
 										Resource(Str("2"), "file", Seq(Attribute(Str("content"), Str("yellow")))))
-		assert(eval(expandAll(parse(prog))) == res)
+		assert(evald == res)
+		assert(toGraph(evald) == 
+			Graph(Resource(Str("1"), "file", Seq(Attribute(Str("content"), Str("one")))),
+						Resource(Str("2"), "file", Seq(Attribute(Str("content"), Str("yellow"))))))
 	}
 
 	test("expandAll - instance in define"){
@@ -174,8 +183,10 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 				$pred => true
 			}
 		"""
+		val evald = eval(expandAll(parse(prog)))
 		val res = "file { '1': 'content' => 'purple' }"
-		assert(eval(expandAll(parse(prog))) == parse(res))
+		assert(evald == parse(res))
+		assert(toGraph(evald) == toGraph(parse(res)))
 	}
 
 }
