@@ -1,0 +1,1 @@
+file{'/foo': } -> file{'/foo/bar': }

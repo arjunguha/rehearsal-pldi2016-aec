@@ -1,0 +1,3 @@
+file{'/myfile':
+  content => "hello"
+}
