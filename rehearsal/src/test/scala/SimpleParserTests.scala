@@ -2,6 +2,7 @@ class SimpleParserTests extends org.scalatest.FunSuite {
 
   import parser.Syntax._
   import parser.Parser._
+  import parser.ParseError
   import java.nio.file._
   import scala.collection.JavaConversions._
 
@@ -16,8 +17,7 @@ class SimpleParserTests extends org.scalatest.FunSuite {
   for (path <- Files.newDirectoryStream(Paths.get("parser-tests/bad"))) {
 
     test(path.toString) {
-      // TODO(arjun): Catch only parse exceptions?
-      intercept[Exception] {
+      intercept[ParseError] {
         parseFile(path.toString)
       }
     }

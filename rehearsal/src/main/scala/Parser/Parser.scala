@@ -3,12 +3,13 @@ package parser
 import scala.util.parsing.combinator._
 import Syntax._
 
+class ParseError(msg: String) extends RuntimeException(msg)
 
 private class Parser extends RegexParsers with PackratParsers{
 
   import Implicits._
 
-	type P[T] = PackratParser[T]
+  type P[T] = PackratParser[T]
 
   // TODO(arjun): escape sequences? interpolation?
 	lazy val stringVal: P[String] =
@@ -51,7 +52,6 @@ private class Parser extends RegexParsers with PackratParsers{
 		manifest ~ ("->" ~> manifest) ^^ { case parent ~ child => Edge(parent, child) } |
 		manifest ~ ("<-" ~> manifest) ^^ { case child ~ parent => Edge(parent, child) }
 
-  // TODO(arjun): This means that the parens are completely optional. Correct?
 	lazy val define: P[Manifest] = "define" ~> word ~ opt(parameters) ~ body ^^ {
 		case name ~ Some(args) ~ body => Define(name, args, body)
 		case name ~ None ~ body => Define(name, Seq(), body)
@@ -147,7 +147,7 @@ private class Parser extends RegexParsers with PackratParsers{
 	def parseString[A](expr: String, parser: Parser[A]): A = {
 		parseAll(parser, expr) match{
 			case Success(r, _) => r
-			case m => throw new RuntimeException(s"$m")
+			case m => throw new ParseError(s"$m")
 		}
 	}
 }
