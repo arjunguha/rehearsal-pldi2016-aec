@@ -43,6 +43,19 @@ package repl {
           }
         }
       }
+      case List("synthprefixbench", trial) => {
+        println("Delta, Prefix, Time")
+        0.until(trial.toInt).foreach { _ =>
+          List(10, 20, 30, 40).foreach { prefixLen =>
+           List(1, 2, 3, 4, 5).foreach { deltaLen =>
+             val lst1 = fileResources.take(prefixLen).toList
+             val lst2 = fileResources.take(prefixLen + deltaLen).toList
+             val (_, t) = time(execLists(lst1, lst2))
+             println(s"$deltaLen, $prefixLen, $t")
+           }
+          }
+        }
+      }
       case List("benchmark", "prefix", n, trial) => { // approx. 50
         // Synthesize the delta between two distinct manifests of size 3 with a common prefix of size n.
         println("count,time")

@@ -3,12 +3,19 @@ package parser
 import scala.util.parsing.combinator._
 import Syntax._
 
-private class Parser extends RegexParsers with PackratParsers{
-	type P[+T] = PackratParser[T]
 
-	lazy val stringVal: P[String] = "\"" ~> "[^\"]*".r <~ "\"" |
-									"'" ~> "[^']*".r <~ "'"
-	lazy val word: P[String] = "" ~> "[a-zA-Z]+".r
+private class Parser extends RegexParsers with PackratParsers{
+
+  import Implicits._
+
+	type P[T] = PackratParser[T]
+
+  // TODO(arjun): escape sequences? interpolation?
+	lazy val stringVal: P[String] =
+	  "\"" ~> "[^\"]*".r <~ "\"" |
+		"'" ~> "[^']*".r <~ "'"
+	// TODO(arjun): I think resource names can be "foo::bar"
+	lazy val word: P[String] = "[a-zA-Z]+".r ^^ { case x => x }
 	lazy val id: P[String] = "" ~> "[a-z_][a-zA-Z0-9_]*".r
 	lazy val attributeName: P[String] = "" ~> "[a-z]+".r
 	lazy val dataType: P[String] = "" ~> "[A-Z][a-zA-Z]+".r
@@ -30,7 +37,9 @@ private class Parser extends RegexParsers with PackratParsers{
 		case typ ~ id ~ attr => Resource(id, typ, attr)
 	}
 
-	lazy val ite: P[Manifest] = "if" ~> (bop | vari) ~ body ~ rep(elsif) ~ opt("else" ~> body) ^^ {
+  // TODO(arjun): bop won't scale as exprs start to grow. Just write a typechecker
+  // eventually.
+	lazy val ite: P[Manifest] = "if" ~> bop ~ body ~ rep(elsif) ~ opt("else" ~> body) ^^ {
 		case pred ~ thn ~ elsifs ~ els => ITE(pred, thn, elsifs.foldRight(els.getOrElse(Empty)) {
 			case ((pred, body), acc) => ITE(pred, body, acc)
 		})
@@ -38,29 +47,30 @@ private class Parser extends RegexParsers with PackratParsers{
 
 	lazy val elsif: P[(Expr, Manifest)] = "elsif" ~> bop ~ body ^^ { case pred ~ body => (pred, body) }
 
-	lazy val edge: P[Manifest] = 
+	lazy val edge: P[Manifest] =
 		manifest ~ ("->" ~> manifest) ^^ { case parent ~ child => Edge(parent, child) } |
 		manifest ~ ("<-" ~> manifest) ^^ { case child ~ parent => Edge(parent, child) }
 
+  // TODO(arjun): This means that the parens are completely optional. Correct?
 	lazy val define: P[Manifest] = "define" ~> word ~ opt(parameters) ~ body ^^ {
 		case name ~ Some(args) ~ body => Define(name, args, body)
 		case name ~ None ~ body => Define(name, Seq(), body)
 	}
 
-	lazy val let: P[Manifest] = varName ~ ("=" ~> expr) ~ opt(manifest) ^^ 
+	lazy val let: P[Manifest] = varName ~ ("=" ~> expr) ~ opt(manifest) ^^
 								{ case id ~ e ~ body => Let(id, e, body.getOrElse(Empty)) }
 
 	//Attribute
 	lazy val before: P[Str] = "before" ^^ { Str(_) }
 	lazy val require: P[Str] = "require" ^^ { Str(_) }
 	lazy val argument: P[Var] = id ^^ { Var(_) } //used for passing arguments to defined types
-	lazy val attribute: P[Attribute] = 
+	lazy val attribute: P[Attribute] =
 		(before | require | expr | argument) ~ ("=>" ~> expr) ^^ { case name ~ value => Attribute(name, value) }
 
 	lazy val attributes: P[Seq[Attribute]] = repsep(attribute, ",") <~ opt(",")
 
 	//Expr
-	lazy val exprMan: P[Manifest] = expr ^^ (E(_))
+	lazy val exprMan: P[Manifest] = expr ^^ { case e => E(e) }
 
 	lazy val expr: P[Expr] = res | vari | bool | string | bop
 
@@ -69,21 +79,32 @@ private class Parser extends RegexParsers with PackratParsers{
 	lazy val vari: P[Expr] = varName ^^ (Var(_))
 
 	//Operators
-	lazy val atom = bool | res | vari | string
-	lazy val batom = not | bool 
+	lazy val atom: P[Expr] =
+	  bool |
+	  res |
+	  vari |
+	  string |
+	  "(" ~ bop ~ ")" ^^ { case _ ~ e ~ _ => e }
 
-	lazy val not: P[Expr] = ("!" ~> expr) ^^ { Not(_) }
+	lazy val not: P[Expr] =
+	  "!" ~> not ^^ { Not(_) } |
+	  atom
 
-	lazy val and: P[Expr] = and ~ ("and" ~> batom) ^^ { case lhs ~ rhs => And(lhs, rhs) } | batom
+	lazy val and: P[Expr] =
+	  and ~ ("and" ~> not) ^^ { case lhs ~ rhs => And(lhs, rhs) } |
+	  not
 
-	lazy val or: P[Expr] = or ~ ("or" ~> and) ^^ { case lhs ~ rhs => Or(lhs, rhs) } | and
+	lazy val or: P[Expr] =
+	  or ~ ("or" ~> and) ^^ { case lhs ~ rhs => Or(lhs, rhs) } |
+	  and
 
-	lazy val bop: P[Expr] = 	(bop | atom) ~ ("==" ~> (or | atom)) ^^ { case lhs ~ rhs => Eq(lhs, rhs) } |
-							(bop | atom) ~ ("!=" ~> (or | atom)) ^^ { case lhs ~ rhs => Not(Eq(lhs, rhs)) } |
-							(bop | atom) ~ ("=~" ~> (or | atom)) ^^ { case lhs ~ rhs => Match(lhs, rhs) } |
-							(bop | atom) ~ ("!~" ~> (or | atom)) ^^ { case lhs ~ rhs => Not(Match(lhs, rhs)) } |
-							(bop | atom) ~ ("in" ~> (or | atom)) ^^ { case lhs ~ rhs => In(lhs, rhs) } |
-							or
+	lazy val bop: P[Expr] =
+	  bop ~ ("==" ~> or) ^^ { case lhs ~ rhs => Eq(lhs, rhs) } |
+		bop ~ ("!=" ~> or) ^^ { case lhs ~ rhs => Not(Eq(lhs, rhs)) } |
+		bop ~ ("=~" ~> or) ^^ { case lhs ~ rhs => Match(lhs, rhs) } |
+		bop ~ ("!~" ~> or) ^^ { case lhs ~ rhs => Not(Match(lhs, rhs)) } |
+		bop ~ ("in" ~> or) ^^ { case lhs ~ rhs => In(lhs, rhs) } |
+		or
 
 	//Constants
 	lazy val bool: P[Expr] = "true" ^^ { _ => Bool(true) } |
@@ -116,23 +137,19 @@ private class Parser extends RegexParsers with PackratParsers{
 		case E(_) => m
 		case Edge(_, _) => m
 	}
-	
+
 	//Program
 	lazy val prog: P[Manifest] = rep(manifest) ^^ { case exprs => blockExprs(exprs) }
 
-	def blockExprs(exprs: Seq[Manifest]): Manifest = exprs.init match {
-		case Seq() => exprs.last
-		case init => init.foldRight[Manifest](exprs.last) {
-			case (e1, e2) => Block(e1, e2)
-		}
-	}
-
+	def blockExprs(exprs: Seq[Manifest]): Manifest = {
+    exprs.foldRight[Manifest](Empty) { case (m1, m2) => m1 >> m2 }
+  }
 	def parseString[A](expr: String, parser: Parser[A]): A = {
 		parseAll(parser, expr) match{
 			case Success(r, _) => r
 			case m => throw new RuntimeException(s"$m")
 		}
-	}	
+	}
 }
 
 object Parser {
@@ -146,4 +163,11 @@ object Parser {
 	def parseArgument(str: String): Argument = parser.parseString(str, parser.parameter)
 	def parseManifest(str: String): Manifest = parser.parseString(str, parser.manifest)
 	def parse(str: String): Manifest = parser.desugar(parser.parseString(str, parser.prog))
+
+	def parseFile(filename: String): Manifest = {
+		import java.nio.file._
+		parse(new String(Files.readAllBytes(Paths.get(filename))))
+	}
+
+
 }

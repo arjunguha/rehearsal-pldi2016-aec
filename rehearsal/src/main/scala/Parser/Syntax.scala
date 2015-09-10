@@ -19,7 +19,7 @@ object Syntax {
 	case class Str(s: String) extends Expr
 	case class Res(typ: String, e: Expr) extends Expr
 	case class Var(name: String) extends Expr
-	case class Bool(b: Boolean) extends Expr	
+	case class Bool(b: Boolean) extends Expr
 	case class Not(e: Expr) extends Expr
 	case class And(e1: Expr, e2: Expr) extends Expr
 	case class Or(e1: Expr, e2: Expr) extends Expr
