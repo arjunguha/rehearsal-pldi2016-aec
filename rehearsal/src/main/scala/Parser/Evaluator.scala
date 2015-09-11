@@ -70,8 +70,10 @@ object Evaluator {
 		case Resource(title, typ, attrs) => Resource(title, typ, attrs.map(attr => subAttr(varName, e, attr)))
 		case ITE(pred, m1, m2) => ITE(subExpr(varName, e, pred), sub(varName, e, m1), sub(varName, e, m2))
 		case Edge(m1, m2) => Edge(sub(varName, e, m1), sub(varName, e, m2))
-		case Define(name, params, m) => Define(name, params, sub(varName, e, m))
-		case Let(v, expr, b) => Let(v, subExpr(varName, e, expr), sub(varName, e, b))
+		case Define(name, params, m) if name != varName => Define(name, params, sub(varName, e, m))
+		case Define(_, _, _) => body
+		case Let(v, expr, b) if v != varName => Let(v, subExpr(varName, e, expr), sub(varName, e, b))
+		case Let(v, expr, b) => Let(v, subExpr(varName, e, expr), b)
 		case E(expr) => E(subExpr(varName, e, expr))
 	}
 
@@ -127,8 +129,7 @@ object Evaluator {
 		}
 		case Edge(m1, m2) => Edge(eval(m1), eval(m2))
 		case Define(_, _, _) => m
-		// TODO(arjun): Evaluate the right-hand side of the let-binding (e)
-		case Let(varName, e, body) => eval(sub(varName, e, body))
+		case Let(varName, e, body) => eval(sub(varName, evalExpr(e), body))
 		case E(e) => E(evalExpr(e))
 	}
 
