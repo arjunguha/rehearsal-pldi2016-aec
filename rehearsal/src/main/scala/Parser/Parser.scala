@@ -135,7 +135,7 @@ private class Parser extends RegexParsers with PackratParsers{
 		case Define(name, args, body) => Define(name, args, desugar(body))
 		case ITE(pred, thn, els) => ITE(pred, desugar(thn), desugar(els))
 		case E(_) => m
-		case Edge(_, _) => m
+		case Edge(m1, m2) => Edge(desugar(m1), desugar(m2))
 	}
 
 	//Program

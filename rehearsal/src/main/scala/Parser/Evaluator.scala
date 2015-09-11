@@ -8,9 +8,43 @@ import scalax.collection.GraphEdge._
 object Evaluator {
 	//pipeline: toGraph(Graph(), eval(expandAll(parse(m))))
 
+	import Implicits._
+
 	case class EvalError(msg: String) extends RuntimeException(msg)
 	case class GraphError(msg: String) extends RuntimeException(msg)
 	type ManifestGraph = Graph[Manifest, DiEdge]
+
+	def isValue(m: Manifest): Boolean = m match {
+		case Empty => true
+		case Block(m1, m2) => isValue(m1) && isValue(m2)
+		case Resource(title, typ, attrs) => {
+			isValueExpr(title) && isPrimitiveType(typ) && attrs.forall {
+				case Attribute(name, value) => isValueExpr(name) && isValueExpr(value)
+			}
+		}
+		case ITE(pred, m1, m2) => isValueExpr(pred) && isValue(m1) && isValue(m2)
+		case Edge(m1, m2) => isValue(m1) && isValue(m2)
+		case Define(_, _, _) => false
+		case Let(_, _, _) => false
+		case E(e) => isValueExpr(e)
+	}
+
+	def isValueExpr(e: Expr): Boolean = e match {
+		case Str(_) => true
+		case Bool(_) => true
+		case Res(typ, e) => isPrimitiveType(typ) && isValueExpr(e)
+		case Var(_) => false
+		case Not(_) => false
+		case And(_, _) => false
+		case Or(_, _) => false
+		case Eq(_, _) => false
+		case Match(_, _) => false
+		case In(_, _) => false
+	}
+
+  val primitiveTypes = Set("file", "package", "user", "group")
+
+	def isPrimitiveType(typ: String): Boolean = primitiveTypes.contains(typ)
 
 	def subExpr(varName: String, e: Expr, body: Expr): Expr = body match {
 		case Str(_) => body
@@ -28,7 +62,7 @@ object Evaluator {
 
 	def subAttr(varName: String, e: Expr, attr: Attribute): Attribute = attr match {
 		case Attribute(name, value) => Attribute(subExpr(varName, e, name), subExpr(varName, e, value))
-	}	
+	}
 
 	def sub(varName: String, e: Expr, body: Manifest): Manifest = body match {
 		case Empty => body
@@ -39,7 +73,7 @@ object Evaluator {
 		case Define(name, params, m) => Define(name, params, sub(varName, e, m))
 		case Let(v, expr, b) => Let(v, subExpr(varName, e, expr), sub(varName, e, b))
 		case E(expr) => E(subExpr(varName, e, expr))
-	}	
+	}
 
 	def evalAttr(a: Attribute): Attribute = a match {
 		case Attribute(name, value) => Attribute(evalExpr(name), evalExpr(value))
@@ -74,25 +108,33 @@ object Evaluator {
 		case In(Str(e1), Str(e2)) => if(e2.contains(e1)) Bool(true) else Bool(false)
 		case In(e1, e2) => throw EvalError(s"Cannot evaluate: Invalid argument(s) for In: $e1, $e2")
 	}
-	
+
 	def eval(m: Manifest): Manifest = m match {
 		case Empty => Empty
-		case Block(Empty, m2) => eval(m2)
-		case Block(m1, Empty) => eval(m1)
-		case Block(m1, m2) => Block(eval(m1), eval(m2))
-		case Resource(title, typ, attrs) => Resource(title, typ, attrs.map(evalAttr))
-		case ITE(pred, m1, m2) if(evalExpr(pred) == Bool(true))  => eval(m1)
-		case ITE(pred, m1, m2) if(evalExpr(pred) == Bool(false)) => eval(m2)
-		case ITE(pred, _, _) => throw EvalError(s"Cannot evaluate: Invalid Predicate for if: $pred")
+		case Block(m1, m2) => eval(m1) >> eval(m2)
+		case Resource(title, typ, attrs) => Resource(evalExpr(title), typ, attrs.map(evalAttr))
+		case ITE(pred, m1, m2) => {
+			val v = evalExpr(pred)
+			if (v == Bool(true)) {
+				eval(m1)
+			}
+			else if (v == Bool(false)) {
+				eval(m2)
+			}
+			else {
+				throw EvalError(s"Cannot evaluate: Invalid Predicate for if: $pred")
+			}
+		}
 		case Edge(m1, m2) => Edge(eval(m1), eval(m2))
 		case Define(_, _, _) => m
+		// TODO(arjun): Evaluate the right-hand side of the let-binding (e)
 		case Let(varName, e, body) => eval(sub(varName, e, body))
 		case E(e) => E(evalExpr(e))
 	}
 
-	/*what to do if instance contains an attribute that doesn't have corresponding parameter in define? : 
+	/*what to do if instance contains an attribute that doesn't have corresponding parameter in define? :
 	  		ignoring for now */
-	def subArgs(params: Seq[Argument], args: Seq[Attribute], body: Manifest): Manifest = 
+	def subArgs(params: Seq[Argument], args: Seq[Attribute], body: Manifest): Manifest =
 		(params, args) match {
 			case (Seq(), _) => body
 			case (Argument(paramName) :: paramsT, Attribute(Str(attrName), value) :: argsT) => {
@@ -103,7 +145,7 @@ object Evaluator {
 				if(paramName == attrName) subArgs(paramsT, argsT, sub(paramName, value, body))
 				else 											subArgs(params, argsT, body)
 			}
-			case (_, Seq()) => throw EvalError(s"""Not enough attributes for 
+			case (_, Seq()) => throw EvalError(s"""Not enough attributes for
 				defined type instantiation: params = $params; body = $body""")
 			case _ => throw EvalError(s"Unexpected attribute pattern: attrs = $args")
 		}
@@ -111,7 +153,7 @@ object Evaluator {
 	def expand(m: Manifest, d: Define): Manifest = (m, d) match {
 		case (Empty, _) => Empty
 		case (Block(m1, m2), _) => Block(expand(m1, d), expand(m2, d))
-		case (Resource(_, typ, attrs), Define(name, params, body)) if name == typ => 
+		case (Resource(_, typ, attrs), Define(name, params, body)) if name == typ =>
 			subArgs(params, attrs, body)
 		case (Resource(_, _, _), _) => m //do nothing
 		case (ITE(pred, thn, els), _) => ITE(pred, expand(thn, d), expand(els, d))
@@ -155,7 +197,7 @@ object Evaluator {
 		case Edge(Block(m11, m12), m2) => addEdges(g, Edge(m11, m2)) ++ addEdges(g, Edge(m12, m2))
 		case Edge(m1, Block(m21, m22)) => addEdges(g, Edge(m1, m21)) ++ addEdges(g, Edge(m1, m22))
 		case Edge(m1, m2) => g += DiEdge(m1, m2)
-	}	
+	}
 
 	def toGraph(m: Manifest): ManifestGraph = toGraphRec(Graph(), m)
 
@@ -164,7 +206,7 @@ object Evaluator {
 		case Block(m1, m2) => toGraphRec(g, m1) ++ toGraphRec(g, m2)
 		case e@Edge(_, _) => addEdges(g, e)
 		case Resource(_, _, _) | E(Res(_, _)) | E(Str(_)) | E(Bool(_)) => g + m
-		case ITE(_, _, _) | Let(_, _, _) | E(_) | Define(_, _, _) => 
+		case ITE(_, _, _) | Let(_, _, _) | E(_) | Define(_, _, _) =>
 			throw GraphError(s"m is not fully evaluated $m")
-	}	
+	}
 }
