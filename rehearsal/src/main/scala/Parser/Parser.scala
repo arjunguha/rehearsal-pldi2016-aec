@@ -28,8 +28,8 @@ private class Parser extends RegexParsers with PackratParsers{
 	lazy val body: P[Manifest] = "{" ~> prog <~ "}"
 
 	lazy val parameter: P[Argument] = opt(dataType) ~ varName ~ opt("=" ~> expr) ^^ {
-		case Some(typ) ~ id ~ default => Argument(id)
-		case None ~ id ~ default => Argument(id)
+		case typ ~ id ~ Some(default) => Argument(id, Some(default))
+		case typ ~ id ~ None => Argument(id, None)
 	}
 
 	lazy val parameters: P[Seq[Argument]] = "(" ~> repsep(parameter, ",") <~ ")"

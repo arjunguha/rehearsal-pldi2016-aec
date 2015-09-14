@@ -3,7 +3,7 @@ package parser
 object Syntax {
 
 	case class Attribute(name: Expr, value: Expr)
-	case class Argument(id: String) //ignoring types and default values for now
+	case class Argument(id: String, default: Option[Expr]) //ignoring types for now
 
 	sealed trait Manifest
 	case object Empty extends Manifest

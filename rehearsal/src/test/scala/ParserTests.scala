@@ -61,8 +61,12 @@ class ParserTestSuite extends org.scalatest.FunSuite {
 	}
 
 	test("Argument"){
-		val arg = "File $x = 'hello'"
-		assert(parseArgument(arg) == Argument("x"))
+		val arg1 = "String $x = 'hello'"
+		val arg2 = "String $x"
+		val arg3 = "$x = 'hello'"
+		assert(parseArgument(arg1) == Argument("x", Some(Str("hello"))))
+		assert(parseArgument(arg2)) == Argument("x", None)
+		assert(parseArgument(arg3) == Argument("x", Some(Str("hello"))))
 	}
 
 	test("resource"){
