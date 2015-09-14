@@ -46,8 +46,18 @@ class ParserTestSuite extends org.scalatest.FunSuite {
 	}
 
 	test("Attribute"){
-		val attr = "ensure => 'present'"
-		assert(parseAttribute(attr) == Attribute(Str("ensure"), Str("present")))
+		val attr1 = "ensure => 'present'"
+		val attr2 = "ensure => present"
+		val attr3 = "content => true"
+		val attr4 = "require => File['/home']"
+		val attr5 = "require => $x"
+		val attr6 = "content => true && false"
+		assert(parseAttribute(attr1) == Attribute(Str("ensure"), Str("present")))
+		assert(parseAttribute(attr2) == Attribute(Str("ensure"), Str("present")))
+		assert(parseAttribute(attr3) == Attribute(Str("content"), Bool(true)))
+		assert(parseAttribute(attr4) == Attribute(Str("require"), Res("File", Str("/home"))))
+		assert(parseAttribute(attr5) == Attribute(Str("require"), Var("x")))
+		assert(parseAttribute(attr6) == Attribute(Str("content"), And(Bool(true), Bool(false))))
 	}
 
 	test("Argument"){
