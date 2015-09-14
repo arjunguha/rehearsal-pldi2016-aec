@@ -1,3 +1,3 @@
 file{'/myfile':
-  "ensure" => "present"
+  ensure => "present"
 }

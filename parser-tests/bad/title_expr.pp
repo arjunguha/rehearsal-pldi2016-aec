@@ -1,4 +1,4 @@
 $x = '/myfile'
 file{$x:
-  ensure => "present"
+  "ensure" => "present"
 }

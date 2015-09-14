@@ -56,11 +56,11 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 	test("eval-expandAll: no arguments"){
 		val prog = """
 			define fun(){
-				hello { "foo": "a" => "b" }
+				hello { "foo": a => "b" }
 			}
 			fun { 'i': }
 		"""
-		val res = "hello {'foo': 'a' => 'b' }"
+		val res = "hello {'foo': a => 'b' }"
 		assert(toGraph(eval(expandAll(parse(prog)))) == toGraph(parse(res)))
 	}
 
@@ -68,8 +68,8 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 		val prog = """
 			define fun($a, $b){
 				foo { '/home': 
-					"require" => $a,
-					"before" => $b
+					require => $a,
+					before => $b
 				}
 			}
 			fun {'instance': 
@@ -79,8 +79,8 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 		"""
 		val res = """
 			foo { '/home': }
-			'A' -> Foo['/home']
-			'B' <- Foo['/home']
+			"A" -> Foo['/home']
+			"B" <- Foo['/home']
 		"""
 		assert(toGraph(eval(expandAll(parse(prog)))) == toGraph(parse(res)))
 	}
@@ -94,7 +94,7 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 				}
 			}
 			define funTwo($a){
-				bar { "2": "attr" => $a }
+				bar { "2": attr => $a }
 			}
 			funOne { "i1": 
 				a => "apple",
@@ -107,7 +107,7 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 			foo { "1": }
 			"apple" -> Foo["1"]
 			Foo["1"] -> "banana"
-			bar { "2": "attr" => "A" }
+			bar { "2": attr => "A" }
 		"""
 		assert(toGraph(eval(expandAll(eval(parse(prog))))) == toGraph(parse(res)))
 	}
@@ -116,9 +116,9 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 		val prog = """
 			define f($a, $b, $c){
 				if $c {
-					file { "1": "content" => $a }
+					file { "1": content => $a }
 				}else{
-					file { "2": "content" => $b }
+					file { "2": content => $b }
 				}
 			}
 
@@ -143,9 +143,9 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 			}
 			define f($a, $b, $c){
 				if $c {
-					file { "1": "content" => $a }
+					file { "1": content => $a }
 				}else{
-					file { "2": "content" => $b }
+					file { "2": content => $b }
 				}
 			}
 			f { "instance2": 
@@ -167,9 +167,9 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 		val prog = """
 			define f($a, $b, $c){
 				if $c {
-					file { "1": "content" => $a }
+					file { "1": content => $a }
 				}else{
-					file { "2": "content" => $b }
+					file { "2": content => $b }
 				}
 			}
 			define g($pred){
@@ -184,7 +184,7 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 			}
 		"""
 		val evald = eval(expandAll(parse(prog)))
-		val res = "file { '1': 'content' => 'purple' }"
+		val res = "file { '1': content => 'purple' }"
 		assert(evald == parse(res))
 		assert(toGraph(evald) == toGraph(parse(res)))
 	}

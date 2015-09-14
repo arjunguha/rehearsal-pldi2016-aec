@@ -61,11 +61,9 @@ private class Parser extends RegexParsers with PackratParsers{
 								{ case id ~ e ~ body => Let(id, e, body.getOrElse(Empty)) }
 
 	//Attribute
-	lazy val before: P[Str] = "before" ^^ { Str(_) }
-	lazy val require: P[Str] = "require" ^^ { Str(_) }
-	lazy val argument: P[Var] = id ^^ { Var(_) } //used for passing arguments to defined types
+	lazy val attrId: P[Str] = id ^^ { case s => Str(s) }
 	lazy val attribute: P[Attribute] =
-		(before | require | expr | argument) ~ ("=>" ~> expr) ^^ { case name ~ value => Attribute(name, value) }
+		(attrId | vari) ~ ("=>" ~> expr | attrId) ^^ { case name ~ value => Attribute(name, value) }
 
 	lazy val attributes: P[Seq[Attribute]] = repsep(attribute, ",") <~ opt(",")
 

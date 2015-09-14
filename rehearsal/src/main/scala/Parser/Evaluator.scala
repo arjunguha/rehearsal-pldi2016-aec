@@ -67,10 +67,12 @@ object Evaluator {
 	def sub(varName: String, e: Expr, body: Manifest): Manifest = body match {
 		case Empty => body
 		case Block(m1, m2) => Block(sub(varName, e, m1), sub(varName, e, m2))
-		case Resource(title, typ, attrs) => Resource(title, typ, attrs.map(attr => subAttr(varName, e, attr)))
+		case Resource(title, typ, attrs) => 
+			Resource(subExpr(varName, e, title), typ, attrs.map(attr => subAttr(varName, e, attr)))
 		case ITE(pred, m1, m2) => ITE(subExpr(varName, e, pred), sub(varName, e, m1), sub(varName, e, m2))
 		case Edge(m1, m2) => Edge(sub(varName, e, m1), sub(varName, e, m2))
-		case Define(name, params, m) if name != varName => Define(name, params, sub(varName, e, m))
+		case Define(name, params, m) if name != varName && !params.contains(Argument(varName)) => 
+			Define(name, params, sub(varName, e, m))
 		case Define(_, _, _) => body
 		case Let(v, expr, b) if v != varName => Let(v, subExpr(varName, e, expr), sub(varName, e, b))
 		case Let(v, expr, b) => Let(v, subExpr(varName, e, expr), b)
