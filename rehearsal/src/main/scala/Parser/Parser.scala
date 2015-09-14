@@ -63,7 +63,7 @@ private class Parser extends RegexParsers with PackratParsers{
 	//Attribute
 	lazy val attrId: P[Str] = id ^^ { case s => Str(s) }
 	lazy val attribute: P[Attribute] =
-		(attrId | vari) ~ ("=>" ~> expr | attrId) ^^ { case name ~ value => Attribute(name, value) }
+		(attrId | vari) ~ ("=>" ~> (expr | attrId)) ^^ { case name ~ value => Attribute(name, value) }
 
 	lazy val attributes: P[Seq[Attribute]] = repsep(attribute, ",") <~ opt(",")
 
