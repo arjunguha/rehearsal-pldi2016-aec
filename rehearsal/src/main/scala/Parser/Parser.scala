@@ -70,7 +70,7 @@ private class Parser extends RegexParsers with PackratParsers{
 	//Expr
 	lazy val exprMan: P[Manifest] = expr ^^ { case e => E(e) }
 
-	lazy val expr: P[Expr] = res | vari | bool | string | bop
+	lazy val expr: P[Expr] = res | vari | bop | bool | string
 
 	lazy val res: P[Expr] = word ~ ("[" ~> expr <~ "]") ^^ { case typ ~ e => Res(typ, e) }
 

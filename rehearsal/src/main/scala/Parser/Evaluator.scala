@@ -65,7 +65,7 @@ object Evaluator {
 	}
 
 	def paramsContainVar(varName: String, params: Seq[Argument]) = 
-		params.foldRight[Boolean]{case Argument(id, _) => id == varName}
+		params.foldRight[Boolean](false){case (Argument(id, _), res) => ((id == varName) || res)}
 
 	def sub(varName: String, e: Expr, body: Manifest): Manifest = body match {
 		case Empty => body

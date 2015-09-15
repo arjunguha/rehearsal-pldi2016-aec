@@ -51,7 +51,7 @@ class ParserTestSuite extends org.scalatest.FunSuite {
 		val attr3 = "content => true"
 		val attr4 = "require => File['/home']"
 		val attr5 = "require => $x"
-		val attr6 = "content => true && false"
+		val attr6 = "content => true and false"
 		assert(parseAttribute(attr1) == Attribute(Str("ensure"), Str("present")))
 		assert(parseAttribute(attr2) == Attribute(Str("ensure"), Str("present")))
 		assert(parseAttribute(attr3) == Attribute(Str("content"), Bool(true)))
@@ -65,7 +65,7 @@ class ParserTestSuite extends org.scalatest.FunSuite {
 		val arg2 = "String $x"
 		val arg3 = "$x = 'hello'"
 		assert(parseArgument(arg1) == Argument("x", Some(Str("hello"))))
-		assert(parseArgument(arg2)) == Argument("x", None)
+		assert(parseArgument(arg2) == Argument("x", None))
 		assert(parseArgument(arg3) == Argument("x", Some(Str("hello"))))
 	}
 
@@ -105,7 +105,7 @@ class ParserTestSuite extends org.scalatest.FunSuite {
 			}
 		"""
 		val res = Define("foo",
-								Seq(Argument("bar")),
+								Seq(Argument("bar", Some(Str("baz")))),
 								Resource(Str("foo"), "file", Seq(Attribute(Str("ensure"), Str("present"))))
 							)
 		assert(parseManifest(expr) == res)
@@ -136,7 +136,7 @@ class ParserTestSuite extends org.scalatest.FunSuite {
 				foo => 'bar'
 			}
 		"""
-		val res = Block(Define("foo",	Seq(Argument("bar")),
+		val res = Block(Define("foo",	Seq(Argument("bar", Some(Str("baz")))),
 								Resource(Str("foo"), "file", Seq(Attribute(Str("ensure"), Str("present"))))
 							), Block(
 					Resource(Str("awe"), "user", Seq(Attribute(Str("ensure"), Str("present")),
