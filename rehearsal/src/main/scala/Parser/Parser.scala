@@ -20,7 +20,7 @@ private class Parser extends RegexParsers with PackratParsers{
 	lazy val id: P[String] = "" ~> "[a-z_][a-zA-Z0-9_]*".r
 	lazy val attributeName: P[String] = "" ~> "[a-z]+".r
 	lazy val dataType: P[String] = "" ~> "[A-Z][a-zA-Z]+".r
-	lazy val varName: P[String] =  "$" ~> id
+	lazy val varName: P[String] =  "$" ~> "[a-z_(::)][a-zA-Z0-9_(::)]*[a-zA-Z0-9_]+|[a-z_(::)]".r
 
 	//Manifest
 	lazy val manifest: P[Manifest] = edge | let | define | resource | ite | exprMan
