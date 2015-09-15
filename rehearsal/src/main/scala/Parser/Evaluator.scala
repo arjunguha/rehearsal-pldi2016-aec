@@ -42,7 +42,7 @@ object Evaluator {
 		case In(_, _) => false
 	}
 
-  val primitiveTypes = Set("file", "package", "user", "group")
+  val primitiveTypes = Set("file", "File", "package", "Package", "user", "User", "group", "Group")
 
 	def isPrimitiveType(typ: String): Boolean = primitiveTypes.contains(typ)
 
@@ -151,7 +151,9 @@ object Evaluator {
 				if(paramName == attrName) subArgs(paramsT, argsT, sub(paramName, value, body))
 				else 											subArgs(params, argsT, body)
 			}
-			case (_, Seq()) => throw EvalError(s"""Not enough attributes for
+			case (Argument(paramName, Some(default)) :: paramsT, Seq()) => 
+				subArgs(paramsT, args, sub(paramName, default, body))
+			case (Argument(_, None) :: _, Seq()) => throw EvalError(s"""Not enough attributes for
 				defined type instantiation: params = $params; body = $body""")
 			case _ => throw EvalError(s"Unexpected attribute pattern: attrs = $args")
 		}
