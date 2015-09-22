@@ -9,10 +9,10 @@ class GithubSuite extends org.scalatest.FunSuite {
   import java.nio.charset.StandardCharsets.UTF_8
   import scala.collection.JavaConversions._
 
-  val env = puppet.Facter.fromFile("rehearsal/src/test/arjun-vm.facter") getOrElse
+  val env = puppet.Facter.fromFile("src/test/arjun-vm.facter") getOrElse
     (throw new Exception("Facter environment not found"))
 
-  val repos = Files.readAllLines(Paths.get("rehearsal/src/test/github.txt"), UTF_8)
+  val repos = Files.readAllLines(Paths.get("src/test/github.txt"), UTF_8)
 
   for (repo <- repos) {
     test(repo) {

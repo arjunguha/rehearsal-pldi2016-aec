@@ -2,7 +2,7 @@ class CatalogTests extends org.scalatest.FunSuite {
   import rehearsal._
   import SymbolicEvaluator.{isDeterministic, isDeterministicError}
 
-  val dir = "rehearsal/src/test/catalogs"
+  val dir = "src/test/catalogs"
 
   // Why do these tests check that nodes.size > 5? It is a dumb sanity check. We could write more rigorous tests,
   // but I've eyeballed the results enough.
@@ -27,7 +27,7 @@ class CatalogTests extends org.scalatest.FunSuite {
     assert(g.nodes.size > 5)
     val g2 = toFileScriptGraph(g)
     println(g)
-    
+
     assert(true == isDeterministicError(g2))
   }
 

@@ -3,7 +3,7 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
   import rehearsal._
   import java.nio.file._
 
-  val root = "rehearsal/src/test/catalogs"
+  val root = "src/test/catalogs"
 
   test("puppet-monit.json") {
     val rg = Catalog.parseFile(s"$root/puppet-monit.json")
