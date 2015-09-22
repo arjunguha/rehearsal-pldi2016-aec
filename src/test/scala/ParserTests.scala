@@ -1,5 +1,6 @@
-import parser.Syntax._
-import parser.Parser._
+import rehearsal._
+import Parser._
+import Syntax._
 
 class ParserTestSuite extends org.scalatest.FunSuite {
 
@@ -81,18 +82,18 @@ class ParserTestSuite extends org.scalatest.FunSuite {
 				user { 'awe': ensure => present }
 			}
 		"""
-		assert(parseManifest(prog) == ITE(Bool(true), 
+		assert(parseManifest(prog) == ITE(Bool(true),
 			Resource(Str("awe"), "user", Seq(Attribute(Str("ensure"), Str("present")))), Empty))
 	}
 
 	test("edge"){
 		val edge1 = "user { 'awe': ensure => 'present' } -> file { '/home': ensure => present }"
 		val edge2 = "user { 'awe': ensure => 'present' } <- file { '/home': ensure => present } "
-		assert(parseManifest(edge1) == 
-			Edge(Resource(Str("awe"), "user", Seq(Attribute(Str("ensure"), Str("present")))), 
+		assert(parseManifest(edge1) ==
+			Edge(Resource(Str("awe"), "user", Seq(Attribute(Str("ensure"), Str("present")))),
 					 Resource(Str("/home"), "file", Seq(Attribute(Str("ensure"), Str("present"))))))
-		assert(parseManifest(edge2) == 
-			Edge(Resource(Str("/home"), "file", Seq(Attribute(Str("ensure"), Str("present")))), 
+		assert(parseManifest(edge2) ==
+			Edge(Resource(Str("/home"), "file", Seq(Attribute(Str("ensure"), Str("present")))),
 					 Resource(Str("awe"), "user", Seq(Attribute(Str("ensure"), Str("present"))))))
 	}
 

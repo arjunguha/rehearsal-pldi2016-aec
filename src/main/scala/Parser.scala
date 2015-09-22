@@ -1,4 +1,4 @@
-package parser
+package rehearsal
 
 import scala.util.parsing.combinator._
 import Syntax._

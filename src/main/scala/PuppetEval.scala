@@ -1,13 +1,11 @@
-package parser
-
-import Syntax._
-import scalax.collection.mutable.Graph
-import scalax.collection.mutable.Graph._
-import scalax.collection.GraphEdge._
+package rehearsal
 
 object Evaluator {
 	//pipeline: toGraph(Graph(), eval(expandAll(parse(m))))
-
+	import Syntax._
+	import scalax.collection.mutable.Graph
+	import scalax.collection.mutable.Graph._
+	import scalax.collection.GraphEdge._
 	import Implicits._
 
 	case class EvalError(msg: String) extends RuntimeException(msg)
@@ -64,17 +62,17 @@ object Evaluator {
 		case Attribute(name, value) => Attribute(subExpr(varName, e, name), subExpr(varName, e, value))
 	}
 
-	def paramsContainVar(varName: String, params: Seq[Argument]) = 
+	def paramsContainVar(varName: String, params: Seq[Argument]) =
 		params.foldRight[Boolean](false){case (Argument(id, _), res) => ((id == varName) || res)}
 
 	def sub(varName: String, e: Expr, body: Manifest): Manifest = body match {
 		case Empty => body
 		case Block(m1, m2) => Block(sub(varName, e, m1), sub(varName, e, m2))
-		case Resource(title, typ, attrs) => 
+		case Resource(title, typ, attrs) =>
 			Resource(subExpr(varName, e, title), typ, attrs.map(attr => subAttr(varName, e, attr)))
 		case ITE(pred, m1, m2) => ITE(subExpr(varName, e, pred), sub(varName, e, m1), sub(varName, e, m2))
 		case Edge(m1, m2) => Edge(sub(varName, e, m1), sub(varName, e, m2))
-		case Define(name, params, m) if name != varName && !paramsContainVar(varName, params) => 
+		case Define(name, params, m) if name != varName && !paramsContainVar(varName, params) =>
 			Define(name, params, sub(varName, e, m))
 		case Define(_, _, _) => body
 		case Let(v, expr, b) if v != varName => Let(v, subExpr(varName, e, expr), sub(varName, e, b))
@@ -151,7 +149,7 @@ object Evaluator {
 				if(paramName == attrName) subArgs(paramsT, argsT, sub(paramName, value, body))
 				else 											subArgs(params, argsT, body)
 			}
-			case (Argument(paramName, Some(default)) :: paramsT, Seq()) => 
+			case (Argument(paramName, Some(default)) :: paramsT, Seq()) =>
 				subArgs(paramsT, args, sub(paramName, default, body))
 			case (Argument(_, None) :: _, Seq()) => throw EvalError(s"""Not enough attributes for
 				defined type instantiation: params = $params; body = $body""")

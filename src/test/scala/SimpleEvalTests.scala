@@ -1,9 +1,9 @@
 class SimpleEvalTests extends org.scalatest.FunSuite {
 
-	import parser.Syntax._
-	import parser.Parser._
-	import parser.Evaluator._
-	import parser.ParseError
+	import rehearsal._
+	import Parser._
+	import Syntax._
+	import Evaluator._
 	import java.nio.file._
 	import scala.collection.JavaConversions._
 
