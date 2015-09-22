@@ -1,4 +1,4 @@
-// From https://github.com/dhoppe/puppet-monit
+# From https://github.com/dhoppe/puppet-monit
 define monit::service() {
   file { "/etc/monit/conf.d/${name}":
     owner   => 'root',
