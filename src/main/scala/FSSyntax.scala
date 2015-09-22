@@ -46,7 +46,6 @@ object FSSyntax {
   sealed abstract trait Expr extends Product {
     def pretty(): String = Pretty.pretty(this)
     def commutesWith(other: Expr) = Commutativity.commutes(this, other)
-    def wp(post: Pred): Pred = WeakestPreconditions.wp(this, post)
 
     val size = Helpers.size(this)
     val paths = Helpers.exprPaths(this)
