@@ -35,7 +35,7 @@ private class Parser extends RegexParsers with PackratParsers{
 		case typ ~ id ~ None => Argument(id, None)
 	}
 
-	lazy val parameters: P[Seq[Argument]] = "(" ~> repsep(parameter, ",") <~ ")"
+	lazy val parameters: P[Seq[Argument]] = ("(" ~> repsep(parameter, ",") <~ opt(",")) <~ ")"
 
 	lazy val resource: P[Manifest] = word ~ ("{" ~> expr <~ ":") ~ (attributes <~ "}") ^^ {
 		case typ ~ id ~ attr => Resource(id, typ, attr)
