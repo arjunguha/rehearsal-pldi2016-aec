@@ -11,6 +11,9 @@ private class Parser extends RegexParsers with PackratParsers{
 
   type P[T] = PackratParser[T]
 
+  override protected val whiteSpace = """(\s|#.*|(/\*((\*[^/])|[^*])*\*/))+""".r
+
+
   // TODO(arjun): escape sequences? interpolation?
 	lazy val stringVal: P[String] =
 	  "\"" ~> "[^\"]*".r <~ "\"" |
