@@ -26,4 +26,5 @@ object Syntax {
 	case class Eq(e1: Expr, e2: Expr) extends Expr
 	case class Match(e1: Expr, e2: Expr) extends Expr
 	case class In(e1: Expr, e2: Expr) extends Expr
+        case class Array(es: Seq[Expr]) extends Expr
 }

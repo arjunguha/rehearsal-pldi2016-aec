@@ -38,6 +38,7 @@ object Evaluator {
 		case Eq(_, _) => false
 		case Match(_, _) => false
 		case In(_, _) => false
+                case Array(es) => es.forall(isValueExpr)
 	}
 
   val primitiveTypes = Set("file", "File", "package", "Package", "user", "User", "group", "Group")
@@ -89,6 +90,7 @@ object Evaluator {
 		case Var(_) => e
 		case Str(_) => e
 		case Bool(_) => e
+                case Array(_) => e
 		case Not(e) => evalExpr(e) match {
 			case Bool(b) => Bool(!b)
 			case _ => throw EvalError(s"Cannot evaluate: Invalid argument for Not: $e")

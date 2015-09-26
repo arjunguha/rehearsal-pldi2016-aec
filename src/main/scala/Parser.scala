@@ -73,9 +73,11 @@ private class Parser extends RegexParsers with PackratParsers{
 	//Expr
 	lazy val exprMan: P[Manifest] = expr ^^ { case e => E(e) }
 
-	lazy val expr: P[Expr] = res | vari | bop | bool | string
+	lazy val expr: P[Expr] = res | array | vari | bop | bool | string
 
 	lazy val res: P[Expr] = word ~ ("[" ~> expr <~ "]") ^^ { case typ ~ e => Res(typ, e) }
+
+        lazy val array: P[Expr] = "[" ~> repsep(expr, ",") <~ "]" ^^ { case es => Array(es) }
 
 	lazy val vari: P[Expr] = varName ^^ (Var(_))
 
@@ -109,7 +111,7 @@ private class Parser extends RegexParsers with PackratParsers{
 
 	//Constants
 	lazy val bool: P[Expr] = "true" ^^ { _ => Bool(true) } |
-								"false" ^^ { _ => Bool(false) }
+				 "false" ^^ { _ => Bool(false) }
 
 	lazy val string: P[Str] = stringVal ^^ (Str(_))
 
