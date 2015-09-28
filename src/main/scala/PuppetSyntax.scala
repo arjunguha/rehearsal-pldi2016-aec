@@ -12,6 +12,7 @@ object Syntax {
 	case class ITE(pred: Expr, m1: Manifest, m2: Manifest) extends Manifest
 	case class Edge(m1: Manifest, m2: Manifest) extends Manifest
 	case class Define(name: String, params: Seq[Argument], body: Manifest) extends Manifest
+	case class Class(name: String, body: Manifest) extends Manifest
 	case class Let(varName: String, e: Expr, body: Manifest) extends Manifest
 	case class E(e: Expr) extends Manifest
 

@@ -26,7 +26,14 @@ private class Parser extends RegexParsers with PackratParsers{
 	lazy val varName: P[String] =  "$" ~> "[a-z_(::)][a-zA-Z0-9_(::)]*[a-zA-Z0-9_]+|[a-z_(::)]".r
 
 	//Manifest
-	lazy val manifest: P[Manifest] = edge | let | define | resource | ite | exprMan
+	lazy val manifest: P[Manifest] =
+	  edge |
+	  let |
+	  define |
+	  resource |
+	  "class" ~ word ~ body ^^ { case _ ~ x ~ m => Class(x, m) } |
+	  ite |
+	  exprMan
 
 	lazy val body: P[Manifest] = "{" ~> prog <~ "}"
 
@@ -130,6 +137,7 @@ private class Parser extends RegexParsers with PackratParsers{
 			case (attrs, Empty) => Resource(Str(id), typ, attrs)
 			case (attrs, m) => Block(Resource(Str(id), typ, attrs), m)
 		}
+		case Class(x, m) => Define(x, Seq(), desugar(m))
 		case Resource(id, typ, attrs) => simplifyAttributes(attrs, Res(typ.capitalize, id)) match {
 			case (attrs, Empty) => Resource(id, typ, attrs)
 			case (attrs, m) => Block(Resource(id, typ, attrs), m)

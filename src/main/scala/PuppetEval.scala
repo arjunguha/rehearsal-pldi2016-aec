@@ -23,6 +23,7 @@ object Evaluator {
 		case ITE(pred, m1, m2) => isValueExpr(pred) && isValue(m1) && isValue(m2)
 		case Edge(m1, m2) => isValue(m1) && isValue(m2)
 		case Define(_, _, _) => false
+		case Class(_, _) => false
 		case Let(_, _, _) => false
 		case E(e) => isValueExpr(e)
 	}
@@ -136,6 +137,7 @@ object Evaluator {
 		case Define(_, _, _) => m
 		case Let(varName, e, body) => eval(sub(varName, evalExpr(e), body))
 		case E(e) => E(evalExpr(e))
+		case Class(_, _) => throw EvalError("class should have eliminated by desugaring")
 	}
 
 	/*what to do if instance contains an attribute that doesn't have corresponding parameter in define? :
@@ -189,6 +191,7 @@ object Evaluator {
 		}
 		case Let(_, _, body) => findDefine(body)
 		case Empty|E(_)|Resource(_, _, _) => None
+		case Class(_, _) => None
 	}
 
 	def expandAll(m: Manifest): Manifest = {
@@ -214,7 +217,7 @@ object Evaluator {
 		case Block(m1, m2) => toGraphRec(g, m1) ++ toGraphRec(g, m2)
 		case e@Edge(_, _) => addEdges(g, e)
 		case Resource(_, _, _) | E(Res(_, _)) | E(Str(_)) | E(Bool(_)) => g + m
-		case ITE(_, _, _) | Let(_, _, _) | E(_) | Define(_, _, _) =>
+		case ITE(_, _, _) | Let(_, _, _) | E(_) | Define(_, _, _) | Class(_, _) =>
 			throw GraphError(s"m is not fully evaluated $m")
 	}
 }
