@@ -31,7 +31,8 @@ private class Parser extends RegexParsers with PackratParsers{
 	  let |
 	  define |
 	  resource |
-	  "class" ~ word ~ body ^^ { case _ ~ x ~ m => Class(x, m) } |
+	  "class" ~ word ~ "inherits" ~ word ~ body ^^ { case _ ~ x ~ _ ~ y ~ m => Class(x, Some(y), m) } |
+	  "class" ~ word ~ body ^^ { case _ ~ x ~ m => Class(x, None, m) } |
 	  "case" ~ expr ~ "{" ~ cases ~ "}" ^^ { case _ ~ e ~ _ ~ lst ~ _ => MCase(e, lst) } |
 	  ite |
 	  exprMan
@@ -145,7 +146,8 @@ private class Parser extends RegexParsers with PackratParsers{
 			case (attrs, Empty) => Resource(Str(id), typ, attrs)
 			case (attrs, m) => Block(Resource(Str(id), typ, attrs), m)
 		}
-		case Class(x, m) => Define(x, Seq(), desugar(m))
+		// TODO(arjun): Inheritance!
+		case Class(x, _, m) => Define(x, Seq(), desugar(m))
 		case Resource(id, typ, attrs) => simplifyAttributes(attrs, Res(typ.capitalize, id)) match {
 			case (attrs, Empty) => Resource(id, typ, attrs)
 			case (attrs, m) => Block(Resource(id, typ, attrs), m)

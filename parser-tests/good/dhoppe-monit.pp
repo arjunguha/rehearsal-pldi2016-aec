@@ -73,9 +73,15 @@ class monit inherits monit::params {
   }
 }
 
+/*
+
+HACK(arjun): This is crazy. Let's not support overriding using inheritance.
+
 class monit::disabled inherits monit {
   Service['monit'] {
     ensure => stopped,
     enable => false,
   }
 }
+
+*/
