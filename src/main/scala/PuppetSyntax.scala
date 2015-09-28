@@ -14,6 +14,7 @@ object Syntax {
 	case class Define(name: String, params: Seq[Argument], body: Manifest) extends Manifest
 	case class Class(name: String, body: Manifest) extends Manifest
 	case class Let(varName: String, e: Expr, body: Manifest) extends Manifest
+	case class MCase(e: Expr, cases: Seq[Case]) extends Manifest
 	case class E(e: Expr) extends Manifest
 
 	sealed trait Expr
@@ -28,4 +29,8 @@ object Syntax {
 	case class Match(e1: Expr, e2: Expr) extends Expr
 	case class In(e1: Expr, e2: Expr) extends Expr
         case class Array(es: Seq[Expr]) extends Expr
+
+   sealed trait Case
+   case class CaseDefault(m: Manifest) extends Case
+   case class CaseExpr(e: Expr, m: Manifest) extends Case
 }

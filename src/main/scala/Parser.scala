@@ -3,7 +3,7 @@ package rehearsal
 import scala.util.parsing.combinator._
 import Syntax._
 
-class ParseError(msg: String) extends RuntimeException(msg)
+case class ParseError(msg: String) extends RuntimeException(msg)
 
 private class Parser extends RegexParsers with PackratParsers{
 
@@ -32,10 +32,17 @@ private class Parser extends RegexParsers with PackratParsers{
 	  define |
 	  resource |
 	  "class" ~ word ~ body ^^ { case _ ~ x ~ m => Class(x, m) } |
+	  "case" ~ expr ~ "{" ~ cases ~ "}" ^^ { case _ ~ e ~ _ ~ lst ~ _ => MCase(e, lst) }
 	  ite |
 	  exprMan
 
+
 	lazy val body: P[Manifest] = "{" ~> prog <~ "}"
+
+	lazy val cases: P[Seq[Case]] =
+	  "default" ~ ":" ~ body ^^ { case _ ~ _ ~ m => Seq(CaseDefault(m)) } |
+	  expr ~ ":" ~ body ~ cases ^^ { case e ~ _ ~ m ~ rest => CaseExpr(e, m) +: rest } |
+	  success(()) ^^ { case _ => Seq[Case]() }
 
 	lazy val parameter: P[Argument] = opt(dataType) ~ varName ~ opt("=" ~> expr) ^^ {
 		case typ ~ id ~ Some(default) => Argument(id, Some(default))
@@ -147,6 +154,18 @@ private class Parser extends RegexParsers with PackratParsers{
 		case ITE(pred, thn, els) => ITE(pred, desugar(thn), desugar(els))
 		case E(_) => m
 		case Edge(m1, m2) => Edge(desugar(m1), desugar(m2))
+		case MCase(e, lst) => {
+			// TODO(arjun): should we ensure that "e" is only evaluted once? Does it
+			// matter? (No side-effects, right?)
+      lst.foldRight[Manifest](Empty) {
+      	// TODO(arjun): Eq(e, v) is not quite right. It won't work for
+      	// values that reduce to regular expressions. See this:
+      	// https://docs.puppetlabs.com/puppet/latest/reference/lang_conditional.html#case-matching
+      	case (CaseExpr(v, m), rest) => ITE(Eq(e, v), m, rest)
+      	case (CaseDefault(m), Empty) => m
+      	case (CaseDefault(_), _) => throw new Exception("default is not the last case (should have been caught by the grammar)")
+      }
+		}
 	}
 
 	//Program
