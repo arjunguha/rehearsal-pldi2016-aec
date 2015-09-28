@@ -32,7 +32,7 @@ private class Parser extends RegexParsers with PackratParsers{
 	  define |
 	  resource |
 	  "class" ~ word ~ body ^^ { case _ ~ x ~ m => Class(x, m) } |
-	  "case" ~ expr ~ "{" ~ cases ~ "}" ^^ { case _ ~ e ~ _ ~ lst ~ _ => MCase(e, lst) }
+	  "case" ~ expr ~ "{" ~ cases ~ "}" ^^ { case _ ~ e ~ _ ~ lst ~ _ => MCase(e, lst) } |
 	  ite |
 	  exprMan
 
