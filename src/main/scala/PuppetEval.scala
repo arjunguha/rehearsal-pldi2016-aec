@@ -40,7 +40,8 @@ object Evaluator {
 		case Eq(_, _) => false
 		case Match(_, _) => false
 		case In(_, _) => false
-                case Array(es) => es.forall(isValueExpr)
+    case Array(es) => es.forall(isValueExpr)
+    case App(_, _) => false
 	}
 
   val primitiveTypes = Set("file", "File", "package", "Package", "user", "User", "group", "Group")
@@ -116,6 +117,7 @@ object Evaluator {
 		case Match(e1, e2) => throw EvalError(s"Cannot evaluate: Invalid argument(s) for Match: $e1, $e2")
 		case In(Str(e1), Str(e2)) => if(e2.contains(e1)) Bool(true) else Bool(false)
 		case In(e1, e2) => throw EvalError(s"Cannot evaluate: Invalid argument(s) for In: $e1, $e2")
+		case App(_, _) => throw new Exception("NYI")
 	}
 
 	def eval(m: Manifest): Manifest = m match {

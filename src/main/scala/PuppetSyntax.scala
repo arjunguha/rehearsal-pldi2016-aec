@@ -17,6 +17,7 @@ object Syntax {
 	case class MCase(e: Expr, cases: Seq[Case]) extends Manifest
 	case class E(e: Expr) extends Manifest
 
+
 	sealed trait Expr
 	case class Str(s: String) extends Expr
 	case class Res(typ: String, e: Expr) extends Expr
@@ -28,7 +29,8 @@ object Syntax {
 	case class Eq(e1: Expr, e2: Expr) extends Expr
 	case class Match(e1: Expr, e2: Expr) extends Expr
 	case class In(e1: Expr, e2: Expr) extends Expr
-        case class Array(es: Seq[Expr]) extends Expr
+  case class Array(es: Seq[Expr]) extends Expr
+  case class App(name: String, args: Seq[Expr]) extends Expr
 
    sealed trait Case
    case class CaseDefault(m: Manifest) extends Case

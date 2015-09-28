@@ -101,6 +101,7 @@ private class Parser extends RegexParsers with PackratParsers{
 	  res |
 	  vari |
 	  string |
+	  word ~ "(" ~ repsep(bop, ",") ~ ")" ^^ { case f ~ _ ~ xs ~ _  => App(f, xs) } |
 	  "(" ~ bop ~ ")" ^^ { case _ ~ e ~ _ => e }
 
 	lazy val not: P[Expr] =
