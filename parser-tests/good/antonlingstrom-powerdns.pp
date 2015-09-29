@@ -47,7 +47,7 @@ class powerdns(
 ) {
 
   anchor { 'powerdns::begin': ;
-    'powerdns::end': ;
+    'powerdns::end':
   }
 
   class { 'powerdns::package':
