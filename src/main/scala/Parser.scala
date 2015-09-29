@@ -61,9 +61,16 @@ private class Parser extends RegexParsers with PackratParsers{
 
 	lazy val parameters: P[Seq[Argument]] = ("(" ~> repsep(parameter, ",") <~ opt(",")) <~ ")"
 
-	lazy val resource: P[Manifest] = word ~ ("{" ~> expr <~ ":") ~ (attributes <~ "}") ^^ {
-		case typ ~ id ~ attr => Resource(id, typ, attr)
+	lazy val resource: P[Manifest] = word ~ ("{" ~> rep1sep(resourcePair, ";") <~ "}") ^^ {
+	  case typ ~ Seq((id, attr)) => Resource(id, typ, attr)
+          case typ ~ pairs => pairs.foldRight[Manifest](Empty) {
+            case ((id, attr), m) => Block(Resource(id, typ, attr), m)
+          }
 	}
+
+        lazy val resourcePair: P[(Expr, Seq[Attribute])] = (expr <~ ":") ~ attributes ^^ {
+          case id ~ attr => (id, attr)
+        }
 
   // TODO(arjun): bop won't scale as exprs start to grow. Just write a typechecker
   // eventually.
