@@ -23,7 +23,7 @@ object Evaluator {
 		case ITE(pred, m1, m2) => isValueExpr(pred) && isValue(m1) && isValue(m2)
 		case Edge(m1, m2) => isValue(m1) && isValue(m2)
 		case Define(_, _, _) => false
-		case Class(_, _, _) => false
+		case Class(_, _, _, _) => false
 		case Let(_, _, _) => false
 		case MCase(_, _) => false
 		case E(e) => isValueExpr(e)
@@ -140,7 +140,7 @@ object Evaluator {
 		case Define(_, _, _) => m
 		case Let(varName, e, body) => eval(sub(varName, evalExpr(e), body))
 		case E(e) => E(evalExpr(e))
-		case Class(_, _, _) => throw EvalError("class should have been eliminated by desugaring")
+		case Class(_, _, _, _) => throw EvalError("class should have been eliminated by desugaring")
 		case MCase(_, _) => throw EvalError("case should have been eliminated by desugaring")
 	}
 
@@ -196,7 +196,7 @@ object Evaluator {
 		case Let(_, _, body) => findDefine(body)
 		case Empty |E(_) | Resource(_, _, _) => None
 		case MCase(_, _) => throw new Exception("not implemented")
-		case Class(_, _, _) => throw new Exception("not implemented")
+		case Class(_, _, _, _) => throw new Exception("not implemented")
 	}
 
 	def expandAll(m: Manifest): Manifest = {
@@ -222,7 +222,7 @@ object Evaluator {
 		case Block(m1, m2) => toGraphRec(g, m1) ++ toGraphRec(g, m2)
 		case e@Edge(_, _) => addEdges(g, e)
 		case Resource(_, _, _) | E(Res(_, _)) | E(Str(_)) | E(Bool(_)) => g + m
-		case ITE(_, _, _) | Let(_, _, _) | E(_) | Define(_, _, _) | Class(_, _, _) |
+		case ITE(_, _, _) | Let(_, _, _) | E(_) | Define(_, _, _) | Class(_, _, _, _) |
 		     MCase(_, _) =>
 			throw GraphError(s"m is not fully evaluated $m")
 	}

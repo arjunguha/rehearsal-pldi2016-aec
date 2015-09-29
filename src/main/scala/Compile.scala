@@ -33,7 +33,7 @@ object Compile {
 	// 	case Var(_) => throw FSCompileError("Var: not a value")
 	// 	case App(_, _) => throw FSCompileError("App: not a value")
 	// }
-	
+
 	//TODO: fill this in
 	def compileResource(title: P.Expr, typ: String, attrs: Seq[Attribute]) = Skip
 
@@ -44,9 +44,9 @@ object Compile {
 		case Edge(m1, m2) => Skip //TODO: figure out what to do with edges
 		//TODO: fix this
 		case E(e) => throw FSCompileError("NYI") //compileExpr(e)
-		case P.ITE(_, _, _) => throw FSCompileError("ITE: not a value")	//may not need this to be a value	
+		case P.ITE(_, _, _) => throw FSCompileError("ITE: not a value")	//may not need this to be a value
 		case Define(name, params, body) => throw FSCompileError("Define: not a value")
-		case Class(name, inherits, body) => throw FSCompileError("Class: should have been desugared")
+		case Class(name, params, inherits, body) => throw FSCompileError("Class: should have been desugared")
 		case Let(varName, e, body) => throw FSCompileError("Let: not a value")
 		case MCase(e, cases) => throw FSCompileError("Case statement: should have been desugared")
 	}

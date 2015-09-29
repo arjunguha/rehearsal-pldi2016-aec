@@ -40,8 +40,10 @@ private class Parser extends RegexParsers with PackratParsers{
 	lazy val body: P[Manifest] = "{" ~> prog <~ "}"
 
         lazy val classManifest: P[Manifest] =
-          "class" ~ word ~ "inherits" ~ word ~ body ^^ { case _ ~ x ~ _ ~ y ~ m => Class(x, Some(y), m) } |
-	  "class" ~ word ~ body ^^ { case _ ~ x ~ m => Class(x, None, m) }
+          ("class" ~> word) ~ opt(parameters) ~ opt("inherits" ~> word) ~ body ^^ {
+            case x ~ Some(params) ~ y ~ m => Class(x, params, y, m)
+            case x ~ None ~ y ~ m => Class(x, Seq(), y, m)
+          }
 
         lazy val caseManifest: P[Manifest] = "case" ~ expr ~ "{" ~ cases ~ "}" ^^ {
           case _ ~ e ~ _ ~ lst ~ _ => MCase(e, lst)
@@ -154,7 +156,7 @@ private class Parser extends RegexParsers with PackratParsers{
 			case (attrs, m) => Block(Resource(Str(id), typ, attrs), m)
 		}
 		// TODO(arjun): Inheritance!
-		case Class(x, _, m) => Define(x, Seq(), desugar(m))
+		case Class(x, params, _, m) => Define(x, params, desugar(m))
 		case Resource(id, typ, attrs) => simplifyAttributes(attrs, Res(typ.capitalize, id)) match {
 			case (attrs, Empty) => Resource(id, typ, attrs)
 			case (attrs, m) => Block(Resource(id, typ, attrs), m)
