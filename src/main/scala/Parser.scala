@@ -31,14 +31,21 @@ private class Parser extends RegexParsers with PackratParsers{
 	  let |
 	  define |
 	  resource |
-	  "class" ~ word ~ "inherits" ~ word ~ body ^^ { case _ ~ x ~ _ ~ y ~ m => Class(x, Some(y), m) } |
-	  "class" ~ word ~ body ^^ { case _ ~ x ~ m => Class(x, None, m) } |
-	  "case" ~ expr ~ "{" ~ cases ~ "}" ^^ { case _ ~ e ~ _ ~ lst ~ _ => MCase(e, lst) } |
+	  classManifest |
+          caseManifest |
 	  ite |
 	  exprMan
 
 
 	lazy val body: P[Manifest] = "{" ~> prog <~ "}"
+
+        lazy val classManifest: P[Manifest] =
+          "class" ~ word ~ "inherits" ~ word ~ body ^^ { case _ ~ x ~ _ ~ y ~ m => Class(x, Some(y), m) } |
+	  "class" ~ word ~ body ^^ { case _ ~ x ~ m => Class(x, None, m) }
+
+        lazy val caseManifest: P[Manifest] = "case" ~ expr ~ "{" ~ cases ~ "}" ^^ {
+          case _ ~ e ~ _ ~ lst ~ _ => MCase(e, lst)
+        }
 
 	lazy val cases: P[Seq[Case]] =
 	  "default" ~ ":" ~ body ^^ { case _ ~ _ ~ m => Seq(CaseDefault(m)) } |
