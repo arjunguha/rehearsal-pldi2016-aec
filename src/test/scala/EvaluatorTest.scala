@@ -190,4 +190,36 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 		assert(toGraph(evald) == toGraph(parse(res)))
 	}
 
+	test("edges with arrays"){
+		val prog = """
+			file { "/usr/rian/":
+				before => ["/usr/rian/foo", "/usr/rian/bar"],
+				require => ["/", "/usr/"]
+			}
+		"""
+		val res = """
+			file { "/usr/rian/": }
+			File["/usr/rian/"] -> "/usr/rian/foo"
+			File["/usr/rian/"] -> "/usr/rian/bar"
+			"/" -> File["/usr/rian/"]
+			"/usr/" -> File["/usr/rian/"]
+		"""
+		assert(toGraph(eval(expandAll(parse(prog)))) == toGraph(parse(res)))
+	}
+
+	test("edges with singleton arrays"){
+		val prog = """
+			file { "/usr/rian/":
+				before => ["/usr/rian/foo"],
+				require => ["/"]
+			}
+		"""
+		val res = """
+			file { "/usr/rian/": }
+			File["/usr/rian/"] -> "/usr/rian/foo"
+			"/" -> File["/usr/rian/"]
+		"""
+		assert(toGraph(eval(expandAll(parse(prog)))) == toGraph(parse(res)))
+	}
+
 }

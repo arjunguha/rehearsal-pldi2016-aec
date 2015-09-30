@@ -209,9 +209,17 @@ object Evaluator {
 		m2
 	}
 
+	/* Note: it is not possible to have an edge between 2 arrays, because an edge containing an 
+		 array only arises through the before and require attributes and such edges always have a 
+		 Res as one of the nodes [-Rian]
+	 */
 	def addEdges(g: ManifestGraph, e: Edge): ManifestGraph = e match {
 		case Edge(Block(m11, m12), m2) => addEdges(g, Edge(m11, m2)) ++ addEdges(g, Edge(m12, m2))
 		case Edge(m1, Block(m21, m22)) => addEdges(g, Edge(m1, m21)) ++ addEdges(g, Edge(m1, m22))
+		case Edge(m1, E(Array(h :: Seq()))) => g += DiEdge(m1, E(h))
+		case Edge(m1, E(Array(h :: t))) => addEdges(g + DiEdge(m1, E(h)), Edge(m1, E(Array(t))))
+		case Edge(E(Array(h :: Seq())), m2) => g += DiEdge(E(h), m2)
+		case Edge(E(Array(h :: t)), m2) => addEdges(g + DiEdge(E(h), m2), Edge(E(Array(t)), m2))
 		case Edge(m1, m2) => g += DiEdge(m1, m2)
 	}
 
@@ -223,7 +231,6 @@ object Evaluator {
 		case e@Edge(_, _) => addEdges(g, e)
 		case Resource(_, _, _) | E(Res(_, _)) | E(Str(_)) | E(Bool(_)) => g + m
 		case ITE(_, _, _) | Let(_, _, _) | E(_) | Define(_, _, _) | Class(_, _, _, _) |
-		     MCase(_, _) =>
-			throw GraphError(s"m is not fully evaluated $m")
+		     MCase(_, _) =>	throw GraphError(s"m is not fully evaluated $m")
 	}
 }
