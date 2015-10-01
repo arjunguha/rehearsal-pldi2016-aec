@@ -37,11 +37,44 @@ private class Parser extends RegexParsers with PackratParsers {
 
 	lazy val body: P[Manifest] = "{" ~> prog <~ "}"
 
+  lazy val include: P[Manifest] =
+    ("include" ~> word) ~ opt(manifest) ^^ {
+      case x ~ manifest => {
+        val x_loaded = x + "_loaded"
+        val pred = Var(x_loaded)
+        // TODO(jcollard): The arguments of the class are inferred by
+        // the surrounding environment. For example:
+        //
+        // class apache (String $version = 'latest') { ... }
+        // include apache
+        //
+        // This actually looks for the variable apache::version first
+        // if that doesn't exist, it uses the default value 'latest'.
+        // To desugar this to a Resource, we need to be able to infer
+        // these from the context of the rest of the manifest (these values
+        // don't need to be declared in any particular order).
+        val instantiate_class = Empty
+        val mark_loaded = Let(x_loaded, Bool(true), Empty)
+        val rest = manifest.getOrElse(Empty)
+        // If the class has not been loaded, instantiate it and marke it loaded
+        Block(ITE(pred, Block(instantiate_class, mark_loaded), Empty), rest)
+      }
+    }
+
 	lazy val classManifest: P[Manifest] =
-		("class" ~> word) ~ opt(parameters) ~ opt("inherits" ~> word) ~ body ^^ {
-			case x ~ Some(params) ~ y ~ m => Class(x, params, y, m)
-			case x ~ None ~ y ~ m => Class(x, Seq(), y, m)
-		}
+	  ("class" ~> word) ~ opt(parameters) ~ opt("inherits" ~> word) ~ body ~ opt(manifest) ^^ {
+            case x ~ params ~ y ~ m ~ body => {
+              val p = params.getOrElse(Seq())
+              val rest = body.getOrElse(Empty)
+              val x_loaded = x + "_loaded"
+              // TODO(jcollard): Injects a loaded variable for each class that
+              // can be used to detect when the class has been loaded at runtime.
+              // Although unlikely, it is completely possible that the author could
+              // have their own variable with the same name. We might want to
+              // consider writing a fresh variable utility function.
+              Let(x_loaded, Bool(false), Block(Class(x, p, y, m), rest))
+            }
+          }
 
 	lazy val caseManifest: P[Manifest] = "case" ~ expr ~ "{" ~ cases ~ "}" ^^ {
 		case _ ~ e ~ _ ~ lst ~ _ => MCase(e, lst)
