@@ -1,4 +1,5 @@
 # From https://github.com/antonlindstrom/puppet-powerdns
+# Replaced usage of selector syntax with if expressions.
 
 # Public: Set confguration directives in a .d directory
 #
@@ -84,14 +85,16 @@ class powerdns::ldap(
 
   require ::powerdns::package
 
-  $package_source = $source ? {
-    ''      => undef,
-    default => $source
+  $package_source = if $source == '' {
+    undef
+  } else {
+    $source
   }
 
-  $package_provider = $source ? {
-    ''      => undef,
-    default => $powerdns::params::package_provider
+  $package_provider = if $source == '' {
+    undef
+  } else {
+    $powerdns::params::package_provider
   }
 
   package { $package:
@@ -136,14 +139,16 @@ class powerdns::mysql(
   $dnssec   = 'yes'
 ) inherits powerdns::params {
 
-  $package_source = $source ? {
-    ''      => undef,
-    default => $source
+  $package_source = if $source == '' {
+    undef
+  } else {
+    $source
   }
 
-  $package_provider = $source ? {
-    ''      => undef,
-    default => $powerdns::params::package_provider
+  $package_provider = if $source == '' {
+    undef
+  } else {
+    $powerdns::params::package_provider
   }
 
   package { $package:
@@ -176,14 +181,16 @@ class powerdns::package(
   $source = ''
 ) inherits powerdns::params {
 
-  $package_source = $source ? {
-    ''      => undef,
-    default => $source
+  $package_source = if $source == '' {
+    undef
+  } else {
+    $source
   }
 
-  $package_provider = $source ? {
-    ''      => undef,
-    default => $powerdns::params::package_provider
+  $package_provider = if $source == '' {
+    undef
+  } else {
+    $powerdns::params::package_provider
   }
 
   package { $package:
@@ -209,66 +216,77 @@ class powerdns::package(
 #
 class powerdns::params {
 
-  $package = $::operatingsystem ? {
-    /(?i:centos|redhat|amazon)/ => 'pdns',
-    default              => 'pdns-server'
+  $package = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
+    'pdns'
+  } else {
+    'pdns-server'
   }
 
-  $package_provider = $::operatingsystem ? {
-    /(?i:centos|redhat|amazon)/  => 'rpm',
-    default               => 'dpkg'
+  $package_provider = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
+    'rpm'
+  } else {
+    'dpkg'
   }
 
-  $package_psql = $::operatingsystem ? {
-    /(?i:centos|redhat|amazon)/ => 'pdns-backend-postgresql',
-    default              => 'pdns-backend-pgsql'
+  $package_psql = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
+    'pdns-backend-postgresql'
+  } else {
+    'pdns-backend-pgsql'
   }
 
-  $package_mysql = $::operatingsystem ? {
-    /(?i:centos|redhat|amazon)/ => 'pdns-backend-mysql',
-    default              => 'pdns-backend-mysql'
+  $package_mysql = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
+    'pdns-backend-mysql'
+  } else {
+    'pdns-backend-mysql'
   }
 
-  $package_ldap = $::operatingsystem ? {
-    /(?i:centos|redhat|amazon)/ => 'pdns-backend-ldap',
-    default              => 'pdns-backend-ldap'
+  $package_ldap = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
+    'pdns-backend-ldap'
+  } else {
+    'pdns-backend-ldap'
   }
 
-  $package_recursor = $::operatingsystem ? {
-    /(?i:centos|redhat|amazon)/ => 'pdns-recursor',
-    default              => 'pdns-recursor'
+  $package_recursor = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
+    'pdns-recursor'
+  } else {
+    'pdns-recursor'
   }
 
-  $postgresql_cfg_path = $::operatingsystem ? {
-    /(?i:centos|redhat|amazon)/ => '/etc/pdns/pdns.conf',
-    default              => '/etc/powerdns/pdns.d/pdns.local.gpgsql.conf'
+  $postgresql_cfg_path = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
+    '/etc/pdns/pdns.conf'
+  } else {
+    '/etc/powerdns/pdns.d/pdns.local.gpgsql.conf'
   }
 
-  $mysql_cfg_path = $::operatingsystem ? {
-    /(?i:centos|redhat|amazon)/ => '/etc/pdns/pdns.conf',
-    default              => '/etc/powerdns/pdns.d/pdns.local.gmysql.conf'
+  $mysql_cfg_path = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
+    '/etc/pdns/pdns.conf'
+  } else {
+    '/etc/powerdns/pdns.d/pdns.local.gmysql.conf'
   }
 
-  $ldap_cfg_path = $::operatingsystem ? {
-    /(?i:centos|redhat|amazon)/ => '/etc/pdns/pdns.conf',
-    default              => '/etc/powerdns/pdns.d/pdns.local.ldap.conf'
+  $ldap_cfg_path = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
+    '/etc/pdns/pdns.conf'
+  } else {
+    '/etc/powerdns/pdns.d/pdns.local.ldap.conf'
   }
 
-  $recursor_cfg_path = $::operatingsystem ? {
-    /(?i:centos|redhat|amazon)/ => '/etc/pdns/recursor.conf',
-    default              => '/etc/powerdns/recursor.conf'
+  $recursor_cfg_path = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
+    '/etc/pdns/recursor.conf'
+  } else {
+    '/etc/powerdns/recursor.conf'
   }
 
-  $cfg_include_name = $::operatingsystem ? {
-    /(?i:centos|redhat|amazon)/ => 'include-dir',
-    default              => 'include'
+  $cfg_include_name = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
+    'include-dir'
+  } else {
+    'include'
   }
 
-  $cfg_include_path = $::operatingsystem ? {
-    /(?i:centos|redhat|amazon)/ => '/etc/pdns/conf.d',
-    default              => '/etc/powerdns/pdns.d'
+  $cfg_include_path = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
+    '/etc/pdns/conf.d'
+  } else {
+    '/etc/powerdns/pdns.d'
   }
-
 }
 # Public: Install the powerdns postgresql backend
 #
@@ -294,19 +312,22 @@ class powerdns::postgresql(
   $dnssec   = 'yes'
 ) inherits powerdns::params {
 
-  $postgres_schema = $dnssec ? {
-    /(yes|true)/ => 'puppet:///modules/powerdns/postgresql_schema.dnssec.sql',
-    default      => 'puppet:///modules/powerdns/postgresql_schema.sql'
+  $postgres_schema = if $dnssec =~ /(yes|true)/ {
+    'puppet:///modules/powerdns/postgresql_schema.dnssec.sql'
+  } else {
+    'puppet:///modules/powerdns/postgresql_schema.sql'
   }
 
-  $package_source = $source ? {
-    ''      => undef,
-    default => $source
+  $package_source = if $source == '' {
+    undef
+  } else {
+    $source
   }
 
-  $package_provider = $source ? {
-    ''      => undef,
-    default => $powerdns::params::package_provider
+  $package_provider = if $source == '' {
+    undef
+  } else {
+    $powerdns::params::package_provider
   }
 
   package { $package:
@@ -381,14 +402,16 @@ class powerdns::recursor(
 
   require ::powerdns
 
-  $package_source = $source ? {
-    ''      => undef,
-    default => $source
+  $package_source = if $source == '' {
+    undef
+  } else {
+    $source
   }
 
-  $package_provider = $source ? {
-    ''      => undef,
-    default => $powerdns::params::package_provider
+  $package_provider = if $source == '' {
+    undef
+  } else {
+    $powerdns::params::package_provider
   }
 
   package { $package:
@@ -408,9 +431,10 @@ class powerdns::recursor(
     require => Package[$package],
   }
 
-  $ensure_service = $ensure ? {
-    'present' => 'running',
-    default   => 'stopped'
+  $ensure_service = if $ensure == 'present' {
+    'running'
+  } else {
+    'stopped'
   }
 
   service { 'pdns-recursor':
@@ -432,9 +456,10 @@ class powerdns::service(
   $ensure = 'present'
 ) {
 
-  $ensure_service = $ensure ? {
-    'present' => 'running',
-    default   => 'stopped'
+  $ensure_service = if $ensure == 'present' {
+    'running'
+  } else {
+    'stopped'
   }
 
   service { 'pdns':
