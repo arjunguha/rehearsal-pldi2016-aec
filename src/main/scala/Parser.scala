@@ -178,6 +178,10 @@ private class Parser extends RegexParsers with PackratParsers {
     }
     case Let(id, value, body) => Let(id, value, desugar(body))
     case Define(name, args, body) => Define(name, args, desugar(body))
+    case E(r@Res(typ, id, attrs)) => simplifyAttributes(attrs, r) match {
+      case (attrs, Empty) => E(Res(typ, id, attrs))
+      case (attrs, m) => Block(E(Res(typ, id, attrs)), m)
+    }
     case E(ITE(pred, thn, els)) => E(ITE(pred, desugar(thn), desugar(els)))
     case E(_) => m
     case Edge(m1, m2) => Edge(desugar(m1), desugar(m2))
