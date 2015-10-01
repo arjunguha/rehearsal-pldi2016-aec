@@ -70,15 +70,13 @@ private class Parser extends RegexParsers with PackratParsers {
 		case id ~ attr => (id, attr)
 	}
 
-	// TODO(arjun): bop won't scale as exprs start to grow. Just write a typechecker
-	// eventually.
-	lazy val ite: P[Manifest] = "if" ~> bop ~ body ~ rep(elsif) ~ opt("else" ~> body) ^^ {
+	lazy val ite: P[Manifest] = "if" ~> expr ~ body ~ rep(elsif) ~ opt("else" ~> body) ^^ {
 		case pred ~ thn ~ elsifs ~ els => ITE(pred, thn, elsifs.foldRight(els.getOrElse(Empty)) {
 			case ((pred, body), acc) => ITE(pred, body, acc)
 		})
 	}
 
-	lazy val elsif: P[(Expr, Manifest)] = "elsif" ~> bop ~ body ^^ { case pred ~ body => (pred, body) }
+	lazy val elsif: P[(Expr, Manifest)] = "elsif" ~> expr ~ body ^^ { case pred ~ body => (pred, body) }
 
 	lazy val edge: P[Manifest] =
 		manifest ~ ("->" ~> manifest) ^^ { case parent ~ child => Edge(parent, child) } |
@@ -102,22 +100,23 @@ private class Parser extends RegexParsers with PackratParsers {
 	//Expr
 	lazy val exprMan: P[Manifest] = expr ^^ { case e => E(e) }
 
-	lazy val expr: P[Expr] = res | array | vari | bop | bool | string
-
 	lazy val res: P[Expr] = word ~ ("[" ~> expr <~ "]") ^^ { case typ ~ e => Res(typ, e) }
-
-	lazy val array: P[Expr] = "[" ~> repsep(expr, ",") <~ "]" ^^ { case es => Array(es) }
 
 	lazy val vari: P[Expr] = varName ^^ (Var(_))
 
-	//Operators
+  //
+	// Expressions. Use "expr" to parse an expression. Do not use any of the other
+	// parsers (e.g., atom, bop, etc.) outside this block.
+	//
+
 	lazy val atom: P[Expr] =
 		bool |
 		res |
 		vari |
 		string |
-		word ~ "(" ~ repsep(bop, ",") ~ ")" ^^ { case f ~ _ ~ xs ~ _  => App(f, xs) } |
-		"(" ~ bop ~ ")" ^^ { case _ ~ e ~ _ => e }
+		"[" ~> repsep(expr, ",") <~ "]" ^^ { case es => Array(es) } |
+		word ~ "(" ~ repsep(expr, ",") ~ ")" ^^ { case f ~ _ ~ xs ~ _  => App(f, xs) } |
+		"(" ~ expr ~ ")" ^^ { case _ ~ e ~ _ => e }
 
 	lazy val not: P[Expr] =
 		"!" ~> not ^^ { Not(_) } |
@@ -138,6 +137,8 @@ private class Parser extends RegexParsers with PackratParsers {
 		bop ~ ("!~" ~> or) ^^ { case lhs ~ rhs => Not(Match(lhs, rhs)) } |
 		bop ~ ("in" ~> or) ^^ { case lhs ~ rhs => In(lhs, rhs) } |
 		or
+
+	lazy val expr: P[Expr] = bop
 
 	//Constants
 	lazy val bool: P[Expr] = "true" ^^ { _ => Bool(true) } |
