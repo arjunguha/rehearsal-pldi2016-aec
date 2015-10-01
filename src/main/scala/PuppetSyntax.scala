@@ -15,7 +15,20 @@ object Syntax {
   case class Let(varName: String, e: Expr, body: Manifest) extends Manifest
   case class MCase(e: Expr, cases: Seq[Case]) extends Manifest
   case class E(e: Expr) extends Manifest
-  // Expects a variable, a class-name, or an array
+
+  // Documentation states that include can accept:
+  //   * a single class name (apache) or a single class reference (Class['apache'])
+  //   * a comma separated list of class names or class references
+  //   * an array of class names or class references
+  //  Examples:
+  //  include base::linux
+  //  include Class['base::linux'] # including a class reference
+  //  include base::linux, apache # including a list
+  //  $my_classes = ['base::linux', 'apache']
+  //  include $my_classes # including an array
+  //
+  //  NOTE: The parser tests only include the first of these three
+  //
   case class Include(e: Expr) extends Manifest
 
 
@@ -33,8 +46,8 @@ object Syntax {
   case class Array(es: Seq[Expr]) extends Expr
   case class App(name: String, args: Seq[Expr]) extends Expr
   case class ITE(pred: Expr, m1: Manifest, m2: Manifest) extends Expr
-  //TODO(jcollard): It would be great if we didn't need this.
   case class ClassName(name: String) extends Expr
+  case class ClassRef(name: String) extends Expr
 
   sealed trait Case
   case class CaseDefault(m: Manifest) extends Case
