@@ -31,7 +31,7 @@ class ParserTestSuite extends org.scalatest.FunSuite {
 	test("expr"){
 		val resourceRef = "file['/bin']"
 		val vari = "$x"
-		assert(parseExpr(resourceRef) == Res("file", Str("/bin")))
+		assert(parseExpr(resourceRef) == Res("file", Str("/bin"), Seq()))
 		assert(parseExpr(vari) == Var("x"))
 	}
 
@@ -45,7 +45,7 @@ class ParserTestSuite extends org.scalatest.FunSuite {
 		assert(parseAttribute(attr1) == Attribute(Str("ensure"), Str("present")))
 		assert(parseAttribute(attr2) == Attribute(Str("ensure"), Str("present")))
 		assert(parseAttribute(attr3) == Attribute(Str("content"), Bool(true)))
-		assert(parseAttribute(attr4) == Attribute(Str("require"), Res("File", Str("/home"))))
+		assert(parseAttribute(attr4) == Attribute(Str("require"), Res("File", Str("/home"), Seq())))
 		assert(parseAttribute(attr5) == Attribute(Str("require"), Var("x")))
 		assert(parseAttribute(attr6) == Attribute(Str("content"), And(Bool(true), Bool(false))))
 	}
@@ -71,8 +71,8 @@ class ParserTestSuite extends org.scalatest.FunSuite {
 				user { 'awe': ensure => present }
 			}
 		"""
-		assert(parseManifest(prog) == ITE(Bool(true),
-			Resource(Str("awe"), "user", Seq(Attribute(Str("ensure"), Str("present")))), Empty))
+		assert(parseManifest(prog) == E(ITE(Bool(true),
+			Resource(Str("awe"), "user", Seq(Attribute(Str("ensure"), Str("present")))), Empty)))
 	}
 
 	test("edge"){
@@ -140,7 +140,7 @@ class ParserTestSuite extends org.scalatest.FunSuite {
 	test("E"){
 		val resourceRef = "file['/bin']"
 		val vari = "$x"
-		assert(parse(resourceRef) == E(Res("file", Str("/bin"))))
+		assert(parse(resourceRef) == E(Res("file", Str("/bin"), Seq())))
 		assert(parse(vari) == E(Var("x")))
 	}
 }

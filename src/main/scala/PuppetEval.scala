@@ -31,7 +31,9 @@ object Evaluator {
 	def isValueExpr(e: Expr): Boolean = e match {
           case Str(_) => true
           case Bool(_) => true
-          case Res(typ, e) => isPrimitiveType(typ) && isValueExpr(e)
+          case Res(typ, e, attrs) => isPrimitiveType(typ) && isValueExpr(e) && attrs.forall {
+	    case Attribute(name, value) => isValueExpr(name) && isValueExpr(value)
+	  }
           case Var(_) => false
           case Not(_) => false
           case And(_, _) => false
@@ -50,7 +52,7 @@ object Evaluator {
 
 	def subExpr(varName: String, e: Expr, body: Expr): Expr = body match {
 		case Str(_) => body
-		case Res(typ, expr) => Res(typ, subExpr(varName, e, expr))
+		case Res(typ, expr, attrs) => Res(typ, subExpr(varName, e, expr), attrs.map(subAttr(varName, e, _)))
 		case Var(id) if varName == id => e
 		case Var(_) => body
 		case Bool(_) => body
@@ -89,7 +91,7 @@ object Evaluator {
 	}
 
 	def evalExpr(e: Expr): Expr = e match {
-		case Res(typ, e) => Res(typ, evalExpr(e))
+		case Res(typ, e, attrs) => Res(typ, evalExpr(e), attrs.map(evalAttr))
 		case Var(_) => e
 		case Str(_) => e
 		case Bool(_) => e
@@ -186,7 +188,7 @@ object Evaluator {
 		case (Define(name1, _, _), Define(name2, _, _)) if name1 == name2 => Empty //remove define declaration
 		case (Define(name, params, body), _) => Define(name, params, expand(body, d))
 		case (Let(x, e, body), _) => Let(x, e, expand(body, d))
-		case (E(Res(typ, e)), _) => m //do something?
+		case (E(Res(typ, e, attrs)), _) => m //do something?
 		case (E(_), _) => m
 	}
 
@@ -240,7 +242,7 @@ object Evaluator {
 		case Empty => g
 		case Block(m1, m2) => toGraphRec(g, m1) ++ toGraphRec(g, m2)
 		case e@Edge(_, _) => addEdges(g, e)
-		case Resource(_, _, _) | E(Res(_, _)) | E(Str(_)) | E(Bool(_)) => g + m
+		case Resource(_, _, _) | E(Res(_, _, _)) | E(Str(_)) | E(Bool(_)) => g + m
 		case Let(_, _, _) | E(_) | Define(_, _, _) | Class(_, _, _, _) |
 		     MCase(_, _) =>	throw GraphError(s"m is not fully evaluated $m")
 	}

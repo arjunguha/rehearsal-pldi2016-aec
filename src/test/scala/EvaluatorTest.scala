@@ -11,8 +11,8 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 
 	test("test1"){
 		val prog = Let("x", Bool(true),
-								ITE(Not(Var("x")), E(Str("oops")),
-									E(And(Var("x"), Or(Var("x"), Not(Var("x")))))))
+								E(ITE(Not(Var("x")), E(Str("oops")),
+									E(And(Var("x"), Or(Var("x"), Not(Var("x"))))))))
 		val res = E(Bool(true))
 		assert(eval(prog) == res)
 	}

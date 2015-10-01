@@ -136,7 +136,10 @@ private class Parser extends RegexParsers with PackratParsers {
 	lazy val atom: P[Expr] =
 		"true" ^^ { _ => Bool(true) } |
 		"false" ^^ { _ => Bool(false) } |
-		word ~ ("[" ~> expr <~ "]") ^^ { case typ ~ e => Res(typ, e) } |
+                word ~ ("[" ~> expr <~ "]") ~ opt("{" ~> attributes <~ "}") ^^ {
+                  case typ ~ e ~ Some(attrs) => Res(typ, e, attrs)
+                  case typ ~ e ~ None => Res(typ, e, Seq())
+                } |
 		vari |
 		stringVal ^^ { x => Str(x) } |
 		"[" ~> repsep(expr, ",") <~ "]" ^^ { case es => Array(es) } |
@@ -182,13 +185,13 @@ private class Parser extends RegexParsers with PackratParsers {
 	def desugar(m: Manifest): Manifest = m match {
 		case Empty => Empty
 		case Block(e1, e2) => Block(desugar(e1), desugar(e2))
-		case Resource(Str(id), typ, attrs) => simplifyAttributes(attrs, Res(typ.capitalize, Str(id))) match {
+		case Resource(Str(id), typ, attrs) => simplifyAttributes(attrs, Res(typ.capitalize, Str(id), Seq())) match {
 			case (attrs, Empty) => Resource(Str(id), typ, attrs)
 			case (attrs, m) => Block(Resource(Str(id), typ, attrs), m)
 		}
 		// TODO(arjun): Inheritance!
 		case Class(x, params, _, m) => Define(x, params, desugar(m))
-		case Resource(id, typ, attrs) => simplifyAttributes(attrs, Res(typ.capitalize, id)) match {
+		case Resource(id, typ, attrs) => simplifyAttributes(attrs, Res(typ.capitalize, id, Seq())) match {
 			case (attrs, Empty) => Resource(id, typ, attrs)
 			case (attrs, m) => Block(Resource(id, typ, attrs), m)
 		}

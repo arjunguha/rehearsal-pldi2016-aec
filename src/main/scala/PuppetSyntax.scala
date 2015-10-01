@@ -18,7 +18,7 @@ object Syntax {
 
 	sealed trait Expr
 	case class Str(s: String) extends Expr
-	case class Res(typ: String, e: Expr) extends Expr
+	case class Res(typ: String, e: Expr, attrs: Seq[Attribute]) extends Expr
 	case class Var(name: String) extends Expr
 	case class Bool(b: Boolean) extends Expr
 	case class Not(e: Expr) extends Expr
