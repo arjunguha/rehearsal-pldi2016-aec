@@ -9,7 +9,6 @@ object Syntax {
 	case object Empty extends Manifest
 	case class Block(m1: Manifest, m2: Manifest) extends Manifest
 	case class Resource(title: Expr, typ: String, attrs: Seq[Attribute]) extends Manifest
-	case class ITE(pred: Expr, m1: Manifest, m2: Manifest) extends Manifest
 	case class Edge(m1: Manifest, m2: Manifest) extends Manifest
 	case class Define(name: String, params: Seq[Argument], body: Manifest) extends Manifest
 	case class Class(name: String, params: Seq[Argument], inherits: Option[String], body: Manifest) extends Manifest
@@ -30,6 +29,7 @@ object Syntax {
 	case class In(e1: Expr, e2: Expr) extends Expr
   case class Array(es: Seq[Expr]) extends Expr
   case class App(name: String, args: Seq[Expr]) extends Expr
+  case class ITE(pred: Expr, m1: Manifest, m2: Manifest) extends Expr
 
    sealed trait Case
    case class CaseDefault(m: Manifest) extends Case

@@ -32,7 +32,6 @@ private class Parser extends RegexParsers with PackratParsers {
 		resource |
 		classManifest |
 		caseManifest |
-		ite |
 		exprMan
 
 	lazy val body: P[Manifest] = "{" ~> prog <~ "}"
@@ -68,12 +67,6 @@ private class Parser extends RegexParsers with PackratParsers {
 
 	lazy val resourcePair: P[(Expr, Seq[Attribute])] = (expr <~ ":") ~ attributes ^^ {
 		case id ~ attr => (id, attr)
-	}
-
-	lazy val ite: P[Manifest] = "if" ~> expr ~ body ~ rep(elsif) ~ opt("else" ~> body) ^^ {
-		case pred ~ thn ~ elsifs ~ els => ITE(pred, thn, elsifs.foldRight(els.getOrElse(Empty)) {
-			case ((pred, body), acc) => ITE(pred, body, acc)
-		})
 	}
 
 	lazy val elsif: P[(Expr, Manifest)] = "elsif" ~> expr ~ body ^^ { case pred ~ body => (pred, body) }
@@ -137,7 +130,13 @@ private class Parser extends RegexParsers with PackratParsers {
 		bop ~ ("in" ~> or) ^^ { case lhs ~ rhs => In(lhs, rhs) } |
 		or
 
-	lazy val expr: P[Expr] = bop
+        lazy val ite: P[Expr] = "if" ~> expr ~ body ~ rep(elsif) ~ opt("else" ~> body) ^^ {
+	  case pred ~ thn ~ elsifs ~ els => ITE(pred, thn, elsifs.foldRight(els.getOrElse(Empty)) {
+	    case ((pred, body), acc) => E(ITE(pred, body, acc))
+	  })
+	}
+
+	lazy val expr: P[Expr] = ite | bop
 
 	def simplifyAttributes(lst: Seq[Attribute], src: Res): (Seq[Attribute], Manifest) = {
 		lst.foldRight[(Seq[Attribute], Manifest)]((Seq(), Empty)) {
@@ -162,7 +161,7 @@ private class Parser extends RegexParsers with PackratParsers {
 		}
 		case Let(id, value, body) => Let(id, value, desugar(body))
 		case Define(name, args, body) => Define(name, args, desugar(body))
-		case ITE(pred, thn, els) => ITE(pred, desugar(thn), desugar(els))
+		case E(ITE(pred, thn, els)) => E(ITE(pred, desugar(thn), desugar(els)))
 		case E(_) => m
 		case Edge(m1, m2) => Edge(desugar(m1), desugar(m2))
 		case MCase(e, lst) => {
@@ -172,7 +171,7 @@ private class Parser extends RegexParsers with PackratParsers {
 				// TODO(arjun): Eq(e, v) is not quite right. It won't work for
 				// values that reduce to regular expressions. See this:
 				// https://docs.puppetlabs.com/puppet/latest/reference/lang_conditional.html#case-matching
-				case (CaseExpr(v, m), rest) => ITE(Eq(e, v), m, rest)
+				case (CaseExpr(v, m), rest) => E(ITE(Eq(e, v), m, rest))
 				case (CaseDefault(m), Empty) => m
 				case (CaseDefault(_), _) => throw new Exception("default is not the last case (should have been caught by the grammar)")
 			}
