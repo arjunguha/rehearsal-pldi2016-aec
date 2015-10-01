@@ -40,9 +40,10 @@ class bind (
   }
 
   # We want a nice log file which the package doesn't provide a location for
-  $bindlogdir = $chroot ? {
-    true  => '/var/named/chroot/var/log/named',
-    false => '/var/log/named',
+  $bindlogdir = if $chroot {
+    '/var/named/chroot/var/log/named'
+  } else {
+    '/var/log/named'
   }
   file { $bindlogdir:
     require => Class['bind::package'],
