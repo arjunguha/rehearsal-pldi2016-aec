@@ -74,14 +74,18 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 				}
 			}
 			fun {'instance':
-				a => "A",
-				b => "B"
+				a => File["A"],
+				b => File["B"]
 			}
+			file{"A": }
+			file{"B": }
 		"""
 		val res = """
 			foo { '/home': }
-			"A" -> Foo['/home']
-			"B" <- Foo['/home']
+			file{"A": }
+			file{"B": }
+			File["A"] -> Foo['/home']
+			File["B"] <- Foo['/home']
 		"""
 		assert(toGraph(eval(expandAll(parse(prog)))) == toGraph(parse(res)))
 	}
@@ -98,16 +102,20 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 				bar { "2": attr => $a }
 			}
 			funOne { "i1":
-				a => "apple",
-				b => "banana"
+				a => File["apple"],
+				b => File["banana"]
 			}
 			funTwo { "i2": a => "A" }
+			file { "apple": }
+			file { "banana": }
 		"""
 
 		val res = """
 			foo { "1": }
-			"apple" -> Foo["1"]
-			Foo["1"] -> "banana"
+			file { "apple": }
+			file { "banana": }
+			File["apple"] -> Foo["1"]
+			Foo["1"] -> File["banana"]
 			bar { "2": attr => "A" }
 		"""
 		assert(toGraph(eval(expandAll(eval(parse(prog))))) == toGraph(parse(res)))
@@ -192,32 +200,44 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 
 	test("edges with arrays"){
 		val prog = """
+			file { "/usr/rian/foo": }
+			file { "/usr/rian/bar": }
+			file { "/": }
+			file { "/usr/": }
 			file { "/usr/rian/":
-				before => ["/usr/rian/foo", "/usr/rian/bar"],
-				require => ["/", "/usr/"]
+				before => [File["/usr/rian/foo"], File["/usr/rian/bar"]],
+				require => [File["/"], File["/usr/"]]
 			}
 		"""
 		val res = """
 			file { "/usr/rian/": }
-			File["/usr/rian/"] -> "/usr/rian/foo"
-			File["/usr/rian/"] -> "/usr/rian/bar"
-			"/" -> File["/usr/rian/"]
-			"/usr/" -> File["/usr/rian/"]
+			file { "/usr/rian/foo": }
+			file { "/usr/rian/bar": }
+			file { "/": }
+			file { "/usr/": }
+			File["/usr/rian/"] -> File["/usr/rian/foo"]
+			File["/usr/rian/"] -> File["/usr/rian/bar"]
+			File["/"] -> File["/usr/rian/"]
+			File["/usr/"] -> File["/usr/rian/"]
 		"""
 		assert(toGraph(eval(expandAll(parse(prog)))) == toGraph(parse(res)))
 	}
 
 	test("edges with singleton arrays"){
 		val prog = """
+			file { "/usr/rian/foo": }
+			file { "/": }
 			file { "/usr/rian/":
-				before => ["/usr/rian/foo"],
-				require => ["/"]
+				before => [File["/usr/rian/foo"]],
+				require => [File["/"]]
 			}
 		"""
 		val res = """
+			file { "/usr/rian/foo": }
+			file { "/": }
 			file { "/usr/rian/": }
-			File["/usr/rian/"] -> "/usr/rian/foo"
-			"/" -> File["/usr/rian/"]
+			File["/usr/rian/"] -> File["/usr/rian/foo"]
+			File["/"] -> File["/usr/rian/"]
 		"""
 		assert(toGraph(eval(expandAll(parse(prog)))) == toGraph(parse(res)))
 	}

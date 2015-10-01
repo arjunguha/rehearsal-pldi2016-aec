@@ -1,28 +1,32 @@
 package rehearsal
 
 object Evaluator {
-	//pipeline: toGraph(Graph(), eval(expandAll(parse(m))))
-	import Syntax._
-	import scalax.collection.mutable.Graph
-	import scalax.collection.mutable.Graph._
-	import scalax.collection.GraphEdge._
-	import Implicits._
+  //pipeline: toGraph(Graph(), eval(expandAll(parse(m))))
+  import Syntax._
+  import scalax.collection.mutable.Graph
+  import scalax.collection.mutable.Graph._
+  import scalax.collection.GraphEdge._
+  import Implicits._
 
-	case class EvalError(msg: String) extends RuntimeException(msg)
-	case class GraphError(msg: String) extends RuntimeException(msg)
-	type ManifestGraph = Graph[Manifest, DiEdge]
+  case class EvalError(msg: String) extends RuntimeException(msg)
+  case class GraphError(msg: String) extends RuntimeException(msg)
+  type ResourceGraph = Graph[Resource, DiEdge]
+
+  sealed trait EdgeDir
+  case object Left extends EdgeDir
+  case object Right extends EdgeDir
 
   def isValue(m: Manifest): Boolean = m match {
     case Empty => true
     case Block(m1, m2) => isValue(m1) && isValue(m2)
     case Resource(title, typ, attrs) => {
       isValueExpr(title) && isPrimitiveType(typ) && attrs.forall {
-	case Attribute(name, value) => isValueExpr(name) && isValueExpr(value)
+        case Attribute(name, value) => isValueExpr(name) && isValueExpr(value)
       }
     }
     case Edge(m1, m2) => isValue(m1) && isValue(m2)
     case Define(_, _, _) => false
-      case Class(_, _, _, _) => false
+    case Class(_, _, _, _) => false
     case Let(_, _, _) => false
     case MCase(_, _) => false
     case E(e) => isValueExpr(e)
@@ -51,47 +55,47 @@ object Evaluator {
 
   val primitiveTypes = Set("file", "File", "package", "Package", "user", "User", "group", "Group")
 
-	def isPrimitiveType(typ: String): Boolean = primitiveTypes.contains(typ)
+  def isPrimitiveType(typ: String): Boolean = primitiveTypes.contains(typ)
 
-	def subExpr(varName: String, e: Expr, body: Expr): Expr = body match {
-		case Str(_) => body
-		case Res(typ, expr, attrs) => Res(typ, subExpr(varName, e, expr), attrs.map(subAttr(varName, e, _)))
-		case Var(id) if varName == id => e
-		case Var(_) => body
-		case Bool(_) => body
-		case Not(expr) => Not(subExpr(varName, e, expr))
-		case And(expr1, expr2) => And(subExpr(varName, e, expr1), subExpr(varName, e, expr2))
-		case Or(expr1, expr2) => Or(subExpr(varName, e, expr1), subExpr(varName, e, expr2))
-		case Eq(expr1, expr2) => Eq(subExpr(varName, e, expr1), subExpr(varName, e, expr2))
-		case Match(expr1, expr2) => Match(subExpr(varName, e, expr1), subExpr(varName, e, expr2))
-		case In(expr1, expr2) => In(subExpr(varName, e, expr1), subExpr(varName, e, expr2))
+  def subExpr(varName: String, e: Expr, body: Expr): Expr = body match {
+    case Str(_) => body
+    case Res(typ, expr, attrs) => Res(typ, subExpr(varName, e, expr), attrs.map(subAttr(varName, e, _)))
+    case Var(id) if varName == id => e
+    case Var(_) => body
+    case Bool(_) => body
+    case Not(expr) => Not(subExpr(varName, e, expr))
+    case And(expr1, expr2) => And(subExpr(varName, e, expr1), subExpr(varName, e, expr2))
+    case Or(expr1, expr2) => Or(subExpr(varName, e, expr1), subExpr(varName, e, expr2))
+    case Eq(expr1, expr2) => Eq(subExpr(varName, e, expr1), subExpr(varName, e, expr2))
+    case Match(expr1, expr2) => Match(subExpr(varName, e, expr1), subExpr(varName, e, expr2))
+    case In(expr1, expr2) => In(subExpr(varName, e, expr1), subExpr(varName, e, expr2))
                 case ITE(pred, m1, m2) => ITE(subExpr(varName, e, pred), sub(varName, e, m1), sub(varName, e, m2))
-	}
+  }
 
-	def subAttr(varName: String, e: Expr, attr: Attribute): Attribute = attr match {
-		case Attribute(name, value) => Attribute(subExpr(varName, e, name), subExpr(varName, e, value))
-	}
+  def subAttr(varName: String, e: Expr, attr: Attribute): Attribute = attr match {
+    case Attribute(name, value) => Attribute(subExpr(varName, e, name), subExpr(varName, e, value))
+  }
 
-	def paramsContainVar(varName: String, params: Seq[Argument]) =
-		params.foldRight[Boolean](false){case (Argument(id, _), res) => ((id == varName) || res)}
+  def paramsContainVar(varName: String, params: Seq[Argument]) =
+    params.foldRight[Boolean](false){case (Argument(id, _), res) => ((id == varName) || res)}
 
-	def sub(varName: String, e: Expr, body: Manifest): Manifest = body match {
-		case Empty => body
-		case Block(m1, m2) => Block(sub(varName, e, m1), sub(varName, e, m2))
-		case Resource(title, typ, attrs) =>
-			Resource(subExpr(varName, e, title), typ, attrs.map(attr => subAttr(varName, e, attr)))
-		case Edge(m1, m2) => Edge(sub(varName, e, m1), sub(varName, e, m2))
-		case Define(name, params, m) if name != varName && !paramsContainVar(varName, params) =>
-			Define(name, params, sub(varName, e, m))
-		case Define(_, _, _) => body
-		case Let(v, expr, b) if v != varName => Let(v, subExpr(varName, e, expr), sub(varName, e, b))
-		case Let(v, expr, b) => Let(v, subExpr(varName, e, expr), b)
-		case E(expr) => E(subExpr(varName, e, expr))
-	}
+  def sub(varName: String, e: Expr, body: Manifest): Manifest = body match {
+    case Empty => body
+    case Block(m1, m2) => Block(sub(varName, e, m1), sub(varName, e, m2))
+    case Resource(title, typ, attrs) =>
+      Resource(subExpr(varName, e, title), typ, attrs.map(attr => subAttr(varName, e, attr)))
+    case Edge(m1, m2) => Edge(sub(varName, e, m1), sub(varName, e, m2))
+    case Define(name, params, m) if name != varName && !paramsContainVar(varName, params) =>
+      Define(name, params, sub(varName, e, m))
+    case Define(_, _, _) => body
+    case Let(v, expr, b) if v != varName => Let(v, subExpr(varName, e, expr), sub(varName, e, b))
+    case Let(v, expr, b) => Let(v, subExpr(varName, e, expr), b)
+    case E(expr) => E(subExpr(varName, e, expr))
+  }
 
-	def evalAttr(a: Attribute): Attribute = a match {
-		case Attribute(name, value) => Attribute(evalExpr(name), evalExpr(value))
-	}
+  def evalAttr(a: Attribute): Attribute = a match {
+    case Attribute(name, value) => Attribute(evalExpr(name), evalExpr(value))
+  }
 
   def evalExpr(e: Expr): Expr = e match {
     case Res(typ, e, attrs) => Res(typ, evalExpr(e), attrs.map(evalAttr))
@@ -115,8 +119,8 @@ object Evaluator {
     case Match(Str(e1), Str(e2)) => {
       val pat = e2.r
       e1 match {
-	case pat(_) => Bool(true)
-	case _ => Bool(false)
+  case pat(_) => Bool(true)
+  case _ => Bool(false)
       }
     }
     case Match(e1, e2) => throw EvalError(s"Cannot evaluate: Invalid argument(s) for Match: $e1, $e2")
@@ -137,10 +141,26 @@ object Evaluator {
     case ClassName(_) => e
   }
 
+  def edgesFromArr(es: Seq[Expr], m: Manifest, d: EdgeDir): Manifest = es match {
+    case Seq() => throw EvalError("edgesFromArr: cannot create edge with empty array")
+    case h :: Seq() => if(d == Right) Edge(E(h), m) else Edge(m, E(h))
+    case h :: t => {
+      if(d == Right) Block(Edge(E(h), m), edgesFromArr(t, m, d))
+      else           Block(Edge(m, E(h)), edgesFromArr(t, m, d))
+    }
+  }
+
+  /* Note: it is not possible to have an edge between 2 arrays, because an edge containing an
+     array only arises through the before and require attributes and such edges always have a
+     Res as one of the nodes [-Rian]
+   */
+
   def eval(m: Manifest): Manifest = m match {
     case Empty => Empty
     case Block(m1, m2) => eval(m1) >> eval(m2)
     case Resource(title, typ, attrs) => Resource(evalExpr(title), typ, attrs.map(evalAttr))
+    case Edge(E(Array(es)), m2) => edgesFromArr(es, eval(m2), Right)
+    case Edge(m1, E(Array(es))) => edgesFromArr(es, eval(m1), Left)
     case Edge(m1, m2) => Edge(eval(m1), eval(m2))
     case Define(_, _, _) => m
     case Let(varName, e, body) => eval(sub(varName, evalExpr(e), body))
@@ -148,55 +168,49 @@ object Evaluator {
     case MCase(_, _) => throw EvalError("case should have been eliminated by desugaring")
     case E(ITE(pred, m1, m2)) => {
       val v = evalExpr(pred)
-      if (v == Bool(true)) {
-	eval(m1)
-      }
-      else if (v == Bool(false)) {
-	eval(m2)
-      }
-      else {
-	throw EvalError(s"Cannot evaluate: Invalid Predicate for if: $pred")
-      }
+      if (v == Bool(true))        eval(m1)
+      else if (v == Bool(false))  eval(m2)
+      else throw EvalError(s"Cannot evaluate: Invalid Predicate for if: $pred")
     }
     case E(e) => E(evalExpr(e))
     case Include(_) => throw new Exception("Not implemented")
     case Require(_) => throw new Exception("Not implemented")
   }
 
-	/*what to do if instance contains an attribute that doesn't have corresponding parameter in define? :
-	  		ignoring for now */
-	def subArgs(params: Seq[Argument], args: Seq[Attribute], body: Manifest): Manifest =
-		(params, args) match {
-			case (Seq(), _) => body
-			case (Argument(paramName, _) :: paramsT, Attribute(Str(attrName), value) :: argsT) => {
-				if(paramName == attrName) subArgs(paramsT, argsT, sub(paramName, value, body))
-				else 											subArgs(params, argsT, body)
-			}
-			case (Argument(paramName, _) :: paramsT, Attribute(Var(attrName), value) :: argsT) => {
-				if(paramName == attrName) subArgs(paramsT, argsT, sub(paramName, value, body))
-				else 											subArgs(params, argsT, body)
-			}
-			case (Argument(paramName, Some(default)) :: paramsT, Seq()) =>
-				subArgs(paramsT, args, sub(paramName, default, body))
-			case (Argument(_, None) :: _, Seq()) => throw EvalError(s"""Not enough attributes for
-				defined type instantiation: params = $params; body = $body""")
-			case _ => throw EvalError(s"Unexpected attribute pattern: attrs = $args")
-		}
+  /*what to do if instance contains an attribute that doesn't have corresponding parameter in define? :
+        ignoring for now */
+  def subArgs(params: Seq[Argument], args: Seq[Attribute], body: Manifest): Manifest =
+    (params, args) match {
+      case (Seq(), _) => body
+      case (Argument(paramName, _) :: paramsT, Attribute(Str(attrName), value) :: argsT) => {
+        if(paramName == attrName) subArgs(paramsT, argsT, sub(paramName, value, body))
+        else                      subArgs(params, argsT, body)
+      }
+      case (Argument(paramName, _) :: paramsT, Attribute(Var(attrName), value) :: argsT) => {
+        if(paramName == attrName) subArgs(paramsT, argsT, sub(paramName, value, body))
+        else                      subArgs(params, argsT, body)
+      }
+      case (Argument(paramName, Some(default)) :: paramsT, Seq()) =>
+        subArgs(paramsT, args, sub(paramName, default, body))
+      case (Argument(_, None) :: _, Seq()) => throw EvalError(s"""Not enough attributes for
+        defined type instantiation: params = $params; body = $body""")
+      case _ => throw EvalError(s"Unexpected attribute pattern: attrs = $args")
+    }
 
-	def expandDefine(m: Manifest, d: Define): Manifest = (m, d) match {
-		case (Empty, _) => Empty
-		case (Block(m1, m2), _) => Block(expandDefine(m1, d), expandDefine(m2, d))
-		case (Resource(_, typ, attrs), Define(name, params, body)) if name == typ =>
-			subArgs(params, attrs, body)
-		case (Resource(_, _, _), _) => m //do nothing
-		case (E(ITE(pred, thn, els)), _) => E(ITE(pred, expandDefine(thn, d), expandDefine(els, d)))
-		case (Edge(m1, m2), _) => Edge(expandDefine(m1, d), expandDefine(m2, d))
-		case (Define(name1, _, _), Define(name2, _, _)) if name1 == name2 => Empty //remove define declaration
-		case (Define(name, params, body), _) => Define(name, params, expandDefine(body, d))
-		case (Let(x, e, body), _) => Let(x, e, expandDefine(body, d))
-		case (E(Res(typ, e, attrs)), _) => m //do something?
-		case (E(_), _) => m
-	}
+  def expandDefine(m: Manifest, d: Define): Manifest = (m, d) match {
+    case (Empty, _) => Empty
+    case (Block(m1, m2), _) => Block(expandDefine(m1, d), expandDefine(m2, d))
+    case (Resource(_, typ, attrs), Define(name, params, body)) if name == typ =>
+      subArgs(params, attrs, body)
+    case (Resource(_, _, _), _) => m //do nothing
+    case (E(ITE(pred, thn, els)), _) => E(ITE(pred, expandDefine(thn, d), expandDefine(els, d)))
+    case (Edge(m1, m2), _) => Edge(expandDefine(m1, d), expandDefine(m2, d))
+    case (Define(name1, _, _), Define(name2, _, _)) if name1 == name2 => Empty //remove define declaration
+    case (Define(name, params, body), _) => Define(name, params, expandDefine(body, d))
+    case (Let(x, e, body), _) => Let(x, e, expandDefine(body, d))
+    case (E(Res(typ, e, attrs)), _) => m //do something?
+    case (E(_), _) => m
+  }
 
   def findDefine(m: Manifest): Option[Define] = m match {
     case d@Define(_, _, _) => Some(d)
@@ -257,30 +271,79 @@ object Evaluator {
     expandAllClasses(expandAllDefines(m))
   }
 
+  /* Note: it is not possible to have an edge between 2 arrays, because an edge containing an
+     array only arises through the before and require attributes and such edges always have a
+     Res as one of the nodes [-Rian]
+   */
+   def expandRes(r: Res, m: Manifest): Option[Resource] = m match {
+    case Block(m1, m2) => {
+      val resDef = expandRes(r, m1)
+      if(resDef == None) expandRes(r, m2)
+      else               resDef
+    }
+    case resDef@Resource(title, typ, attrs) => r match {
+      //TODO(Rian)
+      case Res(refTyp, refTitle, _) => {
+        if (refTyp.equalsIgnoreCase(typ) && title == refTitle) Some(resDef)
+        else None
+      }
+    }    
+    case E(ITE(_, m1, m2)) => {
+      val resDef = expandRes(r, m1)
+      if(resDef == None) expandRes(r, m2)
+      else               resDef
+    }
+    case Edge(m1, m2) => {
+      val resDef = expandRes(r, m1)
+      if(resDef == None) expandRes(r, m2)
+      else               resDef
+    }
+    case Define(_, _, body) => expandRes(r, body)
+    case Class(_, _, _, body) => expandRes(r, body)
+    case Let(varName, e, body) => expandRes(r, body)
+    case Empty | E(_) => None
+    case MCase(_, _) => throw EvalError(s"$m should have been desugared")
+    case Include(_) | Require(_) => throw EvalError(s"NYI (expandRes): $m")
+  }
 
+  def addEdges(g: ResourceGraph, e: Edge): ResourceGraph = e match {
+    case Edge(r1@Resource(_, _, _), r2@Resource(_, _, _)) => g += DiEdge(r1, r2)
+    case Edge(Block(r11, r12), r2) => addEdges(g, Edge(r11, r2)) ++ addEdges(g, Edge(r12, r2))
+    case Edge(r1, Block(r21, r22)) => addEdges(g, Edge(r1, r21)) ++ addEdges(g, Edge(r1, r22))
+    case Edge(_, _) => throw GraphError(s"edge is not fully evaluated $e")
+  }
 
-	/* Note: it is not possible to have an edge between 2 arrays, because an edge containing an
-		 array only arises through the before and require attributes and such edges always have a
-		 Res as one of the nodes [-Rian]
-	 */
-	def addEdges(g: ManifestGraph, e: Edge): ManifestGraph = e match {
-		case Edge(Block(m11, m12), m2) => addEdges(g, Edge(m11, m2)) ++ addEdges(g, Edge(m12, m2))
-		case Edge(m1, Block(m21, m22)) => addEdges(g, Edge(m1, m21)) ++ addEdges(g, Edge(m1, m22))
-		case Edge(m1, E(Array(h :: Seq()))) => g += DiEdge(m1, E(h))
-		case Edge(m1, E(Array(h :: t))) => addEdges(g + DiEdge(m1, E(h)), Edge(m1, E(Array(t))))
-		case Edge(E(Array(h :: Seq())), m2) => g += DiEdge(E(h), m2)
-		case Edge(E(Array(h :: t)), m2) => addEdges(g + DiEdge(E(h), m2), Edge(E(Array(t)), m2))
-		case Edge(m1, m2) => g += DiEdge(m1, m2)
-	}
+  def toGraph(m: Manifest): ResourceGraph = toGraphRec(Graph(), m, m)
 
-	def toGraph(m: Manifest): ManifestGraph = toGraphRec(Graph(), m)
-
-	def toGraphRec(g: ManifestGraph, m: Manifest): ManifestGraph = m match {
-		case Empty => g
-		case Block(m1, m2) => toGraphRec(g, m1) ++ toGraphRec(g, m2)
-		case e@Edge(_, _) => addEdges(g, e)
-		case Resource(_, _, _) | E(Res(_, _, _)) | E(Str(_)) | E(Bool(_)) => g + m
-		case Let(_, _, _) | E(_) | Define(_, _, _) | Class(_, _, _, _) | Include(_) | Require(_) |
-		     MCase(_, _) =>	throw GraphError(s"m is not fully evaluated $m")
-	}
+  def toGraphRec(g: ResourceGraph, m: Manifest, wholeM: Manifest): ResourceGraph = m match {
+    case Empty => g
+    case Block(m1, m2) => toGraphRec(g, m1, wholeM) ++ toGraphRec(g, m2, wholeM)
+    case Edge(E(r1@Res(_, _, _)), E(r2@Res(_, _, _))) => {
+      val r1Def = expandRes(r1, wholeM)
+      val r2Def = expandRes(r2, wholeM)
+      if(r1Def == None) throw GraphError(s"can't find resource def that corresponds to $r1")
+      else if (r2Def == None) throw GraphError(s"can't find resource def that corresponds to $r2")
+      else g + DiEdge(r1Def.get, r2Def.get)
+    }
+    case Edge(E(r@Res(_, _, _)), m2) => {
+      val rDef = expandRes(r, wholeM)
+      if(rDef == None) throw GraphError(s"can't find resource def that corresponds to $r")
+      addEdges(g, Edge(rDef.get, m2))
+    }
+    case Edge(m1, E(r@Res(_, _, _))) => {
+      val rDef = expandRes(r, wholeM)
+      if(rDef == None) throw GraphError(s"can't find resource def that corresponds to $r")
+      addEdges(g, Edge(m1, rDef.get))
+    }
+    case e@Edge(_, _) => addEdges(g, e)
+    case r@Resource(_, _, _) => g + r
+    case E(r@Res(_, _, _)) => {
+      val resDef = expandRes(r, m)
+      if(resDef == None) throw GraphError(s"can't find resource def that corresponds to $r")
+      g + resDef.get
+    }
+    case Let(_, _, _) | E(_) | Define(_, _, _) | Class(_, _, _, _) |
+         MCase(_, _) => throw GraphError(s"m is not fully evaluated $m")
+    case Include(_) | Require(_) => throw GraphError(s"NYI (toGraph): $m")
+  }
 }
