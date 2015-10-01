@@ -37,17 +37,18 @@ object Compile {
 	//TODO: fill this in
 	def compileResource(title: P.Expr, typ: String, attrs: Seq[Attribute]) = Skip
 
-	def compile(m: Manifest): F.Expr = m match {
-		case Empty => Skip
-		case P.Block(m1, m2) => F.Block(compile(m1), compile(m2))
-		case Resource(title, typ, attrs) => compileResource(title, typ, attrs)
-		case Edge(m1, m2) => Skip //TODO: figure out what to do with edges
-		//TODO: fix this
-		case E(e) => throw FSCompileError("NYI") //compileExpr(e)
-		case Define(name, params, body) => throw FSCompileError("Define: not a value")
-		case Class(name, params, inherits, body) => throw FSCompileError("Class: should have been desugared")
-		case Let(varName, e, body) => throw FSCompileError("Let: not a value")
-		case MCase(e, cases) => throw FSCompileError("Case statement: should have been desugared")
-	}
+  def compile(m: Manifest): F.Expr = m match {
+    case Empty => Skip
+    case P.Block(m1, m2) => F.Block(compile(m1), compile(m2))
+    case Resource(title, typ, attrs) => compileResource(title, typ, attrs)
+    case Edge(m1, m2) => Skip //TODO: figure out what to do with edges
+    //TODO: fix this
+    case E(e) => throw FSCompileError("NYI") //compileExpr(e)
+    case Define(name, params, body) => throw FSCompileError("Define: not a value")
+    case Class(name, params, inherits, body) => throw FSCompileError("Class: should have been desugared")
+    case Let(varName, e, body) => throw FSCompileError("Let: not a value")
+    case MCase(e, cases) => throw FSCompileError("Case statement: should have been desugared")
+    case Include(_) => throw FSCompileError("Include statements: should have been evaluated away")
+  }
 
 }

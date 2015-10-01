@@ -12,39 +12,41 @@ object Evaluator {
 	case class GraphError(msg: String) extends RuntimeException(msg)
 	type ManifestGraph = Graph[Manifest, DiEdge]
 
-	def isValue(m: Manifest): Boolean = m match {
-		case Empty => true
-		case Block(m1, m2) => isValue(m1) && isValue(m2)
-		case Resource(title, typ, attrs) => {
-			isValueExpr(title) && isPrimitiveType(typ) && attrs.forall {
-				case Attribute(name, value) => isValueExpr(name) && isValueExpr(value)
-			}
-		}
-                case Edge(m1, m2) => isValue(m1) && isValue(m2)
-		case Define(_, _, _) => false
-		case Class(_, _, _, _) => false
-		case Let(_, _, _) => false
-		case MCase(_, _) => false
-		case E(e) => isValueExpr(e)
-	}
+  def isValue(m: Manifest): Boolean = m match {
+    case Empty => true
+    case Block(m1, m2) => isValue(m1) && isValue(m2)
+    case Resource(title, typ, attrs) => {
+      isValueExpr(title) && isPrimitiveType(typ) && attrs.forall {
+	case Attribute(name, value) => isValueExpr(name) && isValueExpr(value)
+      }
+    }
+    case Edge(m1, m2) => isValue(m1) && isValue(m2)
+    case Define(_, _, _) => false
+      case Class(_, _, _, _) => false
+    case Let(_, _, _) => false
+    case MCase(_, _) => false
+    case E(e) => isValueExpr(e)
+    case Include(_) => false
+  }
 
-	def isValueExpr(e: Expr): Boolean = e match {
-          case Str(_) => true
-          case Bool(_) => true
-          case Res(typ, e, attrs) => isPrimitiveType(typ) && isValueExpr(e) && attrs.forall {
-	    case Attribute(name, value) => isValueExpr(name) && isValueExpr(value)
-	  }
-          case Var(_) => false
-          case Not(_) => false
-          case And(_, _) => false
-          case Or(_, _) => false
-          case Eq(_, _) => false
-	  case Match(_, _) => false
-	  case In(_, _) => false
-          case Array(es) => es.forall(isValueExpr)
-          case App(_, _) => false
-          case ITE(pred, m1, m2) => isValueExpr(pred) && isValue(m1) && isValue(m2)
-	}
+  def isValueExpr(e: Expr): Boolean = e match {
+    case Str(_) => true
+    case Bool(_) => true
+    case Res(typ, e, attrs) => isPrimitiveType(typ) && isValueExpr(e) && attrs.forall {
+      case Attribute(name, value) => isValueExpr(name) && isValueExpr(value)
+    }
+    case Var(_) => false
+    case Not(_) => false
+    case And(_, _) => false
+    case Or(_, _) => false
+    case Eq(_, _) => false
+    case Match(_, _) => false
+    case In(_, _) => false
+    case Array(es) => es.forall(isValueExpr)
+    case App(_, _) => false
+    case ITE(pred, m1, m2) => isValueExpr(pred) && isValue(m1) && isValue(m2)
+    case ClassName(_) => false
+  }
 
   val primitiveTypes = Set("file", "File", "package", "Package", "user", "User", "group", "Group")
 
@@ -90,72 +92,74 @@ object Evaluator {
 		case Attribute(name, value) => Attribute(evalExpr(name), evalExpr(value))
 	}
 
-	def evalExpr(e: Expr): Expr = e match {
-		case Res(typ, e, attrs) => Res(typ, evalExpr(e), attrs.map(evalAttr))
-		case Var(_) => e
-		case Str(_) => e
-		case Bool(_) => e
-                case Array(_) => e
-		case Not(e) => evalExpr(e) match {
-			case Bool(b) => Bool(!b)
-			case _ => throw EvalError(s"Cannot evaluate: Invalid argument for Not: $e")
-		}
-		case And(e1, e2) => (evalExpr(e1), evalExpr(e2)) match {
-			case (Bool(b1), Bool(b2)) => Bool(b1 && b2)
-			case _ => throw EvalError(s"Cannot evaluate: Invalid argument(s) for And: $e1, $e2")
-		}
-		case Or(e1, e2) => (evalExpr(e1), evalExpr(e2)) match {
-			case (Bool(b1), Bool(b2)) => Bool(b1 || b2)
-			case _ => throw EvalError(s"Cannot evaluate: Invalid argument(s) for Or: $e1, $e2")
-		}
-		case Eq(e1, e2) => if(evalExpr(e1) == evalExpr(e2)) Bool(true) else Bool(false)
-		case Match(Str(e1), Str(e2)) => {
-			val pat = e2.r
-			e1 match {
-				case pat(_) => Bool(true)
-				case _ => Bool(false)
-			}
-		}
-		case Match(e1, e2) => throw EvalError(s"Cannot evaluate: Invalid argument(s) for Match: $e1, $e2")
-		case In(Str(e1), Str(e2)) => if(e2.contains(e1)) Bool(true) else Bool(false)
-		case In(e1, e2) => throw EvalError(s"Cannot evaluate: Invalid argument(s) for In: $e1, $e2")
-		case App(_, _) => throw new Exception("NYI")
-                case ITE(pred, m1, m2) => evalExpr(pred) match {
-                  case Bool(true) => eval(m1) match {
-                    case E(e) => e
-                    case _ => throw EvalError(s"Cannot evaluate ITE as an expression with non-expressions in the branch: $m1")
-                  }
-                  case Bool(false) => eval(m2) match {
-                    case E(e) => e
-                    case _ => throw EvalError(s"Cannot evaluate ITE as an expression with non-expressions in the branch: $m2")
-                  }
-                  case _ => throw EvalError(s"Cannot evaluate: invalid predicate for if: $pred")
-                }
-        }
+  def evalExpr(e: Expr): Expr = e match {
+    case Res(typ, e, attrs) => Res(typ, evalExpr(e), attrs.map(evalAttr))
+    case Var(_) => e
+    case Str(_) => e
+    case Bool(_) => e
+    case Array(_) => e
+    case Not(e) => evalExpr(e) match {
+      case Bool(b) => Bool(!b)
+      case _ => throw EvalError(s"Cannot evaluate: Invalid argument for Not: $e")
+    }
+    case And(e1, e2) => (evalExpr(e1), evalExpr(e2)) match {
+      case (Bool(b1), Bool(b2)) => Bool(b1 && b2)
+      case _ => throw EvalError(s"Cannot evaluate: Invalid argument(s) for And: $e1, $e2")
+    }
+    case Or(e1, e2) => (evalExpr(e1), evalExpr(e2)) match {
+      case (Bool(b1), Bool(b2)) => Bool(b1 || b2)
+      case _ => throw EvalError(s"Cannot evaluate: Invalid argument(s) for Or: $e1, $e2")
+    }
+    case Eq(e1, e2) => if(evalExpr(e1) == evalExpr(e2)) Bool(true) else Bool(false)
+    case Match(Str(e1), Str(e2)) => {
+      val pat = e2.r
+      e1 match {
+	case pat(_) => Bool(true)
+	case _ => Bool(false)
+      }
+    }
+    case Match(e1, e2) => throw EvalError(s"Cannot evaluate: Invalid argument(s) for Match: $e1, $e2")
+    case In(Str(e1), Str(e2)) => if(e2.contains(e1)) Bool(true) else Bool(false)
+    case In(e1, e2) => throw EvalError(s"Cannot evaluate: Invalid argument(s) for In: $e1, $e2")
+    case App(_, _) => throw new Exception("NYI")
+    case ITE(pred, m1, m2) => evalExpr(pred) match {
+      case Bool(true) => eval(m1) match {
+        case E(e) => e
+        case _ => throw EvalError(s"Cannot evaluate ITE as an expression with non-expressions in the branch: $m1")
+      }
+      case Bool(false) => eval(m2) match {
+        case E(e) => e
+        case _ => throw EvalError(s"Cannot evaluate ITE as an expression with non-expressions in the branch: $m2")
+      }
+      case _ => throw EvalError(s"Cannot evaluate: invalid predicate for if: $pred")
+    }
+    case ClassName(_) => e
+  }
 
-	def eval(m: Manifest): Manifest = m match {
-		case Empty => Empty
-		case Block(m1, m2) => eval(m1) >> eval(m2)
-		case Resource(title, typ, attrs) => Resource(evalExpr(title), typ, attrs.map(evalAttr))
-    		case Edge(m1, m2) => Edge(eval(m1), eval(m2))
-		case Define(_, _, _) => m
-		case Let(varName, e, body) => eval(sub(varName, evalExpr(e), body))
-		case Class(_, _, _, _) => throw EvalError("class should have been eliminated by desugaring")
-		case MCase(_, _) => throw EvalError("case should have been eliminated by desugaring")
-                case E(ITE(pred, m1, m2)) => {
-			val v = evalExpr(pred)
-			if (v == Bool(true)) {
-				eval(m1)
-			}
-			else if (v == Bool(false)) {
-				eval(m2)
-			}
-			else {
-				throw EvalError(s"Cannot evaluate: Invalid Predicate for if: $pred")
-			}
-		}
-                case E(e) => E(evalExpr(e))
-	}
+  def eval(m: Manifest): Manifest = m match {
+    case Empty => Empty
+    case Block(m1, m2) => eval(m1) >> eval(m2)
+    case Resource(title, typ, attrs) => Resource(evalExpr(title), typ, attrs.map(evalAttr))
+    case Edge(m1, m2) => Edge(eval(m1), eval(m2))
+    case Define(_, _, _) => m
+    case Let(varName, e, body) => eval(sub(varName, evalExpr(e), body))
+    case Class(_, _, _, _) => throw EvalError("class should have been eliminated by desugaring")
+    case MCase(_, _) => throw EvalError("case should have been eliminated by desugaring")
+    case E(ITE(pred, m1, m2)) => {
+      val v = evalExpr(pred)
+      if (v == Bool(true)) {
+	eval(m1)
+      }
+      else if (v == Bool(false)) {
+	eval(m2)
+      }
+      else {
+	throw EvalError(s"Cannot evaluate: Invalid Predicate for if: $pred")
+      }
+    }
+    case E(e) => E(evalExpr(e))
+    case Include(_) => throw new Exception("Not implemented")
+  }
 
 	/*what to do if instance contains an attribute that doesn't have corresponding parameter in define? :
 	  		ignoring for now */
@@ -192,25 +196,26 @@ object Evaluator {
 		case (E(_), _) => m
 	}
 
-	def findDefine(m: Manifest): Option[Define] = m match {
-		case d@Define(_, _, _) => Some(d)
-		case Block(m1, m2) => {
-			val m1res = findDefine(m1)
-			if(m1res == None) findDefine(m2) else m1res
-		}
-		case Edge(m1, m2) => {
-			val m1res = findDefine(m1)
-			if(m1res == None) findDefine(m2) else m1res
-		}
-		case E(ITE(_, m1, m2)) => {
-			val m1res = findDefine(m1)
-			if(m1res == None) findDefine(m2) else m1res
-		}
-		case Let(_, _, body) => findDefine(body)
-		case Empty |E(_) | Resource(_, _, _) => None
-		case MCase(_, _) => throw new Exception("not implemented")
-		case Class(_, _, _, _) => throw new Exception("not implemented")
-	}
+  def findDefine(m: Manifest): Option[Define] = m match {
+    case d@Define(_, _, _) => Some(d)
+    case Block(m1, m2) => {
+      val m1res = findDefine(m1)
+      if(m1res == None) findDefine(m2) else m1res
+    }
+    case Edge(m1, m2) => {
+      val m1res = findDefine(m1)
+      if(m1res == None) findDefine(m2) else m1res
+    }
+    case E(ITE(_, m1, m2)) => {
+      val m1res = findDefine(m1)
+      if(m1res == None) findDefine(m2) else m1res
+    }
+    case Let(_, _, body) => findDefine(body)
+    case Empty |E(_) | Resource(_, _, _) => None
+    case MCase(_, _) => throw new Exception("not implemented")
+    case Class(_, _, _, _) => throw new Exception("not implemented")
+    case Include(_) => throw new Exception("not implemented")
+  }
 
 
   def expandAllDefines(m: Manifest): Manifest = {
@@ -272,7 +277,7 @@ object Evaluator {
 		case Block(m1, m2) => toGraphRec(g, m1) ++ toGraphRec(g, m2)
 		case e@Edge(_, _) => addEdges(g, e)
 		case Resource(_, _, _) | E(Res(_, _, _)) | E(Str(_)) | E(Bool(_)) => g + m
-		case Let(_, _, _) | E(_) | Define(_, _, _) | Class(_, _, _, _) |
+		case Let(_, _, _) | E(_) | Define(_, _, _) | Class(_, _, _, _) | Include(_) |
 		     MCase(_, _) =>	throw GraphError(s"m is not fully evaluated $m")
 	}
 }

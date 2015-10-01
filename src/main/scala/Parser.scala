@@ -37,27 +37,8 @@ private class Parser extends RegexParsers with PackratParsers {
 	lazy val body: P[Manifest] = "{" ~> prog <~ "}"
 
   lazy val include: P[Manifest] =
-    ("include" ~> word) ~ opt(manifest) ^^ {
-      case x ~ manifest => {
-        val x_loaded = x + "_loaded"
-        val pred = Var(x_loaded)
-        // TODO(jcollard): The arguments of the class are inferred by
-        // the surrounding environment. For example:
-        //
-        // class apache (String $version = 'latest') { ... }
-        // include apache
-        //
-        // This actually looks for the variable apache::version first
-        // if that doesn't exist, it uses the default value 'latest'.
-        // To desugar this to a Resource, we need to be able to infer
-        // these from the context of the rest of the manifest (these values
-        // don't need to be declared in any particular order).
-        val instantiate_class = Empty
-        val mark_loaded = Let(x_loaded, Bool(true), Empty)
-        val rest = manifest.getOrElse(Empty)
-        // If the class has not been loaded, instantiate it and marke it loaded
-        Block(E(ITE(pred, Block(instantiate_class, mark_loaded), Empty)), rest)
-      }
+    ("include" ~> expr) ^^ {
+      case x => { Include(x)  }
     }
 
 	lazy val classManifest: P[Manifest] =
@@ -182,37 +163,38 @@ private class Parser extends RegexParsers with PackratParsers {
 		}
 	}
 
-	def desugar(m: Manifest): Manifest = m match {
-		case Empty => Empty
-		case Block(e1, e2) => Block(desugar(e1), desugar(e2))
-		case Resource(Str(id), typ, attrs) => simplifyAttributes(attrs, Res(typ.capitalize, Str(id), Seq())) match {
-			case (attrs, Empty) => Resource(Str(id), typ, attrs)
-			case (attrs, m) => Block(Resource(Str(id), typ, attrs), m)
-		}
-		// TODO(arjun): Inheritance!
-		case Class(x, params, inherits, m) => Class(x, params, inherits, m)
-		case Resource(id, typ, attrs) => simplifyAttributes(attrs, Res(typ.capitalize, id, Seq())) match {
-			case (attrs, Empty) => Resource(id, typ, attrs)
-			case (attrs, m) => Block(Resource(id, typ, attrs), m)
-		}
-		case Let(id, value, body) => Let(id, value, desugar(body))
-		case Define(name, args, body) => Define(name, args, desugar(body))
-		case E(ITE(pred, thn, els)) => E(ITE(pred, desugar(thn), desugar(els)))
-		case E(_) => m
-		case Edge(m1, m2) => Edge(desugar(m1), desugar(m2))
-		case MCase(e, lst) => {
-			// TODO(arjun): should we ensure that "e" is only evaluted once? Does it
-			// matter? (No side-effects, right?)
-			lst.foldRight[Manifest](Empty) {
-				// TODO(arjun): Eq(e, v) is not quite right. It won't work for
-				// values that reduce to regular expressions. See this:
-				// https://docs.puppetlabs.com/puppet/latest/reference/lang_conditional.html#case-matching
-				case (CaseExpr(v, m), rest) => E(ITE(Eq(e, v), m, rest))
-				case (CaseDefault(m), Empty) => m
-				case (CaseDefault(_), _) => throw new Exception("default is not the last case (should have been caught by the grammar)")
-			}
-		}
-	}
+  def desugar(m: Manifest): Manifest = m match {
+    case Empty => Empty
+    case Block(e1, e2) => Block(desugar(e1), desugar(e2))
+    case Resource(Str(id), typ, attrs) => simplifyAttributes(attrs, Res(typ.capitalize, Str(id), Seq())) match {
+      case (attrs, Empty) => Resource(Str(id), typ, attrs)
+      case (attrs, m) => Block(Resource(Str(id), typ, attrs), m)
+    }
+    // TODO(arjun): Inheritance!
+    case Class(x, params, inherits, m) => Class(x, params, inherits, m)
+    case Resource(id, typ, attrs) => simplifyAttributes(attrs, Res(typ.capitalize, id, Seq())) match {
+      case (attrs, Empty) => Resource(id, typ, attrs)
+      case (attrs, m) => Block(Resource(id, typ, attrs), m)
+    }
+    case Let(id, value, body) => Let(id, value, desugar(body))
+    case Define(name, args, body) => Define(name, args, desugar(body))
+    case E(ITE(pred, thn, els)) => E(ITE(pred, desugar(thn), desugar(els)))
+    case E(_) => m
+    case Edge(m1, m2) => Edge(desugar(m1), desugar(m2))
+    case MCase(e, lst) => {
+      // TODO(arjun): should we ensure that "e" is only evaluted once? Does it
+      // matter? (No side-effects, right?)
+      lst.foldRight[Manifest](Empty) {
+	// TODO(arjun): Eq(e, v) is not quite right. It won't work for
+	// values that reduce to regular expressions. See this:
+	// https://docs.puppetlabs.com/puppet/latest/reference/lang_conditional.html#case-matching
+	case (CaseExpr(v, m), rest) => E(ITE(Eq(e, v), m, rest))
+	case (CaseDefault(m), Empty) => m
+	case (CaseDefault(_), _) => throw new Exception("default is not the last case (should have been caught by the grammar)")
+      }
+    }
+    case Include(_) => throw new Exception("not implemented")
+  }
 
 	//Program
 	lazy val prog: P[Manifest] = rep(manifest) ^^ { case exprs => blockExprs(exprs) }
