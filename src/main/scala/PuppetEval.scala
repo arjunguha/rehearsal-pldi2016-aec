@@ -20,8 +20,7 @@ object Evaluator {
 				case Attribute(name, value) => isValueExpr(name) && isValueExpr(value)
 			}
 		}
-		case ITE(pred, m1, m2) => isValueExpr(pred) && isValue(m1) && isValue(m2)
-		case Edge(m1, m2) => isValue(m1) && isValue(m2)
+                case Edge(m1, m2) => isValue(m1) && isValue(m2)
 		case Define(_, _, _) => false
 		case Class(_, _, _, _) => false
 		case Let(_, _, _) => false
@@ -30,18 +29,19 @@ object Evaluator {
 	}
 
 	def isValueExpr(e: Expr): Boolean = e match {
-		case Str(_) => true
-		case Bool(_) => true
-		case Res(typ, e) => isPrimitiveType(typ) && isValueExpr(e)
-		case Var(_) => false
-		case Not(_) => false
-		case And(_, _) => false
-		case Or(_, _) => false
-		case Eq(_, _) => false
-		case Match(_, _) => false
-		case In(_, _) => false
-    case Array(es) => es.forall(isValueExpr)
-    case App(_, _) => false
+          case Str(_) => true
+          case Bool(_) => true
+          case Res(typ, e) => isPrimitiveType(typ) && isValueExpr(e)
+          case Var(_) => false
+          case Not(_) => false
+          case And(_, _) => false
+          case Or(_, _) => false
+          case Eq(_, _) => false
+	  case Match(_, _) => false
+	  case In(_, _) => false
+          case Array(es) => es.forall(isValueExpr)
+          case App(_, _) => false
+          case ITE(pred, m1, m2) => isValueExpr(pred) && isValue(m1) && isValue(m2)
 	}
 
   val primitiveTypes = Set("file", "File", "package", "Package", "user", "User", "group", "Group")
@@ -60,6 +60,7 @@ object Evaluator {
 		case Eq(expr1, expr2) => Eq(subExpr(varName, e, expr1), subExpr(varName, e, expr2))
 		case Match(expr1, expr2) => Match(subExpr(varName, e, expr1), subExpr(varName, e, expr2))
 		case In(expr1, expr2) => In(subExpr(varName, e, expr1), subExpr(varName, e, expr2))
+                case ITE(pred, m1, m2) => ITE(subExpr(varName, e, pred), sub(varName, e, m1), sub(varName, e, m2))
 	}
 
 	def subAttr(varName: String, e: Expr, attr: Attribute): Attribute = attr match {
@@ -74,7 +75,6 @@ object Evaluator {
 		case Block(m1, m2) => Block(sub(varName, e, m1), sub(varName, e, m2))
 		case Resource(title, typ, attrs) =>
 			Resource(subExpr(varName, e, title), typ, attrs.map(attr => subAttr(varName, e, attr)))
-		case ITE(pred, m1, m2) => ITE(subExpr(varName, e, pred), sub(varName, e, m1), sub(varName, e, m2))
 		case Edge(m1, m2) => Edge(sub(varName, e, m1), sub(varName, e, m2))
 		case Define(name, params, m) if name != varName && !paramsContainVar(varName, params) =>
 			Define(name, params, sub(varName, e, m))
@@ -118,13 +118,29 @@ object Evaluator {
 		case In(Str(e1), Str(e2)) => if(e2.contains(e1)) Bool(true) else Bool(false)
 		case In(e1, e2) => throw EvalError(s"Cannot evaluate: Invalid argument(s) for In: $e1, $e2")
 		case App(_, _) => throw new Exception("NYI")
-	}
+                case ITE(pred, m1, m2) => evalExpr(pred) match {
+                  case Bool(true) => eval(m1) match {
+                    case E(e) => e
+                    case _ => throw EvalError(s"Cannot evaluate ITE as an expression with non-expressions in the branch: $m1")
+                  }
+                  case Bool(false) => eval(m2) match {
+                    case E(e) => e
+                    case _ => throw EvalError(s"Cannot evaluate ITE as an expression with non-expressions in the branch: $m2")
+                  }
+                  case _ => throw EvalError(s"Cannot evaluate: invalid predicate for if: $pred")
+                }
+        }
 
 	def eval(m: Manifest): Manifest = m match {
 		case Empty => Empty
 		case Block(m1, m2) => eval(m1) >> eval(m2)
 		case Resource(title, typ, attrs) => Resource(evalExpr(title), typ, attrs.map(evalAttr))
-		case ITE(pred, m1, m2) => {
+    		case Edge(m1, m2) => Edge(eval(m1), eval(m2))
+		case Define(_, _, _) => m
+		case Let(varName, e, body) => eval(sub(varName, evalExpr(e), body))
+		case Class(_, _, _, _) => throw EvalError("class should have been eliminated by desugaring")
+		case MCase(_, _) => throw EvalError("case should have been eliminated by desugaring")
+                case E(ITE(pred, m1, m2)) => {
 			val v = evalExpr(pred)
 			if (v == Bool(true)) {
 				eval(m1)
@@ -136,12 +152,7 @@ object Evaluator {
 				throw EvalError(s"Cannot evaluate: Invalid Predicate for if: $pred")
 			}
 		}
-		case Edge(m1, m2) => Edge(eval(m1), eval(m2))
-		case Define(_, _, _) => m
-		case Let(varName, e, body) => eval(sub(varName, evalExpr(e), body))
-		case E(e) => E(evalExpr(e))
-		case Class(_, _, _, _) => throw EvalError("class should have been eliminated by desugaring")
-		case MCase(_, _) => throw EvalError("case should have been eliminated by desugaring")
+                case E(e) => E(evalExpr(e))
 	}
 
 	/*what to do if instance contains an attribute that doesn't have corresponding parameter in define? :
@@ -170,7 +181,7 @@ object Evaluator {
 		case (Resource(_, typ, attrs), Define(name, params, body)) if name == typ =>
 			subArgs(params, attrs, body)
 		case (Resource(_, _, _), _) => m //do nothing
-		case (ITE(pred, thn, els), _) => ITE(pred, expand(thn, d), expand(els, d))
+		case (E(ITE(pred, thn, els)), _) => E(ITE(pred, expand(thn, d), expand(els, d)))
 		case (Edge(m1, m2), _) => Edge(expand(m1, d), expand(m2, d))
 		case (Define(name1, _, _), Define(name2, _, _)) if name1 == name2 => Empty //remove define declaration
 		case (Define(name, params, body), _) => Define(name, params, expand(body, d))
@@ -189,7 +200,7 @@ object Evaluator {
 			val m1res = findDefine(m1)
 			if(m1res == None) findDefine(m2) else m1res
 		}
-		case ITE(_, m1, m2) => {
+		case E(ITE(_, m1, m2)) => {
 			val m1res = findDefine(m1)
 			if(m1res == None) findDefine(m2) else m1res
 		}
@@ -230,7 +241,7 @@ object Evaluator {
 		case Block(m1, m2) => toGraphRec(g, m1) ++ toGraphRec(g, m2)
 		case e@Edge(_, _) => addEdges(g, e)
 		case Resource(_, _, _) | E(Res(_, _)) | E(Str(_)) | E(Bool(_)) => g + m
-		case ITE(_, _, _) | Let(_, _, _) | E(_) | Define(_, _, _) | Class(_, _, _, _) |
+		case Let(_, _, _) | E(_) | Define(_, _, _) | Class(_, _, _, _) |
 		     MCase(_, _) =>	throw GraphError(s"m is not fully evaluated $m")
 	}
 }
