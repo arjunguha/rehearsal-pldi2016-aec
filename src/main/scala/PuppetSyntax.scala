@@ -47,8 +47,7 @@ object Syntax {
   case class App(name: String, args: Seq[Expr]) extends Expr
   case class ITE(pred: Expr, m1: Manifest, m2: Manifest) extends Expr
   case class ClassName(name: String) extends Expr
-  case class ClassRef(name: String) extends Expr
-
+  
   sealed trait Case
   case class CaseDefault(m: Manifest) extends Case
   case class CaseExpr(e: Expr, m: Manifest) extends Case
