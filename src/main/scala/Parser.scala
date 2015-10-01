@@ -76,7 +76,8 @@ private class Parser extends RegexParsers with PackratParsers {
 
 	lazy val parameters: P[Seq[Argument]] = ("(" ~> repsep(parameter, ",") <~ opt(",")) <~ ")"
 
-	lazy val resource: P[Manifest] = word ~ ("{" ~> rep1sep(resourcePair, ";") <~ "}") ^^ {
+  lazy val resource: P[Manifest] = word ~ ("{" ~> rep1sep(resourcePair, ";") <~
+    (( ";" ~ "}") | "}")) ^^ {
 		case typ ~ Seq((id, attr)) => Resource(id, typ, attr)
 		case typ ~ pairs => pairs.foldRight[Manifest](Empty) {
 			case ((id, attr), m) => Block(Resource(id, typ, attr), m)
