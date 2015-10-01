@@ -17,7 +17,6 @@ object Syntax {
 	case class MCase(e: Expr, cases: Seq[Case]) extends Manifest
 	case class E(e: Expr) extends Manifest
 
-
 	sealed trait Expr
 	case class Str(s: String) extends Expr
 	case class Res(typ: String, e: Expr) extends Expr

@@ -5,14 +5,13 @@ import Syntax._
 
 case class ParseError(msg: String) extends RuntimeException(msg)
 
-private class Parser extends RegexParsers with PackratParsers{
+private class Parser extends RegexParsers with PackratParsers {
 
 	import Implicits._
 
 	type P[T] = PackratParser[T]
 
 	override protected val whiteSpace = """(\s|#.*|(/\*((\*[^/])|[^*])*\*/))+""".r
-
 
 	// TODO(arjun): escape sequences? interpolation?
 	lazy val stringVal: P[String] =

@@ -209,8 +209,8 @@ object Evaluator {
 		m2
 	}
 
-	/* Note: it is not possible to have an edge between 2 arrays, because an edge containing an 
-		 array only arises through the before and require attributes and such edges always have a 
+	/* Note: it is not possible to have an edge between 2 arrays, because an edge containing an
+		 array only arises through the before and require attributes and such edges always have a
 		 Res as one of the nodes [-Rian]
 	 */
 	def addEdges(g: ManifestGraph, e: Edge): ManifestGraph = e match {
