@@ -56,7 +56,7 @@ private class Parser extends RegexParsers with PackratParsers {
         val mark_loaded = Let(x_loaded, Bool(true), Empty)
         val rest = manifest.getOrElse(Empty)
         // If the class has not been loaded, instantiate it and marke it loaded
-        Block(ITE(pred, Block(instantiate_class, mark_loaded), Empty), rest)
+        Block(E(ITE(pred, Block(instantiate_class, mark_loaded), Empty)), rest)
       }
     }
 
