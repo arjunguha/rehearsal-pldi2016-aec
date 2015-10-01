@@ -190,7 +190,7 @@ private class Parser extends RegexParsers with PackratParsers {
 			case (attrs, m) => Block(Resource(Str(id), typ, attrs), m)
 		}
 		// TODO(arjun): Inheritance!
-		case Class(x, params, _, m) => Define(x, params, desugar(m))
+		case Class(x, params, inherits, m) => Class(x, params, inherits, m)
 		case Resource(id, typ, attrs) => simplifyAttributes(attrs, Res(typ.capitalize, id, Seq())) match {
 			case (attrs, Empty) => Resource(id, typ, attrs)
 			case (attrs, m) => Block(Resource(id, typ, attrs), m)

@@ -177,17 +177,17 @@ object Evaluator {
 			case _ => throw EvalError(s"Unexpected attribute pattern: attrs = $args")
 		}
 
-	def expand(m: Manifest, d: Define): Manifest = (m, d) match {
+	def expandDefine(m: Manifest, d: Define): Manifest = (m, d) match {
 		case (Empty, _) => Empty
-		case (Block(m1, m2), _) => Block(expand(m1, d), expand(m2, d))
+		case (Block(m1, m2), _) => Block(expandDefine(m1, d), expandDefine(m2, d))
 		case (Resource(_, typ, attrs), Define(name, params, body)) if name == typ =>
 			subArgs(params, attrs, body)
 		case (Resource(_, _, _), _) => m //do nothing
-		case (E(ITE(pred, thn, els)), _) => E(ITE(pred, expand(thn, d), expand(els, d)))
-		case (Edge(m1, m2), _) => Edge(expand(m1, d), expand(m2, d))
+		case (E(ITE(pred, thn, els)), _) => E(ITE(pred, expandDefine(thn, d), expandDefine(els, d)))
+		case (Edge(m1, m2), _) => Edge(expandDefine(m1, d), expandDefine(m2, d))
 		case (Define(name1, _, _), Define(name2, _, _)) if name1 == name2 => Empty //remove define declaration
-		case (Define(name, params, body), _) => Define(name, params, expand(body, d))
-		case (Let(x, e, body), _) => Let(x, e, expand(body, d))
+		case (Define(name, params, body), _) => Define(name, params, expandDefine(body, d))
+		case (Let(x, e, body), _) => Let(x, e, expandDefine(body, d))
 		case (E(Res(typ, e, attrs)), _) => m //do something?
 		case (E(_), _) => m
 	}
@@ -212,15 +212,44 @@ object Evaluator {
 		case Class(_, _, _, _) => throw new Exception("not implemented")
 	}
 
-	def expandAll(m: Manifest): Manifest = {
-		var d: Option[Define] = findDefine(m)
-		var m2: Manifest = m
-		while(d != None){
-			m2 = expand(m2, d.get)
-			d = findDefine(m2)
-		}
-		m2
-	}
+
+  def expandAllDefines(m: Manifest): Manifest = {
+    var d: Option[Define] = findDefine(m)
+    var m2: Manifest = m
+    while(d != None){
+      m2 = expandDefine(m2, d.get)
+      d = findDefine(m2)
+    }
+    m2
+  }
+
+  //TODO(jcollard)
+  def findClass(m: Manifest): Option[Class] = {
+    None
+  }
+
+  //TODO(jcollard)
+  def expandClass(m: Manifest, c: Class): Manifest = {
+    m
+  }
+
+
+  def expandAllClasses(m: Manifest): Manifest = {
+    var d: Option[Class] = findClass(m)
+    var m2: Manifest = m
+    while(d != None){
+      m2 = expandClass(m2, d.get)
+      d = findClass(m2)
+    }
+    m2
+  }
+
+
+  def expandAll(m: Manifest): Manifest = {
+    expandAllClasses(expandAllDefines(m))
+  }
+
+
 
 	/* Note: it is not possible to have an edge between 2 arrays, because an edge containing an
 		 array only arises through the before and require attributes and such edges always have a
