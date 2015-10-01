@@ -24,22 +24,26 @@ private class Parser extends RegexParsers with PackratParsers {
 	lazy val dataType: P[String] = "" ~> "[A-Z][a-zA-Z]+".r
 	lazy val varName: P[String] =  "$" ~> "[a-z_(::)][a-zA-Z0-9_(::)]*[a-zA-Z0-9_]+|[a-z_(::)]".r
 
-	//Manifest
-	lazy val manifest: P[Manifest] =
-		edge |
-		let |
-		define |
-		resource |
-		classManifest |
-		caseManifest |
-		exprMan
+  //Manifest
+  lazy val manifest: P[Manifest] =
+  edge |
+  let |
+  define |
+  resource |
+  classManifest |
+  caseManifest |
+  include |
+  require |
+  exprMan
+
 
 	lazy val body: P[Manifest] = "{" ~> prog <~ "}"
 
   lazy val include: P[Manifest] =
-    ("include" ~> expr) ^^ {
-      case x => { Include(x)  }
-    }
+    ("include" ~> expr) ^^ ( Include(_) )
+
+  lazy val require: P[Manifest] =
+    ("require" ~> expr) ^^ ( Require(_) )
 
 	lazy val classManifest: P[Manifest] =
 	  ("class" ~> word) ~ opt(parameters) ~ opt("inherits" ~> word) ~ body ~ opt(manifest) ^^ {
@@ -114,18 +118,19 @@ private class Parser extends RegexParsers with PackratParsers {
 	// parsers (e.g., atom, bop, etc.) outside this block.
 	//
 
-	lazy val atom: P[Expr] =
-		"true" ^^ { _ => Bool(true) } |
-		"false" ^^ { _ => Bool(false) } |
-                word ~ ("[" ~> expr <~ "]") ~ opt("{" ~> attributes <~ "}") ^^ {
-                  case typ ~ e ~ Some(attrs) => Res(typ, e, attrs)
-                  case typ ~ e ~ None => Res(typ, e, Seq())
-                } |
-		vari |
-		stringVal ^^ { x => Str(x) } |
-		"[" ~> repsep(expr, ",") <~ "]" ^^ { case es => Array(es) } |
-		word ~ "(" ~ repsep(expr, ",") ~ ")" ^^ { case f ~ _ ~ xs ~ _  => App(f, xs) } |
-		"(" ~ expr ~ ")" ^^ { case _ ~ e ~ _ => e }
+  lazy val atom: P[Expr] =
+    "true" ^^ { _ => Bool(true) } |
+  "false" ^^ { _ => Bool(false) } |
+  word ~ ("[" ~> expr <~ "]") ~ opt("{" ~> attributes <~ "}") ^^ {
+    case typ ~ e ~ Some(attrs) => Res(typ, e, attrs)
+    case typ ~ e ~ None => Res(typ, e, Seq())
+  } |
+  vari |
+  stringVal ^^ { x => Str(x) } |
+  "[" ~> repsep(expr, ",") <~ "]" ^^ { case es => Array(es) } |
+  word ~ "(" ~ repsep(expr, ",") ~ ")" ^^ { case f ~ _ ~ xs ~ _  => App(f, xs) } |
+  word ^^ { x => ClassName(x) } |
+  "(" ~ expr ~ ")" ^^ { case _ ~ e ~ _ => e }
 
 	lazy val not: P[Expr] =
 		"!" ~> not ^^ { Not(_) } |
@@ -194,6 +199,7 @@ private class Parser extends RegexParsers with PackratParsers {
       }
     }
     case Include(_) => throw new Exception("not implemented")
+    case Require(_) => throw new Exception("not implemented")
   }
 
 	//Program

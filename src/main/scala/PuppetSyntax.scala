@@ -30,6 +30,14 @@ object Syntax {
   //  NOTE: The parser tests only include the first of these three
   //
   case class Include(e: Expr) extends Manifest
+  
+  // The main difference between include and require is that require
+  // causes the surrounding container to have a dependency on that class.
+  // That is, all of the resources in the class are guaranteed to
+  // have been applied before the surrounding structure is instantiated
+  // Another difference is that requiring the same class twice is actually
+  // a runtime error.
+  case class Require(e: Expr) extends Manifest
 
 
   sealed trait Expr

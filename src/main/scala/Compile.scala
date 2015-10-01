@@ -49,6 +49,7 @@ object Compile {
     case Let(varName, e, body) => throw FSCompileError("Let: not a value")
     case MCase(e, cases) => throw FSCompileError("Case statement: should have been desugared")
     case Include(_) => throw FSCompileError("Include statements: should have been evaluated away")
+    case Require(_) => throw FSCompileError("Include statements: should have been evaluated away")
   }
 
 }

@@ -27,6 +27,7 @@ object Evaluator {
     case MCase(_, _) => false
     case E(e) => isValueExpr(e)
     case Include(_) => false
+    case Require(_) => false
   }
 
   def isValueExpr(e: Expr): Boolean = e match {
@@ -159,6 +160,7 @@ object Evaluator {
     }
     case E(e) => E(evalExpr(e))
     case Include(_) => throw new Exception("Not implemented")
+    case Require(_) => throw new Exception("Not implemented")
   }
 
 	/*what to do if instance contains an attribute that doesn't have corresponding parameter in define? :
@@ -215,6 +217,7 @@ object Evaluator {
     case MCase(_, _) => throw new Exception("not implemented")
     case Class(_, _, _, _) => throw new Exception("not implemented")
     case Include(_) => throw new Exception("not implemented")
+    case Require(_) => throw new Exception("not implemented")
   }
 
 
@@ -277,7 +280,7 @@ object Evaluator {
 		case Block(m1, m2) => toGraphRec(g, m1) ++ toGraphRec(g, m2)
 		case e@Edge(_, _) => addEdges(g, e)
 		case Resource(_, _, _) | E(Res(_, _, _)) | E(Str(_)) | E(Bool(_)) => g + m
-		case Let(_, _, _) | E(_) | Define(_, _, _) | Class(_, _, _, _) | Include(_) |
+		case Let(_, _, _) | E(_) | Define(_, _, _) | Class(_, _, _, _) | Include(_) | Require(_) |
 		     MCase(_, _) =>	throw GraphError(s"m is not fully evaluated $m")
 	}
 }
