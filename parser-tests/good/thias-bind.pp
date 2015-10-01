@@ -1,4 +1,5 @@
 # From https://github.com/thias/puppet-bind
+# Changed usage of selector syntax on a boolean to an if-then-else expression.
 
 # Class: bind
 #
@@ -24,9 +25,10 @@ class bind (
 ) inherits ::bind::params {
 
   # Main package and service
-  $packagenamesuffix = $chroot ? {
-    true  => '-chroot',
-    false => '',
+  $packagenamesuffix = if $chroot {
+    '-chroot'
+  } else {
+    ''    
   }
   class { 'bind::package':
     packagenameprefix => $packagenameprefix,
