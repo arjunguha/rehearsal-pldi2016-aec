@@ -100,8 +100,6 @@ private class Parser extends RegexParsers with PackratParsers {
 	//Expr
 	lazy val exprMan: P[Manifest] = expr ^^ { case e => E(e) }
 
-	lazy val res: P[Expr] = word ~ ("[" ~> expr <~ "]") ^^ { case typ ~ e => Res(typ, e) }
-
 	lazy val vari: P[Expr] = varName ^^ (Var(_))
 
   //
@@ -110,10 +108,11 @@ private class Parser extends RegexParsers with PackratParsers {
 	//
 
 	lazy val atom: P[Expr] =
-		bool |
-		res |
+		"true" ^^ { _ => Bool(true) } |
+		"false" ^^ { _ => Bool(false) } |
+		word ~ ("[" ~> expr <~ "]") ^^ { case typ ~ e => Res(typ, e) } |
 		vari |
-		string |
+		stringVal ^^ { x => Str(x) } |
 		"[" ~> repsep(expr, ",") <~ "]" ^^ { case es => Array(es) } |
 		word ~ "(" ~ repsep(expr, ",") ~ ")" ^^ { case f ~ _ ~ xs ~ _  => App(f, xs) } |
 		"(" ~ expr ~ ")" ^^ { case _ ~ e ~ _ => e }
@@ -139,12 +138,6 @@ private class Parser extends RegexParsers with PackratParsers {
 		or
 
 	lazy val expr: P[Expr] = bop
-
-	//Constants
-	lazy val bool: P[Expr] = "true" ^^ { _ => Bool(true) } |
-				 "false" ^^ { _ => Bool(false) }
-
-	lazy val string: P[Str] = stringVal ^^ (Str(_))
 
 	def simplifyAttributes(lst: Seq[Attribute], src: Res): (Seq[Attribute], Manifest) = {
 		lst.foldRight[(Seq[Attribute], Manifest)]((Seq(), Empty)) {
@@ -192,6 +185,7 @@ private class Parser extends RegexParsers with PackratParsers {
 	def blockExprs(exprs: Seq[Manifest]): Manifest = {
 		exprs.foldRight[Manifest](Empty) { case (m1, m2) => m1 >> m2 }
 	}
+
 	def parseString[A](expr: String, parser: Parser[A]): A = {
 		parseAll(parser, expr) match{
 			case Success(r, _) => r
@@ -203,8 +197,6 @@ private class Parser extends RegexParsers with PackratParsers {
 object Parser {
 	private val parser = new Parser()
 
-	def parseBool(str: String): Expr = parser.parseString(str, parser.bool)
-	def parseStr(str: String): Str = parser.parseString(str, parser.string)
 	def parseOps(str: String): Expr = parser.parseString(str, parser.bop)
 	def parseExpr(str: String): Expr = parser.parseString(str, parser.expr)
 	def parseAttribute(str: String): Attribute = parser.parseString(str, parser.attribute)

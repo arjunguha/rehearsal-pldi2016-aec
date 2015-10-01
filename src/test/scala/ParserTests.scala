@@ -4,17 +4,6 @@ import Syntax._
 
 class ParserTestSuite extends org.scalatest.FunSuite {
 
-	test("constant"){
-		val bool1 = "true"
-		val bool2 = "false"
-		val str1 = "\"hello\""
-		val str2 = "'hello'"
-		assert(parseBool(bool1) == Bool(true))
-		assert(parseBool(bool2) == Bool(false))
-		assert(parseStr(str1) == Str("hello"))
-		assert(parseStr(str2) == Str("hello"))
-	}
-
 	test("op1"){
 		val not = "!true"
 		assert(parseOps(not) == Not(Bool(true)))
@@ -76,7 +65,7 @@ class ParserTestSuite extends org.scalatest.FunSuite {
 		assert(parseManifest(prog) == res)
 	}
 
-	test("ite"){
+	test("ite") {
 		val prog = """
 			if true {
 				user { 'awe': ensure => present }
