@@ -202,8 +202,8 @@ private class Parser extends RegexParsers with PackratParsers {
 	case (CaseDefault(_), _) => throw new Exception("default is not the last case (should have been caught by the grammar)")
       }
     }
-    case Include(_) => throw new Exception("not implemented")
-    case Require(_) => throw new Exception("not implemented")
+    case Include(_) => m
+    case Require(_) => m
   }
 
 	//Program
