@@ -45,10 +45,13 @@ private class Parser extends RegexParsers with PackratParsers {
   lazy val body: P[Manifest] = "{" ~> prog <~ "}"
 
   lazy val include: P[Manifest] =
-    ("include" ~> expr) ^^ ( Include(_) )
+    ("include" ~> className) ^^ ( Include(_) )
 
   lazy val require: P[Manifest] =
-    ("require" ~> expr) ^^ ( Require(_) )  
+    ("require" ~> className) ^^ ( Require(_) )  
+
+  lazy val className: P[Expr] =
+    expr | word ^^ (Str(_))
 
   // A puppet regular expression starts and ends with a forward slash
   // The regular expression may be a plain regexp or it may be wrapped
@@ -159,7 +162,6 @@ private class Parser extends RegexParsers with PackratParsers {
   stringVal ^^ { x => Str(x) } |
   "[" ~> repsep(expr, ",") <~ "]" ^^ { case es => Array(es) } |
   word ~ "(" ~ repsep(expr, ",") ~ ")" ^^ { case f ~ _ ~ xs ~ _  => App(f, xs) } |
-  word ^^ { x => Str(x) } |
   regexp |
   "(" ~ expr ~ ")" ^^ { case _ ~ e ~ _ => e }
 
