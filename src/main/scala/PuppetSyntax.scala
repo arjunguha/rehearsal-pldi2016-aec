@@ -54,7 +54,6 @@ object Syntax {
   case class Array(es: Seq[Expr]) extends Expr
   case class App(name: String, args: Seq[Expr]) extends Expr
   case class ITE(pred: Expr, m1: Manifest, m2: Manifest) extends Expr
-  case class ClassName(name: String) extends Expr
 
   // From the Language: Data Types: Regular Expressions
   // https://docs.puppetlabs.com/puppet/latest/reference/lang_data_regexp.html
