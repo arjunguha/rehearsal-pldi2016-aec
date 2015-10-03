@@ -159,7 +159,6 @@ private class Parser extends RegexParsers with PackratParsers {
   stringVal ^^ { x => Str(x) } |
   "[" ~> repsep(expr, ",") <~ "]" ^^ { case es => Array(es) } |
   word ~ "(" ~ repsep(expr, ",") ~ ")" ^^ { case f ~ _ ~ xs ~ _  => App(f, xs) } |
-  word ^^ { x => ClassName(x) } |
   regexp |
   "(" ~ expr ~ ")" ^^ { case _ ~ e ~ _ => e }
 
