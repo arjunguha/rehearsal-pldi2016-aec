@@ -121,8 +121,8 @@ object Evaluator {
     case Match(Str(e1), Str(e2)) => {
       val pat = e2.r
       e1 match {
-  case pat(_) => Bool(true)
-  case _ => Bool(false)
+        case pat(_) => Bool(true)
+        case _ => Bool(false)
       }
     }
     case Match(e1, e2) => throw EvalError(s"Cannot evaluate: Invalid argument(s) for Match: $e1, $e2")
