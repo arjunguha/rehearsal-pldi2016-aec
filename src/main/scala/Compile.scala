@@ -19,6 +19,12 @@ object Compile {
 
   //compile to ResourceModel.Res
 
+  def attrsToMap(attrs: scala.collection.Seq[Attribute]): Map[String, P.Expr] = attrs match {
+    case scala.collection.Seq() => Map()
+    case Attribute(Str(name), value) :: t => attrsToMap(t) + Tuple2(name, value)
+  }
+  
+
   //these are the file cuttently types accepted by isPrimitiveType in PuppetEval
   def compileResource(r: Resource): ResModel = r.typ match {
     //TODO
@@ -31,7 +37,6 @@ object Compile {
     case "group" => Group("", false)
   }
   
-
   //TODO(rian)
   //use compile function in ResourceModel to go from ResModel to FS
   def compile(g: ResourceGraph): FileScriptGraph = Graph()
