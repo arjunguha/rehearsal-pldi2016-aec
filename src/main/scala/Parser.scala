@@ -24,6 +24,10 @@ private class Parser extends RegexParsers with PackratParsers {
   lazy val dataType: P[String] = "" ~> "[A-Z][a-zA-Z]+".r
   lazy val varName: P[String] =  "$" ~> "[a-z_(::)][a-zA-Z0-9_(::)]*[a-zA-Z0-9_]+|[a-z_(::)]".r
 
+  // Supposedly parses a string that is a regular expression
+  // Solution to this stack overflow post: http://stackoverflow.com/questions/17843691/javascript-regex-to-match-a-regex
+  lazy val regexpString: P[String] = "/\\/((?![*+?])(?:[^\\r\\n\\[/\\\\]|\\\\.|\\[(?:[^\\r\\n\\]\\\\]|\\\\.)*\\])+)\\/((?:g(?:im?|m)?|i(?:gm?|m)?|m(?:gi?|i)?)?)/".r ^^ { case x => x }
+
   //Manifest
   lazy val manifest: P[Manifest] =
   edge |
@@ -41,6 +45,30 @@ private class Parser extends RegexParsers with PackratParsers {
 
   lazy val include: P[Manifest] =
     ("include" ~> expr) ^^ ( Include(_) )
+
+  // A puppet regular expression starts and ends with a forward slash
+  // The regular expression may be a plain regexp or it may be wrapped
+  // with parens and prefaced with an option.
+  // TODO(jcollard): Additionally, these optional types can be sprinkled
+  // throughout the expression. However, we currently don't support it.
+  lazy val regexp: P[Expr] =
+    ("/" ~> (regexpWithOptions | regexpPlain) <~ "/")
+
+  // Just a plain regexp
+  lazy val regexpPlain: P[Expr] =
+    regexpString ^^ { case rx => RegExp(Seq(), rx) }
+
+  // A regexp that starts with an option
+  lazy val regexpWithOptions: P[Expr] =
+    ("(?" ~> regexpOptions ~ regexpString) <~ ")" ^^ { case os ~ rx  => RegExp(os, rx) }
+
+  lazy val regexpOptions: P[Seq[RegExpOption]] =
+    rep1(regexpOption) <~ ":"
+
+  lazy val regexpOption: P[RegExpOption] =
+    ("i" ^^ (_ => IgnoreCase)) |
+    ("m" ^^ (_ => MatchNewLine)) |
+    ("x" ^^ (_ => IgnoreWhiteSpace))
 
   lazy val require: P[Manifest] =
     ("require" ~> expr) ^^ ( Require(_) )
@@ -131,6 +159,7 @@ private class Parser extends RegexParsers with PackratParsers {
   "[" ~> repsep(expr, ",") <~ "]" ^^ { case es => Array(es) } |
   word ~ "(" ~ repsep(expr, ",") ~ ")" ^^ { case f ~ _ ~ xs ~ _  => App(f, xs) } |
   word ^^ { x => ClassName(x) } |
+  regexp |
   "(" ~ expr ~ ")" ^^ { case _ ~ e ~ _ => e }
 
 	lazy val not: P[Expr] =

@@ -66,8 +66,11 @@ object Syntax {
   case class RegExp(options: Seq[RegExpOption], regexp: String) extends Expr
 
   sealed trait RegExpOption
+  // Ignores case in the regexp 'i'
   case object IgnoreCase extends RegExpOption
+  // Matches newlines on the regular expression '.'
   case object MatchNewLine extends RegExpOption
+  // Ignores white spaces and comments in the regular expression 'x'
   case object IgnoreWhiteSpace extends RegExpOption
 
   sealed trait Case
