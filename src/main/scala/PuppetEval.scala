@@ -51,6 +51,7 @@ object Evaluator {
     case App(_, _) => false
     case ITE(pred, m1, m2) => isValueExpr(pred) && isValue(m1) && isValue(m2)
     case ClassName(_) => false
+    case RegExp(_,_) => false
   }
 
   val primitiveTypes = Set("file", "File", "package", "Package", "user", "User", "group", "Group")
@@ -139,6 +140,7 @@ object Evaluator {
       case _ => throw EvalError(s"Cannot evaluate: invalid predicate for if: $pred")
     }
     case ClassName(_) => e
+    case RegExp(_, _) => e
   }
 
   def edgesFromArr(es: Seq[Expr], m: Manifest, d: EdgeDir): Manifest = es match {

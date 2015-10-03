@@ -13,16 +13,16 @@ private class Parser extends RegexParsers with PackratParsers {
 
 	override protected val whiteSpace = """(\s|#.*|(/\*((\*[^/])|[^*])*\*/))+""".r
 
-	// TODO(arjun): escape sequences? interpolation?
-	lazy val stringVal: P[String] =
-		"\"" ~> "[^\"]*".r <~ "\"" |
-		"'" ~> "[^']*".r <~ "'"
-	// TODO: is there a better way to write this?
-	lazy val word: P[String] = "(::)?([a-zA-Z]+(::)?[a-zA-Z]+)+|[a-zA-Z_]+".r ^^ { case x => x }
-	lazy val id: P[String] = "" ~> "[a-z_][a-zA-Z0-9_]*".r
-	lazy val attributeName: P[String] = "" ~> "[a-z]+".r
-	lazy val dataType: P[String] = "" ~> "[A-Z][a-zA-Z]+".r
-	lazy val varName: P[String] =  "$" ~> "[a-z_(::)][a-zA-Z0-9_(::)]*[a-zA-Z0-9_]+|[a-z_(::)]".r
+  // TODO(arjun): escape sequences? interpolation?
+  lazy val stringVal: P[String] =
+    "\"" ~> "[^\"]*".r <~ "\"" |
+    "'" ~> "[^']*".r <~ "'"
+  // TODO: is there a better way to write this?
+  lazy val word: P[String] = "(::)?([a-zA-Z]+(::)?[a-zA-Z]+)+|[a-zA-Z_]+".r ^^ { case x => x }
+  lazy val id: P[String] = "" ~> "[a-z_][a-zA-Z0-9_]*".r
+  lazy val attributeName: P[String] = "" ~> "[a-z]+".r
+  lazy val dataType: P[String] = "" ~> "[A-Z][a-zA-Z]+".r
+  lazy val varName: P[String] =  "$" ~> "[a-z_(::)][a-zA-Z0-9_(::)]*[a-zA-Z0-9_]+|[a-z_(::)]".r
 
   //Manifest
   lazy val manifest: P[Manifest] =
@@ -37,7 +37,7 @@ private class Parser extends RegexParsers with PackratParsers {
   exprMan
 
 
-	lazy val body: P[Manifest] = "{" ~> prog <~ "}"
+  lazy val body: P[Manifest] = "{" ~> prog <~ "}"
 
   lazy val include: P[Manifest] =
     ("include" ~> expr) ^^ ( Include(_) )
