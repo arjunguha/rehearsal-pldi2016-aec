@@ -138,6 +138,10 @@ object Evaluator {
         case E(e) => e
         case _ => throw EvalError(s"Cannot evaluate ITE as an expression with non-expressions in the branch: $m2")
       }
+      case Undef => eval(m2) match {
+        case E(e) => e
+        case _ => throw EvalError(s"Cannot evaluate ITE as an expression with non-expressions in the branch: $m2")
+      }
       case _ => throw EvalError(s"Cannot evaluate: invalid predicate for if: $pred")
     }
     case RegExp(_, _) => e
@@ -172,6 +176,7 @@ object Evaluator {
       val v = evalExpr(pred)
       if (v == Bool(true))        eval(m1)
       else if (v == Bool(false))  eval(m2)
+      else if (v == Undef)        eval(m2)
       else throw EvalError(s"Cannot evaluate: Invalid Predicate for if: $pred")
     }
     case E(e) => E(evalExpr(e))
