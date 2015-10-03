@@ -26,7 +26,8 @@ private class Parser extends RegexParsers with PackratParsers {
 
   // Supposedly parses a string that is a regular expression
   // Solution to this stack overflow post: http://stackoverflow.com/questions/17843691/javascript-regex-to-match-a-regex
-  lazy val regexpString: P[String] = "/\\/((?![*+?])(?:[^\\r\\n\\[/\\\\]|\\\\.|\\[(?:[^\\r\\n\\]\\\\]|\\\\.)*\\])+)\\/((?:g(?:im?|m)?|i(?:gm?|m)?|m(?:gi?|i)?)?)/".r ^^ { case x => x }
+  //lazy val regexpString: P[String] = "/\\/((?![*+?])(?:[^\\r\\n\\[/\\\\]|\\\\.|\\[(?:[^\\r\\n\\]\\\\]|\\\\.)*\\])+)\\/((?:g(?:im?|m)?|i(?:gm?|m)?|m(?:gi?|i)?)?)/".r ^^ { case x => x }
+  lazy val regexpString: P[String] = "[^/]*".r ^^ { case x => x}
 
   //Manifest
   lazy val manifest: P[Manifest] =
