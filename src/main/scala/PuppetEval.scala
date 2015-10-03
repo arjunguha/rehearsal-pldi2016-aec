@@ -308,8 +308,8 @@ object Evaluator {
     }
     case resDef@Resource(title, typ, attrs) => r match {
       //TODO(Rian)
-      case Res(refTyp, refTitle, _) => {
-        if (refTyp.equalsIgnoreCase(typ) && title == refTitle) Some(resDef)
+      case Res(refTyp, refTitle, refAttrs) => {
+        if (refTyp.equalsIgnoreCase(typ) && title == refTitle) Some(Resource(title, typ, attrs ++ refAttrs))
         else None
       }
     }
