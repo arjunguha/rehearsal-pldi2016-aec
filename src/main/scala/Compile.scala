@@ -26,15 +26,35 @@ object Compile {
   
 
   //these are the file cuttently types accepted by isPrimitiveType in PuppetEval
-  def compileResource(r: Resource): ResModel = r.typ match {
-    //TODO
-    case "file" => File(Paths.get(""), "", false)
-    //TODO
-    case "package" => Package("", false)
-    //TODO
-    case "user" => User("", false, false)
-    //TODO
-    case "group" => Group("", false)
+  def compileResource(r: Resource): ResModel = {
+    val attrsMap = attrsToMap(r.attrs)
+    r.typ match {
+      //TODO
+      case "file" => File(Paths.get(""), "", false)
+      //TODO
+      case "package" => Package("", false)
+      //TODO
+      case "user" => User("", false, false)
+      case "group" => {
+        val nameAttr = attrsMap.get("name")
+        val ensureAttr = attrsMap.get("ensure")
+        val name: String = nameAttr match {
+          case None => r.title match {
+            case Str(n) => n
+            case _ => throw FSCompileError(s"invalid value for resource title: $r.title")
+          }          
+          case Some(Str(n)) => n
+          case _ => throw FSCompileError(s"invalid value for 'name' attribute: $nameAttr")
+        }
+        val present = ensureAttr match {
+          case Some(Str("present")) => true
+          case Some(Str("absent")) => false
+          //TODO: find out if there is a default value for 'ensure'
+          case _ => throw FSCompileError(s"invalid value for 'ensure' attribute: $ensureAttr")
+        }
+        Group(name, present)
+      }
+    }
   }
   
   //TODO(rian)
