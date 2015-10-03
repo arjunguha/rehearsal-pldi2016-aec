@@ -234,9 +234,9 @@ object Evaluator {
       if(m1res == None) findDefine(m2) else m1res
     }
     case Let(_, _, body) => findDefine(body)
+    case Class(_, _, _, body) => findDefine(body)
     case Empty |E(_) | Resource(_, _, _) => None
     case MCase(_, _) => throw new Exception("not implemented")
-    case Class(_, _, _, _) => throw new Exception("not implemented")
     case Include(_) => throw new Exception("not implemented")
     case Require(_) => throw new Exception("not implemented")
   }
@@ -253,8 +253,26 @@ object Evaluator {
   }
 
   //TODO(jcollard)
-  def findClass(m: Manifest): Option[Class] = {
-    None
+  def findClass(m: Manifest): Option[Class] = m match {
+    case c@Class(_, _, _, _) => Some(c)
+    case Block(m1, m2) => {
+      val m1res = findClass(m1)
+      if(m1res == None) findClass(m2) else m1res
+    }
+    case Edge(m1, m2) => {
+      val m1res = findClass(m1)
+      if(m1res == None) findClass(m2) else m1res
+    }
+    case E(ITE(_, m1, m2)) => {
+      val m1res = findClass(m1)
+      if(m1res == None) findClass(m2) else m1res
+    }
+    case Let(_, _, body) => findClass(body)
+    case Empty |E(_) | Resource(_, _, _) => None
+    case Define(_,_,_) => throw EvalError("Defines should have been expanded by this point.")
+    case MCase(_, _) => throw new Exception("not implemented")
+    case Include(_) => throw new Exception("not implemented")
+    case Require(_) => throw new Exception("not implemented")
   }
 
   //TODO(jcollard)
