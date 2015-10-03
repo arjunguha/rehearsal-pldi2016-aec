@@ -152,6 +152,7 @@ private class Parser extends RegexParsers with PackratParsers {
 	//
 
   lazy val atom: P[Expr] =
+    "undef" ^^ { _ => Undef } |
     "true" ^^ { _ => Bool(true) } |
   "false" ^^ { _ => Bool(false) } |
   word ~ ("[" ~> expr <~ "]") ~ opt("{" ~> attributes <~ "}") ^^ {

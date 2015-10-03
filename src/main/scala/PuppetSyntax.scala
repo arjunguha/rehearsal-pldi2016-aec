@@ -30,7 +30,7 @@ object Syntax {
   //  NOTE: The parser tests only include the first of these three
   //
   case class Include(e: Expr) extends Manifest
-  
+
   // The main difference between include and require is that require
   // causes the surrounding container to have a dependency on that class.
   // That is, all of the resources in the class are guaranteed to
@@ -41,6 +41,7 @@ object Syntax {
 
 
   sealed trait Expr
+  case object Undef extends Expr
   case class Str(s: String) extends Expr
   case class Res(typ: String, e: Expr, attrs: Seq[Attribute]) extends Expr
   case class Var(name: String) extends Expr
@@ -59,7 +60,7 @@ object Syntax {
   // https://docs.puppetlabs.com/puppet/latest/reference/lang_data_regexp.html
   // A regular expression can have these options sprinkled through out. In
   // practice it seems that these are placed at the beginning of the expression
-  // For example: /(?{enabled-options}-{disabled-options}:regex)/ 
+  // For example: /(?{enabled-options}-{disabled-options}:regex)/
   // TODO(jcollard): This will not cut it for arbitrary puppet regexps because
   // it is only picking up the initial options.
   case class RegExp(options: Seq[RegExpOption], regexp: String) extends Expr

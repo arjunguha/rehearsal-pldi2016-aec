@@ -35,6 +35,7 @@ object Evaluator {
   }
 
   def isValueExpr(e: Expr): Boolean = e match {
+    case Undef => true
     case Str(_) => true
     case Bool(_) => true
     case Res(typ, e, attrs) => isPrimitiveType(typ) && isValueExpr(e) && attrs.forall {
@@ -98,6 +99,7 @@ object Evaluator {
   }
 
   def evalExpr(e: Expr): Expr = e match {
+    case Undef => e
     case Res(typ, e, attrs) => Res(typ, evalExpr(e), attrs.map(evalAttr))
     case Var(_) => e
     case Str(_) => e
@@ -287,7 +289,7 @@ object Evaluator {
         if (refTyp.equalsIgnoreCase(typ) && title == refTitle) Some(resDef)
         else None
       }
-    }    
+    }
     case E(ITE(_, m1, m2)) => {
       val resDef = expandRes(r, m1)
       if(resDef == None) expandRes(r, m2)
