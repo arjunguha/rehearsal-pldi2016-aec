@@ -9,6 +9,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
   import rehearsal.Implicits._
   import java.nio.file.Path
   import java.nio.file.Paths
+  import Evaluator._
 
   import SymbolicEvaluator.{predEquals, exprEquals, isDeterministic, isDeterministicError}
 
@@ -131,8 +132,8 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
       file {'/usr/games/sl': ensure => present, content => "something"}
       package {'sl': ensure => present }
                   """
-    val pp = parse(program)
-    val g = toFileScriptGraph(pp.desugar.toGraph(Facter.emptyEnv).head._2)
+    val rg = toGraph(eval(expandAll(Parser.parse(program))))
+    val g = toFileScriptGraph(rg)
     assert(false == isDeterministic(g))
   }
 
@@ -152,8 +153,8 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
       file {'/foo/bar': ensure => file, before => Service['foo'] }
       service {'foo':}
                   """
-    val pp = parse(program)
-    val g = toFileScriptGraph(pp.desugar.toGraph(Facter.emptyEnv).head._2)
+    val rg = toGraph(eval(expandAll(Parser.parse(program))))
+    val g = toFileScriptGraph(rg)
     assert(false == isDeterministic(g))
   }  
 
@@ -163,9 +164,9 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
       file {'/foo/bar': ensure => file, before => File['/etc/foo'] }
       file {'/etc/foo': ensure => file}
                   """
-    val pp = parse(program)
-    val g = toFileScriptGraph(pp.desugar.toGraph(Facter.emptyEnv).head._2)
-    val arg = pp.desugar.toGraph(Facter.emptyEnv).head._2
+    val rg = toGraph(eval(expandAll(Parser.parse(program))))
+    val g = toFileScriptGraph(rg)
+    // val arg = pp.desugar.toGraph(Facter.emptyEnv).head._2
     assert(false == isDeterministic(g))
   }  
 

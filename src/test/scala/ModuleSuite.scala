@@ -9,6 +9,7 @@ class ModuleSuite extends org.scalatest.FunSuite {
   import rehearsal._
   import puppet.graph._
   import puppet.Facter
+  import Evaluator._
 
   val modulesPath = "benchmarks/puppetforge-modules/modules"
 
@@ -21,7 +22,7 @@ class ModuleSuite extends org.scalatest.FunSuite {
       val likelyClassName = name.split("/").last
       val include = parse(s"include $likelyClassName")
       val pp = TopLevel(mod.items ++ include.items)
-      val rg = pp.desugar.toGraph(puppet.Facter.emptyEnv).head._2
+      val rg = toGraph(eval(expandAll(Parser.parseFile(name))))
       toFileScriptGraph(rg)
     }
 

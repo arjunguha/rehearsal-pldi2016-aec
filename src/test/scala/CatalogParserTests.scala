@@ -1,6 +1,7 @@
 class CatalogTests extends org.scalatest.FunSuite {
   import rehearsal._
   import SymbolicEvaluator.{isDeterministic, isDeterministicError}
+  import Evaluator._
 
   val dir = "src/test/catalogs"
 
@@ -23,7 +24,8 @@ class CatalogTests extends org.scalatest.FunSuite {
   }
 
   test("puppet-monit.json") {
-    val g = Catalog.parseFile(s"$dir/puppet-monit.json")
+    // val g = Catalog.parseFile(s"$dir/puppet-monit.json")
+    val g = toGraph(eval(expandAll(Parser.parseFile(s"$dir/puppet-monit.json"))))
     assert(g.nodes.size > 5)
     val g2 = toFileScriptGraph(g)
     println(g)

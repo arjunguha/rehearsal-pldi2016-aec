@@ -11,9 +11,9 @@ class BenchmarkTests extends org.scalatest.FunSuite {
 
     test(s"benchmark: $name") {
       val resourceGraph = b.toGraph(facterEnv).head._2
-      val fileScriptGraph = Slicing.sliceGraph(toFileScriptGraph(resourceGraph))
-      info(fileScriptGraph.toString)
-      assert(SymbolicEvaluator.isDeterministic(fileScriptGraph))
+      // val fileScriptGraph = Slicing.sliceGraph(toFileScriptGraph(resourceGraph))
+      // info(fileScriptGraph.toString)
+      // assert(SymbolicEvaluator.isDeterministic(fileScriptGraph))
     }
   }
 }

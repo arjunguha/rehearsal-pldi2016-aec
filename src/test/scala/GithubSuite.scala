@@ -8,6 +8,7 @@ class GithubSuite extends org.scalatest.FunSuite {
   import java.nio.file.{Files, Paths, Path}
   import java.nio.charset.StandardCharsets.UTF_8
   import scala.collection.JavaConversions._
+  import Evaluator._
 
   val env = puppet.Facter.fromFile("src/test/arjun-vm.facter") getOrElse
     (throw new Exception("Facter environment not found"))
@@ -16,8 +17,9 @@ class GithubSuite extends org.scalatest.FunSuite {
 
   for (repo <- repos) {
     test(repo) {
-      val topLevel = findPuppetFiles(Paths.get(repo)).get
-      val g = GuessClasses.guessLoad(topLevel).desugar.toGraph(env).head._2
+      // val topLevel = findPuppetFiles(Paths.get(repo)).get
+      // val g = GuessClasses.guessLoad(topLevel).desugar.toGraph(env).head._2
+      val g = toGraph(eval(expandAll(Parser.parseFile(repo))))
       val files = g.nodes.filter(_.typ == "File")
       val numEdges = g.edges.size
       val numFiles = files.size
