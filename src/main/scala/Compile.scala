@@ -9,7 +9,7 @@ object Compile {
   import rehearsal.Implicits._
   import rehearsal.{Syntax => P}
   import P._
-  import ResourceModel.{Res => ResModel, File, Package, User, Group, EnsureFile, AbsentPath, compile}
+  import ResourceModel.{Res => ResModel,_}
   import Evaluator.ResourceGraph
   import scalax.collection.mutable.Graph
   import scalax.collection.mutable.Graph._
@@ -26,68 +26,86 @@ object Compile {
   //these are the file cuttently types accepted by isPrimitiveType in PuppetEval
   def convertResource(r: Resource): ResModel = {
     val attrsMap = attrsToMap(r.attrs)
-    val nameExpr = attrsMap.get("name")
-    val ensureExpr = attrsMap.get("ensure")
-    val name: String = nameExpr match {
+    val name: String = attrsMap.get("name") match {
       case None => r.title match {
         case Str(n) => n
-        case _ => throw FSCompileError(s"invalid value for resource title: $r.title")
+        case s => throw FSCompileError(s"invalid value for resource title: $s")
       }          
       case Some(Str(n)) => n
-      case _ => throw FSCompileError(s"invalid value for 'name' attribute: $nameExpr")
-    }
-    val present = ensureExpr match {
-      case Some(Str("present")) => true
-      case Some(Str("absent")) => false
-      //TODO: find out if there is a default value for 'ensure'
-      case _ => throw FSCompileError(s"invalid value for 'ensure' attribute: $ensureExpr")
+      case e => throw FSCompileError(s"invalid value for 'name' attribute: $e")
     }
     r.typ match {
-      //TODO
-      //assusming the only difference between File and EnsureFile is that File does not have ensure attribute
       case "file" => {
-        val pathExpr = attrsMap.get("path")
-        val contentExpr = attrsMap.get("content")
-        val forceExpr = attrsMap.get("force")
-        val path: String = pathExpr match {
+        val path: String = attrsMap.get("path") match {
           case None => r.title match {
             case Str(n) => n
             case _ => throw FSCompileError(s"invalid value for resource title: $r.title")
           }          
           case Some(Str(n)) => n
-          case _ => throw FSCompileError(s"invalid value for 'path' attribute: $pathExpr")
+          case e => throw FSCompileError(s"invalid value for 'path' attribute: $e")
         }
-        val content: String = contentExpr match {
+        val content: String = attrsMap.get("content") match {
           case None => ""        
           case Some(Str(n)) => n
-          case _ => throw FSCompileError(s"invalid value for 'content' attribute: $contentExpr")
+          case e => throw FSCompileError(s"invalid value for 'content' attribute: $e")
         }
-        val force = forceExpr match {
+        val force = attrsMap.get("force") match {
           case Some(Str("yes")) | Some(Bool(true)) => true
           case Some(Str("no")) | Some(Bool(false)) | None => false
-          case _ => throw FSCompileError(s"invalid value for 'force' attribute: $forceExpr")
+          case e => throw FSCompileError(s"invalid value for 'force' attribute: $e")
         }
-        ensureExpr match {
+        attrsMap.get("ensure") match {
           case None => File(Paths.get(path), content, force)
-          case Some(Str("present")) => EnsureFile(Paths.get(path), content)
-          case Some(Str("absent")) => AbsentPath(Paths.get(path), force)
-          case _ => throw FSCompileError(s"invalid value for 'ensure' attribute $ensureExpr")
+          case Some(Str("present")) => File(Paths.get(path), content, force)
+          case Some(Str("absent")) | Some(Bool(false)) => AbsentPath(Paths.get(path), force)
+          case Some(Str("file")) => EnsureFile(Paths.get(path), content)
+          case Some(Str("directory")) => Directory(Paths.get(path))
+          case Some(Str("link")) => {
+            attrsMap.get("target") match {
+              case None => 
+                throw FSCompileError(s"Missing target attribute. Target is required with ensure => link")
+              case Some(Str(target)) => File(path, target, true)
+              case target => throw FSCompileError(s"invalid value for 'target' attribute $target")
+            }
+          }
+          case e => throw FSCompileError(s"invalid value for 'ensure' attribute $e")
         }
       }
-      case "package" => Package(name, present)
+      case "package" => {
+        val present = attrsMap.get("ensure") match {
+          case Some(Str("present")) | Some(Str("installed")) | Some(Str("latest")) => true
+          case Some(Str("absent")) | Some(Str("purged")) => false
+          case Some(Str("held")) => throw NotImplemented("NYI package held") // TODO
+          case e => throw FSCompileError(s"invalid value for 'ensure' attribute: $e")
+        }  
+        Package(name, present)
+      }
       case "user" => {
-        val manageHomeExpr = attrsMap.get("managehome")
-        val manageHome = manageHomeExpr match {
+        val present = attrsMap.get("ensure") match {
+          case Some(Str("present")) => true
+          case Some(Str("absent")) => false
+          case Some(Str("role")) => throw NotImplemented("NYI user role") // TODO
+          case e => throw FSCompileError(s"invalid value for 'ensure' attribute: $e")
+        }        
+        val manageHome = attrsMap.get("managehome") match {
           case Some(Str("yes")) | Some(Bool(true)) => true
           case Some(Str("no")) | Some(Bool(false)) | None => false
-          case _ => throw FSCompileError(s"invalid value for 'managehome' attribute: $manageHomeExpr")
+          case e => throw FSCompileError(s"invalid value for 'managehome' attribute: $e")
         }        
         User(name, present, manageHome)
       }
-      case "group" => Group(name, present)
+      case "group" => {
+        val present = attrsMap.get("ensure") match {
+          case Some(Str("present")) => true
+          case Some(Str("absent")) => false
+          case e => throw FSCompileError(s"invalid value for 'ensure' attribute: $e")
+        }
+        Group(name, present)
+      }
     }
   }
   
   //use compile function in ResourceModel to go from ResModel to FS
-  def toFileScriptGraph(g: ResourceGraph): FileScriptGraph = nodeMap((r: Resource) => compile(convertResource(r)), g)
+  def toFileScriptGraph(g: ResourceGraph): FileScriptGraph = 
+    nodeMap((r: Resource) => compile(convertResource(r)), g)
 }
