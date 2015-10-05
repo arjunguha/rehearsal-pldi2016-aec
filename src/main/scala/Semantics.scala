@@ -1,6 +1,6 @@
 package rehearsal
 
-object Compile {
+object ResourceToExpr {
 
   import java.nio.file.{Path, Paths}
   import rehearsal.{FSSyntax => F}
@@ -16,6 +16,19 @@ object Compile {
   import scalax.collection.GraphEdge._
 
   case class FSCompileError(msg: String) extends RuntimeException(msg)
+
+  val pkgcache = PackageCache()
+
+  def PackageDependencies(pkg: String): List[String] = {
+    val cmd = s"""apt-rdepends --show=depends $pkg | grep -v '^ ' | grep -v $pkg"""
+    val (sts, out, err) = Cmd.exec(cmd)
+    /*  Toposort
+     *  Among dependent packages of this package, apt-get will install the
+     *  package with all its dependencies present first(in a reverse
+     *  topological sort order)
+     */
+     out.lines.toList
+  }
 
   def attrsToMap(attrs: scala.collection.Seq[Attribute]): Map[String, P.Expr] = attrs match {
     case scala.collection.Seq() => Map()
