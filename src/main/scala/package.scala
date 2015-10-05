@@ -1,6 +1,7 @@
 package object rehearsal {
 
-  import puppet.graph._
+  // import puppet.graph._
+  import Evaluator.{ResourceGraph, eval, expandAll, toGraph}
   import scala.reflect.runtime.universe.TypeTag
   import scalax.collection.GraphPredef._
   import scalax.collection.Graph
@@ -12,10 +13,10 @@ package object rehearsal {
   import rehearsal.Implicits._
   import scala.util.{Try, Success, Failure}
   import puppet.syntax.{TopLevel, parse}
+  import Compile.{toFileScriptGraph => toFS}
+  import Parser.parseFile
 
-  def toFileScriptGraph(resourceGraph: ResourceGraph): FileScriptGraph = {
-    nodeMap((r: Resource) => ResourceToExpr(r), resourceGraph)
-  }
+  def toFileScriptGraph(resourceGraph: ResourceGraph): FileScriptGraph = toFS(resourceGraph)
 
   def fileScriptGraphSize(g: FileScriptGraph): Int = {
     g.nodes.map(_.size).reduce(_ + _) + g.edges.size
@@ -97,7 +98,8 @@ package object rehearsal {
 
   def isDeterministic(repo: String): Boolean = {
     val topLevel = findPuppetFiles(Paths.get(repo)).get
-    val resourceGraph = topLevel.desugar.toGraph(Map()).head._2
+    // val resourceGraph = topLevel.desugar.toGraph(Map()).head._2
+    val resourceGraph = toGraph(eval(expandAll(parseFile(repo))))
     val fsGraph = toFileScriptGraph(resourceGraph)
     SymbolicEvaluator.isDeterministic(fsGraph)
   }

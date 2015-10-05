@@ -6,6 +6,7 @@ package repl {
   import scala.tools.nsc.Settings
   import java.nio.file.Paths
   import UpdateSynth._
+  import Evaluator._
 
   private object Main extends App {
     def uncurry[A, B, C](f: (A, B) => C)(t: (A, B)): C = f(t._1, t._2)
@@ -113,7 +114,7 @@ package repl {
         }
       }
       case "catalog-deter" :: List(catalogFile) => {
-        val rg = Catalog.parseFile(catalogFile)
+        val rg = toGraph(eval(expandAll(Parser.parseFile(catalogFile))))
         println(rg)
         val g = toFileScriptGraph(rg)
         val g1 = Slicing.sliceGraph(g)
@@ -136,15 +137,16 @@ package object repl {
 
   import puppet.Modules
   import puppet.syntax.{TopLevel, parse}
+  import Evaluator._
 
   val modules = Modules("benchmarks/puppetforge-modules/modules").withoutRubyAndInvalidDeps
 
   def loadModuleClass(name: String) = {
-    val likelyClassName = name.split("/").last
-    val mod = modules.loadWithDependencies(name)
-    val include = parse(s"include $likelyClassName")
-    val pp = TopLevel(mod.items ++ include.items)
-    toFileScriptGraph(pp.desugar.toGraph(puppet.Facter.emptyEnv).head._2)
+    // val likelyClassName = name.split("/").last
+    // val mod = modules.loadWithDependencies(name)
+    // val include = parse(s"include $likelyClassName")
+    val rg = toGraph(eval(expandAll(Parser.parseFile(name))))
+    toFileScriptGraph(rg)
   }
 
   def isDeterministic(g: FileScriptGraph): (Boolean, Long) = {

@@ -3,9 +3,10 @@ package rehearsal
 object DeterminismBenchmarks {
 
   import SymbolicEvaluator._
+  import Evaluator._
 
   def bench(label: String, path: String, check: FileScriptGraph => Boolean, onlySliced: Boolean = false): Unit = {
-    val rg = Catalog.parseFile(path)
+    val rg = toGraph(eval(expandAll(Parser.parseFile(path))))
     val g = toFileScriptGraph(rg)
 
     if (!onlySliced) {

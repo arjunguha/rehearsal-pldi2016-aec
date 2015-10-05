@@ -2,12 +2,11 @@ package rehearsal
 
 object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
 
-
-
   import java.nio.file.{Files, Paths, Path}
   import ResourceModel._
   import FSSyntax.{Expr, Skip, Block}
   import Eval._
+  import Evaluator.{expandAll, toGraph}
   import smtlib.parser.Commands._
   import smtlib.parser.Terms._
 
@@ -331,16 +330,16 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
   }
 
   def exec(manifest1: String, manifest2: String): (Precond, List[Res]) = {
-    val graph1 = puppet.syntax.parse(manifest1).desugar().toGraph(Map()).head._2
-    val graph2 = puppet.syntax.parse(manifest2).desugar().toGraph(Map()).head._2
+    val graph1 = toGraph(Evaluator.eval(expandAll(Parser.parseFile(manifest1))))
+    val graph2 = toGraph(Evaluator.eval(expandAll(Parser.parseFile(manifest2))))
 
     assert(SymbolicEvaluator.isDeterministic(toFileScriptGraph(graph1)),
            "V1 is not deterministic")
     assert(SymbolicEvaluator.isDeterministic(toFileScriptGraph(graph2)),
            "V2 is not deterministic")
 
-    val ov1 = topologicalSort(graph1).map(r => ResourceToExpr.convert(r))
-    val ov2 = topologicalSort(graph2).map(r => ResourceToExpr.convert(r))
+    val ov1 = topologicalSort(graph1).map(r => Compile.convertResource(r))
+    val ov2 = topologicalSort(graph2).map(r => Compile.convertResource(r))
     execLists(ov1, ov2) match {
       case (_, precond, rs) => (precond, rs)
     }

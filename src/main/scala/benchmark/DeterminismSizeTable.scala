@@ -3,9 +3,10 @@ package rehearsal
 object DeterminismSizeTables {
 
   import SymbolicEvaluator._
+  import Evaluator._
 
   def bench(label: String, path: String): Unit = {
-    val rg = Catalog.parseFile(path)
+    val rg = toGraph(eval(expandAll(Parser.parseFile(path))))
     val g = toFileScriptGraph(rg)
     val rSize = rg.nodes.size
     val fSize =  fileScriptGraphSize(g)
