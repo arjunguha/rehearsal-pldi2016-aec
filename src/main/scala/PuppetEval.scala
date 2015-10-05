@@ -55,7 +55,7 @@ object Evaluator {
   }
 
   val primitiveTypes = Set("file", "File", "package", "Package", "user", "User", "group", "Group",
-                           "service", "Service")
+                           "service", "Service", "ssh_authorized_key", "Ssh_authorized_key")
 
   def isPrimitiveType(typ: String): Boolean = primitiveTypes.contains(typ)
 

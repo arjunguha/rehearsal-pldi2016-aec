@@ -103,6 +103,22 @@ object Compile {
         Group(name, present)
       }
       case "service" => Service(name)
+      case "ssh_authorized_key" => {
+        val user = attrsMap.get("user") match {
+          case Some(Str(s)) => s
+          case e => throw FSCompileError(s"invalid value for 'user' attribute: $e")
+        }
+        val present = attrsMap.get("ensure") match {
+          case Some(Str("present")) => true
+          case Some(Str("absent")) => false
+          case e => throw FSCompileError(s"invalid value for 'ensure' attribute: $e")
+        }
+        val key = attrsMap.get("key") match {
+          case Some(Str(s)) => s
+          case e => throw FSCompileError(s"invalid value for 'ensure' attribute: $e")
+        }        
+        SshAuthorizedKey(user, present, name, key: String)
+      }
       case s => throw NotImplemented(s"Not Implemented or invalid resource type: $s")
     }
   }
