@@ -4,56 +4,57 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
   import java.nio.file._
   import Evaluator._
 
-  val root = "src/test/catalogs"
+  val root = "parser-tests/good"
 
-  test("puppet-monit.json") {
-    val rg = toGraph(eval(expandAll(Parser.parseFile(s"$root/puppet-monit.json"))))
+  test("dhoppe-monit.pp") {
+    val rg = toGraph(eval(expandAll(Parser.parseFile(s"$root/dhoppe-monit.pp"))))
     val g = toFileScriptGraph(rg)
     assert(SymbolicEvaluator.isDeterministicError(g) == true)
   }
 
-  test("puppet-bind.json") {
-    val rg = toGraph(eval(expandAll(Parser.parseFile(s"$root/puppet-bind.json"))))
+  test("thias-bind.pp") {
+    val rg = toGraph(eval(expandAll(Parser.parseFile(s"$root/thias-bind.pp"))))
     val g = toFileScriptGraph(rg)
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
-  test("puppet-hosting.json") {
-    val rg = toGraph(eval(expandAll(Parser.parseFile(s"$root/puppet-hosting.json"))))
+  //not in parser-tests yet
+  ignore("puppet-hosting.pp") {
+    val rg = toGraph(eval(expandAll(Parser.parseFile(s"$root/puppet-hosting.pp"))))
     val g = toFileScriptGraph(rg)
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
-  test("puppet-powerdns.json") {
-    val rg = toGraph(eval(expandAll(Parser.parseFile(s"$root/puppet-powerdns.json"))))
+  test("antonlingstrom-powerdns.pp") {
+    val rg = toGraph(eval(expandAll(Parser.parseFile(s"$root/antonlingstrom-powerdns.pp"))))
     val g = toFileScriptGraph(rg)
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
-  test("SpikyIRC.json") {
-    val rg = toGraph(eval(expandAll(Parser.parseFile(s"$root/SpikyIRC.json"))))
+  test("nfisher-SpikyIRC.pp") {
+    val rg = toGraph(eval(expandAll(Parser.parseFile(s"$root/nfisher-SpikyIRC.pp"))))
     val g = toFileScriptGraph(rg)
     assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)) == false)
   }
 
-  test("ghoneycutt-xinetd.json") {
-    val rg = toGraph(eval(expandAll(Parser.parseFile(s"$root/ghoneycutt-xinetd.json"))))
+  //not in parser-tests yet
+  ignore("ghoneycutt-xinetd.pp") {
+    val rg = toGraph(eval(expandAll(Parser.parseFile(s"$root/ghoneycutt-xinetd.pp"))))
     val g = toFileScriptGraph(rg)
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
-  test("thias-ntp.json") {
-    val rg = toGraph(eval(expandAll(Parser.parseFile(s"$root/thias-ntp.json"))))
+  //not in parser-tests yet
+  ignore("thias-ntp.pp") {
+    val rg = toGraph(eval(expandAll(Parser.parseFile(s"$root/thias-ntp.pp"))))
     val g = toFileScriptGraph(rg)
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
-  test("xdrum-rsyslog.json") {
-    val rg = toGraph(eval(expandAll(Parser.parseFile(s"$root/xdrum-rsyslog.json"))))
+  //not in parser-tests yet
+  ignore("xdrum-rsyslog.pp") {
+    val rg = toGraph(eval(expandAll(Parser.parseFile(s"$root/xdrum-rsyslog.pp"))))
     val g = toFileScriptGraph(rg)
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
-
-
-
 }
