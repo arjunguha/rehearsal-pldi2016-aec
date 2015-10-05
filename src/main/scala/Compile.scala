@@ -102,6 +102,8 @@ object Compile {
         }
         Group(name, present)
       }
+      case "service" => Service(name)
+      case s => throw NotImplemented(s"Not Implemented or invalid resource type: $s")
     }
   }
   
