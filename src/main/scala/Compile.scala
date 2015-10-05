@@ -9,7 +9,7 @@ object Compile {
   import rehearsal.Implicits._
   import rehearsal.{Syntax => P}
   import P._
-  import ResourceModel.{Res => ResModel, File, Package, User, Group, EnsureFile, AbsentPath}
+  import ResourceModel.{Res => ResModel, File, Package, User, Group, EnsureFile, AbsentPath, compile}
   import Evaluator.ResourceGraph
   import scalax.collection.mutable.Graph
   import scalax.collection.mutable.Graph._
@@ -17,16 +17,14 @@ object Compile {
 
   case class FSCompileError(msg: String) extends RuntimeException(msg)
 
-  //compile to ResourceModel.Res
-
   def attrsToMap(attrs: scala.collection.Seq[Attribute]): Map[String, P.Expr] = attrs match {
     case scala.collection.Seq() => Map()
     case Attribute(Str(name), value) :: t => attrsToMap(t) + Tuple2(name, value)
   }
   
-
+  //compile to ResourceModel.Res
   //these are the file cuttently types accepted by isPrimitiveType in PuppetEval
-  def compileResource(r: Resource): ResModel = {
+  def convertResource(r: Resource): ResModel = {
     val attrsMap = attrsToMap(r.attrs)
     val nameExpr = attrsMap.get("name")
     val ensureExpr = attrsMap.get("ensure")
@@ -90,7 +88,6 @@ object Compile {
     }
   }
   
-  //TODO(rian)
   //use compile function in ResourceModel to go from ResModel to FS
-  def compile(g: ResourceGraph): FileScriptGraph = Graph()
+  def toFileScriptGraph(g: ResourceGraph): FileScriptGraph = nodeMap((r: Resource) => compile(convertResource(r)), g)
 }
