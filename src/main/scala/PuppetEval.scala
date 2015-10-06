@@ -20,18 +20,21 @@ object Evaluator {
     case Empty => true
     case Block(m1, m2) => isValue(m1) && isValue(m2)
     case Resource(title, typ, attrs) => {
+      val prim = isPrimitiveType(typ)
+      if (!prim) println(s"$typ not a primitive type")
       isValueExpr(title) && isPrimitiveType(typ) && attrs.forall {
         case Attribute(name, value) => isValueExpr(name) && isValueExpr(value)
       }
     }
     case Edge(m1, m2) => isValue(m1) && isValue(m2)
+    case E(e) => isValueExpr(e)
+
     case Define(_, _, _) => false
-    case Class(_, _, _, _) => false
     case Let(_, _, _) => false
     case MCase(_, _) => false
-    case E(e) => isValueExpr(e)
     case Include(_) => false
     case Require(_) => false
+    case Class(_, _, _, _) => false
   }
 
   def isValueExpr(e: Expr): Boolean = e match {
@@ -54,8 +57,14 @@ object Evaluator {
     case Regex(_) => false
   }
 
-  val primitiveTypes = Set("file", "File", "package", "Package", "user", "User", "group", "Group",
-                           "service", "Service", "ssh_authorized_key", "Ssh_authorized_key")
+  val primitiveTypes =
+    Set("file", "File", "package", "Package", "user", "User", "group", "Group",
+      "service", "Service", "ssh_authorized_key", "Ssh_authorized_key",
+      // TODO(jcollard): Is stage actually a primitive type or do we need to do
+      // something special with it so it doesn't end up here
+      "Stage", "stage",
+      // TODO(jcollard): Is class actually a primitive type?
+      "Class", "class")
 
   def isPrimitiveType(typ: String): Boolean = primitiveTypes.contains(typ)
 
