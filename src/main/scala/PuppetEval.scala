@@ -350,8 +350,16 @@ object Evaluator {
 
           //Replace include / require with a resource that will be filled
           //during expansion.
-          case Include(_) => (Resource(Str(name), name, params.map(argToAttr(name))), true)
-          case Require(_) => (Resource(Str(name), name, params.map(argToAttr(name))), true)
+          case Include(Str(name0))
+              if name0 == name => (Resource(Str(name), name, params.map(argToAttr(name))), true)
+
+          case Require(Str(name0))
+              if name0 == name => (Resource(Str(name), name, params.map(argToAttr(name))), true)
+          case Include(Str(_)) => (m, expanded)
+          case Require(Str(_)) => (m, expanded)
+          
+          case Include(e) => throw EvalError(s"Right hand side of include was not a string. Valid puppet but we don't handle it. Right hand: $e.")
+          case Require(e) => throw EvalError(s"Right hand side of require was not a string. Valid puppet but we don't handle it. Right hand: $e.")          
         }
       }
     }
