@@ -54,7 +54,8 @@ object Evaluator {
     case RegExp(_,_) => false
   }
 
-  val primitiveTypes = Set("file", "File", "package", "Package", "user", "User", "group", "Group")
+  val primitiveTypes = Set("file", "File", "package", "Package", "user", "User", "group", "Group",
+                           "service", "Service", "ssh_authorized_key", "Ssh_authorized_key")
 
   def isPrimitiveType(typ: String): Boolean = primitiveTypes.contains(typ)
 

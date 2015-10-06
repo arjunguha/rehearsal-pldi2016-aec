@@ -338,8 +338,8 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     assert(SymbolicEvaluator.isDeterministic(toFileScriptGraph(graph2)),
            "V2 is not deterministic")
 
-    val ov1 = topologicalSort(graph1).map(r => Compile.convertResource(r))
-    val ov2 = topologicalSort(graph2).map(r => Compile.convertResource(r))
+    val ov1 = topologicalSort(graph1).map(r => ResourceToExpr.convertResource(r))
+    val ov2 = topologicalSort(graph2).map(r => ResourceToExpr.convertResource(r))
     execLists(ov1, ov2) match {
       case (_, precond, rs) => (precond, rs)
     }

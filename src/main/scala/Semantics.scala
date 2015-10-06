@@ -1,22 +1,21 @@
 package rehearsal
 
-import rehearsal.ResourceModel.SshAuthorizedKey
-
-/*
- * Give filesystem semantics to resources
- *
- * Expresses resources in terms of file system changes
- */
 object ResourceToExpr {
 
-  import FSSyntax.{Expr, Skip}
+  import java.nio.file.{Path, Paths}
+  import rehearsal.{FSSyntax => F}
+  import F.{Seq => FSeq}
+  import F._
   import rehearsal.Implicits._
-  import rehearsal.{ResourceModel => R}
+  import rehearsal.{Syntax => P}
+  import P._
+  import ResourceModel.{Res => ResModel,_}
+  import Evaluator.ResourceGraph
+  import scalax.collection.mutable.Graph
+  import scalax.collection.mutable.Graph._
+  import scalax.collection.GraphEdge._
 
-  import java.nio.file.{Path, Files, Paths}
-
-  import puppet.graph._
-  import puppet.graph.Implicits._
+  case class FSCompileError(msg: String) extends RuntimeException(msg)
 
   val pkgcache = PackageCache()
 
@@ -31,135 +30,113 @@ object ResourceToExpr {
      out.lines.toList
   }
 
-  val validBoolVals = List ((BoolV(true): Value, true),
-                            (BoolV(false): Value, false),
-                            (StringV("yes"): Value, true),
-                            (StringV("no"): Value, false)).toMap
-
-  def validVal[T](r: Resource, property: String,
-                  options: Map[Value, T]): Option[T] = {
-    r.getRawVal(property).map(options.get(_)).flatten
+  def attrsToMap(attrs: scala.collection.Seq[Attribute]): Map[String, P.Expr] = attrs match {
+    case scala.collection.Seq() => Map()
+    case Attribute(Str(name), value) :: t => attrsToMap(t) + Tuple2(name, value)
   }
-
-  def validVal(r: Resource, property: String,
-               options: List[String]): Option[String] = {
-    val m = options.map((o) => (StringV(o): Value, o)).toMap
-    validVal(r, property, m)
-  }
-
-  def File(r: Resource) = {
-
-    val validEnsureVals = List("present", "absent", "file", "directory", "link")
-
-    val path = r.get[String]("path") getOrElse r.name
-    val source = r.get[String]("source")
-    val content = r.get[String]("content")
-    val ensure = validVal(r, "ensure", validEnsureVals) orElse {
-      if(content.isDefined) Some("present") else None
-    } orElse {
-      if(source.isDefined) Some("file") else None
+  
+  //compile to ResourceModel.Res
+  //these are the file cuttently types accepted by isPrimitiveType in PuppetEval
+  def convertResource(r: Resource): ResModel = {
+    val attrsMap = attrsToMap(r.attrs)
+    val name: String = attrsMap.get("name") match {
+      case None => r.title match {
+        case Str(n) => n
+        case s => throw FSCompileError(s"invalid value for resource title: $s")
+      }          
+      case Some(Str(n)) => n
+      case e => throw FSCompileError(s"invalid value for 'name' attribute: $e")
     }
-    val force = validVal(r, "force", validBoolVals) getOrElse false
-    val purge = validVal(r, "purge", validBoolVals) getOrElse false
-    val target = r.get[String]("target")
-    val owner = r.get[String]("owner")
-    val provider = r.get[String]("provider")
-    val mode = r.get[String]("mode")
-
-    val props: Map[String, Option[String]] = Map(
-      "path" -> Some(path),
-      "content" -> content,
-      "source" -> source,
-      "ensure" -> ensure,
-      "force" -> Some(force.toString))
-
-    (props("ensure"), props("path"), props("content"), props("source"),
-     r.get[Boolean]("force").getOrElse(false)) match {
-       case (Some("present"), Some(p), Some(c), None, _) =>  R.File(p, c, false)
-        case (Some("present"), Some(p), None, Some(c), _) => R.File(p, c, false)
-        case (Some("present"), Some(p), None, None, _) => R.File(p, "", false)
-        case (Some("absent"), Some(p), _, _, true) => R.AbsentPath(p, true)
-        case (Some("absent"), Some(p), _, _, false) => R.AbsentPath(p, false)
-        case (Some("file"), Some(p), Some(c), None, true) => R.File(p, c, true)
-        case (Some("file"), Some(p), None, Some(c), true) => R.File(p, c, true)
-        case (Some("file"), Some(p), None, None, true) => R.File(p, "", true)
-        case (Some("file"), Some(p), Some(c), None, false) =>  R.EnsureFile(p, c)
-        case (Some("file"), Some(p), None, Some(c), false) => R.EnsureFile(p, c)
-        case (Some("file"), Some(p), None, None, false) => R.EnsureFile(p, "")
-        case (Some("directory"), Some(p), _, _, _) => R.Directory(p)
-       case (Some("link"), Some(p),_,  _, _) => R.File(p, r.get[String]("target").get, true)
-       case _ => throw Unexpected(s"ensure attribute missing for file ${r.name}, attrs = ${r.attributes} ${props("ensure")}")
-     }
-  }
-
-  def PuppetPackage(r: Resource) = {
-
-    val validEnsureVals = List("present", "installed", "absent", "purged", "held", "latest")
-
-    val ensure = validVal(r, "ensure", validEnsureVals) getOrElse "installed"
-    val provider = r.get[String]("provider")
-
-    val supportedProviders = Set("apt", "rpm")
-
-    if(provider.isDefined && !supportedProviders.contains(provider.get)) {
-      throw Unexpected(s"""package(${r.name}): "${provider.get}" provider not supported""")
-    }
-
-    ensure match {
-      case "present" | "installed" | "latest" => R.Package(r.name, true)
-      case "absent" | "purged" => R.Package(r.name, false)
-      case "held" => throw NotImplemented("NYI package held") // TODO
-      case _ => throw Unexpected(s"Invalid value for ensure: ${ensure}")
-    }
-  }
-
-  def User(r: Resource) = {
-    val validEnsureVals = List("present", "absent", "role")
-    val ensure = validVal(r, "ensure", validEnsureVals) getOrElse "present"
-    val managehome = validVal(r, "managehome", validBoolVals) getOrElse false
-    if (r.get[String]("provider").getOrElse("useradd") != "useradd") {
-      throw NotImplemented(s"user(${r.name}): provider not supported")
-    }
-    (ensure, managehome) match {
-      case ("present", true) => R.User(r.name, true, true)
-      case ("present", false) => R.User(r.name, true, false)
-      case ("absent", _) => R.User(r.name, false, managehome)
-      case (_, _) => throw Unexpected(s"value for ensure: $ensure")
-    }
-  }
-
-  def Group(r: Resource) = {
-    val validEnsureVals = List("present", "absent")
-    val ensure = validVal(r, "ensure", validEnsureVals) getOrElse {
-      throw Unexpected(s"group ${r.name} 'ensure' attribute missing")
-    }
-    val provider = r.get[String]("provider")
-    if (provider.getOrElse("groupadd") != "groupadd") {
-      throw NotImplemented(s"""group(${r.name}): "${provider.get}" provider not supported""")
-    }
-    ensure match {
-      case "present" => R.Group(r.name, true)
-      case "absent" => R.Group(r.name, false)
-      case _ => throw Unexpected(s"ensure value is $ensure")
+    r.typ match {
+      case "file" => {
+        val path: String = attrsMap.get("path") match {
+          case None => r.title match {
+            case Str(n) => n
+            case _ => throw FSCompileError(s"invalid value for resource title: $r.title")
+          }          
+          case Some(Str(n)) => n
+          case e => throw FSCompileError(s"invalid value for 'path' attribute: $e")
+        }
+        val content: String = attrsMap.get("content") match {
+          case None => ""        
+          case Some(Str(n)) => n
+          case e => throw FSCompileError(s"invalid value for 'content' attribute: $e")
+        }
+        val force = attrsMap.get("force") match {
+          case Some(Str("yes")) | Some(Bool(true)) => true
+          case Some(Str("no")) | Some(Bool(false)) | None => false
+          case e => throw FSCompileError(s"invalid value for 'force' attribute: $e")
+        }
+        attrsMap.get("ensure") match {
+          case None => File(Paths.get(path), content, force)
+          case Some(Str("present")) => File(Paths.get(path), content, force)
+          case Some(Str("absent")) | Some(Bool(false)) => AbsentPath(Paths.get(path), force)
+          case Some(Str("file")) => EnsureFile(Paths.get(path), content)
+          case Some(Str("directory")) => Directory(Paths.get(path))
+          case Some(Str("link")) => {
+            attrsMap.get("target") match {
+              case None => 
+                throw FSCompileError(s"Missing target attribute. Target is required with ensure => link")
+              case Some(Str(target)) => File(path, target, true)
+              case target => throw FSCompileError(s"invalid value for 'target' attribute $target")
+            }
+          }
+          case e => throw FSCompileError(s"invalid value for 'ensure' attribute $e")
+        }
+      }
+      case "package" => {
+        val present = attrsMap.get("ensure") match {
+          case Some(Str("present")) | Some(Str("installed")) | Some(Str("latest")) => true
+          case Some(Str("absent")) | Some(Str("purged")) => false
+          case Some(Str("held")) => throw NotImplemented("NYI package held") // TODO
+          case e => throw FSCompileError(s"invalid value for 'ensure' attribute: $e")
+        }  
+        Package(name, present)
+      }
+      case "user" => {
+        val present = attrsMap.get("ensure") match {
+          case Some(Str("present")) => true
+          case Some(Str("absent")) => false
+          case Some(Str("role")) => throw NotImplemented("NYI user role") // TODO
+          case e => throw FSCompileError(s"invalid value for 'ensure' attribute: $e")
+        }        
+        val manageHome = attrsMap.get("managehome") match {
+          case Some(Str("yes")) | Some(Bool(true)) => true
+          case Some(Str("no")) | Some(Bool(false)) | None => false
+          case e => throw FSCompileError(s"invalid value for 'managehome' attribute: $e")
+        }        
+        User(name, present, manageHome)
+      }
+      case "group" => {
+        val present = attrsMap.get("ensure") match {
+          case Some(Str("present")) => true
+          case Some(Str("absent")) => false
+          case e => throw FSCompileError(s"invalid value for 'ensure' attribute: $e")
+        }
+        Group(name, present)
+      }
+      case "service" => Service(name)
+      case "ssh_authorized_key" => {
+        val user = attrsMap.get("user") match {
+          case Some(Str(s)) => s
+          case e => throw FSCompileError(s"invalid value for 'user' attribute: $e")
+        }
+        val present = attrsMap.get("ensure") match {
+          case Some(Str("present")) => true
+          case Some(Str("absent")) => false
+          case e => throw FSCompileError(s"invalid value for 'ensure' attribute: $e")
+        }
+        val key = attrsMap.get("key") match {
+          case Some(Str(s)) => s
+          case e => throw FSCompileError(s"invalid value for 'ensure' attribute: $e")
+        }        
+        SshAuthorizedKey(user, present, name, key: String)
+      }
+      case s => throw NotImplemented(s"Not Implemented or invalid resource type: $s")
     }
   }
-
-  def convert(r: Resource): ResourceModel.Res = r.typ.toLowerCase match {
-    case "file" => File(r)
-    case "package" => PuppetPackage(r)
-    case "user" => User(r)
-    case "group" => Group(r)
-    case "ssh_authorized_key" => SshAuthorizedKey(r.get[String]("user").get, r.get[Boolean]("ensure").getOrElse(true),
-      r.get[String]("name").get, r.get[String]("key").get)
-    case "service" => R.Service(r.title)
-//    case "Notify" => Skip
-//    case "Exec" => {
-//      println("WARNING: found an exec resource, but treating as Skip")
-//      Skip
-//    }
-    case _ => throw NotImplemented("Resource type \"%s\" not supported yet".format(r.typ))
-  }
-
-  def apply(r: Resource): Expr = convert(r).compile
-
+  
+  //use compile function in ResourceModel to go from ResModel to FS
+  def toFileScriptGraph(g: ResourceGraph): FileScriptGraph = 
+    nodeMap((r: Resource) => compile(convertResource(r)), g)
 }

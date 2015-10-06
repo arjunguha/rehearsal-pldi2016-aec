@@ -13,7 +13,7 @@ package object rehearsal {
   import rehearsal.Implicits._
   import scala.util.{Try, Success, Failure}
   import puppet.syntax.{TopLevel, parse}
-  import Compile.{toFileScriptGraph => toFS}
+  import ResourceToExpr.{toFileScriptGraph => toFS}
   import Parser.parseFile
 
   def toFileScriptGraph(resourceGraph: ResourceGraph): FileScriptGraph = toFS(resourceGraph)
