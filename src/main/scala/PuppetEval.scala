@@ -205,19 +205,41 @@ object Evaluator {
       case _ => throw EvalError(s"Unexpected attribute pattern: attrs = $args")
     }
 
+  def expandDefineExpr(e: Expr, d: Define): Expr = e match {
+    case Undef => Undef
+    case Str(_) | Res(_, _, _) | Var(_) | Bool(_) | App(_, _) | RegExp(_, _) => e
+    case Not(e) => Not(expandDefineExpr(e, d))
+    case And(e1, e2) => And(expandDefineExpr(e1, d), expandDefineExpr(e2, d))
+    case Or(e1, e2) => Or(expandDefineExpr(e1, d), expandDefineExpr(e2, d))
+    case Eq(e1, e2) => Eq(expandDefineExpr(e1, d), expandDefineExpr(e2, d))
+    case Match(e1, e2) => Match(expandDefineExpr(e1, d), expandDefineExpr(e2, d))
+    case In(e1, e2) => In(expandDefineExpr(e1, d), expandDefineExpr(e2, d))
+    case Array(es) => Array(es.map(e => expandDefineExpr(e, d)))
+    case ITE(pred, m1, m2) => ITE(expandDefineExpr(e, d), expandDefine(m1, d), expandDefine(m2, d))
+  }  
+
+  def expandDefineCase(c: Case, d: Define): Case = c match {
+    case CaseDefault(m) => CaseDefault(expandDefine(m, d))
+    case CaseExpr(e, m) => CaseExpr(expandDefineExpr(e, d), expandDefine(m, d))
+  }
+  
+
   def expandDefine(m: Manifest, d: Define): Manifest = (m, d) match {
     case (Empty, _) => Empty
     case (Block(m1, m2), _) => Block(expandDefine(m1, d), expandDefine(m2, d))
     case (Resource(_, typ, attrs), Define(name, params, body)) if name == typ =>
       subArgs(params, attrs, body)
-    case (Resource(_, _, _), _) => m //do nothing
-    case (E(ITE(pred, thn, els)), _) => E(ITE(pred, expandDefine(thn, d), expandDefine(els, d)))
+    case (Resource(_, _, _), _) => m 
     case (Edge(m1, m2), _) => Edge(expandDefine(m1, d), expandDefine(m2, d))
-    case (Define(name1, _, _), Define(name2, _, _)) if name1 == name2 => Empty //remove define declaration
+    case (Define(name1, _, _), Define(name2, _, _)) if name1 == name2 => Empty 
     case (Define(name, params, body), _) => Define(name, params, expandDefine(body, d))
-    case (Let(x, e, body), _) => Let(x, e, expandDefine(body, d))
-    case (E(Res(typ, e, attrs)), _) => m //do something?
-    case (E(_), _) => m
+    case (Let(x, e, body), _) => Let(x, expandDefineExpr(e, d), expandDefine(body, d))
+    case (MCase(e, cases), _) => 
+      MCase(expandDefineExpr(e, d), 
+            cases.map(c => expandDefineCase(c, d)))
+    case (E(e), d) => E(expandDefineExpr(e, d))
+    case (Class(_, _, _, _), _) | (Include(_), _) | (Require(_), _) => 
+      throw Unexpected(s"$m should have been expanded")
   }
 
   def findDefine(m: Manifest): Option[Define] = m match {
@@ -310,7 +332,9 @@ object Evaluator {
     case resDef@Resource(title, typ, attrs) => r match {
       //TODO(Rian)
       case Res(refTyp, refTitle, refAttrs) => {
-        if (refTyp.equalsIgnoreCase(typ) && title == refTitle) Some(Resource(title, typ, attrs ++ refAttrs))
+        if (refTyp.equalsIgnoreCase(typ) && title == refTitle) {
+          Some(Resource(title, typ, attrs ++ refAttrs))
+        }
         else None
       }
     }
