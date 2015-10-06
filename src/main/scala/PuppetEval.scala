@@ -80,7 +80,9 @@ object Evaluator {
     case Eq(expr1, expr2) => Eq(subExpr(varName, e, expr1), subExpr(varName, e, expr2))
     case Match(expr1, expr2) => Match(subExpr(varName, e, expr1), subExpr(varName, e, expr2))
     case In(expr1, expr2) => In(subExpr(varName, e, expr1), subExpr(varName, e, expr2))
-                case ITE(pred, m1, m2) => ITE(subExpr(varName, e, pred), sub(varName, e, m1), sub(varName, e, m2))
+    case ITE(pred, m1, m2) => ITE(subExpr(varName, e, pred), sub(varName, e, m1), sub(varName, e, m2))
+    case App(name, args) => App(name, args.map(x => subExpr(varName, e, x)))
+    case _ => throw new Exception(s"Failed to substitute into $body")
   }
 
   def subAttr(varName: String, e: Expr, attr: Attribute): Attribute = attr match {
@@ -403,7 +405,7 @@ object Evaluator {
     }
     findInclude(m2) match {
       case None => m2
-      case Some(e) => throw EvalError(s"Could not evaluate unbound class in $e")
+      case Some(e) => throw EvalError(s"Could not expand unbound class in $e")
     }
   }
 
