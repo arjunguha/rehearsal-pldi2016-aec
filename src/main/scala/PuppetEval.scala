@@ -51,7 +51,7 @@ object Evaluator {
     case Array(es) => es.forall(isValueExpr)
     case App(_, _) => false
     case ITE(pred, m1, m2) => isValueExpr(pred) && isValue(m1) && isValue(m2)
-    case RegExp(_,_) => false
+    case Regex(_) => false
   }
 
   val primitiveTypes = Set("file", "File", "package", "Package", "user", "User", "group", "Group",
@@ -119,7 +119,7 @@ object Evaluator {
       case _ => throw EvalError(s"Cannot evaluate: Invalid argument(s) for Or: $e1, $e2")
     }
     case Eq(e1, e2) => if(evalExpr(e1) == evalExpr(e2)) Bool(true) else Bool(false)
-    case Match(Str(e1), Str(e2)) => {
+    case Match(Str(e1), Regex(e2)) => {
       val pat = e2.r
       e1 match {
         case pat(_) => Bool(true)
@@ -145,7 +145,7 @@ object Evaluator {
       }
       case _ => throw EvalError(s"Cannot evaluate: invalid predicate for if: $pred")
     }
-    case RegExp(_, _) => e
+    case Regex(_) => e
   }
 
   def edgesFromArr(es: Seq[Expr], m: Manifest, d: EdgeDir): Manifest = es match {
