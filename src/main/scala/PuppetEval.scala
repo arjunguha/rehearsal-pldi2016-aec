@@ -181,8 +181,9 @@ object Evaluator {
       else throw EvalError(s"Cannot evaluate: Invalid Predicate for if: $pred")
     }
     case E(e) => E(evalExpr(e))
-    case Include(_) => throw new Exception("Not implemented")
-    case Require(_) => throw new Exception("Not implemented")
+    case Include(_) => throw EvalError("include should have been eliminated during class expansion.")
+    case Require(_) => throw EvalError("require should have been eliminated during class expansion.")
+
   }
 
   /*what to do if instance contains an attribute that doesn't have corresponding parameter in define? :
@@ -218,6 +219,11 @@ object Evaluator {
     case (Let(x, e, body), _) => Let(x, e, expandDefine(body, d))
     case (E(Res(typ, e, attrs)), _) => m //do something?
     case (E(_), _) => m
+
+    case (Class(_,_,_,_), _) => throw EvalError("classes should have been removed during class expansion.")
+    case (Include(_), _) => throw EvalError("include should have been removed during class expansion.")
+    case (Require(_), _) => throw EvalError("require should have been removed during class expansion.")
+
   }
 
   def findDefine(m: Manifest): Option[Define] = m match {
@@ -236,10 +242,9 @@ object Evaluator {
     }
     case Let(_, _, body) => findDefine(body)
     case Class(_, _, _, body) => findDefine(body)
-    case Empty |E(_) | Resource(_, _, _) => None
+    case Empty |E(_) | Resource(_, _, _) | Include(_) | Require(_) => None
+
     case MCase(_, _) => throw new Exception("not implemented")
-    case Include(_) => throw new Exception("not implemented")
-    case Require(_) => throw new Exception("not implemented")
   }
 
 
@@ -269,24 +274,75 @@ object Evaluator {
       if(m1res == None) findClass(m2) else m1res
     }
     case Let(_, _, body) => findClass(body)
-    case Empty |E(_) | Resource(_, _, _) => None
-    case Define(_,_,_) => throw EvalError("Defines should have been expanded by this point.")
-    case MCase(_, _) => throw new Exception("not implemented")
-    case Include(_) => throw new Exception("not implemented")
-    case Require(_) => throw new Exception("not implemented")
+    case Define(_,_,body) => findClass(body)
+    case Empty |E(_) | Resource(_, _, _) | Include(_) | Require(_) => None
+    case MCase(_, _) => throw  new Exception("not implemented")
   }
 
   //TODO(jcollard)
-  def expandClass(m: Manifest, c: Class): Manifest = {
-    m
-  }
+  def expandClass(m: Manifest, c: Class, expanded: Boolean): (Manifest, Boolean) =
+    c match {
+      case Class(name,params,inherits,body) => {
+        m match {
+          // Turn the class into a Define
+          case Class(name1,_,_,_)
+              if name1 == name => (Define(name, params, body), expanded)
+          case c2@Class(_,_,_,_) => (c2, expanded)
+
+          case Empty => (Empty, expanded)
+          case Block(m1, m2) => {
+            val (m1Prime, expandedPrime) = expandClass(m1, c, expanded)
+            val (m2Prime, expandedPrime2) = expandClass(m2, c, expandedPrime)
+            (Block(m1Prime, m2Prime), expandedPrime2)
+          }
+          // TODO(jcollard): Check if this is a Class resource?
+          case Resource(_, _, _) => (m, expanded) //do nothing
+          case E(ITE(pred, thn, els)) => {
+            //TODO(jcollard): This is almost certainly wrong. This should
+            //be something that would normally be handled at runtime. If
+            //the include is on both the left and right hand side, this
+            //will likely be incorrect
+            val (left, e0) = expandClass(thn, c, expanded)
+            val (right, e1) = expandClass(els, c, e0)
+            (E(ITE(pred, left, right)), e1)
+          }
+          case Edge(m1, m2) => {
+            val (left, e0) = expandClass(m1, c, expanded)
+            val (right, e1) = expandClass(m2, c, e0)
+            (Edge(left, right), e1)
+          }
+          case Define(name, params, body) => {
+            val (bod, e0) = expandClass(body, c, expanded)
+            (Define(name, params, bod), e0)
+          }
+          case Let(x, e, body) => {
+            val (bod, e0) = expandClass(body, c, expanded)
+            (Let(x, e, bod), e0)
+          } 
+          case E(_) => (m, expanded)
+
+          //Replace include / require with a resource that will be filled
+          //during expansion.
+          case Include(_) => (Resource(Str(name), name, params.map(argToAttr(name))), true)
+          case Require(_) => (Resource(Str(name), name, params.map(argToAttr(name))), true)
+        }
+      }
+    }
+
+  def argToAttr(className: String)(arg: Argument) : Attribute =
+    arg match {
+      case Argument(id, None) => Attribute(Str(id), Var(s"$className::$id"))
+      case Argument(id, Some(e)) => Attribute(Str(id), e)
+    }
+
 
 
   def expandAllClasses(m: Manifest): Manifest = {
     var d: Option[Class] = findClass(m)
     var m2: Manifest = m
     while(d != None){
-      m2 = expandClass(m2, d.get)
+      val (newMan, _) = expandClass(m2, d.get, false)
+      m2 = newMan
       d = findClass(m2)
     }
     m2
@@ -294,7 +350,7 @@ object Evaluator {
 
 
   def expandAll(m: Manifest): Manifest = {
-    expandAllClasses(expandAllDefines(m))
+    expandAllDefines(expandAllClasses(m))
   }
 
   /* Note: it is not possible to have an edge between 2 arrays, because an edge containing an
