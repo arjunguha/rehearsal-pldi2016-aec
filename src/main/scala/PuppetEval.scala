@@ -357,7 +357,7 @@ object Evaluator {
               if name0 == name => (Resource(Str(name), name, params.map(argToAttr(name))), true)
           case Include(Str(_)) => (m, expanded)
           case Require(Str(_)) => (m, expanded)
-          
+
           case Include(e) => throw EvalError(s"Right hand side of include was not a string. Valid puppet but we don't handle it. Right hand: $e.")
           case Require(e) => throw EvalError(s"Right hand side of require was not a string. Valid puppet but we don't handle it. Right hand: $e.")          
         }
@@ -370,7 +370,28 @@ object Evaluator {
       case Argument(id, Some(e)) => Attribute(Str(id), e)
     }
 
-
+  def findInclude(m: Manifest): Option[Manifest] = 
+    m match {
+      case i@Include(_) => Some(i)
+      case r@Require(_) => Some(r)
+        case Class(_, _, _, body) => findInclude(body)
+      case Block(m1, m2) => {
+        val m1res = findInclude(m1)
+        if(m1res == None) findInclude(m2) else m1res
+      }
+      case Edge(m1, m2) => {
+        val m1res = findInclude(m1)
+        if(m1res == None) findInclude(m2) else m1res
+      }
+      case E(ITE(_, m1, m2)) => {
+        val m1res = findInclude(m1)
+        if(m1res == None) findInclude(m2) else m1res
+      }
+      case Let(_, _, body) => findInclude(body)
+      case Define(_,_,body) => findInclude(body)
+      case Empty |E(_) | Resource(_, _, _) => None
+      case MCase(_, _) => throw  new Exception("not implemented")
+    }
 
   def expandAllClasses(m: Manifest): Manifest = {
     var d: Option[Class] = findClass(m)
@@ -380,7 +401,10 @@ object Evaluator {
       m2 = newMan
       d = findClass(m2)
     }
-    m2
+    findInclude(m2) match {
+      case None => m2
+      case Some(e) => throw EvalError(s"Could not evaluate unbound class in $e")
+    }
   }
 
 
