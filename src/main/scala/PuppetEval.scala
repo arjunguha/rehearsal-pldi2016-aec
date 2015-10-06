@@ -216,7 +216,7 @@ object Evaluator {
     case Match(e1, e2) => Match(expandDefineExpr(e1, d), expandDefineExpr(e2, d))
     case In(e1, e2) => In(expandDefineExpr(e1, d), expandDefineExpr(e2, d))
     case Array(es) => Array(es.map(e => expandDefineExpr(e, d)))
-    case ITE(pred, m1, m2) => ITE(expandDefineExpr(e, d), expandDefine(m1, d), expandDefine(m2, d))
+    case ITE(pred, m1, m2) => ITE(expandDefineExpr(pred, d), expandDefine(m1, d), expandDefine(m2, d))
   }  
 
   def expandDefineCase(c: Case, d: Define): Case = c match {
