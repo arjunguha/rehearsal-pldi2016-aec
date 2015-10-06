@@ -272,10 +272,18 @@ object Evaluator {
     case Let(_, _, body) => findDefine(body)
     case Class(_, _, _, body) => findDefine(body)
     case Empty |E(_) | Resource(_, _, _) | Include(_) | Require(_) => None
-
-    case MCase(_, _) => throw new Exception("not implemented")
+    case MCase(_, Seq()) => None
+    case MCase(e, CaseDefault(m) :: t) => {
+      val d = findDefine(m)
+      if(d == None) findDefine(MCase(e, t))
+      else          d
+    }
+    case MCase(e, CaseExpr(_, m) :: t) => {
+      val d = findDefine(m)
+      if(d == None) findDefine(MCase(e, t))
+      else          d 
+    }
   }
-
 
   def expandAllDefines(m: Manifest): Manifest = {
     var d: Option[Define] = findDefine(m)
@@ -305,7 +313,17 @@ object Evaluator {
     case Let(_, _, body) => findClass(body)
     case Define(_,_,body) => findClass(body)
     case Empty |E(_) | Resource(_, _, _) | Include(_) | Require(_) => None
-    case MCase(_, _) => throw  new Exception("not implemented")
+    case MCase(_, Seq()) => None
+    case MCase(e, CaseDefault(m) :: t) => {
+      val d = findClass(m)
+      if(d == None) findClass(MCase(e, t))
+      else          d
+    }
+    case MCase(e, CaseExpr(_, m) :: t) => {
+      val d = findClass(m)
+      if(d == None) findClass(MCase(e, t))
+      else          d 
+    }
   }
 
   //TODO(jcollard)
