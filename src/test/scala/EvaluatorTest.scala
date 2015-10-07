@@ -189,7 +189,7 @@ class EvaluatorTestSuite extends org.scalatest.FunSuite {
 				}
 			}
 			g { "instance2":
-				$pred => true
+				pred => true
 			}
 		"""
 		val evald = eval(expandAll(parse(prog)))

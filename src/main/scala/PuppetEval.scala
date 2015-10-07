@@ -251,7 +251,7 @@ object Evaluator {
   def expandDefine(m: Manifest, d: Define): Manifest = (m, d) match {
     case (Empty, _) => Empty
     case (Block(m1, m2), _) => Block(expandDefine(m1, d), expandDefine(m2, d))
-    case (Resource(n, typ, attrs), Define(name, params, body)) if name == typ =>
+    case (Resource(_, typ, attrs), Define(name, params, body)) if name == typ =>
       subArgs(params, attrs, body)
     case (Resource(_, _, _), _) => m 
     case (Edge(m1, m2), _) => Edge(expandDefine(m1, d), expandDefine(m2, d))
