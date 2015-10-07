@@ -83,7 +83,7 @@ class powerdns::ldap(
   $ldap_secret = '',
 ) inherits powerdns::params {
 
-  require ::powerdns::package
+  require powerdns::package
 
   $package_source = if $source == '' {
     undef
@@ -400,7 +400,7 @@ class powerdns::recursor(
 
 ) inherits powerdns::params {
 
-  require ::powerdns
+  require powerdns
 
   $package_source = if $source == '' {
     undef
