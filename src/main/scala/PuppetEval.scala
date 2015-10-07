@@ -342,8 +342,8 @@ object Evaluator {
     }
   }
 
-  def expandClassCase(cse: MCase, c: Class, expanded: Boolean): (Manifest, Boolean) = cse match {
-    case MCase(_, Seq()) => (c, expanded)
+  def expandClassCase(cse: MCase, c: Class, expanded: Boolean): (MCase, Boolean) = cse match {
+    case MCase(_, Seq()) => (cse, expanded)
     case MCase(e, d@CaseDefault(expr) :: t) => {
       val (c0: MCase, e0) = expandClassCase(MCase(e, t), c, expanded)
       (MCase(e, Seq(CaseDefault(expr)) ++ c0.cases), e0)
