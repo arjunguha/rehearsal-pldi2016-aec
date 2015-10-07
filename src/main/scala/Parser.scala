@@ -178,7 +178,8 @@ private class Parser extends RegexParsers with PackratParsers {
 
   def desugar(m: Manifest): Manifest = m match {
     case Empty => Empty
-    case Block(E(ITE(pred, thn, els)), e2) => E(ITE(pred, Block(thn, e2), Block(els, e2)))
+    case Block(Let(id, value, body), e2) => desugar(Let(id, value, Block(body, e2)))
+    case Block(E(ITE(pred, thn, els)), e2) => E(ITE(pred, desugar(Block(thn, e2)), desugar(Block(els, e2))))
     case Block(e1, e2) => Block(desugar(e1), desugar(e2))
     case Resource(Str(id), typ, attrs) => simplifyAttributes(attrs, Res(typ.capitalize, Str(id), Seq())) match {
       case (attrs, Empty) => Resource(Str(id), typ, attrs)
