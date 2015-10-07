@@ -59,12 +59,8 @@ object Evaluator {
 
   val primitiveTypes =
     Set("file", "File", "package", "Package", "user", "User", "group", "Group",
-      "service", "Service", "ssh_authorized_key", "Ssh_authorized_key",
-      // TODO(jcollard): Is stage actually a primitive type or do we need to do
-      // something special with it so it doesn't end up here
-      "Stage", "stage",
-      // TODO(jcollard): Is class actually a primitive type?
-      "Class", "class")
+      "service", "Service", "ssh_authorized_key", "Ssh_authorized_key"
+    )
 
   def isPrimitiveType(typ: String): Boolean = primitiveTypes.contains(typ)
 
@@ -140,7 +136,7 @@ object Evaluator {
     case Match(e1, e2) => throw EvalError(s"Cannot evaluate: Invalid argument(s) for Match: $e1, $e2")
     case In(Str(e1), Str(e2)) => if(e2.contains(e1)) Bool(true) else Bool(false)
     case In(e1, e2) => throw EvalError(s"Cannot evaluate: Invalid argument(s) for In: $e1, $e2")
-    case App(_, _) => throw new Exception("NYI")
+    case App(name, e1) => evalApplication(name, e1.map(evalExpr))
     case ITE(pred, m1, m2) => evalExpr(pred) match {
       case Bool(true) => eval(m1) match {
         case E(e) => e
@@ -157,6 +153,15 @@ object Evaluator {
       case _ => throw EvalError(s"Cannot evaluate: invalid predicate for if: $pred")
     }
     case Regex(_) => e
+  }
+
+  // Evaluate built in function application
+  def evalApplication(fname: String, args: Seq[Expr]): Expr = fname match {
+    case "template" if args.length == 1 => {
+      val v = args.head
+      Str(s"template($v)")
+    }
+    case _ => throw EvalError(s"$fname cannot be applied to $args")
   }
 
   def edgesFromArr(es: Seq[Expr], m: Manifest, d: EdgeDir): Manifest = es match {
@@ -251,8 +256,8 @@ object Evaluator {
   def expandDefine(m: Manifest, d: Define): Manifest = (m, d) match {
     case (Empty, _) => Empty
     case (Block(m1, m2), _) => Block(expandDefine(m1, d), expandDefine(m2, d))
-    case (Resource(_, typ, attrs), Define(name, params, body)) if name == typ =>
-      subArgs(params, attrs, body)
+    case (Resource(title, typ, attrs), Define(name, params, body)) if name == typ =>
+      Let("title", title, subArgs(params, attrs, body))
     case (Resource(_, _, _), _) => m 
     case (Edge(m1, m2), _) => Edge(expandDefine(m1, d), expandDefine(m2, d))
     case (Define(name1, _, _), Define(name2, _, _)) if name1 == name2 => Empty 
@@ -307,7 +312,6 @@ object Evaluator {
     m2
   }
 
-  //TODO(jcollard)
   def findClass(m: Manifest): Option[Class] = m match {
     case c@Class(_, _, _, _) => Some(c)
     case Block(m1, m2) => {
@@ -338,7 +342,6 @@ object Evaluator {
     }
   }
 
-  //TODO(jcollard)
   def expandClass(m: Manifest, c: Class, expanded: Boolean): (Manifest, Boolean) =
     c match {
       case Class(name,params,inherits,body) => {
