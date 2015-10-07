@@ -206,8 +206,6 @@ object Evaluator {
       case _ => None
     }
 
-  /*what to do if instance contains an attribute that doesn't have corresponding parameter in define? :
-        ignoring for now */
   def subArgs(params: Seq[Argument], args: Seq[Attribute], body: Manifest): Manifest =
     (params, args) match {
       // Base case: We're done!
