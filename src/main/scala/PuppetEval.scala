@@ -197,25 +197,39 @@ object Evaluator {
 
   }
 
+  def findAttribute(name: String, argsT: Seq[Attribute]): Option[Attribute] =
+    (argsT.filter(x => x match {
+      case (Attribute(Str(attname), _)) if attname == name => true
+      case _ => false
+    })) match {
+      case head :: _ => Some(head)
+      case _ => None
+    }
+
   /*what to do if instance contains an attribute that doesn't have corresponding parameter in define? :
         ignoring for now */
   def subArgs(params: Seq[Argument], args: Seq[Attribute], body: Manifest): Manifest =
     (params, args) match {
-      case (Seq(), _) => body
-      case (Argument(paramName, _) :: paramsT, Attribute(Str(attrName), value) :: argsT) => {
-        if(paramName == attrName) subArgs(paramsT, argsT, sub(paramName, value, body))
-        else                      subArgs(params, argsT, body)
-      }
-      case (Argument(paramName, _) :: paramsT, Attribute(Var(attrName), value) :: argsT) => {
-        if(paramName == attrName) subArgs(paramsT, argsT, sub(paramName, value, body))
-        else                      subArgs(params, argsT, body)
-      }
-      case (Argument(paramName, Some(default)) :: paramsT, Seq()) =>
-        subArgs(paramsT, args, sub(paramName, default, body))
-      case (Argument(_, None) :: _, Seq()) => throw EvalError(s"""Not enough attributes for
-        defined type instantiation: params = $params; body = $body""")
+      // Base case: We're done!
+      case (Seq(), Seq()) => body
+      // Otherwise
+      case (Argument(paramName, default) :: paramsT, args) =>
+        // Lookup the argument
+        findAttribute(paramName, args) match {
+          // If it doesn't have a value, check for a default value or fail if no default exists.
+          case None => default match {
+            case None => throw EvalError(s"Invalid parameter $paramName. Was not found in define type.")
+            case Some(default) => subArgs(paramsT, args, sub(paramName, default, body))
+          }
+          // If it does have a value, substitute it in and recur.
+          case Some(att@Attribute(attrName, value)) => {
+            val argsT = args.filter(x => (x != att))
+            subArgs(paramsT, argsT, sub(paramName, value, body))
+          }
+        }
       case _ => throw EvalError(s"Unexpected attribute pattern: attrs = $args")
-    }
+  }
+
 
   def expandDefineExpr(e: Expr, d: Define): Expr = e match {
     case Undef => Undef
@@ -239,7 +253,7 @@ object Evaluator {
   def expandDefine(m: Manifest, d: Define): Manifest = (m, d) match {
     case (Empty, _) => Empty
     case (Block(m1, m2), _) => Block(expandDefine(m1, d), expandDefine(m2, d))
-    case (Resource(_, typ, attrs), Define(name, params, body)) if name == typ =>
+    case (Resource(n, typ, attrs), Define(name, params, body)) if name == typ =>
       subArgs(params, attrs, body)
     case (Resource(_, _, _), _) => m 
     case (Edge(m1, m2), _) => Edge(expandDefine(m1, d), expandDefine(m2, d))
