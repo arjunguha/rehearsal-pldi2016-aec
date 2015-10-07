@@ -355,7 +355,6 @@ object Evaluator {
     }
   }  
 
-  //TODO(jcollard)
   def expandClass(m: Manifest, c: Class, expanded: Boolean): (Manifest, Boolean) =
     c match {
       case Class(name,params,inherits,body) => {
@@ -374,7 +373,12 @@ object Evaluator {
             val (m2Prime, expandedPrime2) = expandClass(m2, c, expandedPrime)
             (Block(m1Prime, m2Prime), expandedPrime2)
           }
-          // TODO(jcollard): Check if this is a Class resource?
+          // If this is a resource for the specific class, replace it with the
+          // appropriate resource
+          case Resource(title, typ, _)
+              if (typ.toLowerCase == "class") && title == name =>
+                (Resource(Str(name), name, params.map(argToAttr(name))), expanded)
+
           case Resource(_, _, _) => (m, expanded) //do nothing
           case E(ITE(pred, thn, els)) => {
             //TODO(jcollard): This is almost certainly wrong. This should
@@ -399,6 +403,12 @@ object Evaluator {
             (Let(x, e, bod), e0)
           } 
           case cse@MCase(_, _) => expandClassCase(cse, c, expanded)
+          // If this is a resouce for the specific class, replace it with the
+          // appropriate resource
+          // TODO(jcollard): If the title is not a string, this does not work
+          case E(Res(typ, title, _))
+            if (typ.toLowerCase == "class") && (title == Str(name)) =>
+              (E(Res(name, Str(name), params.map(argToAttr(name)))), expanded)
           case E(_) => (m, expanded)
 
           //Replace include / require with a resource that will be filled
