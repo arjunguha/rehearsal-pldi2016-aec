@@ -342,6 +342,20 @@ object Evaluator {
     }
   }
 
+  def expandClassCase(cse: MCase, c: Class, expanded: Boolean): (Manifest, Boolean) = cse match {
+    case MCase(_, Seq()) => (c, expanded)
+    case MCase(e, d@CaseDefault(expr) :: t) => {
+      val (c0: MCase, e0) = expandClassCase(MCase(e, t), c, expanded)
+      (MCase(e, Seq(CaseDefault(expr)) ++ c0.cases), e0)
+    }
+    case MCase(e, CaseExpr(exp, m) :: t) => {
+      val (m0: Manifest, e0: Boolean) = expandClass(m, c, expanded)
+      val (cT: MCase, e1: Boolean) = expandClassCase(MCase(e, t), c, e0)
+      (MCase(e, Seq(CaseExpr(exp, m0)) ++ cT.cases), e1)
+    }
+  }  
+
+  //TODO(jcollard)
   def expandClass(m: Manifest, c: Class, expanded: Boolean): (Manifest, Boolean) =
     c match {
       case Class(name,params,inherits,body) => {
@@ -384,6 +398,7 @@ object Evaluator {
             val (bod, e0) = expandClass(body, c, expanded)
             (Let(x, e, bod), e0)
           } 
+          case cse@MCase(_, _) => expandClassCase(cse, c, expanded)
           case E(_) => (m, expanded)
 
           //Replace include / require with a resource that will be filled
@@ -394,8 +409,8 @@ object Evaluator {
 
           case Require(Str(name0))
               if name0 == name =>
-                 if (expanded) throw EvalError("Could not expand class twice inside of require.")
-                 else (Resource(Str(name), name, params.map(argToAttr(name))), true)
+                if (expanded) throw EvalError("Could not expand class twice inside of require.")
+                else (Resource(Str(name), name, params.map(argToAttr(name))), true)
 
           case Include(Str(_)) => (m, expanded)
           case Require(Str(_)) => (m, expanded)
