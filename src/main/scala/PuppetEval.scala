@@ -346,7 +346,10 @@ object Evaluator {
           // Turn the class into a Define
           case Class(name1,_,_,_)
               if name1 == name => (Define(name, params, body), expanded)
-          case c2@Class(_,_,_,_) => (c2, expanded)
+          case Class(name,params,inherits,body) => {
+            val (bodyPrime, e0) = expandClass(body, c, expanded)
+            (Class(name, params, inherits, bodyPrime), e0)
+          }
 
           case Empty => (Empty, expanded)
           case Block(m1, m2) => {
@@ -383,10 +386,14 @@ object Evaluator {
           //Replace include / require with a resource that will be filled
           //during expansion.
           case Include(Str(name0))
-              if name0 == name => (Resource(Str(name), name, params.map(argToAttr(name))), true)
+              if name0 == name => 
+                if (expanded) (Empty, expanded)  else (Resource(Str(name), name, params.map(argToAttr(name))), true)
 
           case Require(Str(name0))
-              if name0 == name => (Resource(Str(name), name, params.map(argToAttr(name))), true)
+              if name0 == name =>
+                 if (expanded) throw EvalError("Could not expand class twice inside of require.")
+                 else (Resource(Str(name), name, params.map(argToAttr(name))), true)
+
           case Include(Str(_)) => (m, expanded)
           case Require(Str(_)) => (m, expanded)
 
@@ -406,7 +413,7 @@ object Evaluator {
     m match {
       case i@Include(_) => Some(i)
       case r@Require(_) => Some(r)
-        case Class(_, _, _, body) => findInclude(body)
+      case Class(_, _, _, body) => findInclude(body)
       case Block(m1, m2) => {
         val m1res = findInclude(m1)
         if(m1res == None) findInclude(m2) else m1res
