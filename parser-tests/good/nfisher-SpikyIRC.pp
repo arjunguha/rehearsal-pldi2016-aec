@@ -1,3 +1,5 @@
+$::fqdn = "foo.com" # HACK(arjun)
+
 # From https://github.com/nfisher/SpikyIRC
 # Contents were flattened by removing the usage of node.
 # Drugs are baaadd m'kay. Don't do stages at home kids.
