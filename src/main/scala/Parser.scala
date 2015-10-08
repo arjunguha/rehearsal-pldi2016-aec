@@ -3,8 +3,6 @@ package rehearsal
 import scala.util.parsing.combinator._
 import Syntax._
 
-case class ParseError(msg: String) extends RuntimeException(msg)
-
 private class Parser extends RegexParsers with PackratParsers {
 
   import Implicits._

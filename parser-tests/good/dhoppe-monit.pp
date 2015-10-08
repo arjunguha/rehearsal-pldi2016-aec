@@ -85,3 +85,5 @@ class monit::disabled inherits monit {
 }
 
 */
+
+include monit

@@ -8,7 +8,6 @@ object Evaluator {
   import scalax.collection.GraphEdge._
   import Implicits._
 
-  case class EvalError(msg: String) extends RuntimeException(msg)
   case class GraphError(msg: String) extends RuntimeException(msg)
   type ResourceGraph = Graph[Resource, DiEdge]
 
@@ -245,26 +244,26 @@ object Evaluator {
     case In(e1, e2) => In(expandDefineExpr(e1, d), expandDefineExpr(e2, d))
     case Array(es) => Array(es.map(e => expandDefineExpr(e, d)))
     case ITE(pred, m1, m2) => ITE(expandDefineExpr(pred, d), expandDefine(m1, d), expandDefine(m2, d))
-  }  
+  }
 
   def expandDefineCase(c: Case, d: Define): Case = c match {
     case CaseDefault(m) => CaseDefault(expandDefine(m, d))
     case CaseExpr(e, m) => CaseExpr(expandDefineExpr(e, d), expandDefine(m, d))
   }
-  
+
 
   def expandDefine(m: Manifest, d: Define): Manifest = (m, d) match {
     case (Empty, _) => Empty
     case (Block(m1, m2), _) => Block(expandDefine(m1, d), expandDefine(m2, d))
     case (Resource(title, typ, attrs), Define(name, params, body)) if name == typ =>
       Let("title", title, subArgs(params, attrs, body))
-    case (Resource(_, _, _), _) => m 
+    case (Resource(_, _, _), _) => m
     case (Edge(m1, m2), _) => Edge(expandDefine(m1, d), expandDefine(m2, d))
-    case (Define(name1, _, _), Define(name2, _, _)) if name1 == name2 => Empty 
+    case (Define(name1, _, _), Define(name2, _, _)) if name1 == name2 => Empty
     case (Define(name, params, body), _) => Define(name, params, expandDefine(body, d))
     case (Let(x, e, body), _) => Let(x, expandDefineExpr(e, d), expandDefine(body, d))
-    case (MCase(e, cases), _) => 
-      MCase(expandDefineExpr(e, d), 
+    case (MCase(e, cases), _) =>
+      MCase(expandDefineExpr(e, d),
             cases.map(c => expandDefineCase(c, d)))
     case (E(e), d) => E(expandDefineExpr(e, d))
     case (Class(_,_,_,_), _) => throw EvalError("classes should have been removed during class expansion.")
@@ -298,7 +297,7 @@ object Evaluator {
     case MCase(e, CaseExpr(_, m) :: t) => {
       val d = findDefine(m)
       if(d == None) findDefine(MCase(e, t))
-      else          d 
+      else          d
     }
   }
 
@@ -338,7 +337,7 @@ object Evaluator {
     case MCase(e, CaseExpr(_, m) :: t) => {
       val d = findClass(m)
       if(d == None) findClass(MCase(e, t))
-      else          d 
+      else          d
     }
   }
 
@@ -353,7 +352,7 @@ object Evaluator {
       val (cT: MCase, e1: Boolean) = expandClassCase(MCase(e, t), c, e0)
       (MCase(e, Seq(CaseExpr(exp, m0)) ++ cT.cases), e1)
     }
-  }  
+  }
 
   def expandClass(m: Manifest, c: Class, expanded: Boolean): (Manifest, Boolean) =
     c match {
@@ -401,7 +400,7 @@ object Evaluator {
           case Let(x, e, body) => {
             val (bod, e0) = expandClass(body, c, expanded)
             (Let(x, e, bod), e0)
-          } 
+          }
           case cse@MCase(_, _) => expandClassCase(cse, c, expanded)
           // If this is a resouce for the specific class, replace it with the
           // appropriate resource
@@ -414,7 +413,7 @@ object Evaluator {
           //Replace include / require with a resource that will be filled
           //during expansion.
           case Include(Str(name0))
-              if name0 == name => 
+              if name0 == name =>
                 if (expanded) (Empty, expanded)  else (Resource(Str(name), name, params.map(argToAttr(name))), true)
 
           case Require(Str(name0))
@@ -426,7 +425,7 @@ object Evaluator {
           case Require(Str(_)) => (m, expanded)
 
           case Include(e) => throw EvalError(s"Right hand side of include was not a string. Valid puppet but we don't handle it. Right hand: $e.")
-          case Require(e) => throw EvalError(s"Right hand side of require was not a string. Valid puppet but we don't handle it. Right hand: $e.")          
+          case Require(e) => throw EvalError(s"Right hand side of require was not a string. Valid puppet but we don't handle it. Right hand: $e.")
         }
       }
     }
@@ -437,7 +436,7 @@ object Evaluator {
       case Argument(id, Some(e)) => Attribute(Str(id), e)
     }
 
-  def findInclude(m: Manifest): Option[Manifest] = 
+  def findInclude(m: Manifest): Option[Manifest] =
     m match {
       case i@Include(_) => Some(i)
       case r@Require(_) => Some(r)

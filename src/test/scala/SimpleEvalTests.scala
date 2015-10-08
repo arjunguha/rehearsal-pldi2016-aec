@@ -1,17 +1,23 @@
 class SimpleEvalTests extends org.scalatest.FunSuite {
 
 	import rehearsal._
-	import Parser._
+	import PuppetParser2._
 	import Syntax._
-	import Evaluator._
+	import PuppetEval2._
 	import java.nio.file._
 	import scala.collection.JavaConversions._
 
-	for (path <- Files.newDirectoryStream(Paths.get("eval-tests"))) {
+	for (path <- Files.newDirectoryStream(Paths.get("parser-tests/good"))) {
 
 		test(path.toString) {
-			val v = eval(expandAll(parseFile(path.toString)))
-			assert(isValue(v), s"$v is not a value")
+			parseFile(path.toString)
+			val (resources, deps) = eval(parseFile(path.toString))
+			if (deps.nodes.length == 0) {
+				info("No resources found -- a trivial test")
+			}
+			for (node <- deps.nodes) {
+				assert(primTypes.contains(node.value.typ), s"${node.value.typ} not elaborated")
+			}
 		}
 
 	}
