@@ -49,6 +49,7 @@ object PuppetEval2 {
   }
 
   // Produces a new state and a list of resource titles
+  // TODO(arjun): Handle "require" and "before" dependencies.
   def evalResource(st: State, resource: Resource): (State, List[Node]) = {
     resource match {
       case ResourceRef(typ, titleExpr, Seq()) => {
@@ -60,14 +61,17 @@ object PuppetEval2 {
           ResourceVal(typ, evalTitle(st.env, titleExpr),
                       evalAttrs(st.env, attrs))
         }
-        val nodes = vals.map(_.node)
-        val redefinedResources = st.resources.keySet.intersect(nodes.toSet)
+        val newNodes: Set[Node] = vals.map(_.node).toSet
+        //println(s"Creating nodes $nodes")
+        val redefinedResources = st.resources.keySet.intersect(newNodes)
         if (redefinedResources.isEmpty == false) {
           throw EvalError(s"${redefinedResources.head} is already defined")
         }
         else {
           val newResources = vals.map(r => r.node -> r).toMap
-          (st.copy(resources = st.resources ++ newResources), nodes.toList)
+          (st.copy(resources = st.resources ++ newResources,
+                   deps = st.deps ++ Graph.from(newNodes, edges = Set())),
+           newNodes.toList)
         }
       }
     }
@@ -153,7 +157,14 @@ object PuppetEval2 {
       case Some(v) => v
       case None => throw EvalError(s"variable $x is undefined")
     }
-
+    case Array(es) => Array(es.map(e => evalExpr(env, e)))
+    case App("template", Seq(e)) => evalExpr(env, e) match {
+      // TODO(arjun): This is bogus. It is supposed to use filename as a
+      // template string. The file contents have patterns that refer to variables
+      // in the environment.
+      case Str(filename) => Str(filename)
+      case _ => throw EvalError("template function expects a string argument")
+    }
     case Cond(e1, e2, e3) => evalBool(env, e1) match {
       case true => evalExpr(env, e2)
       case false => evalExpr(env, e3)
@@ -170,23 +181,78 @@ object PuppetEval2 {
 
 // }
 
-def evalLoop(st: State, manifest: Manifest) = {
-  val st1 = evalManifest(st, manifest)
-  st1.deps.nodes.find(node => node.typ == "class") match {
-    case None => st1
-    case Some(node) => {
-      node.value match {
-        case Node(_, name) => {
-          throw EvalError(s"need to expand class $name")
-        }
+  def splice[A](outer: Graph[A, DiEdge], node: A,
+                inner: Graph[A, DiEdge]): Graph[A, DiEdge] = {
+    val innerNode = outer.get(node)
+    val toEdges = (for (from <- innerNode.diPredecessors;
+                        to <- inner.nodes.filter(_.inDegree == 0))
+                   yield (DiEdge(from.value, to.value)))
+    val fromEdges = (for (from <- inner.nodes.filter(_.outDegree == 0);
+                          to <- innerNode.diSuccessors)
+                     yield (DiEdge(from.value, to.value)))
+    outer ++ inner ++ fromEdges ++ toEdges - innerNode
+  }
+
+  def instantiateClass(st: State, classNode: Node): State = {
+    require(classNode.typ == "class")
+    val title = classNode.title
+    st.classes.get(title) match {
+      case Some(Class(_, _, _, m)) => {
+        val st1 = evalManifest(st.copy(deps = Graph.empty), m)
+        val classNode = st.deps.get(Node("class", title))
+        st1.copy(deps = splice(st.deps, st.deps.get(Node("class", title)), st1.deps))
       }
+      case None => throw EvalError(s"class not found: $title ${st.classes.keys}")
+      case _ => throw new Exception("expected class")
     }
   }
-}
+
+  def instantiateType(st: State, node: Node): State = {
+    val Define(_, formals, m) = st.definedTypes(node.typ)
+    val ResourceVal(_, _, actuals) = st.resources(node)
+    val expected = formals.map(x => x.id -> x.default).toMap
+    val unexpected = actuals.keySet -- expected.keySet
+    if (unexpected.isEmpty == false) {
+      throw EvalError(s"unexpected arguments: ${unexpected}")
+    }
+    val evaluated = expected.map {
+      case (x, None) => actuals.get(x) match {
+        case Some(v) => (x, v)
+        case None => throw EvalError(s"expected argument $x")
+      }
+      case (x, Some(default)) => actuals.get(x) match {
+        case Some(v) => (x, v)
+        case None => (x, evalExpr(st.env, default))
+      }
+    }
+    val st1 = evalManifest(st.copy(deps = Graph.empty, env = evaluated.toMap),
+                           m)
+    st1.copy(deps = splice(st.deps, node, st1.deps),
+             resources = st1.resources - node)
+  }
+
+
+  def evalLoop(st: State): State = {
+    val st1 = st
+    // Select newly instantiated classes and splice them into the graph
+    val instClasses = st1.deps.nodes.filter(_.typ == "class").map(_.value)
+    val st2 = instClasses.foldLeft(st1)(instantiateClass)
+    // Select newly instantiated defined types and splice them into the graph
+    val newInstances = st2.deps.nodes
+      .filter(node => st2.definedTypes.contains(node.typ))
+      .map(_.value)
+    val st3 = newInstances.foldLeft(st2)(instantiateType)
+    if (newInstances.isEmpty && instClasses.isEmpty) {
+      st3 // st1 == st2 == st3
+    }
+    else {
+      evalLoop(st3)
+    }
+  }
 
   def eval(manifest: Manifest): (Map[Node, ResourceVal], Graph[Node, DiEdge]) = {
-    val st = evalLoop(State(Map(), Graph.empty, Map(), Map(), Map()),
-                          manifest)
+    val st = evalLoop(evalManifest(State(Map(), Graph.empty, Map(), Map(), Map()),
+                                   manifest))
     (st.resources, st.deps)
   }
 
