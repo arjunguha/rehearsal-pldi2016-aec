@@ -215,6 +215,7 @@ object PuppetEval2 {
     if (unexpected.isEmpty == false) {
       throw EvalError(s"unexpected arguments: ${unexpected}")
     }
+    val titlePair = ("title" -> Str(node.title))
     val evaluated = expected.map {
       case (x, None) => actuals.get(x) match {
         case Some(v) => (x, v)
@@ -222,10 +223,11 @@ object PuppetEval2 {
       }
       case (x, Some(default)) => actuals.get(x) match {
         case Some(v) => (x, v)
-        case None => (x, evalExpr(st.env, default))
+        case None => (x, evalExpr(st.env + titlePair, default))
       }
     }
-    val st1 = evalManifest(st.copy(deps = Graph.empty, env = evaluated.toMap),
+    val st1 = evalManifest(st.copy(deps = Graph.empty,
+                                   env = evaluated.toMap + titlePair),
                            m)
     st1.copy(deps = splice(st.deps, node, st1.deps),
              resources = st1.resources - node)
