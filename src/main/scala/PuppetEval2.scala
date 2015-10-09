@@ -8,6 +8,55 @@ object PuppetEval2 {
   import scalax.collection.GraphPredef._
   import scalax.collection.GraphEdge._
   import scalax.collection.edge.Implicits._
+  import scala.util.parsing.combinator._
+
+  // Note(jcollard): We currently only support very basic string interpolation.
+  // "Test plus $qualified::name"
+  // "Test plus ${qualified::name}_blah_blah"
+  // However, it should be noted that the language supports more complex expressions.
+  // For example:
+  // "<VirtualHost *:${hiera("http_port")}>"
+  // "Using interface ${::interfaces.split(',')[3]} for broadcast"
+  // "Inheriting ${$inherits.upcase}."
+  class StringInterpolatorParser extends RegexParsers with PackratParsers {
+
+    type P[T] = PackratParser[T]
+
+    sealed trait Str
+    case class SExpr(expr: Expr) extends Str
+    case class S(x: String) extends Str
+
+    override val skipWhitespace = false
+
+    lazy val varName: P[String] = "[a-z_(::)][a-zA-Z0-9_(::)]*[a-zA-Z0-9_]+|[a-z_(::)]".r ^^ { case x => x }
+
+    lazy val str: P[Str] =
+      "$" ~ varName ^^ { case _ ~ x => SExpr(Var(x)) } |
+      "${" ~ varName ~ "}" ^^ { case _ ~ x ~ _ => SExpr(Var(x)) } |
+      whiteSpace ^^ { case ws => S(ws) } |
+      """[^\s]""".r ^^ { case other => S(other) }
+
+  }
+
+  object StringInterpolator {
+    private val parser = new StringInterpolatorParser()
+    import parser._
+    def interpolate(env: Env, x: String): Expr =
+      parseAll(rep(str), x) match {
+        case Success(strs, _) => Str(helper(env, strs).mkString(""))
+        case m => throw new ParseError(s"$m")
+      }
+
+    private def helper(env: Env, s: Seq[Str]): List[String] =
+      s match {
+        case Seq() => List("")
+        case S(x) :: rest => x :: helper(env, rest)
+        case SExpr(expr) :: rest => evalExpr(env, expr) match {
+          case Str(x) => x :: helper(env, rest)
+          case _ => throw EvalError(s"variable $expr could not be interpolated as a string.")
+        }
+      }
+  }
 
   val primTypes =  Set("file", "File", "package", "Package", "user", "User",
     "group", "Group", "service", "Service", "ssh_authorized_key",
@@ -148,7 +197,7 @@ object PuppetEval2 {
   def evalExpr(env: Env, expr: Expr): Expr = expr match {
     case Undef => Undef
     case Num(n) => Num(n)
-    case Str(str) => Str(str)
+    case Str(str) => StringInterpolator.interpolate(env, str)
     case Bool(b) => Bool(b)
     case EResourceRef(typ, title) => EResourceRef(typ, evalExpr(env, title))
     case Eq(e1, e2) => Bool(evalExpr(env, e1) == evalExpr(env, e2))
