@@ -8,6 +8,7 @@ object PuppetEval2 {
   import scalax.collection.GraphPredef._
   import scalax.collection.GraphEdge._
   import scalax.collection.edge.Implicits._
+  import Implicits._
   import scala.util.parsing.combinator._
 
   object StringInterpolator {
@@ -70,9 +71,8 @@ object PuppetEval2 {
                    definedTypes: Map[String, VDefinedType],
                    classes: Map[String, VClass],
                    classGraph: Map[String, Graph[Node, DiEdge]],
-                   stages: Map[String, Set[Node]])
-
-
+                   stages: Map[String, Set[Node]],
+                   aliases: Map[Node, Node])
 
   def evalAttrs(env: Env, attrs: Seq[Attribute]): Map[String, Expr] = {
     // TODO(arjun): duplicates are probably an error
@@ -108,7 +108,7 @@ object PuppetEval2 {
     Graph.from(edges = Seq(before, require, notify, subscribe).flatten)
   }
 
-  val relationshipParams = Seq("before", "require", "notify", "subscribe")
+  val metaparameters = Seq("before", "require", "notify", "subscribe", "alias")
 
   // Produces a new state and a list of resource titles
   // TODO(arjun): Handle "require" and "before" dependencies.
@@ -119,13 +119,21 @@ object PuppetEval2 {
         (st.copy(deps = st.deps + node), List(node))
       }
       case ResourceDecl(typ, lst) => {
-        val (vals, relationships) = lst.map { case (titleExpr, attrs) =>
+        val (vals, relationships, aliases) = lst.map({ case (titleExpr, attrs) =>
           val attrVals = evalAttrs(st.env, attrs)
           val resource = ResourceVal(typ, evalTitle(st.env, titleExpr),
-                                     attrVals -- relationshipParams)
+                                     attrVals -- metaparameters)
           val relationships = extractRelationships(resource.node, attrVals)
-          (resource, relationships)
-        }.unzip
+          val aliases = attrVals.get("alias") match {
+            case Some(v) => {
+              val alias = v.value[String].getOrElse(throw EvalError("alias must be a string"))
+              Map(Node(typ, alias) -> resource.node)
+            }
+            case None => Map[Node, Node]()
+          }
+          (resource, relationships, aliases)
+        }).unzip3
+        val aliasMap = aliases.reduce(_ ++ _)
 
         val newNodes: Set[Node] = vals.map(_.node).toSet
         //println(s"Creating nodes $nodes")
@@ -137,9 +145,11 @@ object PuppetEval2 {
           val newResources = vals.map(r => r.node -> r).toMap
           (st.copy(resources = st.resources ++ newResources,
                    deps = st.deps ++
+                     Graph[Node, DiEdge](aliasMap.keys.toSeq: _*) ++
                      Graph.from(newNodes, edges = Set()) ++
                      relationships.reduce(_ union _),
-                   stages = newResources.foldRight(st.stages)(updateStage)),
+                   stages = newResources.foldRight(st.stages)(updateStage),
+                   aliases = st.aliases ++ aliasMap),
            newNodes.toList)
         }
       }
@@ -270,6 +280,14 @@ object PuppetEval2 {
     outer ++ inner ++ fromEdges ++ toEdges - innerNode
   }
 
+  def mergeNodes[A](g: Graph[A, DiEdge], src1: A, src2: A, dst: A): Graph[A, DiEdge] = {
+    val es1 = for (x <- g.get(src1).diPredecessors) yield (DiEdge(x.value, dst))
+    val es2 = for (x <- g.get(src2).diPredecessors) yield (DiEdge(x.value, dst))
+    val es3 = for (x <- g.get(src1).diSuccessors) yield (DiEdge(dst, x.value))
+    val es4 = for (x <- g.get(src2).diSuccessors) yield (DiEdge(dst, x.value))
+    g ++ es1 ++ es2 ++ es3 ++ es4 + dst - src1 - src2
+  }
+
   def instantiateClass(st: State, classNode: Node): State = {
     require(classNode.typ == "class")
     val title = classNode.title
@@ -347,7 +365,8 @@ object PuppetEval2 {
     definedTypes = Map(),
     classes = Map(),
     classGraph = Map(),
-    stages = Map())
+    stages = Map(),
+    aliases = Map())
 
   def updateStage(res: (Node, ResourceVal), stages: Map[String, Set[Node]]): Map[String, Set[Node]] = res match {
     case (node, ResourceVal(_, _, attrMap)) =>
@@ -370,8 +389,13 @@ object PuppetEval2 {
     st1
   }
 
+  def eliminateAliases(st: State): State = {
+    val deps = st.aliases.toSeq.foldRight(st.deps) { case ((alias, target), g) => mergeNodes(g, alias, target, target) }
+    st.copy(deps = deps, aliases = Map())
+  }
+
   def eval(manifest: Manifest): EvaluatedManifest = {
-    val st = stageExpansion(evalLoop(evalManifest(emptyState, manifest)))
+    val st = eliminateAliases(stageExpansion(evalLoop(evalManifest(emptyState, manifest))))
     EvaluatedManifest(st.resources, st.deps)
   }
 }
