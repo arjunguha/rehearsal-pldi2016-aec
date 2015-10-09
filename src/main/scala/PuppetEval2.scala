@@ -165,6 +165,12 @@ object PuppetEval2 {
       case false => evalManifest(st, m2)
     }
     case Include(title) => st.copy(deps = st.deps + Node("class", evalTitle(st.env, title)))
+    case MApp("fail", Seq(str)) => evalExpr(st.env, str) match {
+      // TODO(arjun): Different type of error
+      case Str(str) => throw EvalError(s"user-defined failure: $str")
+      case v => throw EvalError(s"expected string argument, got $v ${manifest.pos}")
+    }
+    case MApp(f, _) => throw NotImplemented("unsupported function: $f ${manifest.pos}")
     case MCase(e, cases) => {
       val v = evalExpr(st.env, e)
       cases.find(c => matchCase(st.env, v, c)) match {
@@ -173,8 +179,6 @@ object PuppetEval2 {
         case Some(CaseExpr(_, m)) => evalManifest(st, m)
       }
     }
-
-    case _ => throw NotImplemented(manifest.toString)
   }
 
   // Helps implement conditionals. "Truthy" values are mapped to Scala's true
@@ -200,7 +204,7 @@ object PuppetEval2 {
       // error. But, silently returning undef will make us miss other bugs in
       // our implementation. If a test manifest actually uses this feature,
       // modify it so that the undeclared variable is set to Undef.
-      case None => throw EvalError(s"variable $x is undefined")
+      case None => throw EvalError(s"undefined variable: $x (${expr.pos})")
     }
     case Array(es) => Array(es.map(e => evalExpr(env, e)))
     case App("template", Seq(e)) => evalExpr(env, e) match {
@@ -210,21 +214,13 @@ object PuppetEval2 {
       case Str(filename) => Str(filename)
       case _ => throw EvalError("template function expects a string argument")
     }
+    case App(f, args) => throw NotImplemented(s"function $f (${expr.pos})")
     case Cond(e1, e2, e3) => evalBool(env, e1) match {
       case true => evalExpr(env, e2)
       case false => evalExpr(env, e3)
     }
     case _ => throw NotImplemented(expr.toString)
   }
-
-//   case class Set(varName: String, e: Expr) extends Manifest
-//   case class MCase(e: Expr, cases: Seq[Case]) extends Manifest
-//   case class ITE(pred: Expr, m1: Manifest, m2: Manifest) extends Manifest
-//   case class Include(e: Expr) extends Manifest
-//   case class Require(e: Expr) extends Manifest
-//   case class MApp(name: String, args: Seq[Expr]) extends Manifest
-
-// }
 
   def splice[A](outer: Graph[A, DiEdge], node: A,
                 inner: Graph[A, DiEdge]): Graph[A, DiEdge] = {

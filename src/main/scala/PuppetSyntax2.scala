@@ -2,6 +2,8 @@ package rehearsal
 
 object PuppetSyntax2 {
 
+  import scala.util.parsing.input.Positional
+
   // Documentation states that include can accept:
   //   * a single class name (apache) or a single class reference (Class['apache'])
   //   * a comma separated list of class names or class references
@@ -26,15 +28,15 @@ object PuppetSyntax2 {
   case class Attribute(name: Expr, value: Expr)
   case class Argument(id: String, default: Option[Expr]) //ignoring types for now
 
-  sealed trait Resource
+  sealed trait Resource extends Positional
   case class ResourceDecl(typ: String, resources: Seq[(Expr, Seq[Attribute])]) extends Resource
   case class ResourceRef(typ: String, title: Expr, attrs: Seq[Attribute]) extends Resource
 
-  sealed trait Case
+  sealed trait Case extends Positional
   case class CaseDefault(m: Manifest) extends Case
   case class CaseExpr(e: Expr, m: Manifest) extends Case
 
-  sealed trait Manifest
+  sealed trait Manifest extends Positional
   case object Empty extends Manifest
   case class Block(m1: Manifest, m2: Manifest) extends Manifest
   case class EdgeList(resources: Seq[Resource]) extends Manifest
@@ -48,7 +50,7 @@ object PuppetSyntax2 {
   case class MApp(name: String, args: Seq[Expr]) extends Manifest
 
    // Manifests must not appear in Expr, either directly or indirectly
-  sealed trait Expr
+  sealed trait Expr extends Positional
   case object Undef extends Expr
   case class Str(s: String) extends Expr
   case class Num(n: Int) extends Expr
