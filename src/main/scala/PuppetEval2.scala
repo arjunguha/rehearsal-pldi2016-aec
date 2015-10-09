@@ -75,7 +75,8 @@ object PuppetEval2 {
                    deps: Graph[Node, DiEdge],
                    env: Env,
                    definedTypes: Map[String, VDefinedType],
-                   classes: Map[String, VClass])
+                   classes: Map[String, VClass],
+                   stages: Map[String, Set[Node]])
 
 
 
@@ -143,7 +144,8 @@ object PuppetEval2 {
           (st.copy(resources = st.resources ++ newResources,
                    deps = st.deps ++
                      Graph.from(newNodes, edges = Set()) ++
-                     relationships.reduce(_ union _)),
+                     relationships.reduce(_ union _),
+                   stages = newResources.foldRight(st.stages)(updateStage)),
            newNodes.toList)
         }
       }
@@ -343,7 +345,24 @@ object PuppetEval2 {
     deps = Graph.empty,
     env = Map("title" -> Str("main"), "name" -> Str("main")),
     definedTypes = Map(),
-    classes = Map())
+    classes = Map(),
+    stages = Map())
+
+  def updateStage(res: (Node, ResourceVal), stages: Map[String, Set[Node]]): Map[String, Set[Node]] = res match {
+    case (node, ResourceVal(_, _, attrMap)) =>
+      attrMap.get("stage") match {
+        case Some(Str(stage)) => addStage(stage, node, stages)
+        case Some(stage) => throw EvalError(s"Stage evaluated to non-string. $stage")
+        case None => addStage("main", node, stages)
+      }
+  }
+
+  def addStage(stage: String, node: Node, stages: Map[String, Set[Node]]): Map[String, Set[Node]] =
+      stages.get(stage) match {
+        case None => stages + (stage -> Set(node))
+        case Some(set) => stages + (stage -> (set + node))
+      }
+
 
   def eval(manifest: Manifest): (Map[Node, ResourceVal], Graph[Node, DiEdge]) = {
     val st = evalLoop(evalManifest(emptyState, manifest))
