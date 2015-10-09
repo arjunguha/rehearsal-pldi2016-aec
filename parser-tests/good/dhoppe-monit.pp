@@ -1,3 +1,7 @@
+# NOTE(jcollard): Added since the program is written to fail if it isn't
+# squeeze
+$::lsbdistcodename = 'squeeze'
+
 # From https://github.com/dhoppe/puppet-monit
 define monit::service() {
   file { "/etc/monit/conf.d/${name}":

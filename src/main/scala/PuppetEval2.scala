@@ -284,8 +284,12 @@ object PuppetEval2 {
         case None => (x, evalExpr(env + titlePair, default))
       }
     }
+    val evaluatedPrime = evaluated.get("name") match {
+      case None => evaluated + ("name" -> Str(node.title))
+      case _ => evaluated
+    }
     val st1 = evalManifest(st.copy(deps = Graph.empty,
-                                   env = evaluated.toMap + titlePair),
+                                   env = evaluatedPrime.toMap + titlePair),
                            m)
     st1.copy(deps = splice(st.deps, node, st1.deps),
              resources = st1.resources - node)
