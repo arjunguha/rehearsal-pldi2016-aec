@@ -165,6 +165,12 @@ object PuppetEval2 {
       case false => evalManifest(st, m2)
     }
     case Include(title) => st.copy(deps = st.deps + Node("class", evalTitle(st.env, title)))
+    case MApp("fail", Seq(str)) => evalExpr(st.env, str) match {
+      // TODO(arjun): Different type of error
+      case Str(str) => throw EvalError(s"user-defined failure: $str")
+      case v => throw EvalError(s"expected string argument, got $v ${manifest.pos}")
+    }
+    case MApp(f, _) => throw NotImplemented("unsupported function: $f ${manifest.pos}")
     case MCase(e, cases) => {
       val v = evalExpr(st.env, e)
       cases.find(c => matchCase(st.env, v, c)) match {
@@ -173,8 +179,6 @@ object PuppetEval2 {
         case Some(CaseExpr(_, m)) => evalManifest(st, m)
       }
     }
-
-    case _ => throw NotImplemented(manifest.toString)
   }
 
   // Helps implement conditionals. "Truthy" values are mapped to Scala's true
@@ -217,15 +221,6 @@ object PuppetEval2 {
     }
     case _ => throw NotImplemented(expr.toString)
   }
-
-//   case class Set(varName: String, e: Expr) extends Manifest
-//   case class MCase(e: Expr, cases: Seq[Case]) extends Manifest
-//   case class ITE(pred: Expr, m1: Manifest, m2: Manifest) extends Manifest
-//   case class Include(e: Expr) extends Manifest
-//   case class Require(e: Expr) extends Manifest
-//   case class MApp(name: String, args: Seq[Expr]) extends Manifest
-
-// }
 
   def splice[A](outer: Graph[A, DiEdge], node: A,
                 inner: Graph[A, DiEdge]): Graph[A, DiEdge] = {
