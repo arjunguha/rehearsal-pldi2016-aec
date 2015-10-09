@@ -196,7 +196,11 @@ object PuppetEval2 {
     case Not(e) => Bool(!evalBool(env, e))
     case Var(x) => env.get(x) match {
       case Some(v) => v
-      case None => Undef
+      // NOTE(arjun): Do not change this. Strictly speaking, this is not an
+      // error. But, silently returning undef will make us miss other bugs in
+      // our implementation. If a test manifest actually uses this feature,
+      // modify it so that the undeclared variable is set to Undef.
+      case None => throw EvalError(s"variable $x is undefined")
     }
     case Array(es) => Array(es.map(e => evalExpr(env, e)))
     case App("template", Seq(e)) => evalExpr(env, e) match {
