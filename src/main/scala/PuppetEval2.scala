@@ -304,9 +304,15 @@ object PuppetEval2 {
     }
   }
 
+  val emptyState = State(
+    resources = Map(),
+    deps = Graph.empty,
+    env = Map("title" -> Str("main"), "name" -> Str("main")),
+    definedTypes = Map(),
+    classes = Map())
+
   def eval(manifest: Manifest): (Map[Node, ResourceVal], Graph[Node, DiEdge]) = {
-    val st = evalLoop(evalManifest(State(Map(), Graph.empty, Map(), Map(), Map()),
-                                   manifest))
+    val st = evalLoop(evalManifest(emptyState, manifest))
     (st.resources, st.deps)
   }
 
