@@ -81,6 +81,8 @@ object ResourceSemantics {
           case "absent" | "purged" => false
           case x => throw FSCompileError(s"inexpected ensure for package: $x")
         }
+        attrs.consume("source", "")
+        attrs.consume("provider", "")
         Package(name, present)
       }
       case "user" => {
@@ -90,7 +92,9 @@ object ResourceSemantics {
           case "absent" => false
           case x => throw FSCompileError(s"unexpected ensure value: $x")
         }
-        val manageHome = attrs.consume("manageHome", false)
+        val manageHome = attrs.consume("managehome", false)
+        attrs.consume("comment", "")
+        attrs.consume("shell", "")
         User(name, present, manageHome)
       }
       case "service" => {
@@ -111,6 +115,7 @@ object ResourceSemantics {
         }
         val key = attrs.consume[String]("key")
         val name = attrs.consume("name", resource.title)
+        attrs.consume("type", "rsa") // TODO(arjun): What is the actual default type?
         SshAuthorizedKey(user, present, name, key)
       }
       case _ => throw NotImplemented(resource.toString)
