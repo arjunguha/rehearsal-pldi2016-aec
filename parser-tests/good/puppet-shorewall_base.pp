@@ -1,3 +1,8 @@
+# https://github.com/duritong/puppet-shorewall/blob/07c863098f453d3ce67d64c2ac5c67d8cf4c6a25/manifests/init.pp#L5
+# Stolen from the init.pp
+$shorewall::ensure_version = 'present'
+$shorewall::conf_source = false
+
 package { 'shorewall':
   ensure => $shorewall::ensure_version,
 }
