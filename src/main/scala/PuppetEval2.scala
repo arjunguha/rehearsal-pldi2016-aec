@@ -193,6 +193,7 @@ object PuppetEval2 {
   def evalBool(env: Env, expr: Expr): Boolean = evalExpr(env, expr) match {
     case Bool(true) => true
     case Bool(false) => false
+    case Undef => false
     case v => throw EvalError(s"predicate evaluated to $v")
   }
 
