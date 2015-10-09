@@ -134,23 +134,25 @@ class PuppetParser2 extends RegexParsers with PackratParsers {
   }
 
   lazy val and: P[Expr] = positioned {
-    and ~ ("and" ~> not) ^^ { case lhs ~ rhs => And(lhs, rhs) } |
+    not ~ "and" ~ and ^^ { case lhs ~ _ ~ rhs => And(lhs, rhs) } |
     not
   }
 
   lazy val or: P[Expr] = positioned {
-    or ~ ("or" ~> and) ^^ { case lhs ~ rhs => Or(lhs, rhs) } |
+    and ~ "or" ~ or ^^ { case lhs ~ _ ~ rhs => Or(lhs, rhs) } |
     and
   }
 
   lazy val bop: P[Expr] = positioned {
-    bop ~ ("==" ~> or) ^^ { case lhs ~ rhs => Eq(lhs, rhs) } |
-    bop ~ ("!=" ~> or) ^^ { case lhs ~ rhs => Not(Eq(lhs, rhs)) } |
-    bop ~ ("=~" ~> or) ^^ { case lhs ~ rhs => Match(lhs, rhs) } |
-    bop ~ ("!~" ~> or) ^^ { case lhs ~ rhs => Not(Match(lhs, rhs)) } |
-    bop ~ ("in" ~> or) ^^ { case lhs ~ rhs => In(lhs, rhs) } |
+    or ~ "==" ~ bop ^^ { case lhs ~ _ ~ rhs => Eq(lhs, rhs) } |
+    or ~ "!=" ~ bop ^^ { case lhs ~ _ ~ rhs => Not(Eq(lhs, rhs)) } |
+    or ~ "=~" ~ bop ^^ { case lhs ~ _ ~ rhs => Match(lhs, rhs) } |
+    or ~ "!~" ~ bop ^^ { case lhs ~ _ ~ rhs => Not(Match(lhs, rhs)) } |
+    or ~ "in" ~ bop ^^ { case lhs ~ _ ~ rhs => In(lhs, rhs) } |
     or
   }
+
+
 
   lazy val cond: P[Expr] = positioned {
     bop ~ "?" ~ bop ~ ":" ~ cond ^^
@@ -159,6 +161,7 @@ class PuppetParser2 extends RegexParsers with PackratParsers {
       { case _ ~ e1 ~ _ ~ e2 ~ _ ~ _ ~ _ ~ e3 ~ _ => Cond(e1, e2, e3) } |
     bop
   }
+
 
   lazy val expr: P[Expr] = cond
 
