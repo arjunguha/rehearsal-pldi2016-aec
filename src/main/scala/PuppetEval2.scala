@@ -76,6 +76,7 @@ object PuppetEval2 {
                    env: Env,
                    definedTypes: Map[String, VDefinedType],
                    classes: Map[String, VClass],
+                   classGraph: Map[String, Graph[Node, DiEdge]],
                    stages: Map[String, Set[Node]])
 
 
@@ -279,14 +280,20 @@ object PuppetEval2 {
   def instantiateClass(st: State, classNode: Node): State = {
     require(classNode.typ == "class")
     val title = classNode.title
-    st.classes.get(title) match {
-      case Some(VClass(_, classEnv, args, m)) => {
-        assert(args.size == 0, "not implemented class args")
-        val st1 = evalManifest(st.copy(deps = Graph.empty), m)
-        val classNode = st.deps.get(Node("class", title))
-        st1.copy(deps = splice(st.deps, st.deps.get(Node("class", title)), st1.deps))
+    st.classGraph.get(title) match {
+      // Class has already been instantiated, splice it in where necesarry
+      case Some(deps) =>
+          st.copy(deps = splice(st.deps, st.deps.get(Node("class", title)), deps))
+      case None => st.classes.get(title) match {
+        case Some(VClass(_, classEnv, args, m)) => {
+          assert(args.size == 0, "not implemented class args")
+          val st1 = evalManifest(st.copy(deps = Graph.empty), m)
+          st1.copy(deps = splice(st.deps, st.deps.get(Node("class", title)), st1.deps),
+            classGraph = st1.classGraph + (title -> st1.deps)
+          )
+        }
+        case None => throw EvalError(s"class not found: $title ${st.classes.keys}")
       }
-      case None => throw EvalError(s"class not found: $title ${st.classes.keys}")
     }
   }
 
@@ -326,11 +333,13 @@ object PuppetEval2 {
     val st1 = st
     // Select newly instantiated classes and splice them into the graph
     val instClasses = st1.deps.nodes.filter(_.typ == "class").map(_.value)
+    println(s"new classes: $instClasses")
     val st2 = instClasses.foldLeft(st1)(instantiateClass)
     // Select newly instantiated defined types and splice them into the graph
     val newInstances = st2.deps.nodes
       .filter(node => st2.definedTypes.contains(node.typ))
       .map(_.value)
+    println(s"new instances: $newInstances")
     val st3 = newInstances.foldLeft(st2)(instantiateType)
     if (newInstances.isEmpty && instClasses.isEmpty) {
       st3 // st1 == st2 == st3
@@ -346,6 +355,7 @@ object PuppetEval2 {
     env = Map("title" -> Str("main"), "name" -> Str("main")),
     definedTypes = Map(),
     classes = Map(),
+    classGraph = Map(),
     stages = Map())
 
   def updateStage(res: (Node, ResourceVal), stages: Map[String, Set[Node]]): Map[String, Set[Node]] = res match {
@@ -363,9 +373,14 @@ object PuppetEval2 {
         case Some(set) => stages + (stage -> (set + node))
       }
 
+  def stageExpansion(st: State): State = {
+    val st1 = st
+    val instStages = st1.deps.nodes.filter(_.typ == "stage").map(_.value)
+    st1
+  }
 
   def eval(manifest: Manifest): (Map[Node, ResourceVal], Graph[Node, DiEdge]) = {
-    val st = evalLoop(evalManifest(emptyState, manifest))
+    val st = stageExpansion(evalLoop(evalManifest(emptyState, manifest)))
     (st.resources, st.deps)
   }
 
