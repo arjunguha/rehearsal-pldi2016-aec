@@ -49,9 +49,8 @@ object PuppetEval2 {
 
   }
 
-  val primTypes =  Set("file", "File", "package", "Package", "user", "User",
-    "group", "Group", "service", "Service", "ssh_authorized_key",
-    "Ssh_authorized_key", "augeas", "Augeas")
+  val primTypes =  Set("file", "package", "user", "group", "service",
+                       "ssh_authorized_key", "augeas")
 
 
   case class ResourceVal(typ: String, title: String, attrs: Map[String, Expr]) {
@@ -97,19 +96,42 @@ object PuppetEval2 {
     }
   }
 
+  def resourceRefs(e: Expr): Seq[Node] = e match {
+    case EResourceRef(typ, Str(title)) => Seq(Node(typ, title))
+    case Array(seq) => seq.map(resourceRefs).flatten
+    case _ => throw EvalError(s"expected resource reference, got $e ${e.pos}")
+  }
+
+  def extractRelationships(s: Node,
+                           attrs: Map[String, Expr]): Graph[Node, DiEdge] = {
+
+    def get(key: String) = resourceRefs(attrs.getOrElse(key, Array(Seq())))
+    val before = get("before").map(r => DiEdge(s, r))
+    val require = get("require").map(r => DiEdge(r, s))
+    val notify = get("notify").map(r => DiEdge(s, r))
+    val subscribe = get("subscribe").map(r => DiEdge(r, s))
+    Graph.from(edges = Seq(before, require, notify, subscribe).flatten)
+  }
+
+  val relationshipParams = Seq("before", "require", "notify", "subscribe")
+
   // Produces a new state and a list of resource titles
   // TODO(arjun): Handle "require" and "before" dependencies.
   def evalResource(st: State, resource: Resource): (State, List[Node]) = {
     resource match {
       case ResourceRef(typ, titleExpr, Seq()) => {
-        val node = Node(typ, evalTitle(st.env, titleExpr))
+        val node = Node(typ.toLowerCase, evalTitle(st.env, titleExpr))
         (st.copy(deps = st.deps + node), List(node))
       }
       case ResourceDecl(typ, lst) => {
-        val vals = lst.map { case (titleExpr, attrs) =>
-          ResourceVal(typ, evalTitle(st.env, titleExpr),
-                      evalAttrs(st.env, attrs))
-        }
+        val (vals, relationships) = lst.map { case (titleExpr, attrs) =>
+          val attrVals = evalAttrs(st.env, attrs)
+          val resource = ResourceVal(typ, evalTitle(st.env, titleExpr),
+                                     attrVals -- relationshipParams)
+          val relationships = extractRelationships(resource.node, attrVals)
+          (resource, relationships)
+        }.unzip
+
         val newNodes: Set[Node] = vals.map(_.node).toSet
         //println(s"Creating nodes $nodes")
         val redefinedResources = st.resources.keySet.intersect(newNodes)
@@ -119,7 +141,9 @@ object PuppetEval2 {
         else {
           val newResources = vals.map(r => r.node -> r).toMap
           (st.copy(resources = st.resources ++ newResources,
-                   deps = st.deps ++ Graph.from(newNodes, edges = Set())),
+                   deps = st.deps ++
+                     Graph.from(newNodes, edges = Set()) ++
+                     relationships.reduce(_ union _)),
            newNodes.toList)
         }
       }
@@ -211,7 +235,7 @@ object PuppetEval2 {
     case Num(n) => Num(n)
     case Str(str) => StringInterpolator.interpolate(env, str)
     case Bool(b) => Bool(b)
-    case EResourceRef(typ, title) => EResourceRef(typ, evalExpr(env, title))
+    case EResourceRef(typ, title) => EResourceRef(typ.toLowerCase, evalExpr(env, title))
     case Eq(e1, e2) => Bool(evalExpr(env, e1) == evalExpr(env, e2))
     case Not(e) => Bool(!evalBool(env, e))
     case Var(x) => env.get(x) match {

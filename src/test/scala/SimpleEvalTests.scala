@@ -6,6 +6,11 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
 	import PuppetEval2._
 	import java.nio.file._
 	import scala.collection.JavaConversions._
+  import scalax.collection.Graph
+  import scalax.collection.Graph._
+  import scalax.collection.GraphPredef._
+  import scalax.collection.GraphEdge._
+  import scalax.collection.edge.Implicits._
 
 	for (path <- Files.newDirectoryStream(Paths.get("parser-tests/good"))) {
 
@@ -20,6 +25,35 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
 			}
 		}
 
+	}
+
+	test("simple before relationship") {
+
+		val (r, g) = eval(parse("""
+      file{"A":
+        before => File["B"]
+      }
+      file{"B": }
+    """))
+
+    assert(r.size == 2)
+    assert(g == Graph(Node("file", "A") ~> Node("file", "B")))
+
+	}
+
+	test("require relationship with an array") {
+
+		val (r, g) = eval(parse("""
+      file{"A":
+        require => [File["B"], File["C"]]
+      }
+      file{"B": }
+      file{"C": }
+    """))
+
+    assert(r.size == 3)
+    assert(g == Graph(Node("file", "B") ~> Node("file", "A"),
+                      Node("file", "C") ~> Node("file", "A")))
 	}
 
 }
