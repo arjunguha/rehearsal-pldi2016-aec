@@ -62,7 +62,7 @@ object PuppetEval2 {
 
   val primTypes =  Set("file", "File", "package", "Package", "user", "User",
     "group", "Group", "service", "Service", "ssh_authorized_key",
-    "Ssh_authorized_key")
+    "Ssh_authorized_key", "augeas", "Augeas")
 
 
   case class ResourceVal(typ: String, title: String, attrs: Map[String, Expr]) {
