@@ -59,6 +59,15 @@ object PuppetEval2 {
     val node = Node(typ, title)
   }
 
+  case class VClass(name: String, env: Env,
+                    args: Map[String, Option[Expr]], body: Manifest)
+
+  case class VDefinedType(
+    name: String,
+    env: Env,
+    args: Map[String, Option[Expr]],
+    body: Manifest)
+
   type Env = Map[String, Expr]
 
   case class Node(typ: String, title: String)
@@ -66,8 +75,8 @@ object PuppetEval2 {
   case class State(resources: Map[Node, ResourceVal],
                    deps: Graph[Node, DiEdge],
                    env: Env,
-                   definedTypes: Map[String, Manifest],
-                   classes: Map[String, Manifest])
+                   definedTypes: Map[String, VDefinedType],
+                   classes: Map[String, VClass])
 
 
 
@@ -141,7 +150,10 @@ object PuppetEval2 {
         throw EvalError(s"$f is already defined as a type")
       }
       else {
-        st.copy(definedTypes = st.definedTypes + (f -> manifest))
+        // TODO(arjun): ensure no duplicate identifiers
+        val vt = VDefinedType(f, st.env, args.map(a => a.id -> a.default).toMap,
+                              m)
+        st.copy(definedTypes = st.definedTypes + (f -> vt))
       }
     }
     case Class(f, args, _, m) => {
@@ -149,7 +161,11 @@ object PuppetEval2 {
         throw EvalError(s"$f is already defined as a class")
       }
       else {
-        st.copy(classes = st.classes + (f -> manifest))
+        // TODO(arjun): ensure no duplicate identifiers
+        val vc = VClass(f, st.env,
+                        args.map(a => a.id -> a.default).toMap,
+                        m)
+        st.copy(classes = st.classes + (f -> vc))
       }
     }
     case ESet(x, e) => {
@@ -238,33 +254,34 @@ object PuppetEval2 {
     require(classNode.typ == "class")
     val title = classNode.title
     st.classes.get(title) match {
-      case Some(Class(_, _, _, m)) => {
+      case Some(VClass(_, classEnv, args, m)) => {
+        assert(args.size == 0, "not implemented class args")
         val st1 = evalManifest(st.copy(deps = Graph.empty), m)
         val classNode = st.deps.get(Node("class", title))
         st1.copy(deps = splice(st.deps, st.deps.get(Node("class", title)), st1.deps))
       }
       case None => throw EvalError(s"class not found: $title ${st.classes.keys}")
-      case _ => throw new Exception("expected class")
     }
   }
 
   def instantiateType(st: State, node: Node): State = {
-    val Define(_, formals, m) = st.definedTypes(node.typ)
+    val VDefinedType(_, env, formals, m) = st.definedTypes(node.typ)
     val ResourceVal(_, _, actuals) = st.resources(node)
-    val expected = formals.map(x => x.id -> x.default).toMap
-    val unexpected = actuals.keySet -- expected.keySet
+    val unexpected = actuals.keySet -- actuals.keySet
     if (unexpected.isEmpty == false) {
       throw EvalError(s"unexpected arguments: ${unexpected}")
     }
     val titlePair = ("title" -> Str(node.title))
-    val evaluated = expected.map {
+    val evaluated = formals.toList.map {
       case (x, None) => actuals.get(x) match {
         case Some(v) => (x, v)
         case None => throw EvalError(s"expected argument $x")
       }
       case (x, Some(default)) => actuals.get(x) match {
         case Some(v) => (x, v)
-        case None => (x, evalExpr(st.env + titlePair, default))
+        // Notice that default expressions are evaluated in the lexical scope
+        // of the type definition, but with $title bound dynamically.
+        case None => (x, evalExpr(env + titlePair, default))
       }
     }
     val st1 = evalManifest(st.copy(deps = Graph.empty,
