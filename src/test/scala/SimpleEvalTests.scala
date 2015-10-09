@@ -2,7 +2,7 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
 
 	import rehearsal._
 	import PuppetParser2._
-	import Syntax._
+	import PuppetSyntax2._
 	import PuppetEval2._
 	import java.nio.file._
 	import scala.collection.JavaConversions._
@@ -16,7 +16,7 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
 
 		test(path.toString) {
 			parseFile(path.toString)
-			val (resources, deps) = eval(parseFile(path.toString))
+			val EvaluatedManifest(resources, deps) = eval(parseFile(path.toString))
 			if (deps.nodes.length == 0) {
 				info("No resources found -- a trivial test")
 			}
@@ -29,7 +29,7 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
 
 	test("simple before relationship") {
 
-		val (r, g) = eval(parse("""
+		val EvaluatedManifest(r, g) = eval(parse("""
       file{"A":
         before => File["B"]
       }
@@ -43,7 +43,7 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
 
 	test("require relationship with an array") {
 
-		val (r, g) = eval(parse("""
+		val EvaluatedManifest(r, g) = eval(parse("""
       file{"A":
         require => [File["B"], File["C"]]
       }

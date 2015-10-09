@@ -52,12 +52,6 @@ object PuppetEval2 {
   val primTypes =  Set("file", "package", "user", "group", "service",
                        "ssh_authorized_key", "augeas")
 
-
-  case class ResourceVal(typ: String, title: String, attrs: Map[String, Expr]) {
-
-    val node = Node(typ, title)
-  }
-
   case class VClass(name: String, env: Env,
                     args: Map[String, Option[Expr]], body: Manifest)
 
@@ -69,7 +63,6 @@ object PuppetEval2 {
 
   type Env = Map[String, Expr]
 
-  case class Node(typ: String, title: String)
 
   case class State(resources: Map[Node, ResourceVal],
                    deps: Graph[Node, DiEdge],
@@ -377,15 +370,15 @@ object PuppetEval2 {
     st1
   }
 
-  def eval(manifest: Manifest): (Map[Node, ResourceVal], Graph[Node, DiEdge]) = {
+  def eval(manifest: Manifest): EvaluatedManifest = {
     val st = stageExpansion(evalLoop(evalManifest(emptyState, manifest)))
-    (st.resources, st.deps)
+    EvaluatedManifest(st.resources, st.deps)
   }
 
   // TODO(arjun): change name to compile when everyone isn't hacking simultaneously
-  def evalFull(manifest: Manifest): (Map[Node, ResourceModel.Res], Graph[Node, DiEdge]) = {
-    val (r, g) = eval(manifest)
-    (r.mapValues(x => ResourceSemantics.compile(x)), g)
+  def evalFull(manifest: Manifest): ResourceGraph = {
+    val EvaluatedManifest(r, g) = eval(manifest)
+    ResourceGraph(r.mapValues(x => ResourceSemantics.compile(x)), g)
   }
 
 }

@@ -3,6 +3,8 @@ package rehearsal
 object PuppetSyntax2 {
 
   import scala.util.parsing.input.Positional
+  import scalax.collection.Graph
+  import scalax.collection.GraphEdge.DiEdge
 
   // Documentation states that include can accept:
   //   * a single class name (apache) or a single class reference (Class['apache'])
@@ -67,5 +69,14 @@ object PuppetSyntax2 {
   case class Regex(regex: String) extends Expr
   case class Cond(test: Expr, truePart: Expr, falsePart: Expr) extends Expr
   case class EResourceRef(typ: String, title: Expr) extends Expr
+
+  case class ResourceVal(typ: String, title: String, attrs: Map[String, Expr]) {
+    val node = Node(typ, title)
+  }
+
+  case class Node(typ: String, title: String)
+
+  case class EvaluatedManifest(ress: Map[Node, ResourceVal], deps: Graph[Node, DiEdge])
+  case class ResourceGraph(ress: Map[Node, ResourceModel.Res], deps: Graph[Node, DiEdge])
 
 }
