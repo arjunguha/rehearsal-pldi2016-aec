@@ -34,7 +34,7 @@ object ResourceToExpr {
     case scala.collection.Seq() => Map()
     case Attribute(Str(name), value) :: t => attrsToMap(t) + Tuple2(name, value)
   }
-  
+
   //compile to ResourceModel.Res
   //these are the file cuttently types accepted by isPrimitiveType in PuppetEval
   def convertResource(r: Resource): ResModel = {
@@ -43,7 +43,7 @@ object ResourceToExpr {
       case None => r.title match {
         case Str(n) => n
         case s => throw FSCompileError(s"invalid value for resource title: $s")
-      }          
+      }
       case Some(Str(n)) => n
       case e => throw FSCompileError(s"invalid value for 'name' attribute: $e")
     }
@@ -53,12 +53,12 @@ object ResourceToExpr {
           case None => r.title match {
             case Str(n) => n
             case _ => throw FSCompileError(s"invalid value for resource title: $r.title")
-          }          
+          }
           case Some(Str(n)) => n
           case e => throw FSCompileError(s"invalid value for 'path' attribute: $e")
         }
         val content: String = attrsMap.get("content") match {
-          case None => ""        
+          case None => ""
           case Some(Str(n)) => n
           case e => throw FSCompileError(s"invalid value for 'content' attribute: $e")
         }
@@ -75,7 +75,7 @@ object ResourceToExpr {
           case Some(Str("directory")) => Directory(Paths.get(path))
           case Some(Str("link")) => {
             attrsMap.get("target") match {
-              case None => 
+              case None =>
                 throw FSCompileError(s"Missing target attribute. Target is required with ensure => link")
               case Some(Str(target)) => File(path, target, true)
               case target => throw FSCompileError(s"invalid value for 'target' attribute $target")
@@ -90,7 +90,7 @@ object ResourceToExpr {
           case Some(Str("absent")) | Some(Str("purged")) => false
           case Some(Str("held")) => throw NotImplemented("NYI package held") // TODO
           case e => throw FSCompileError(s"invalid value for 'ensure' attribute: $e")
-        }  
+        }
         Package(name, present)
       }
       case "user" => {
@@ -99,12 +99,12 @@ object ResourceToExpr {
           case Some(Str("absent")) => false
           case Some(Str("role")) => throw NotImplemented("NYI user role") // TODO
           case e => throw FSCompileError(s"invalid value for 'ensure' attribute: $e")
-        }        
+        }
         val manageHome = attrsMap.get("managehome") match {
           case Some(Str("yes")) | Some(Bool(true)) => true
           case Some(Str("no")) | Some(Bool(false)) | None => false
           case e => throw FSCompileError(s"invalid value for 'managehome' attribute: $e")
-        }        
+        }
         User(name, present, manageHome)
       }
       case "group" => {
@@ -129,14 +129,14 @@ object ResourceToExpr {
         val key = attrsMap.get("key") match {
           case Some(Str(s)) => s
           case e => throw FSCompileError(s"invalid value for 'ensure' attribute: $e")
-        }        
+        }
         SshAuthorizedKey(user, present, name, key: String)
       }
       case s => throw NotImplemented(s"Not Implemented or invalid resource type: $s")
     }
   }
-  
+
   //use compile function in ResourceModel to go from ResModel to FS
-  def toFileScriptGraph(g: ResourceGraph): FileScriptGraph = 
+  def toFileScriptGraph(g: ResourceGraph): FileScriptGraph =
     nodeMap((r: Resource) => compile(convertResource(r)), g)
 }

@@ -1,5 +1,9 @@
 package rehearsal
 
+trait Extractor2[T] {
+  def apply(from: PuppetSyntax2.Expr): Option[T]
+}
+
 object Implicits {
 
   import FSSyntax._
@@ -59,5 +63,32 @@ object Implicits {
     }
   }
 
+
+  implicit def extractString = new Extractor2[String] {
+    import PuppetSyntax2._
+
+    def apply(e: Expr) = e match {
+      case Str(s) => Some(s)
+      case _ => None
+    }
+  }
+
+  implicit def extractSBool = new Extractor2[Boolean] {
+    import PuppetSyntax2._
+
+    def apply(e: Expr) = e match {
+      case Str("yes") => Some(true)
+      case Str("no") => Some(false)
+      case Bool(b) => Some(b)
+      case _ => None
+    }
+  }
+
+  implicit class RichExpr2(e: PuppetSyntax2.Expr) {
+    import PuppetSyntax2._
+
+    def value[T](implicit extractor: Extractor2[T]) = extractor(e)
+
+  }
 
 }

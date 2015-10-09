@@ -382,4 +382,10 @@ object PuppetEval2 {
     (st.resources, st.deps)
   }
 
+  // TODO(arjun): change name to compile when everyone isn't hacking simultaneously
+  def evalFull(manifest: Manifest): (Map[Node, ResourceModel.Res], Graph[Node, DiEdge]) = {
+    val (r, g) = eval(manifest)
+    (r.mapValues(x => ResourceSemantics.compile(x)), g)
+  }
+
 }

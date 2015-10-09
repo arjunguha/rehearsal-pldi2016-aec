@@ -28,7 +28,6 @@ object ResourceModel {
     val keyPath = s"/home/$user/.ssh/$name"
   }
 
-
   def compile(r: Res): Expr = r match {
     case EnsureFile(p, c) =>
       If(TestFileState(p, IsFile), Rm(p), Skip) >> CreateFile(p, c)
