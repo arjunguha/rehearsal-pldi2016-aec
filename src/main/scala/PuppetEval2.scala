@@ -283,7 +283,7 @@ object PuppetEval2 {
         // of the type definition, but with $title bound dynamically.
         case None => (x, evalExpr(env + titlePair, default))
       }
-    }
+    }.toMap
     val evaluatedPrime = evaluated.get("name") match {
       case None => evaluated + ("name" -> Str(node.title))
       case _ => evaluated
