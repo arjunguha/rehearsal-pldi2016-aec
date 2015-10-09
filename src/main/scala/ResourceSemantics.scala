@@ -2,7 +2,6 @@ package rehearsal
 
 object ResourceSemantics {
 
-  import java.nio.file.{Path, Paths}
   import Implicits._
   import PuppetSyntax2._
   import PuppetEval2.ResourceVal
