@@ -24,7 +24,7 @@ class PuppetParser2 extends RegexParsers with PackratParsers {
   lazy val className: P[Expr] = expr | word ^^ (Str(_))
 
   //Manifest
-  lazy val manifest: P[Manifest] =
+  lazy val manifest: P[Manifest] = positioned {
     varName ~ "=" ~ expr ^^
       { case x ~ _ ~ e => ESet(x, e) } |
     "define" ~ word ~ params ~ body ^^
@@ -45,14 +45,16 @@ class PuppetParser2 extends RegexParsers with PackratParsers {
       { case lst => EdgeList(lst) } |
     word ~ "(" ~ repsep(expr, ",") ~ ")" ^^
       { case f ~ _ ~ xs ~ _  => MApp(f, xs) }
+    }
 
-  lazy val elses: P[Manifest] =
+  lazy val elses: P[Manifest] = positioned {
     "else" ~ body ^^
       { case _ ~ m => m } |
     "elsif" ~ parenExpr ~ body ~ elses ^^
       { case _ ~ e ~ m1 ~ m2 => ITE(e, m1, m2) } |
     success(()) ^^
       { case () => Empty }
+    }
 
   lazy val body: P[Manifest] = "{" ~> prog <~ "}"
 
@@ -110,7 +112,7 @@ class PuppetParser2 extends RegexParsers with PackratParsers {
 
   lazy val parenExpr: P[Expr] = "(" ~ expr ~ ")" ^^ { case _ ~ e ~ _ => e }
 
-  lazy val atom: P[Expr] =
+  lazy val atom: P[Expr] = positioned {
     "undef" ^^ { _ => Undef } |
     "true" ^^ { _ => Bool(true) } |
     "false" ^^ { _ => Bool(false) } |
@@ -124,34 +126,39 @@ class PuppetParser2 extends RegexParsers with PackratParsers {
     word ~ "[" ~ expr ~ "]" ^^
       { case typ ~ _ ~ title ~ _ => EResourceRef(typ, title) } |
     parenExpr
+  }
 
-  lazy val not: P[Expr] =
+  lazy val not: P[Expr] = positioned {
     "!" ~> not ^^ { Not(_) } |
     atom
+  }
 
-  lazy val and: P[Expr] =
+  lazy val and: P[Expr] = positioned {
     and ~ ("and" ~> not) ^^ { case lhs ~ rhs => And(lhs, rhs) } |
     not
+  }
 
-  lazy val or: P[Expr] =
+  lazy val or: P[Expr] = positioned {
     or ~ ("or" ~> and) ^^ { case lhs ~ rhs => Or(lhs, rhs) } |
     and
+  }
 
-  lazy val bop: P[Expr] =
+  lazy val bop: P[Expr] = positioned {
     bop ~ ("==" ~> or) ^^ { case lhs ~ rhs => Eq(lhs, rhs) } |
     bop ~ ("!=" ~> or) ^^ { case lhs ~ rhs => Not(Eq(lhs, rhs)) } |
     bop ~ ("=~" ~> or) ^^ { case lhs ~ rhs => Match(lhs, rhs) } |
     bop ~ ("!~" ~> or) ^^ { case lhs ~ rhs => Not(Match(lhs, rhs)) } |
     bop ~ ("in" ~> or) ^^ { case lhs ~ rhs => In(lhs, rhs) } |
     or
+  }
 
-  lazy val cond: P[Expr] =
+  lazy val cond: P[Expr] = positioned {
     bop ~ "?" ~ bop ~ ":" ~ cond ^^
       { case e1 ~ _ ~ e2 ~ _ ~ e3 => Cond(e1, e2, e3) } |
     "if" ~ bop ~ "{" ~ expr ~ "}" ~ "else" ~ "{" ~ expr ~ "}" ^^
       { case _ ~ e1 ~ _ ~ e2 ~ _ ~ _ ~ _ ~ e3 ~ _ => Cond(e1, e2, e3) } |
     bop
-
+  }
 
   lazy val expr: P[Expr] = cond
 

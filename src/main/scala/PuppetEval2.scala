@@ -200,7 +200,7 @@ object PuppetEval2 {
       // error. But, silently returning undef will make us miss other bugs in
       // our implementation. If a test manifest actually uses this feature,
       // modify it so that the undeclared variable is set to Undef.
-      case None => throw EvalError(s"variable $x is undefined")
+      case None => throw EvalError(s"undefined variable: $x (${expr.pos})")
     }
     case Array(es) => Array(es.map(e => evalExpr(env, e)))
     case App("template", Seq(e)) => evalExpr(env, e) match {
@@ -210,6 +210,7 @@ object PuppetEval2 {
       case Str(filename) => Str(filename)
       case _ => throw EvalError("template function expects a string argument")
     }
+    case App(f, args) => throw NotImplemented(s"function $f (${expr.pos})")
     case Cond(e1, e2, e3) => evalBool(env, e1) match {
       case true => evalExpr(env, e2)
       case false => evalExpr(env, e3)
