@@ -38,7 +38,10 @@ object PuppetSyntax2 {
   case class CaseDefault(m: Manifest) extends Case
   case class CaseExpr(e: Expr, m: Manifest) extends Case
 
-  sealed trait Manifest extends Positional
+  sealed trait Manifest extends Positional {
+   def eval(): EvaluatedManifest = PuppetEval2.eval(this)
+  }
+
   case object Empty extends Manifest
   case class Block(m1: Manifest, m2: Manifest) extends Manifest
   case class EdgeList(resources: Seq[Resource]) extends Manifest
@@ -76,7 +79,10 @@ object PuppetSyntax2 {
 
   case class Node(typ: String, title: String)
 
-  case class EvaluatedManifest(ress: Map[Node, ResourceVal], deps: Graph[Node, DiEdge])
+  case class EvaluatedManifest(ress: Map[Node, ResourceVal], deps: Graph[Node, DiEdge]) {
+    def resourceGraph(): ResourceGraph = ResourceGraph(ress.mapValues(x => ResourceSemantics.compile(x)), deps)
+  }
+
   case class ResourceGraph(ress: Map[Node, ResourceModel.Res], deps: Graph[Node, DiEdge])
 
 }

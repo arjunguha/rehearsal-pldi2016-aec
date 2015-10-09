@@ -374,11 +374,4 @@ object PuppetEval2 {
     val st = stageExpansion(evalLoop(evalManifest(emptyState, manifest)))
     EvaluatedManifest(st.resources, st.deps)
   }
-
-  // TODO(arjun): change name to compile when everyone isn't hacking simultaneously
-  def evalFull(manifest: Manifest): ResourceGraph = {
-    val EvaluatedManifest(r, g) = eval(manifest)
-    ResourceGraph(r.mapValues(x => ResourceSemantics.compile(x)), g)
-  }
-
 }
