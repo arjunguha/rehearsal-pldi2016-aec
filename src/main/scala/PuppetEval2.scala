@@ -10,54 +10,43 @@ object PuppetEval2 {
   import scalax.collection.edge.Implicits._
   import scala.util.parsing.combinator._
 
-  // Note(jcollard): We currently only support very basic string interpolation.
-  // "Test plus $qualified::name"
-  // "Test plus ${qualified::name}_blah_blah"
-  // However, it should be noted that the language supports more complex expressions.
-  // For example:
-  // "<VirtualHost *:${hiera("http_port")}>"
-  // "Using interface ${::interfaces.split(',')[3]} for broadcast"
-  // "Inheriting ${$inherits.upcase}."
-  class StringInterpolatorParser extends RegexParsers with PackratParsers {
-
-    type P[T] = PackratParser[T]
-
-    sealed trait Str
-    case class SExpr(expr: Expr) extends Str
-    case class S(x: String) extends Str
-
-    override val skipWhitespace = false
-
-    lazy val varName: P[String] = "[a-z_(::)][a-zA-Z0-9_(::)]*[a-zA-Z0-9_]+|[a-z_(::)]".r ^^ { case x => x }
-
-    lazy val str: P[Str] =
-      "$" ~ varName ^^ { case _ ~ x => SExpr(Var(x)) } |
-      "${" ~ varName ~ "}" ^^ { case _ ~ x ~ _ => SExpr(Var(x)) } |
-      whiteSpace ^^ { case ws => S(ws) } |
-      """[^\s]""".r ^^ { case other => S(other) }
-
-  }
-
   object StringInterpolator {
-    private val parser = new StringInterpolatorParser()
+    val parser = new PuppetParser2()
     import parser._
-    def interpolate(env: Env, x: String): Expr =
-      parseAll(rep(str), x) match {
-        case Success(strs, _) => Str(helper(env, strs).mkString(""))
-        case m => throw new ParseError(s"$m")
-      }
 
-    private def helper(env: Env, s: Seq[Str]): List[String] =
-      s match {
-        case Seq() => List("")
-        case S(x) :: rest => x :: helper(env, rest)
-        case SExpr(expr) :: rest => evalExpr(env, expr) match {
-          case Str(x) => x :: helper(env, rest)
-          // Undef is interpolated as the empty string
-          case Undef => helper(env, rest)
-          case _ => throw EvalError(s"variable $expr could not be interpolated as a string.")
+    def interpolate(env: Env, str: String): Expr = {
+      val strs = str.split("""\$""")
+      Str(strs(0) + strs.toList.drop(1).map(helper(env)).mkString(""))
+    }
+
+    def helper(env: Env)(str: String): String = {
+      val tokens = str.split("""\s+""").toList
+      checkBraces(env, tokens(0)) + tokens.drop(1).mkString("")
+    }
+
+    def checkBraces(env: Env, str: String): String = {
+      str.indexOf("{") match {
+        case 0 => {
+          val ix = str.indexOf("}")
+          val expr = str.substring(1, ix)
+          val rest = str.substring(ix+1, str.length)
+          evaluate(env, expr) + rest
         }
+        case _ => evaluate(env, str)
       }
+    }
+
+    def evaluate(env: Env, str: String): String = {
+      val strPrime = if(str.charAt(0) != '$') "$" + str else str
+      parseAll(expr, strPrime) match {
+        case Success(expr, _) => evalExpr(env, expr) match {
+          case Str(s) => s
+          case _ => throw EvalError(s"None string expression evaluated during string interpolation: $expr")
+        }
+        case m => throw EvalError(s"Could not parse interpolated expression: $m")
+      }
+    }
+
   }
 
   val primTypes =  Set("file", "File", "package", "Package", "user", "User",
