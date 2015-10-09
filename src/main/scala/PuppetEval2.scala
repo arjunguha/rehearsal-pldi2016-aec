@@ -333,13 +333,11 @@ object PuppetEval2 {
     val st1 = st
     // Select newly instantiated classes and splice them into the graph
     val instClasses = st1.deps.nodes.filter(_.typ == "class").map(_.value)
-    println(s"new classes: $instClasses")
     val st2 = instClasses.foldLeft(st1)(instantiateClass)
     // Select newly instantiated defined types and splice them into the graph
     val newInstances = st2.deps.nodes
       .filter(node => st2.definedTypes.contains(node.typ))
       .map(_.value)
-    println(s"new instances: $newInstances")
     val st3 = newInstances.foldLeft(st2)(instantiateType)
     if (newInstances.isEmpty && instClasses.isEmpty) {
       st3 // st1 == st2 == st3
