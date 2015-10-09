@@ -53,6 +53,8 @@ object PuppetEval2 {
         case S(x) :: rest => x :: helper(env, rest)
         case SExpr(expr) :: rest => evalExpr(env, expr) match {
           case Str(x) => x :: helper(env, rest)
+          // Undef is interpolated as the empty string
+          case Undef => helper(env, rest)
           case _ => throw EvalError(s"variable $expr could not be interpolated as a string.")
         }
       }
@@ -204,7 +206,7 @@ object PuppetEval2 {
     case Not(e) => Bool(!evalBool(env, e))
     case Var(x) => env.get(x) match {
       case Some(v) => v
-      case None => throw EvalError(s"variable $x is undefined")
+      case None => Undef
     }
     case Array(es) => Array(es.map(e => evalExpr(env, e)))
     case App("template", Seq(e)) => evalExpr(env, e) match {
