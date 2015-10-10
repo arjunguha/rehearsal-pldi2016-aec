@@ -30,6 +30,9 @@ object SymbolicEvaluator {
   }
   def isDeterministic(g: FileScriptGraph,
                       logFile: Option[String] = None): Boolean = {
+    if (g.nodes.size < 2) {
+      return true
+    }
     val impl = new SymbolicEvaluatorImpl(
       g.nodes.map(e => e.paths).reduce(_ union _).toList,
       g.nodes.map(_.hashes).reduce(_ union _),

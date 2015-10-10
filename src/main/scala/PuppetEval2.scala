@@ -51,7 +51,7 @@ object PuppetEval2 {
   }
 
   val primTypes =  Set("file", "package", "user", "group", "service",
-                       "ssh_authorized_key", "augeas")
+                       "ssh_authorized_key", "augeas", "notify")
 
   case class VClass(name: String, env: Env,
                     args: Map[String, Option[Expr]], body: Manifest)
@@ -62,7 +62,49 @@ object PuppetEval2 {
     args: Map[String, Option[Expr]],
     body: Manifest)
 
-  type Env = Map[String, Expr]
+  case class Env(scope: Map[String, Expr], enclosing: Option[Env]) {
+
+    // NOTE(arjun): Do not change this. Strictly speaking, this is not an
+    // error. But, silently returning undef will make us miss other bugs in
+    // our implementation. If a test manifest actually uses this feature,
+    // modify it so that the undeclared variable is set to Undef.
+    def getOrError(x: String): Expr = {
+      scope.getOrElse(x, enclosing match {
+        case None => throw EvalError(s"undefined identifier $x")
+        case Some(env) => env.getOrError(x)
+      })
+    }
+
+    def newScope(): Env = Env(Map(), Some(this))
+
+    def default(x: String, v: Expr) = scope.get(x) match {
+      case None => Env(scope + (x -> v), enclosing)
+      case Some(_) => this
+    }
+
+    def +(xv: (String, Expr)): Env = {
+      val (x, v) = xv
+      if (scope.contains(x)) {
+        throw EvalError(s"identifier already set: $x")
+      }
+      else {
+        Env(scope + (x -> v), enclosing)
+      }
+    }
+
+    def forceSet(x: String, v: Expr) = new Env(scope + (x -> v), enclosing)
+
+    def ++(other: Map[String, Expr]): Env = {
+      Env(scope ++ other, enclosing)
+    }
+
+  }
+
+  object Env {
+
+    val empty = Env(Map(), None)
+
+  }
 
 
   case class State(resources: Map[Node, ResourceVal],
@@ -198,19 +240,18 @@ object PuppetEval2 {
         st.copy(classes = st.classes + (f -> vc))
       }
     }
-    case ESet(x, e) => {
-      if (st.env.contains(x)) {
-        throw EvalError(s"$x is already set")
-      }
-      else {
-        st.copy(env = st.env + (x -> evalExpr(st.env, e)))
-      }
-    }
+    case ESet(x, e) => st.copy(env = st.env + (x -> evalExpr(st.env, e)))
     case ITE(e, m1, m2) => evalBool(st.env, e) match {
       case true => evalManifest(st, m1)
       case false => evalManifest(st, m2)
     }
-    case Include(title) => st.copy(deps = st.deps + Node("class", evalTitle(st.env, title)))
+    case Include(titleExpr) => {
+      val title = evalTitle(st.env, titleExpr)
+      // TODO(arjun): Dependencies? Does include make the outer class depend on this class?
+      val res = ResourceVal("class", title, Map())
+      val node = Node("class", title)
+      st.copy(resources = st.resources + (node -> res), deps = st.deps + node)
+    }
     case MApp("fail", Seq(str)) => evalExpr(st.env, str) match {
       // TODO(arjun): Different type of error
       case Str(str) => throw EvalError(s"user-defined failure: $str")
@@ -244,14 +285,7 @@ object PuppetEval2 {
     case EResourceRef(typ, title) => EResourceRef(typ.toLowerCase, evalExpr(env, title))
     case Eq(e1, e2) => Bool(evalExpr(env, e1) == evalExpr(env, e2))
     case Not(e) => Bool(!evalBool(env, e))
-    case Var(x) => env.get(x) match {
-      case Some(v) => v
-      // NOTE(arjun): Do not change this. Strictly speaking, this is not an
-      // error. But, silently returning undef will make us miss other bugs in
-      // our implementation. If a test manifest actually uses this feature,
-      // modify it so that the undeclared variable is set to Undef.
-      case None => throw EvalError(s"undefined variable: $x (${expr.pos})")
-    }
+    case Var(x) => env.getOrError(x)
     case Array(es) => Array(es.map(e => evalExpr(env, e)))
     case App("template", Seq(e)) => evalExpr(env, e) match {
       // TODO(arjun): This is bogus. It is supposed to use filename as a
@@ -288,18 +322,41 @@ object PuppetEval2 {
     g ++ es1 ++ es2 ++ es3 ++ es4 + dst - src1 - src2
   }
 
-  def instantiateClass(st: State, classNode: Node): State = {
-    require(classNode.typ == "class")
-    val title = classNode.title
+  def evalArgs(formals: Map[String, Option[Expr]], actuals: Map[String, Expr], env: Env): Map[String, Expr] = {
+    val unexpected = actuals.keySet -- actuals.keySet
+    if (unexpected.isEmpty == false) {
+      throw EvalError(s"unexpected arguments: ${unexpected}")
+    }
+    formals.toList.map {
+      case (x, None) => actuals.get(x) match {
+        case Some(v) => (x, v)
+        case None => throw EvalError(s"expected argument $x")
+      }
+      case (x, Some(default)) => actuals.get(x) match {
+        case Some(v) => (x, v)
+        // Notice that default expressions are evaluated in the lexical scope
+        // of the type definition, but with $title bound dynamically.
+        case None => (x, evalExpr(env, default))
+      }
+    }.toMap
+  }
+
+  def instantiateClass(st: State, node: Node): State = {
+    require(node.typ == "class")
+    val title = node.title
     st.classGraph.get(title) match {
       // Class has already been instantiated, splice it in where necesarry
       case Some(deps) =>
           st.copy(deps = splice(st.deps, st.deps.get(Node("class", title)), deps))
       case None => st.classes.get(title) match {
-        case Some(VClass(_, classEnv, args, m)) => {
-          assert(args.size == 0, "not implemented class args")
-          val st1 = evalManifest(st.copy(deps = Graph.empty), m)
-          st1.copy(deps = splice(st.deps, st.deps.get(Node("class", title)), st1.deps),
+        case Some(VClass(_, env, formals, m)) => {
+          val ResourceVal(_, _, actuals) = st.resources(node)
+          val env1 = env.forceSet("title", Str(node.title)).forceSet("name", Str(node.title))
+          val evaluated = evalArgs(formals, actuals, env1)
+          val env2 = (env.newScope ++ evaluated).default("title", Str(node.title)).default("name", Str(node.title))
+          val st1 = evalManifest(st.copy(deps = Graph.empty, env = env2), m)
+          st1.copy(
+            deps = splice(st.deps, st.deps.get(Node("class", title)), st1.deps),
             classGraph = st1.classGraph + (title -> st1.deps)
           )
         }
@@ -315,28 +372,11 @@ object PuppetEval2 {
     if (unexpected.isEmpty == false) {
       throw EvalError(s"unexpected arguments: ${unexpected}")
     }
-    val titlePair = ("title" -> Str(node.title))
-    val evaluated = formals.toList.map {
-      case (x, None) => actuals.get(x) match {
-        case Some(v) => (x, v)
-        case None => throw EvalError(s"expected argument $x")
-      }
-      case (x, Some(default)) => actuals.get(x) match {
-        case Some(v) => (x, v)
-        // Notice that default expressions are evaluated in the lexical scope
-        // of the type definition, but with $title bound dynamically.
-        case None => (x, evalExpr(env + titlePair, default))
-      }
-    }.toMap
-    val evaluatedPrime = evaluated.get("name") match {
-      case None => evaluated + ("name" -> Str(node.title))
-      case _ => evaluated
-    }
-    val st1 = evalManifest(st.copy(deps = Graph.empty,
-                                   env = evaluatedPrime.toMap + titlePair),
-                           m)
-    st1.copy(deps = splice(st.deps, node, st1.deps),
-             resources = st1.resources - node)
+    val env1 = env.forceSet("title", Str(node.title)).forceSet("name", Str(node.title))
+    val evaluated = evalArgs(formals, actuals, env1)
+    val env2 = (env.newScope ++ evaluated).default("title", Str(node.title)).default("name", Str(node.title))
+    val st1 = evalManifest(st.copy(deps = Graph.empty, env = env2), m)
+    st1.copy(deps = splice(st.deps, node, st1.deps), resources = st1.resources - node)
   }
 
 
@@ -361,7 +401,7 @@ object PuppetEval2 {
   val emptyState = State(
     resources = Map(),
     deps = Graph.empty,
-    env = Map("title" -> Str("main"), "name" -> Str("main")),
+    env = Env.empty + ("title" -> Str("main")) + ("name" -> Str("main")),
     definedTypes = Map(),
     classes = Map(),
     classGraph = Map(),
