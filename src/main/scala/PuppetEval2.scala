@@ -359,10 +359,25 @@ object PuppetEval2 {
   }
 
   def addStage(stage: String, node: Node, stages: Map[String, Set[Node]]): Map[String, Set[Node]] =
-      stages.get(stage) match {
-        case None => stages + (stage -> Set(node))
-        case Some(set) => stages + (stage -> (set + node))
-      }
+    stages.get(stage) match {
+      case None => stages + (stage -> Set(node))
+      case Some(set) => stages + (stage -> (set + node))
+    }
+
+  //TODO(Rian)
+  //General idea: 
+  //nodes = st.stages.get(s.title)
+  //edges = all edges involving a Node in nodes
+  //Graph.from(nodes, edges)
+  def partitionGraph(st: State, s: Node): Graph[Node, DiEdge] = {
+    val nodes = st.stages.get(s.title)
+    val edges = Set()
+    Graph()
+  }
+
+  def expandStage(st: State, s: Node): State = {
+    st.copy(deps = splice(st.deps, st.deps.get(s), partitionGraph(st, s)))
+  }
 
   def stageExpansion(st: State): State = {
     val st1 = st
