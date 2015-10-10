@@ -385,8 +385,8 @@ object PuppetEval2 {
 
   def expandStage(stage: Node, st: State): State = {
     require(stage.typ == "stage")
-    val stageNodes = st.stages.getOrElse(stage.title, throw new Exception(s"Stage should be in map. $stage"))
-    val dependencies = st.deps.get(stage).incoming.map(x => st.stages.getOrElse(x.head.value.title, throw new Exception(s"Stage should be in map. $stage"))).flatten
+    val stageNodes = st.stages.getOrElse(stage.title, throw new Exception(s"Stage should be in map. $stage")).filter(x => st.deps.contains(x))
+    val dependencies = st.deps.get(stage).incoming.map(x => st.stages.getOrElse(x.head.value.title, throw new Exception(s"Stage should be in map. $stage"))).flatten.filter(x => st.deps.contains(x))
     val st2 =
       stageNodes.foldRight(st)((n, st1) =>
         st1.copy(
