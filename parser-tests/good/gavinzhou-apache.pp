@@ -1,5 +1,7 @@
 # From https://github.com/gavinzhou/puppet-module/tree/ad3f8244809adc6cb452d2e1b2feee0d6de363bd/apache/manifests
 
+include apache
+
 class apache {
   include apache::install
   include apache::config
@@ -65,20 +67,20 @@ class apache::config {
         group   => "apache",
         mode    => "0755";
     }
-    
-    cron { 
-        "apache-log-arh":
-        command => "gzip /var/log/httpd/*log.$(date +\%Y\%m\%d -d '3 days ago')",
-        user    => "root",
-        hour    => "4",
-        minute  => "0";
-
-        "apache-log-del": 
-        command => "/bin/rm /var/log/httpd/*log.$(date +\%Y\%m\%d -d '30 days ago').gz",
-        user    => "root",
-        hour    => "4",
-        minute  => "20";
-    }
+# HACK(jcollard): We do not support cron    
+#    cron { 
+#        "apache-log-arh":
+#        command => "gzip /var/log/httpd/*log.$(date +\%Y\%m\%d -d '3 days ago')",
+#        user    => "root",
+#        hour    => "4",
+#        minute  => "0";
+#
+#        "apache-log-del": 
+#        command => "/bin/rm /var/log/httpd/*log.$(date +\%Y\%m\%d -d '30 days ago').gz",
+#        user    => "root",
+#        hour    => "4",
+#        minute  => "20";
+#    }
 
     augeas { "tcp_max_tw":
         context => "/files/etc/sysctl.conf",
@@ -111,7 +113,8 @@ define apache::vhost( $port=80,
 class apache::install {
     package { "apache":
         name    => [ "httpd", "httpd-devel.x86_64", "mod_ssl", "distcache", "mod_extract_forwarded",],
-        ensure  => "installed",
-        require => [Class["yumrepo"], Class["php"],],
+      ensure  => "installed",
+# HACK(jcollard): External      
+#        require => [Class["yumrepo"], Class["php"],],
     }
 }
