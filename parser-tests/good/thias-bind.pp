@@ -5,6 +5,15 @@
 # HACK(arjun): Added to instantiate the class
 include bind
 
+# TODO(jcollard): We don't support inheritance, using top level functions instead
+# Take inherited values as those in the 'Debian' version
+$::osfamily = 'Debian'
+$::bind::params::packagenameprefix = 'bind9'
+$::bind::params::servicename       = 'bind9'
+$::bind::params::binduser          = 'bind'
+$::bind::params::bindgroup         = 'bind'
+
+
 # Class: bind
 #
 # Install and enable an ISC BIND server.
@@ -24,7 +33,9 @@ include bind
 #
 class bind (
   $chroot            = false,
-  $service_reload    = true,
+  # HACK(jcollard): Prevents bind::service from updating
+  # on instantiation
+  $service_reload    = false,
   $packagenameprefix = $::bind::params::packagenameprefix,
 ) inherits ::bind::params {
 
@@ -39,7 +50,9 @@ class bind (
     packagenamesuffix => $packagenamesuffix,
   }
   class { 'bind::service':
-    servicename    => $servicename,
+    #    servicename    => $servicename,
+    # HACK(jcollard): Bypassing inheritance
+    servicename    => $::bind::params::servicename,
     service_reload => $service_reload,
   }
 
