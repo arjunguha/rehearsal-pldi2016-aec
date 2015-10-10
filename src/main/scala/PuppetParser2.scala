@@ -120,7 +120,7 @@ class PuppetParser2 extends RegexParsers with PackratParsers {
     stringVal ^^ { x => Str(x) } |
     """\d+""".r ^^
       { n => Num(n.toInt) } |
-    "[" ~> repsep(expr, ",") <~ "]" ^^ { case es => Array(es) } |
+    "[" ~ repsep(expr, ",") ~ opt(",") ~ "]" ^^ { case _ ~ es ~ _ ~ _ => Array(es) } |
     word ~ "(" ~ repsep(expr, ",") ~ ")" ^^ { case f ~ _ ~ xs ~ _  => App(f, xs) } |
     ("/" ~> "[^/]*".r <~ "/") ^^ { case expr => Regex(expr) } |
     word ~ "[" ~ expr ~ "]" ^^
