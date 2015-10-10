@@ -57,6 +57,7 @@ object ResourceSemantics {
         val content = attrs.consume("content", "")
         val force = attrs.consume("force", false)
 
+        attrs.consume("seltype", "") // TODO(jcollard): Explicityl ignoring seltype.
         attrs.consume("alias", "") // TODO(arjun): Does this induce edges?
         attrs.consume("group", "root")
         attrs.consume("owner", "root")
