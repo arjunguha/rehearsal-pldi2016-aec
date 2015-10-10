@@ -95,6 +95,7 @@ object ResourceSemantics {
         val manageHome = attrs.consume("managehome", false)
         attrs.consume("comment", "")
         attrs.consume("shell", "")
+        attrs.consume("groups", "")
         User(name, present, manageHome)
       }
       case "service" => {
@@ -104,6 +105,7 @@ object ResourceSemantics {
         attrs.consume("hasrestart", false)
         attrs.consume("enable", false)
         attrs.consume("ensure", "running")
+        attrs.consume("restart", "")
         Service(name)
       }
       case "ssh_authorized_key" => {
