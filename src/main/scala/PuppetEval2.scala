@@ -383,25 +383,24 @@ object PuppetEval2 {
       case Some(set) => stages + (stage -> (set + node))
     }
 
-  //TODO(Rian)
-  //General idea: 
-  //nodes = st.stages.get(s.title)
-  //edges = all edges involving a Node in nodes
-  //Graph.from(nodes, edges)
-  def partitionGraph(st: State, s: Node): Graph[Node, DiEdge] = {
-    val nodes = st.stages.get(s.title)
-    val edges = Set()
-    Graph()
+  def linkStages(resources: Set[Node])(dependency: Node, st: State) = {
+    require(dependency.typ == "stage")
+    throw new Exception()
   }
 
-  def expandStage(st: State, s: Node): State = {
-    st.copy(deps = splice(st.deps, st.deps.get(s), partitionGraph(st, s)))
+  def expandStage(stage: Node, st: State): State = {
+    require(stage.typ == "stage")
+    val stageNodes = st.stages.getOrElse(stage.title, throw new Exception(s"Stage should be in map. $stage"))
+    st.deps
+    val dependencies = st.deps.get(stage).incoming.map(x => x.head.value)
+    dependencies.foldRight(st)(linkStages(stageResources))
+    st
   }
 
   def stageExpansion(st: State): State = {
     val st1 = st
     val instStages = st1.deps.nodes.filter(_.typ == "stage").map(_.value)
-    st1
+    instStages.foldRight(st)(expandStage)
   }
 
   def eliminateAliases(st: State): State = {
