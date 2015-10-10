@@ -1,6 +1,10 @@
 # From https://github.com/thias/puppet-bind
 # Changed usage of selector syntax on a boolean to an if-then-else expression.
 
+
+# HACK(arjun): Added to instantiate the class
+include bind
+
 # Class: bind
 #
 # Install and enable an ISC BIND server.
@@ -136,3 +140,4 @@ class bind::service (
   }
 
 }
+
