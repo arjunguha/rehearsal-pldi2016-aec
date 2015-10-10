@@ -71,7 +71,7 @@ object ResourceSemantics {
           case "absent" => AbsentPath(path, force)
           case "file" => EnsureFile(path, content)
           case "directory" => Directory(path)
-          case "link" => File(path, attrs.consume[String]("target"), true)
+          case "link" => File(attrs.consume[String]("target"), "", true) // TODO(arjun): contents?
           case _ => throw FSCompileError("unexpected ensure value")
         }
       }
