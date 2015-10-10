@@ -418,15 +418,27 @@ object PuppetEval2 {
   }
 
   def addStage(stage: String, node: Node, stages: Map[String, Set[Node]]): Map[String, Set[Node]] =
-      stages.get(stage) match {
-        case None => stages + (stage -> Set(node))
-        case Some(set) => stages + (stage -> (set + node))
-      }
+    stages.get(stage) match {
+      case None => stages + (stage -> Set(node))
+      case Some(set) => stages + (stage -> (set + node))
+    }
+
+  def expandStage(stage: Node, st: State): State = {
+    require(stage.typ == "stage")
+    val stageNodes = st.stages.getOrElse(stage.title, throw new Exception(s"Stage should be in map. $stage"))
+    val dependencies = st.deps.get(stage).incoming.map(x => st.stages.getOrElse(x.head.value.title, throw new Exception(s"Stage should be in map. $stage"))).flatten
+    val st2 =
+      stageNodes.foldRight(st)((n, st1) =>
+        st1.copy(
+          deps = st1.deps ++ dependencies.map(x => DiEdge(x, n))
+        )
+      )
+    st2.copy( deps = st2.deps - stage )
+  }
 
   def stageExpansion(st: State): State = {
-    val st1 = st
-    val instStages = st1.deps.nodes.filter(_.typ == "stage").map(_.value)
-    st1
+    val instStages = st.deps.nodes.filter(_.typ == "stage").map(_.value)
+    instStages.foldRight(st)(expandStage)
   }
 
   def eliminateAliases(st: State): State = {
