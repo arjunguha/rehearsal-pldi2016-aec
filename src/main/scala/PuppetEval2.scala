@@ -15,32 +15,32 @@ object PuppetEval2 {
     val parser = new PuppetParser2()
     import parser._
 
-    def interpolate(env: Env, str: String): Expr = {
+    def interpolate(st: State, env: Env, str: String): Expr = {
       val strs = str.split("""\$""")
-      Str(strs(0) + strs.toList.drop(1).map(helper(env)).mkString(""))
+      Str(strs(0) + strs.toList.drop(1).map(helper(st, env)).mkString(""))
     }
 
-    def helper(env: Env)(str: String): String = {
+    def helper(st: State, env: Env)(str: String): String = {
       val tokens = str.split("""\s+""").toList
-      checkBraces(env, tokens(0)) + tokens.drop(1).mkString("")
+      checkBraces(st, env, tokens(0)) + tokens.drop(1).mkString("")
     }
 
-    def checkBraces(env: Env, str: String): String = {
+    def checkBraces(st: State, env: Env, str: String): String = {
       str.indexOf("{") match {
         case 0 => {
           val ix = str.indexOf("}")
           val expr = str.substring(1, ix)
           val rest = str.substring(ix+1, str.length)
-          evaluate(env, expr) + rest
+          evaluate(st, env, expr) + rest
         }
-        case _ => evaluate(env, str)
+        case _ => evaluate(st, env, str)
       }
     }
 
-    def evaluate(env: Env, str: String): String = {
+    def evaluate(st: State, env: Env, str: String): String = {
       val strPrime = if(str.charAt(0) != '$') "$" + str else str
       parseAll(expr, strPrime) match {
-        case Success(expr, _) => evalExpr(env, expr) match {
+        case Success(expr, _) => evalExpr(st, env, expr) match {
           case Str(s) => s
           case _ => throw EvalError(s"None string expression evaluated during string interpolation: $expr")
         }
@@ -116,18 +116,18 @@ object PuppetEval2 {
                    stages: Map[String, Set[Node]],
                    aliases: Map[Node, Node])
 
-  def evalAttrs(env: Env, attrs: Seq[Attribute]): Map[String, Expr] = {
+  def evalAttrs(st: State, env: Env, attrs: Seq[Attribute]): Map[String, Expr] = {
     // TODO(arjun): duplicates are probably an error
     attrs.map({
-      case Attribute(kExpr, v) => evalExpr(env, kExpr) match {
-        case Str(k) => k -> evalExpr(env, v)
+      case Attribute(kExpr, v) => evalExpr(st, env, kExpr) match {
+        case Str(k) => k -> evalExpr(st, env, v)
         case _ => throw EvalError("attribute key should be a string")
       }
     }).toMap
   }
 
-  def evalTitle(env: Env, titleExpr: Expr): String = {
-    evalExpr(env, titleExpr) match {
+  def evalTitle(st: State, env: Env, titleExpr: Expr): String = {
+    evalExpr(st, env, titleExpr) match {
       case Str(title) => title
       case v => throw EvalError(s"title should be a string, but got $v ${titleExpr.pos}")
     }
@@ -157,13 +157,13 @@ object PuppetEval2 {
   def evalResource(st: State, resource: Resource): (State, List[Node]) = {
     resource match {
       case ResourceRef(typ, titleExpr, Seq()) => {
-        val node = Node(typ.toLowerCase, evalTitle(st.env, titleExpr))
+        val node = Node(typ.toLowerCase, evalTitle(st, st.env, titleExpr))
         (st.copy(deps = st.deps + node), List(node))
       }
       case ResourceDecl(typ, lst) => {
         val (vals, relationships, aliases) = lst.map({ case (titleExpr, attrs) =>
-          val attrVals = evalAttrs(st.env, attrs)
-          val resource = ResourceVal(typ, evalTitle(st.env, titleExpr),
+          val attrVals = evalAttrs(st, st.env, attrs)
+          val resource = ResourceVal(typ, evalTitle(st, st.env, titleExpr),
                                      attrVals -- metaparameters)
           val relationships = extractRelationships(resource.node, attrVals)
           val aliases = attrVals.get("alias") match {
@@ -208,9 +208,9 @@ object PuppetEval2 {
     }
   }
 
-  def matchCase(env: Env, v: Expr, aCase: Case): Boolean = aCase match {
+  def matchCase(st: State, env: Env, v: Expr, aCase: Case): Boolean = aCase match {
     case CaseDefault(_) => true
-    case CaseExpr(e, _) => evalExpr(env, e) == v
+    case CaseExpr(e, _) => evalExpr(st, env, e) == v
   }
 
   def evalManifest(st: State, manifest: Manifest): State = manifest match {
@@ -240,27 +240,27 @@ object PuppetEval2 {
         st.copy(classes = st.classes + (f -> vc))
       }
     }
-    case ESet(x, e) => st.copy(env = st.env + (x -> evalExpr(st.env, e)))
-    case ITE(e, m1, m2) => evalBool(st.env, e) match {
+    case ESet(x, e) => st.copy(env = st.env + (x -> evalExpr(st, st.env, e)))
+    case ITE(e, m1, m2) => evalBool(st, st.env, e) match {
       case true => evalManifest(st, m1)
       case false => evalManifest(st, m2)
     }
     case Include(titleExpr) => {
-      val title = evalTitle(st.env, titleExpr)
+      val title = evalTitle(st, st.env, titleExpr)
       // TODO(arjun): Dependencies? Does include make the outer class depend on this class?
       val res = ResourceVal("class", title, Map())
       val node = Node("class", title)
       st.copy(resources = st.resources + (node -> res), deps = st.deps + node)
     }
-    case MApp("fail", Seq(str)) => evalExpr(st.env, str) match {
+    case MApp("fail", Seq(str)) => evalExpr(st, st.env, str) match {
       // TODO(arjun): Different type of error
       case Str(str) => throw EvalError(s"user-defined failure: $str")
       case v => throw EvalError(s"expected string argument, got $v ${manifest.pos}")
     }
     case MApp(f, _) => throw NotImplemented("unsupported function: $f ${manifest.pos}")
     case MCase(e, cases) => {
-      val v = evalExpr(st.env, e)
-      cases.find(c => matchCase(st.env, v, c)) match {
+      val v = evalExpr(st, st.env, e)
+      cases.find(c => matchCase(st, st.env, v, c)) match {
         case None => st
         case Some(CaseDefault(m)) => evalManifest(st, m)
         case Some(CaseExpr(_, m)) => evalManifest(st, m)
@@ -270,34 +270,40 @@ object PuppetEval2 {
 
   // Helps implement conditionals. "Truthy" values are mapped to Scala's true
   // and "falsy" values are mapped to Scala's false.
-  def evalBool(env: Env, expr: Expr): Boolean = evalExpr(env, expr) match {
+  def evalBool(st: State, env: Env, expr: Expr): Boolean = evalExpr(st, env, expr) match {
     case Bool(true) => true
     case Bool(false) => false
+    case Str(_) => true
     case Undef => false
     case v => throw EvalError(s"predicate evaluated to $v")
   }
 
-  def evalExpr(env: Env, expr: Expr): Expr = expr match {
+  def evalExpr(st: State, env: Env, expr: Expr): Expr = expr match {
     case Undef => Undef
     case Num(n) => Num(n)
-    case Str(str) => StringInterpolator.interpolate(env, str)
+    case Str(str) => StringInterpolator.interpolate(st, env, str)
     case Bool(b) => Bool(b)
-    case EResourceRef(typ, title) => EResourceRef(typ.toLowerCase, evalExpr(env, title))
-    case Eq(e1, e2) => Bool(evalExpr(env, e1) == evalExpr(env, e2))
-    case Not(e) => Bool(!evalBool(env, e))
+    case EResourceRef(typ, title) => EResourceRef(typ.toLowerCase, evalExpr(st, env, title))
+    case Eq(e1, e2) => Bool(evalExpr(st, env, e1) == evalExpr(st, env, e2))
+    case Not(e) => Bool(!evalBool(st, env, e))
+    case And(e1, e2) => Bool(evalBool(st, env, e1) && evalBool(st, env, e2))
     case Var(x) => env.getOrError(x)
-    case Array(es) => Array(es.map(e => evalExpr(env, e)))
-    case App("template", Seq(e)) => evalExpr(env, e) match {
+    case Array(es) => Array(es.map(e => evalExpr(st, env, e)))
+    case App("template", Seq(e)) => evalExpr(st, env, e) match {
       // TODO(arjun): This is bogus. It is supposed to use filename as a
       // template string. The file contents have patterns that refer to variables
       // in the environment.
       case Str(filename) => Str(filename)
       case _ => throw EvalError("template function expects a string argument")
     }
+    case App("defined", Seq(rref)) => evalExpr(st, st.env, rref) match {
+      case EResourceRef(typ, Str(title)) => Bool(st.resources.contains(Node(typ, title)))
+      case v => throw EvalError(s"expected resource reference as argument to defined")
+    }
     case App(f, args) => throw NotImplemented(s"function $f (${expr.pos})")
-    case Cond(e1, e2, e3) => evalBool(env, e1) match {
-      case true => evalExpr(env, e2)
-      case false => evalExpr(env, e3)
+    case Cond(e1, e2, e3) => evalBool(st, env, e1) match {
+      case true => evalExpr(st, env, e2)
+      case false => evalExpr(st, env, e3)
     }
     case _ => throw NotImplemented(expr.toString)
   }
@@ -322,7 +328,7 @@ object PuppetEval2 {
     g ++ es1 ++ es2 ++ es3 ++ es4 + dst - src1 - src2
   }
 
-  def evalArgs(formals: Map[String, Option[Expr]], actuals: Map[String, Expr], env: Env): Map[String, Expr] = {
+  def evalArgs(st: State, formals: Map[String, Option[Expr]], actuals: Map[String, Expr], env: Env): Map[String, Expr] = {
     val unexpected = actuals.keySet -- actuals.keySet
     if (unexpected.isEmpty == false) {
       throw EvalError(s"unexpected arguments: ${unexpected}")
@@ -336,7 +342,7 @@ object PuppetEval2 {
         case Some(v) => (x, v)
         // Notice that default expressions are evaluated in the lexical scope
         // of the type definition, but with $title bound dynamically.
-        case None => (x, evalExpr(env, default))
+        case None => (x, evalExpr(st, env, default))
       }
     }.toMap
   }
@@ -352,7 +358,7 @@ object PuppetEval2 {
         case Some(VClass(_, env, formals, m)) => {
           val ResourceVal(_, _, actuals) = st.resources(node)
           val env1 = env.forceSet("title", Str(node.title)).forceSet("name", Str(node.title))
-          val evaluated = evalArgs(formals, actuals, env1)
+          val evaluated = evalArgs(st, formals, actuals, env1)
           val env2 = (env.newScope ++ evaluated).default("title", Str(node.title)).default("name", Str(node.title))
           val st1 = evalManifest(st.copy(deps = Graph.empty, env = env2), m)
           st1.copy(
@@ -373,7 +379,7 @@ object PuppetEval2 {
       throw EvalError(s"unexpected arguments: ${unexpected}")
     }
     val env1 = env.forceSet("title", Str(node.title)).forceSet("name", Str(node.title))
-    val evaluated = evalArgs(formals, actuals, env1)
+    val evaluated = evalArgs(st, formals, actuals, env1)
     val env2 = (env.newScope ++ evaluated).default("title", Str(node.title)).default("name", Str(node.title))
     val st1 = evalManifest(st.copy(deps = Graph.empty, env = env2), m)
     st1.copy(deps = splice(st.deps, node, st1.deps), resources = st1.resources - node)

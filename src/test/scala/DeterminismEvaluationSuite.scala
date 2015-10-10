@@ -43,7 +43,7 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
   }
 
   //not in parser-tests yet
-  ignore("xdrum-rsyslog.pp") {
+  test("xdrum-rsyslog.pp") {
     val g = parseFile(s"$root/xdrum-rsyslog.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
