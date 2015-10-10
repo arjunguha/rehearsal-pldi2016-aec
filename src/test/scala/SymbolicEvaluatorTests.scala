@@ -4,10 +4,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
   import FSSyntax._
   import scalax.collection.Graph
   import scalax.collection.GraphEdge.DiEdge
-  import puppet.syntax.parse
-  import puppet.Facter
   import rehearsal.Implicits._
-  import java.nio.file.Path
   import java.nio.file.Paths
   import Evaluator._
 

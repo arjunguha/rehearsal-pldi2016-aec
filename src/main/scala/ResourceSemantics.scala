@@ -56,6 +56,15 @@ object ResourceSemantics {
         val path = attrs.consume("path", resource.title)
         val content = attrs.consume("content", "")
         val force = attrs.consume("force", false)
+
+        attrs.consume("alias", "") // TODO(arjun): Does this induce edges?
+        attrs.consume("group", "root")
+        attrs.consume("owner", "root")
+        attrs.consume("mode", "0644")
+        attrs.consume("recurse", false) // TODO(arjun): necessary to model?
+        attrs.consume("purge", false) // TODO(arjun): necessary to model?
+        attrs.consume("source", "") // TODO(arjun): I think this is meant to be mutually exclusive with "content"
+
         attrs.consume("ensure", "present") match {
           case "present" => File(path, content, force)
           case "absent" => AbsentPath(path, force)
@@ -86,6 +95,11 @@ object ResourceSemantics {
       }
       case "service" => {
         val name = attrs.consume("name", resource.title)
+        // TODO(arjun): Ignored attributes
+        attrs.consume("hasstatus", false)
+        attrs.consume("hasrestart", false)
+        attrs.consume("enable", false)
+        attrs.consume("ensure", "running")
         Service(name)
       }
       case "ssh_authorized_key" => {
