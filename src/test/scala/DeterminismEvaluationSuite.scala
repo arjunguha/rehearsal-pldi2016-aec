@@ -16,7 +16,7 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
   }
 
   //not in parser-tests yet
-  ignore("puppet-hosting.pp") {
+  test("puppet-hosting.pp") {
     val g = parseFile(s"$root/puppet-hosting.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
@@ -26,13 +26,12 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
-  test("nfisher-SpikyIRC.pp") {
+  ignore("nfisher-SpikyIRC.pp") {
     val g = parseFile(s"$root/nfisher-SpikyIRC.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)) == false)
   }
 
-  //not in parser-tests yet
-  ignore("ghoneycutt-xinetd.pp") {
+  test("ghoneycutt-xinetd.pp") {
     val g = parseFile(s"$root/ghoneycutt-xinetd.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
