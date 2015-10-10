@@ -129,7 +129,7 @@ object PuppetEval2 {
   def evalTitle(env: Env, titleExpr: Expr): String = {
     evalExpr(env, titleExpr) match {
       case Str(title) => title
-      case _ => throw EvalError("title should be a string")
+      case v => throw EvalError(s"title should be a string, but got $v ${titleExpr.pos}")
     }
   }
 
