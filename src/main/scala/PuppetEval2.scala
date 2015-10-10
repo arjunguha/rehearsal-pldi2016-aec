@@ -383,23 +383,21 @@ object PuppetEval2 {
       case Some(set) => stages + (stage -> (set + node))
     }
 
-  def linkStages(resources: Set[Node])(dependency: Node, st: State) = {
-    require(dependency.typ == "stage")
-    throw new Exception()
-  }
-
   def expandStage(stage: Node, st: State): State = {
     require(stage.typ == "stage")
     val stageNodes = st.stages.getOrElse(stage.title, throw new Exception(s"Stage should be in map. $stage"))
-    st.deps
-    val dependencies = st.deps.get(stage).incoming.map(x => x.head.value)
-    dependencies.foldRight(st)(linkStages(stageResources))
-    st
+    val dependencies = st.deps.get(stage).incoming.map(x => st.stages.getOrElse(x.head.value.title, throw new Exception(s"Stage should be in map. $stage"))).flatten
+    val st2 =
+      stageNodes.foldRight(st)((n, st1) =>
+        st1.copy(
+          deps = st1.deps ++ dependencies.map(x => DiEdge(x, n))
+        )
+      )
+    st2.copy( deps = st2.deps - stage )
   }
 
   def stageExpansion(st: State): State = {
-    val st1 = st
-    val instStages = st1.deps.nodes.filter(_.typ == "stage").map(_.value)
+    val instStages = st.deps.nodes.filter(_.typ == "stage").map(_.value)
     instStages.foldRight(st)(expandStage)
   }
 
