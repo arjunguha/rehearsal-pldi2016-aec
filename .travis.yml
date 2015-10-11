@@ -6,6 +6,7 @@ jdk: openjdk7
 script:
   - git clone https://github.com/regb/scala-smtlib.git
   - cd scala-smtlib
+  - git checkout 711e9a1ef994935482bc83ff3795a94f637f0a04
   - sbt publish-local
   - cd ..
   - sbt compile
