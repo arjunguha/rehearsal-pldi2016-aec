@@ -126,6 +126,14 @@ object PuppetEval2 {
     }).toMap
   }
 
+  def evalTitles(st: State, env: Env, titleExpr: Expr): Seq[String] = {
+    evalExpr(st, env, titleExpr) match {
+      case Str(title) => Seq(title)
+      case Array(titles) => titles.map(x => evalTitle(st, env, x))
+      case v => throw EvalError(s"title should be a string or an array, but got $v{titleExpr.pos}")
+    }
+  }
+
   def evalTitle(st: State, env: Env, titleExpr: Expr): String = {
     evalExpr(st, env, titleExpr) match {
       case Str(title) => title
@@ -152,6 +160,10 @@ object PuppetEval2 {
 
   val metaparameters = Seq("before", "require", "notify", "subscribe", "alias")
 
+
+  def evalResourceTitles(titleExpr: Expr, attrVals: Map[String, Expr]): List[ResourceVal] =
+    throw new Exception()
+
   // Produces a new state and a list of resource titles
   // TODO(arjun): Handle "require" and "before" dependencies.
   def evalResource(st: State, resource: Resource): (State, List[Node]) = {
@@ -163,33 +175,31 @@ object PuppetEval2 {
       case ResourceDecl(typ, lst) => {
         val (vals, relationships, aliases) = lst.map({ case (titleExpr, attrs) =>
           val attrVals = evalAttrs(st, st.env, attrs)
-          val resource = ResourceVal(typ, evalTitle(st, st.env, titleExpr),
-                                     attrVals -- metaparameters)
-          val relationships = extractRelationships(resource.node, attrVals)
+          val resources = evalTitles(st, st.env, titleExpr).map(title => ResourceVal(typ, title, attrVals -- metaparameters))
+          val relationships: Seq[Graph[Node, DiEdge]] = resources.map(r => extractRelationships(r.node, attrVals))
           val aliases = attrVals.get("alias") match {
             case Some(v) => {
               val alias = v.value[String].getOrElse(throw EvalError("alias must be a string"))
-              Map(Node(typ, alias) -> resource.node)
+              resources.map(r => Map(Node(typ, alias) -> r.node)).reduce(_ ++ _)
             }
             case None => Map[Node, Node]()
           }
-          (resource, relationships, aliases)
+          (resources, relationships, aliases)
         }).unzip3
-        val aliasMap = aliases.reduce(_ ++ _)
-
-        val newNodes: Set[Node] = vals.map(_.node).toSet
+        val aliasMap: Map[Node,Node] = aliases.reduce(_ ++ _)
+        val newNodes: Set[Node] = vals.map(_.map(_.node)).flatten.toSet
         //println(s"Creating nodes $nodes")
         val redefinedResources = st.resources.keySet.intersect(newNodes)
         if (redefinedResources.isEmpty == false) {
           throw EvalError(s"${redefinedResources.head} is already defined")
         }
         else {
-          val newResources = vals.map(r => r.node -> r).toMap
+          val newResources: Map[Node, ResourceVal] = vals.map(rs => rs.map(r => r.node -> r).toMap).reduce(_ ++ _)
           (st.copy(resources = st.resources ++ newResources,
                    deps = st.deps ++
                      Graph[Node, DiEdge](aliasMap.keys.toSeq: _*) ++
                      Graph.from(newNodes, edges = Set()) ++
-                     relationships.reduce(_ union _),
+                     relationships.flatten.reduce(_ union _),
                    stages = newResources.foldRight(st.stages)(updateStage),
                    aliases = st.aliases ++ aliasMap),
            newNodes.toList)
