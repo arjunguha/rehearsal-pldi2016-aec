@@ -40,6 +40,11 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     assert(SymbolicEvaluator.isDeterministic(g) == true)
   }  
 
+  test("pdurbin-java-jpa-tutorial.pp") {
+    val g = parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph.fsGraph
+    assert(SymbolicEvaluator.isDeterministic(g) == true)
+  }
+
   test("thias-ntp.pp") {
     val g = parseFile(s"$root/thias-ntp.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministic(g) == false)
