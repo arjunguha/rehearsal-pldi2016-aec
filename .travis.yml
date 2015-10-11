@@ -3,6 +3,12 @@ sudo: false
 scala:
  - 2.11.7
 jdk: openjdk7
+script:
+  - git clone https://github.com/regb/scala-smtlib.git
+  - cd scala-smtlib
+  - sbt publish-local
+  - cd ..
+  - sbt compile
 cache:
   directories:
     - /home/travis/.ivy2
