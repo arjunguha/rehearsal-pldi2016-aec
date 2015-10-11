@@ -3,8 +3,7 @@
 include apache
 
 class apache {
-  include apache::install
-  include apache::config
+  include apache::install, apache::config
 }
 
 class apache::config {
