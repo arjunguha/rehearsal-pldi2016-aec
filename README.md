@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/plasma-umass/rehearsal.svg?branch=master)](https://travis-ci.org/plasma-umass/rehearsal)
+[![Build Status](https://magnum.travis-ci.com/plasma-umass/rehearsal.svg?token=qLSQpCbsY9CMXsHZVJDd)](https://magnum.travis-ci.com/plasma-umass/rehearsal)
 
 rehearsal
 =========
