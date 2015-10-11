@@ -113,7 +113,75 @@ class apache::install {
     package { "apache":
         name    => [ "httpd", "httpd-devel.x86_64", "mod_ssl", "distcache", "mod_extract_forwarded",],
       ensure  => "installed",
-# HACK(jcollard): External      
-#        require => [Class["yumrepo"], Class["php"],],
+      require => [Class["yumrepo"], Class["php"],],
     }
+}
+
+# HACK(jcollard): Force instantiation.
+include php, yumrepo
+
+class php::config {
+    $require = Class["php::install"]
+
+# HACK(jcollard): We do not support this
+#    File {
+#        ensure  => present,
+#        owner   => 'root',
+#        group   => 'root',
+#        mode    => 0644,
+#    }
+
+    file { 
+		"/etc/php.ini":
+		source  => "puppet:///modules/php/php.ini";
+    }
+}
+
+class php {
+	include php::install, php::config
+}
+
+class php::redis {
+    package { "php-redis":
+        ensure  => "installed",
+        require => Class["yumrepo"],
+    }
+}
+
+class php::install {
+	package { "php":
+		name    => ["php", "php-devel", "php-gd", "php-mbstring", "php-mcrypt", "php-mysql", "php-ncurses", "php-pdo", "php-pear", "php-pecl-memcache", "php-soap", "php-xml", "php-xmlrpc",],
+		ensure  => installed,
+        require => Class["yumrepo"],
+	}
+}
+
+class yumrepo {
+
+# HACK(jcollard): We do not support this  
+#	File {
+#		owner   => "root",
+#		group   => "root",
+#		mode    => "0644",
+#	}
+
+	file {
+		"/etc/yum.repos.d/centos5.x-local.repo":
+		source  => "puppet:///modules/yumrepo/centos5.x-local.repo";
+
+		"/etc/yum.repos.d/crooz.repo":
+		source  => "puppet:///modules/yumrepo/crooz.repo";
+
+		"/etc/yum.repos.d/puppetlabs.repo":
+		source  => "puppet:///modules/yumrepo/puppetlabs.repo";
+
+		"/etc/yum.repos.d/epel.repo":
+		source  => "puppet:///modules/yumrepo/epel.repo";
+
+        "/etc/yum.repos.d/CentOS-Base.repo":
+        ensure  => absent;
+
+        "/etc/yum.repos.d/CentOS-Media.repo":
+        ensure  => absent;
+	}
 }
