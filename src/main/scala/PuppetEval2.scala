@@ -245,13 +245,8 @@ object PuppetEval2 {
       case true => evalManifest(st, m1)
       case false => evalManifest(st, m2)
     }
-    case Include(titleExpr) => {
-      val title = evalTitle(st, st.env, titleExpr)
-      // TODO(arjun): Dependencies? Does include make the outer class depend on this class?
-      val res = ResourceVal("class", title, Map())
-      val node = Node("class", title)
-      st.copy(resources = st.resources + (node -> res), deps = st.deps + node)
-    }
+    case Include(titleExprs) => titleExprs.foldRight(st)(evalTitle)
+
     case MApp("fail", Seq(str)) => evalExpr(st, st.env, str) match {
       // TODO(arjun): Different type of error
       case Str(str) => throw EvalError(s"user-defined failure: $str")
@@ -266,6 +261,14 @@ object PuppetEval2 {
         case Some(CaseExpr(_, m)) => evalManifest(st, m)
       }
     }
+  }
+
+  def evalTitle(titleExpr: Expr, st: State): State = {
+    val title = evalTitle(st, st.env, titleExpr)
+    // TODO(arjun): Dependencies? Does include make the outer class depend on this class?
+    val res = ResourceVal("class", title, Map())
+    val node = Node("class", title)
+    st.copy(resources = st.resources + (node -> res), deps = st.deps + node)
   }
 
   // Helps implement conditionals. "Truthy" values are mapped to Scala's true

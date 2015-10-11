@@ -50,7 +50,7 @@ object PuppetSyntax2 {
   case class ESet(varName: String, e: Expr) extends Manifest
   case class MCase(e: Expr, cases: Seq[Case]) extends Manifest
   case class ITE(pred: Expr, m1: Manifest, m2: Manifest) extends Manifest
-  case class Include(e: Expr) extends Manifest
+  case class Include(es: List[Expr]) extends Manifest
   case class Require(e: Expr) extends Manifest
   case class MApp(name: String, args: Seq[Expr]) extends Manifest
 

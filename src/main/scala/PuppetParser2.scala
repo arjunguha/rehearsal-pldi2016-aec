@@ -35,8 +35,8 @@ class PuppetParser2 extends RegexParsers with PackratParsers {
       { case _ ~ x ~ xs ~ _ ~ y ~ m => Class(x, xs, Some(y), m) } |
     "case" ~ expr ~ "{" ~ cases ~ "}" ^^
       { case _ ~ e ~ _ ~ lst ~ _ => MCase(e, lst) } |
-    "include" ~ className ^^
-      { case _ ~ x => Include(x) } |
+    "include" ~ repsep(className, ",") ^^
+      { case _ ~ xs => Include(xs) } |
     "require" ~ className ^^
       { case _ ~ x => Require(x) } |
     "if" ~ expr ~ body ~ elses ^^
