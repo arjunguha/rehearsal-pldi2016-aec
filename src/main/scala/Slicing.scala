@@ -39,7 +39,6 @@ object Slicing {
   }
 
   def sliceGraph(g: FileScriptGraph): FileScriptGraph = { Graph()
-    //TODO: (Rian) Get set of all paths that appear in more than one node of G
     val paths  = interferingPaths(g.nodes.map(_.value).toList)
     val nodes = g.nodes.map(p => slice(p, paths))
     val edges = g.edges.map(e => slice(e.from, paths) ~> slice(e.to, paths))
