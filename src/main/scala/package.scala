@@ -1,7 +1,5 @@
 package object rehearsal {
 
-  // import puppet.graph._
-  import Evaluator.{ResourceGraph, eval, expandAll, toGraph}
   import scala.reflect.runtime.universe.TypeTag
   import scalax.collection.GraphPredef._
   import scalax.collection.Graph
@@ -77,7 +75,7 @@ package object rehearsal {
       else { scala.Seq(child) }
     }
   }
-  
+
   def time[A](thunk: => A): (A, Long) = {
     val start = System.currentTimeMillis
     val r = thunk

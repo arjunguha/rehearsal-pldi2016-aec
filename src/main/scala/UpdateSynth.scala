@@ -6,7 +6,6 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
   import ResourceModel._
   import FSSyntax.{Expr, Skip, Block}
   import Eval._
-  import Evaluator.{expandAll, toGraph}
   import smtlib.parser.Commands._
   import smtlib.parser.Terms._
 

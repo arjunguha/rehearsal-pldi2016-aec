@@ -52,9 +52,9 @@ object Implicits {
     }
   }
 
-  implicit class RichManifest(m: Syntax.Manifest) {
+  implicit class RichManifest(m: PuppetSyntax2.Manifest) {
 
-    import Syntax._
+    import PuppetSyntax2._
 
     def >>(other: Manifest) = (m, other) match {
       case (Empty, _) => other

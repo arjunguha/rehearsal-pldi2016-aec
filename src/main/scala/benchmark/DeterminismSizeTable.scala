@@ -3,7 +3,6 @@ package rehearsal
 object DeterminismSizeTables {
 
   import SymbolicEvaluator._
-  import Evaluator._
 
   def bench(label: String, path: String): Unit = {
     val rg = PuppetParser2.parseFile(path).eval().resourceGraph()
