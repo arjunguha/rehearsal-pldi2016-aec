@@ -1,8 +1,12 @@
 language: scala
-sudo: false
+sudo: true
 scala:
  - 2.11.7
 jdk: openjdk7
+addons:
+  apt:
+    packages:
+    - "apt-file"
 script:
   - ./fetch-travis-deps.sh
   - PATH=$PATH:/home/travis/mydeps/z3/bin sbt test
