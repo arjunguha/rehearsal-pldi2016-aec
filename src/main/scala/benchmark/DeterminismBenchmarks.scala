@@ -3,11 +3,10 @@ package rehearsal
 object DeterminismBenchmarks {
 
   import SymbolicEvaluator._
-  import Evaluator._
+  import PuppetEval2._
 
   def bench(label: String, path: String, check: FileScriptGraph => Boolean, onlySliced: Boolean = false): Unit = {
-    val rg = toGraph(eval(expandAll(Parser.parseFile(path))))
-    val g = toFileScriptGraph(rg)
+    val g = PuppetParser2.parseFile(path).eval.resourceGraph.fsGraph
 
     if (!onlySliced) {
       val (r, t) = time(check(g))
@@ -24,19 +23,21 @@ object DeterminismBenchmarks {
   }
 
 
-  val root = "rehearsal/src/test/catalogs"
+  val root = "rehearsal/parser-tests/good"
 
   def run(): Unit = {
     println("Name,Slicing,Size,Time")
     for (i <- 0.until(10)) {
-      bench("monit", s"$root/puppet-monit.json", g => isDeterministicError(g) == true)
-      bench("bind", s"$root/puppet-bind.json", g => isDeterministic(g) == false)
-      bench("hosting", s"$root/puppet-hosting.json", g => isDeterministic(g) == false)
-      bench("dns", s"$root/puppet-powerdns.json", g => isDeterministic(g) == false)
-      bench("irc", s"$root/SpikyIRC.json", g => isDeterministic(g) == false, onlySliced = true)
-      bench("xinetd", s"$root/ghoneycutt-xinetd.json", g => isDeterministic(g) == false)
-      bench("ntp", s"$root/thias-ntp.json", g => isDeterministic(g) == false)
-      bench("rsyslog", s"$root/xdrum-rsyslog.json", g => isDeterministic(g) == false)
+      bench("monit", s"$root/dhoppe-monit.pp", g => isDeterministicError(g) == true)
+      bench("bind", s"$root/thias-bind.pp", g => isDeterministic(g) == false)
+      bench("hosting", s"$root/puppet-hosting.pp", g => isDeterministic(g) == false)
+      bench("dns", s"$root/antonlingstrom-powerdns.pp", g => isDeterministic(g) == false)
+      bench("irc", s"$root/nfisher-SpikyIRC.pp", g => isDeterministic(g) == false, onlySliced = true)
+      bench("xinetd", s"$root/ghoneycutt-xinetd.pp", g => isDeterministic(g) == false)
+      bench("apache", s"$root/gazinzhou-apache.pp", g => isDeterministic(g) == true)
+      bench("jpa", s"$root/pdurbin-java-jpa-tutorial.pp", g => isDeterministic(g) == true)
+      bench("ntp", s"$root/thias-ntp.pp", g => isDeterministic(g) == false)
+      bench("rsyslog", s"$root/xdrum-rsyslog.pp", g => isDeterministic(g) == false)
     }
   }
 
