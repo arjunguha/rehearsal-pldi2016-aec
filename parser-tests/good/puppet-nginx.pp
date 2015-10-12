@@ -1,6 +1,9 @@
 # From https://github.com/BenoitCattie/puppet-nginx/blob/master/manifests/init.pp
 # Selectors replaced with if expressions. Template usage removed.
 
+# Added instantiation.
+include nginx
+
 # Class: nginx
 #
 # Install nginx.
