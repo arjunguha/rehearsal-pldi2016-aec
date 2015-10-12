@@ -1,6 +1,6 @@
 package rehearsal
 
-object Slicing2 {
+object Slicing {
 
   import scala.annotation.tailrec
   import java.nio.file.Path
@@ -35,13 +35,17 @@ object Slicing2 {
     if((allPaths(e, paths) intersect paths) == Set.empty) Skip
     else e
   
+  def interferingPaths(exprs: List[Expr]): Set[Path] = {
+    val allPaths = exprs.map(e => Helpers.exprPaths(e))
+    val counts = allPaths.flatten.groupBy(identity).mapValues(_.length)
+    counts.filter(_._2 > 1).keySet
+  }
+
   def sliceGraph(g: FileScriptGraph): FileScriptGraph = { Graph()
     //TODO: (Rian) Get set of all paths that appear in more than one node of G
-    val paths: Set[Path] = Set()
+    val paths  = interferingPaths(g.nodes.map(_.value).toList)
     val nodes = g.nodes.map(p => slice(p, paths))
     val edges = g.edges.map(e => slice(e.from, paths) ~> slice(e.to, paths))
     Graph.from(nodes, edges)
   }
-
-  
 }
