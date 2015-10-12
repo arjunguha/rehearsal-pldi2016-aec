@@ -1,6 +1,6 @@
 #!/bin/bash
-if [ -d "/home/travis/deps" ]; then
-  echo "/home/travis/deps exists, so not fetching any dependencies"
+if [ -d "/home/travis/mydeps" ]; then
+  echo "/home/travis/mydeps exists, so not fetching any dependencies"
   exit 0
 fi
 
