@@ -305,6 +305,7 @@ object PuppetEval2 {
     
     case Not(e) => Bool(!evalBool(st, env, e))
     case And(e1, e2) => Bool(evalBool(st, env, e1) && evalBool(st, env, e2))
+    case Or(e1, e2) => Bool(evalBool(st, env, e1) || evalBool(st, env, e2))
     case Var(x) => env.getOrError(x)
     case Array(es) => Array(es.map(e => evalExpr(st, env, e)))
     case App("template", Seq(e)) => evalExpr(st, env, e) match {
