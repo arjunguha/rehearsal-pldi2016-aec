@@ -5,8 +5,8 @@ if [ -d "/home/travis/mydeps" ]; then
 fi
 
 cd /home/travis
-mkdir deps
-cd deps
+mkdir mydeps
+cd mydeps
 
 ZIPFILE=z3-4.4.1-x64-ubuntu-14.04.zip
 URL=https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/$ZIPFILE
