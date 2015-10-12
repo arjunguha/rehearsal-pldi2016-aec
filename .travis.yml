@@ -4,15 +4,10 @@ scala:
  - 2.11.7
 jdk: openjdk7
 script:
-  - ./fetch-z3.sh
-  - git clone https://github.com/regb/scala-smtlib.git
-  - cd scala-smtlib
-  - git checkout 711e9a1ef994935482bc83ff3795a94f637f0a04
-  - sbt publish-local
-  - cd ..
-  - PATH=$PATH:$PWD/z3/bin sbt test
+  - ./fetch-travis-deps.sh
+  - PATH=$PATH:/home/travis/deps/z3/bin sbt test
 cache:
   directories:
     - /home/travis/.ivy2
     - /home/travis/.sbt
-    - /home/travis/z3
+    - /home/travis/deps
