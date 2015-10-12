@@ -145,6 +145,10 @@ class PuppetParser2 extends RegexParsers with PackratParsers {
   lazy val bop: P[Expr] = positioned {
     or ~ "==" ~ bop ^^ { case lhs ~ _ ~ rhs => Eq(lhs, rhs) } |
     or ~ "!=" ~ bop ^^ { case lhs ~ _ ~ rhs => Not(Eq(lhs, rhs)) } |
+    or ~ "<" ~ bop ^^ { case lhs ~ _ ~ rhs => LT(lhs, rhs) } |
+    or ~ ">" ~ bop ^^ { case lhs ~ _ ~ rhs => LT(rhs, lhs) } |
+    or ~ "<=" ~ bop ^^ { case lhs ~ _ ~ rhs => Or(LT(lhs, rhs), Eq(lhs, rhs)) } |
+    or ~ ">=" ~ bop ^^ { case lhs ~ _ ~ rhs => Or(LT(rhs, lhs), Eq(lhs, rhs)) } |
     or ~ "=~" ~ bop ^^ { case lhs ~ _ ~ rhs => Match(lhs, rhs) } |
     or ~ "!~" ~ bop ^^ { case lhs ~ _ ~ rhs => Not(Match(lhs, rhs)) } |
     or ~ "in" ~ bop ^^ { case lhs ~ _ ~ rhs => In(lhs, rhs) } |

@@ -65,6 +65,7 @@ object PuppetSyntax2 {
   case class And(e1: Expr, e2: Expr) extends Expr
   case class Or(e1: Expr, e2: Expr) extends Expr
   case class Eq(e1: Expr, e2: Expr) extends Expr
+  case class LT(n1: Expr, n2: Expr) extends Expr
   case class Match(e1: Expr, e2: Expr) extends Expr
   case class In(e1: Expr, e2: Expr) extends Expr
   case class Array(es: Seq[Expr]) extends Expr

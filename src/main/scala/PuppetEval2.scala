@@ -298,6 +298,11 @@ object PuppetEval2 {
     case Bool(b) => Bool(b)
     case EResourceRef(typ, title) => EResourceRef(typ.toLowerCase, evalExpr(st, env, title))
     case Eq(e1, e2) => Bool(evalExpr(st, env, e1) == evalExpr(st, env, e2))
+    case LT(e1, e2) => (evalExpr(st, env, e1), evalExpr(st, env, e2)) match {
+      case (Num(n1), Num(n2)) => Bool(n1 < n2)
+      case _ => throw EvalError(s"expected args to LT to evaluate to Nums")
+    }
+    
     case Not(e) => Bool(!evalBool(st, env, e))
     case And(e1, e2) => Bool(evalBool(st, env, e1) && evalBool(st, env, e2))
     case Var(x) => env.getOrError(x)
