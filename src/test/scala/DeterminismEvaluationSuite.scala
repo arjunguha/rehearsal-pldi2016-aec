@@ -54,4 +54,9 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     val g = parseFile(s"$root/xdrum-rsyslog.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
+
+  test("BenoitCattie-puppet-nginx.pp") {
+    val g = parseFile(s"$root/BenoitCattie-puppet-nginx.pp").eval.resourceGraph.fsGraph
+    assert(SymbolicEvaluator.isDeterministic(g))
+  }
 }

@@ -38,6 +38,7 @@ object DeterminismBenchmarks {
       bench("jpa", s"$root/pdurbin-java-jpa-tutorial.pp", g => isDeterministic(g) == true)
       bench("ntp", s"$root/thias-ntp.pp", g => isDeterministic(g) == false)
       bench("rsyslog", s"$root/xdrum-rsyslog.pp", g => isDeterministic(g) == false)
+      bench("nginx", s"$root/BenoitCattie-puppet-nginx.pp", g => isDeterministic(g) == true)
     }
   }
 
