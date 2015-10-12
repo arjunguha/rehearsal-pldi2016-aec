@@ -96,7 +96,7 @@ object ResourceModel {
       }
     }
     case Package(name, true) => {
-      val files = pkgcache.files(name).getOrElse(Set())
+      val files = pkgcache.files(name).get
       val dirs = allpaths(files) -- files - root
 
       val mkdirs = dirs.toSeq.sortBy(_.getNameCount)
