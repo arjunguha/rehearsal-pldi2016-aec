@@ -127,7 +127,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
       file {'/usr/games/sl': ensure => present, content => "something"}
       package {'sl': ensure => present }
                   """
-    val g = PuppetParser2.parse(program).eval().resourceGraph().fsGraph()
+    val g = PuppetParser.parse(program).eval().resourceGraph().fsGraph()
     assert(false == isDeterministic(g))
   }
 
@@ -147,7 +147,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
       file {'/foo/bar': ensure => file, before => Service['foo'] }
       service {'foo':}
                   """
-    val g = PuppetParser2.parse(program).eval().resourceGraph().fsGraph()
+    val g = PuppetParser.parse(program).eval().resourceGraph().fsGraph()
     assert(false == isDeterministic(g))
   }  
 
@@ -157,7 +157,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
       file {'/foo/bar': ensure => file, before => File['/etc/foo'] }
       file {'/etc/foo': ensure => file}
                   """
-    val g = PuppetParser2.parse(program).eval().resourceGraph().fsGraph()
+    val g = PuppetParser.parse(program).eval().resourceGraph().fsGraph()
     assert(false == isDeterministic(g))
   }  
 

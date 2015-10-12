@@ -3,10 +3,10 @@ package rehearsal
 object DeterminismBenchmarks {
 
   import SymbolicEvaluator._
-  import PuppetEval2._
+  import PuppetEval._
 
   def bench(label: String, path: String, check: FileScriptGraph => Boolean, onlySliced: Boolean = false): Unit = {
-    val g = PuppetParser2.parseFile(path).eval.resourceGraph.fsGraph
+    val g = PuppetParser.parseFile(path).eval.resourceGraph.fsGraph
 
     if (!onlySliced) {
       val (r, t) = time(check(g))

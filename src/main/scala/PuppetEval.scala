@@ -1,8 +1,8 @@
 package rehearsal
 
-object PuppetEval2 {
+object PuppetEval {
 
-  import PuppetSyntax2._
+  import PuppetSyntax._
   import scalax.collection.Graph
   import scalax.collection.Graph._
   import scalax.collection.GraphPredef._
@@ -12,12 +12,12 @@ object PuppetEval2 {
   import scala.util.parsing.combinator._
 
   object StringInterpolator {
-    val parser = new PuppetParser2()
+    val parser = new PuppetParser()
     import parser._
 
     def interpolate(st: State, env: Env, str: String): Expr = {
       val strs = str.split("""\$""")
-      Str(strs(0) + strs.toList.drop(1).map(helper(st, env)).mkString(""))
+      EStr(strs(0) + strs.toList.drop(1).map(helper(st, env)).mkString(""))
     }
 
     def helper(st: State, env: Env)(str: String): String = {
@@ -41,7 +41,7 @@ object PuppetEval2 {
       val strPrime = if(str.charAt(0) != '$') "$" + str else str
       parseAll(expr, strPrime) match {
         case Success(expr, _) => evalExpr(st, env, expr) match {
-          case Str(s) => s
+          case EStr(s) => s
           case _ => throw EvalError(s"None string expression evaluated during string interpolation: $expr")
         }
         case m => throw EvalError(s"Could not parse interpolated expression: $m")
@@ -120,7 +120,7 @@ object PuppetEval2 {
     // TODO(arjun): duplicates are probably an error
     attrs.map({
       case Attribute(kExpr, v) => evalExpr(st, env, kExpr) match {
-        case Str(k) => k -> evalExpr(st, env, v)
+        case EStr(k) => k -> evalExpr(st, env, v)
         case _ => throw EvalError("attribute key should be a string")
       }
     }).toMap
@@ -128,29 +128,29 @@ object PuppetEval2 {
 
   def evalTitles(st: State, env: Env, titleExpr: Expr): Seq[String] = {
     evalExpr(st, env, titleExpr) match {
-      case Str(title) => Seq(title)
-      case Array(titles) => titles.map(x => evalTitle(st, env, x))
+      case EStr(title) => Seq(title)
+      case EArray(titles) => titles.map(x => evalTitle(st, env, x))
       case v => throw EvalError(s"title should be a string or an array, but got $v{titleExpr.pos}")
     }
   }
 
   def evalTitle(st: State, env: Env, titleExpr: Expr): String = {
     evalExpr(st, env, titleExpr) match {
-      case Str(title) => title
+      case EStr(title) => title
       case v => throw EvalError(s"title should be a string, but got $v ${titleExpr.pos}")
     }
   }
 
   def resourceRefs(e: Expr): Seq[Node] = e match {
-    case EResourceRef(typ, Str(title)) => Seq(Node(typ, title))
-    case Array(seq) => seq.map(resourceRefs).flatten
+    case EResourceRef(typ, EStr(title)) => Seq(Node(typ, title))
+    case EArray(seq) => seq.map(resourceRefs).flatten
     case _ => throw EvalError(s"expected resource reference, got $e ${e.pos}")
   }
 
   def extractRelationships(s: Node,
                            attrs: Map[String, Expr]): Graph[Node, DiEdge] = {
 
-    def get(key: String) = resourceRefs(attrs.getOrElse(key, Array(Seq())))
+    def get(key: String) = resourceRefs(attrs.getOrElse(key, EArray(Seq())))
     val before = get("before").map(r => DiEdge(s, r))
     val require = get("require").map(r => DiEdge(r, s))
     val notify = get("notify").map(r => DiEdge(s, r))
@@ -224,10 +224,10 @@ object PuppetEval2 {
   }
 
   def evalManifest(st: State, manifest: Manifest): State = manifest match {
-    case Empty => st
-    case Block(m1, m2) => evalManifest(evalManifest(st, m1), m2)
-    case EdgeList(lst) => evalEdges(st, lst)._1
-    case Define(f, args, m) => {
+    case MEmpty => st
+    case MSeq(m1, m2) => evalManifest(evalManifest(st, m1), m2)
+    case MResources(lst) => evalEdges(st, lst)._1
+    case MDefine(f, args, m) => {
       if (st.definedTypes.contains(f)) {
         throw EvalError(s"$f is already defined as a type")
       }
@@ -238,7 +238,7 @@ object PuppetEval2 {
         st.copy(definedTypes = st.definedTypes + (f -> vt))
       }
     }
-    case Class(f, args, _, m) => {
+    case MClass(f, args, _, m) => {
       if (st.classes.contains(f)) {
         throw EvalError(s"$f is already defined as a class")
       }
@@ -250,16 +250,16 @@ object PuppetEval2 {
         st.copy(classes = st.classes + (f -> vc))
       }
     }
-    case ESet(x, e) => st.copy(env = st.env + (x -> evalExpr(st, st.env, e)))
-    case ITE(e, m1, m2) => evalBool(st, st.env, e) match {
+    case MSet(x, e) => st.copy(env = st.env + (x -> evalExpr(st, st.env, e)))
+    case MIte(e, m1, m2) => evalBool(st, st.env, e) match {
       case true => evalManifest(st, m1)
       case false => evalManifest(st, m2)
     }
-    case Include(titleExprs) => titleExprs.foldRight(st)(evalTitle)
+    case MInclude(titleExprs) => titleExprs.foldRight(st)(evalTitle)
 
     case MApp("fail", Seq(str)) => evalExpr(st, st.env, str) match {
       // TODO(arjun): Different type of error
-      case Str(str) => throw EvalError(s"user-defined failure: $str")
+      case EStr(str) => throw EvalError(s"user-defined failure: $str")
       case v => throw EvalError(s"expected string argument, got $v ${manifest.pos}")
     }
     case MApp(f, _) => throw NotImplemented(s"unsupported function: $f ${manifest.pos}")
@@ -284,43 +284,43 @@ object PuppetEval2 {
   // Helps implement conditionals. "Truthy" values are mapped to Scala's true
   // and "falsy" values are mapped to Scala's false.
   def evalBool(st: State, env: Env, expr: Expr): Boolean = evalExpr(st, env, expr) match {
-    case Bool(true) => true
-    case Bool(false) => false
-    case Str(_) => true
-    case Undef => false
+    case EBool(true) => true
+    case EBool(false) => false
+    case EStr(_) => true
+    case EUndef => false
     case v => throw EvalError(s"predicate evaluated to $v")
   }
 
   def evalExpr(st: State, env: Env, expr: Expr): Expr = expr match {
-    case Undef => Undef
-    case Num(n) => Num(n)
-    case Str(str) => StringInterpolator.interpolate(st, env, str)
-    case Bool(b) => Bool(b)
+    case EUndef => EUndef
+    case ENum(n) => ENum(n)
+    case EStr(str) => StringInterpolator.interpolate(st, env, str)
+    case EBool(b) => EBool(b)
     case EResourceRef(typ, title) => EResourceRef(typ.toLowerCase, evalExpr(st, env, title))
-    case Eq(e1, e2) => Bool(evalExpr(st, env, e1) == evalExpr(st, env, e2))
-    case LT(e1, e2) => (evalExpr(st, env, e1), evalExpr(st, env, e2)) match {
-      case (Num(n1), Num(n2)) => Bool(n1 < n2)
+    case EEq(e1, e2) => EBool(evalExpr(st, env, e1) == evalExpr(st, env, e2))
+    case ELT(e1, e2) => (evalExpr(st, env, e1), evalExpr(st, env, e2)) match {
+      case (ENum(n1), ENum(n2)) => EBool(n1 < n2)
       case _ => throw EvalError(s"expected args to LT to evaluate to Nums")
     }
     
-    case Not(e) => Bool(!evalBool(st, env, e))
-    case And(e1, e2) => Bool(evalBool(st, env, e1) && evalBool(st, env, e2))
-    case Or(e1, e2) => Bool(evalBool(st, env, e1) || evalBool(st, env, e2))
-    case Var(x) => env.getOrError(x)
-    case Array(es) => Array(es.map(e => evalExpr(st, env, e)))
-    case App("template", Seq(e)) => evalExpr(st, env, e) match {
+    case ENot(e) => EBool(!evalBool(st, env, e))
+    case EAnd(e1, e2) => EBool(evalBool(st, env, e1) && evalBool(st, env, e2))
+    case EOr(e1, e2) => EBool(evalBool(st, env, e1) || evalBool(st, env, e2))
+    case EVar(x) => env.getOrError(x)
+    case EArray(es) => EArray(es.map(e => evalExpr(st, env, e)))
+    case EApp("template", Seq(e)) => evalExpr(st, env, e) match {
       // TODO(arjun): This is bogus. It is supposed to use filename as a
       // template string. The file contents have patterns that refer to variables
       // in the environment.
-      case Str(filename) => Str(filename)
+      case EStr(filename) => EStr(filename)
       case _ => throw EvalError("template function expects a string argument")
     }
-    case App("defined", Seq(rref)) => evalExpr(st, st.env, rref) match {
-      case EResourceRef(typ, Str(title)) => Bool(st.resources.contains(Node(typ, title)))
+    case EApp("defined", Seq(rref)) => evalExpr(st, st.env, rref) match {
+      case EResourceRef(typ, EStr(title)) => EBool(st.resources.contains(Node(typ, title)))
       case v => throw EvalError(s"expected resource reference as argument to defined")
     }
-    case App(f, args) => throw NotImplemented(s"function $f (${expr.pos})")
-    case Cond(e1, e2, e3) => evalBool(st, env, e1) match {
+    case EApp(f, args) => throw NotImplemented(s"function $f (${expr.pos})")
+    case ECond(e1, e2, e3) => evalBool(st, env, e1) match {
       case true => evalExpr(st, env, e2)
       case false => evalExpr(st, env, e3)
     }
@@ -376,9 +376,9 @@ object PuppetEval2 {
       case None => st.classes.get(title) match {
         case Some(VClass(_, env, formals, m)) => {
           val ResourceVal(_, _, actuals) = st.resources(node)
-          val env1 = env.forceSet("title", Str(node.title)).forceSet("name", Str(node.title))
+          val env1 = env.forceSet("title", EStr(node.title)).forceSet("name", EStr(node.title))
           val evaluated = evalArgs(st, formals, actuals, env1)
-          val env2 = (env.newScope ++ evaluated).default("title", Str(node.title)).default("name", Str(node.title))
+          val env2 = (env.newScope ++ evaluated).default("title", EStr(node.title)).default("name", EStr(node.title))
           val st1 = evalManifest(st.copy(deps = Graph.empty, env = env2), m)
           st1.copy(
             deps = splice(st.deps, st.deps.get(Node("class", title)), st1.deps),
@@ -397,9 +397,9 @@ object PuppetEval2 {
     if (unexpected.isEmpty == false) {
       throw EvalError(s"unexpected arguments: ${unexpected}")
     }
-    val env1 = env.forceSet("title", Str(node.title)).forceSet("name", Str(node.title))
+    val env1 = env.forceSet("title", EStr(node.title)).forceSet("name", EStr(node.title))
     val evaluated = evalArgs(st, formals, actuals, env1)
-    val env2 = (env.newScope ++ evaluated).default("title", Str(node.title)).default("name", Str(node.title))
+    val env2 = (env.newScope ++ evaluated).default("title", EStr(node.title)).default("name", EStr(node.title))
     val st1 = evalManifest(st.copy(deps = Graph.empty, env = env2), m)
     st1.copy(deps = splice(st.deps, node, st1.deps), resources = st1.resources - node)
   }
@@ -426,7 +426,7 @@ object PuppetEval2 {
   val emptyState = State(
     resources = Map(),
     deps = Graph.empty,
-    env = Env.empty + ("title" -> Str("main")) + ("name" -> Str("main")),
+    env = Env.empty + ("title" -> EStr("main")) + ("name" -> EStr("main")),
     definedTypes = Map(),
     classes = Map(),
     classGraph = Map(),
@@ -436,7 +436,7 @@ object PuppetEval2 {
   def updateStage(res: (Node, ResourceVal), stages: Map[String, Set[Node]]): Map[String, Set[Node]] = res match {
     case (node, ResourceVal(_, _, attrMap)) =>
       attrMap.get("stage") match {
-        case Some(Str(stage)) => addStage(stage, node, stages)
+        case Some(EStr(stage)) => addStage(stage, node, stages)
         case Some(stage) => throw EvalError(s"Stage evaluated to non-string. $stage")
         case None => addStage("main", node, stages)
       }

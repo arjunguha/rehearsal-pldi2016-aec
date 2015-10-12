@@ -1,6 +1,6 @@
 package rehearsal
 
-object Eval {
+object FSEvaluator {
 
   import FSSyntax._
   import java.nio.file.Path

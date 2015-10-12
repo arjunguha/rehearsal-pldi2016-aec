@@ -5,7 +5,7 @@ object DeterminismSizeTables {
   import SymbolicEvaluator._
 
   def bench(label: String, path: String): Unit = {
-    val rg = PuppetParser2.parseFile(path).eval().resourceGraph()
+    val rg = PuppetParser.parseFile(path).eval().resourceGraph()
     val g = rg.fsGraph()
     val rSize = rg.deps.nodes.size
     val fSize =  fileScriptGraphSize(g)

@@ -1,9 +1,9 @@
 class SimpleEvalTests extends org.scalatest.FunSuite {
 
 	import rehearsal._
-	import PuppetParser2._
-	import PuppetSyntax2._
-	import PuppetEval2._
+	import PuppetParser._
+	import PuppetSyntax._
+	import PuppetEval._
 	import java.nio.file._
 	import scala.collection.JavaConversions._
   import scalax.collection.Graph

@@ -1,7 +1,7 @@
 class SimpleParserTests extends org.scalatest.FunSuite {
 
   import rehearsal._
-  import PuppetParser2._
+  import PuppetParser._
   //import Syntax._
   import java.nio.file._
   import scala.collection.JavaConversions._

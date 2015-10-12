@@ -1,6 +1,6 @@
 package rehearsal
 
-object PuppetSyntax2 {
+object PuppetSyntax {
 
   import scala.util.parsing.input.Positional
   import scalax.collection.Graph
@@ -39,39 +39,39 @@ object PuppetSyntax2 {
   case class CaseExpr(e: Expr, m: Manifest) extends Case
 
   sealed trait Manifest extends Positional {
-   def eval(): EvaluatedManifest = PuppetEval2.eval(this)
+   def eval(): EvaluatedManifest = PuppetEval.eval(this)
   }
 
-  case object Empty extends Manifest
-  case class Block(m1: Manifest, m2: Manifest) extends Manifest
-  case class EdgeList(resources: Seq[Resource]) extends Manifest
-  case class Define(name: String, params: Seq[Argument], body: Manifest) extends Manifest
-  case class Class(name: String, params: Seq[Argument], inherits: Option[String], body: Manifest) extends Manifest
-  case class ESet(varName: String, e: Expr) extends Manifest
+  case object MEmpty extends Manifest
+  case class MSeq(m1: Manifest, m2: Manifest) extends Manifest
+  case class MResources(resources: Seq[Resource]) extends Manifest
+  case class MDefine(name: String, params: Seq[Argument], body: Manifest) extends Manifest
+  case class MClass(name: String, params: Seq[Argument], inherits: Option[String], body: Manifest) extends Manifest
+  case class MSet(varName: String, e: Expr) extends Manifest
   case class MCase(e: Expr, cases: Seq[Case]) extends Manifest
-  case class ITE(pred: Expr, m1: Manifest, m2: Manifest) extends Manifest
-  case class Include(es: List[Expr]) extends Manifest
-  case class Require(e: Expr) extends Manifest
+  case class MIte(pred: Expr, m1: Manifest, m2: Manifest) extends Manifest
+  case class MInclude(es: List[Expr]) extends Manifest
+  case class MRequire(e: Expr) extends Manifest
   case class MApp(name: String, args: Seq[Expr]) extends Manifest
 
    // Manifests must not appear in Expr, either directly or indirectly
   sealed trait Expr extends Positional
-  case object Undef extends Expr
-  case class Str(s: String) extends Expr
-  case class Num(n: Int) extends Expr
-  case class Var(name: String) extends Expr
-  case class Bool(b: Boolean) extends Expr
-  case class Not(e: Expr) extends Expr
-  case class And(e1: Expr, e2: Expr) extends Expr
-  case class Or(e1: Expr, e2: Expr) extends Expr
-  case class Eq(e1: Expr, e2: Expr) extends Expr
-  case class LT(n1: Expr, n2: Expr) extends Expr
-  case class Match(e1: Expr, e2: Expr) extends Expr
-  case class In(e1: Expr, e2: Expr) extends Expr
-  case class Array(es: Seq[Expr]) extends Expr
-  case class App(name: String, args: Seq[Expr]) extends Expr
-  case class Regex(regex: String) extends Expr
-  case class Cond(test: Expr, truePart: Expr, falsePart: Expr) extends Expr
+  case object EUndef extends Expr
+  case class EStr(s: String) extends Expr
+  case class ENum(n: Int) extends Expr
+  case class EVar(name: String) extends Expr
+  case class EBool(b: Boolean) extends Expr
+  case class ENot(e: Expr) extends Expr
+  case class EAnd(e1: Expr, e2: Expr) extends Expr
+  case class EOr(e1: Expr, e2: Expr) extends Expr
+  case class EEq(e1: Expr, e2: Expr) extends Expr
+  case class ELT(n1: Expr, n2: Expr) extends Expr
+  case class EMatch(e1: Expr, e2: Expr) extends Expr
+  case class EIn(e1: Expr, e2: Expr) extends Expr
+  case class EArray(es: Seq[Expr]) extends Expr
+  case class EApp(name: String, args: Seq[Expr]) extends Expr
+  case class ERegex(regex: String) extends Expr
+  case class ECond(test: Expr, truePart: Expr, falsePart: Expr) extends Expr
   case class EResourceRef(typ: String, title: Expr) extends Expr
 
   case class ResourceVal(typ: String, title: String, attrs: Map[String, Expr]) {

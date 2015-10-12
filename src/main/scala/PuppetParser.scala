@@ -1,10 +1,10 @@
 package rehearsal
 
 import scala.util.parsing.combinator._
-import PuppetSyntax2._
+import PuppetSyntax._
 import Implicits._
 
-class PuppetParser2 extends RegexParsers with PackratParsers {
+class PuppetParser extends RegexParsers with PackratParsers {
 
   type P[T] = PackratParser[T]
 
@@ -20,28 +20,28 @@ class PuppetParser2 extends RegexParsers with PackratParsers {
   lazy val dataType: P[String] = "" ~> "[A-Z][a-zA-Z]+".r
   lazy val varName: P[String] =  "$" ~> "[a-z_(::)][a-zA-Z0-9_(::)]*[a-zA-Z0-9_]+|[a-z_(::)]".r
 
-  lazy val className: P[Expr] = expr | word ^^ (Str(_))
+  lazy val className: P[Expr] = expr | word ^^ (EStr(_))
 
   //Manifest
   lazy val manifest: P[Manifest] = positioned {
     varName ~ "=" ~ expr ^^
-      { case x ~ _ ~ e => ESet(x, e) } |
+      { case x ~ _ ~ e => MSet(x, e) } |
     "define" ~ word ~ params ~ body ^^
-      { case _ ~ x ~ xs ~ m => Define(x, xs, m) } |
+      { case _ ~ x ~ xs ~ m => MDefine(x, xs, m) } |
     "class" ~ word ~ params ~ body ^^
-      { case _ ~ x ~ xs ~ m => Class(x, xs, None, m) } |
+      { case _ ~ x ~ xs ~ m => MClass(x, xs, None, m) } |
     "class" ~ word ~ params ~ "inherits" ~ word ~ body ^^
-      { case _ ~ x ~ xs ~ _ ~ y ~ m => Class(x, xs, Some(y), m) } |
+      { case _ ~ x ~ xs ~ _ ~ y ~ m => MClass(x, xs, Some(y), m) } |
     "case" ~ expr ~ "{" ~ cases ~ "}" ^^
       { case _ ~ e ~ _ ~ lst ~ _ => MCase(e, lst) } |
     "include" ~ repsep(className, ",") ^^
-      { case _ ~ xs => Include(xs) } |
+      { case _ ~ xs => MInclude(xs) } |
     "require" ~ className ^^
-      { case _ ~ x => Require(x) } |
+      { case _ ~ x => MRequire(x) } |
     "if" ~ expr ~ body ~ elses ^^
-      { case _ ~ e ~ m1 ~ m2 => ITE(e, m1, m2) } |
+      { case _ ~ e ~ m1 ~ m2 => MIte(e, m1, m2) } |
     rep1sep(resource, "->") ^^
-      { case lst => EdgeList(lst) } |
+      { case lst => MResources(lst) } |
     word ~ "(" ~ repsep(expr, ",") ~ ")" ^^
       { case f ~ _ ~ xs ~ _  => MApp(f, xs) }
     }
@@ -50,9 +50,9 @@ class PuppetParser2 extends RegexParsers with PackratParsers {
     "else" ~ body ^^
       { case _ ~ m => m } |
     "elsif" ~ parenExpr ~ body ~ elses ^^
-      { case _ ~ e ~ m1 ~ m2 => ITE(e, m1, m2) } |
+      { case _ ~ e ~ m1 ~ m2 => MIte(e, m1, m2) } |
     success(()) ^^
-      { case () => Empty }
+      { case () => MEmpty }
     }
 
   lazy val body: P[Manifest] = "{" ~> prog <~ "}"
@@ -60,7 +60,7 @@ class PuppetParser2 extends RegexParsers with PackratParsers {
   lazy val prog: P[Manifest] = rep(manifest) ^^ { case exprs => blockExprs(exprs) }
 
   def blockExprs(exprs: Seq[Manifest]): Manifest = {
-    exprs.foldRight[Manifest](Empty) { case (m1, m2) => Block(m1, m2) }
+    exprs.foldRight[Manifest](MEmpty) { case (m1, m2) => MSeq(m1, m2) }
   }
 
   lazy val cases: P[Seq[Case]] =
@@ -96,13 +96,13 @@ class PuppetParser2 extends RegexParsers with PackratParsers {
   }
 
   //Attribute
-  lazy val attrId: P[Str] = id ^^ { case s => Str(s) }
+  lazy val attrId: P[EStr] = id ^^ { case s => EStr(s) }
   lazy val attribute: P[Attribute] =
     (attrId | vari) ~ ("=>" ~> (expr | attrId)) ^^ { case name ~ value => Attribute(name, value) }
 
   lazy val attributes: P[Seq[Attribute]] = repsep(attribute, ",") <~ opt(",")
 
-  lazy val vari: P[Expr] = varName ^^ (Var(_))
+  lazy val vari: P[Expr] = varName ^^ (EVar(_))
 
   //
   // Expressions. Use "expr" to parse an expression. Do not use any of the other
@@ -112,46 +112,46 @@ class PuppetParser2 extends RegexParsers with PackratParsers {
   lazy val parenExpr: P[Expr] = "(" ~ expr ~ ")" ^^ { case _ ~ e ~ _ => e }
 
   lazy val atom: P[Expr] = positioned {
-    "undef" ^^ { _ => Undef } |
-    "true" ^^ { _ => Bool(true) } |
-    "false" ^^ { _ => Bool(false) } |
+    "undef" ^^ { _ => EUndef } |
+    "true" ^^ { _ => EBool(true) } |
+    "false" ^^ { _ => EBool(false) } |
     vari |
-    stringVal ^^ { x => Str(x) } |
+    stringVal ^^ { x => EStr(x) } |
     """\d+""".r ^^
-      { n => Num(n.toInt) } |
-    "[" ~ repsep(expr, ",") ~ opt(",") ~ "]" ^^ { case _ ~ es ~ _ ~ _ => Array(es) } |
-    word ~ "(" ~ repsep(expr, ",") ~ ")" ^^ { case f ~ _ ~ xs ~ _  => App(f, xs) } |
-    ("/" ~> "[^/]*".r <~ "/") ^^ { case expr => Regex(expr) } |
+      { n => ENum(n.toInt) } |
+    "[" ~ repsep(expr, ",") ~ opt(",") ~ "]" ^^ { case _ ~ es ~ _ ~ _ => EArray(es) } |
+    word ~ "(" ~ repsep(expr, ",") ~ ")" ^^ { case f ~ _ ~ xs ~ _  => EApp(f, xs) } |
+    ("/" ~> "[^/]*".r <~ "/") ^^ { case expr => ERegex(expr) } |
     word ~ "[" ~ expr ~ "]" ^^
       { case typ ~ _ ~ title ~ _ => EResourceRef(typ, title) } |
     parenExpr
   }
 
   lazy val not: P[Expr] = positioned {
-    "!" ~> not ^^ { Not(_) } |
+    "!" ~> not ^^ { ENot(_) } |
     atom
   }
 
   lazy val and: P[Expr] = positioned {
-    not ~ "and" ~ and ^^ { case lhs ~ _ ~ rhs => And(lhs, rhs) } |
+    not ~ "and" ~ and ^^ { case lhs ~ _ ~ rhs => EAnd(lhs, rhs) } |
     not
   }
 
   lazy val or: P[Expr] = positioned {
-    and ~ "or" ~ or ^^ { case lhs ~ _ ~ rhs => Or(lhs, rhs) } |
+    and ~ "or" ~ or ^^ { case lhs ~ _ ~ rhs => EOr(lhs, rhs) } |
     and
   }
 
   lazy val bop: P[Expr] = positioned {
-    or ~ "==" ~ bop ^^ { case lhs ~ _ ~ rhs => Eq(lhs, rhs) } |
-    or ~ "!=" ~ bop ^^ { case lhs ~ _ ~ rhs => Not(Eq(lhs, rhs)) } |
-    or ~ "<" ~ bop ^^ { case lhs ~ _ ~ rhs => LT(lhs, rhs) } |
-    or ~ ">" ~ bop ^^ { case lhs ~ _ ~ rhs => LT(rhs, lhs) } |
-    or ~ "<=" ~ bop ^^ { case lhs ~ _ ~ rhs => Or(LT(lhs, rhs), Eq(lhs, rhs)) } |
-    or ~ ">=" ~ bop ^^ { case lhs ~ _ ~ rhs => Or(LT(rhs, lhs), Eq(lhs, rhs)) } |
-    or ~ "=~" ~ bop ^^ { case lhs ~ _ ~ rhs => Match(lhs, rhs) } |
-    or ~ "!~" ~ bop ^^ { case lhs ~ _ ~ rhs => Not(Match(lhs, rhs)) } |
-    or ~ "in" ~ bop ^^ { case lhs ~ _ ~ rhs => In(lhs, rhs) } |
+    or ~ "==" ~ bop ^^ { case lhs ~ _ ~ rhs => EEq(lhs, rhs) } |
+    or ~ "!=" ~ bop ^^ { case lhs ~ _ ~ rhs => ENot(EEq(lhs, rhs)) } |
+    or ~ "<" ~ bop ^^ { case lhs ~ _ ~ rhs => ELT(lhs, rhs) } |
+    or ~ ">" ~ bop ^^ { case lhs ~ _ ~ rhs => ELT(rhs, lhs) } |
+    or ~ "<=" ~ bop ^^ { case lhs ~ _ ~ rhs => EOr(ELT(lhs, rhs), EEq(lhs, rhs)) } |
+    or ~ ">=" ~ bop ^^ { case lhs ~ _ ~ rhs => EOr(ELT(rhs, lhs), EEq(lhs, rhs)) } |
+    or ~ "=~" ~ bop ^^ { case lhs ~ _ ~ rhs => EMatch(lhs, rhs) } |
+    or ~ "!~" ~ bop ^^ { case lhs ~ _ ~ rhs => ENot(EMatch(lhs, rhs)) } |
+    or ~ "in" ~ bop ^^ { case lhs ~ _ ~ rhs => EIn(lhs, rhs) } |
     or
   }
 
@@ -159,9 +159,9 @@ class PuppetParser2 extends RegexParsers with PackratParsers {
 
   lazy val cond: P[Expr] = positioned {
     bop ~ "?" ~ bop ~ ":" ~ cond ^^
-      { case e1 ~ _ ~ e2 ~ _ ~ e3 => Cond(e1, e2, e3) } |
+      { case e1 ~ _ ~ e2 ~ _ ~ e3 => ECond(e1, e2, e3) } |
     "if" ~ bop ~ "{" ~ expr ~ "}" ~ "else" ~ "{" ~ expr ~ "}" ^^
-      { case _ ~ e1 ~ _ ~ e2 ~ _ ~ _ ~ _ ~ e3 ~ _ => Cond(e1, e2, e3) } |
+      { case _ ~ e1 ~ _ ~ e2 ~ _ ~ _ ~ _ ~ e3 ~ _ => ECond(e1, e2, e3) } |
     bop
   }
 
@@ -170,8 +170,8 @@ class PuppetParser2 extends RegexParsers with PackratParsers {
 
 }
 
-object PuppetParser2 {
-  private val parser = new PuppetParser2()
+object PuppetParser {
+  private val parser = new PuppetParser()
   import parser._
 
   def parse(str: String): Manifest = parseAll(prog, str) match {

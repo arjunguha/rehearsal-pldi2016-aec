@@ -1,6 +1,6 @@
 package rehearsal
 
-import Eval._
+import FSEvaluator._
 import smtlib._
 import parser._
 import Commands._
@@ -292,10 +292,10 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  def fstateFromTerm(term: Term): Option[Eval.FState] = term match {
-    case QualifiedIdentifier(Identifier(SSymbol("IsDir"), _), _) => Some(Eval.FDir)
+  def fstateFromTerm(term: Term): Option[FSEvaluator.FState] = term match {
+    case QualifiedIdentifier(Identifier(SSymbol("IsDir"), _), _) => Some(FSEvaluator.FDir)
     case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("IsFile"), _), _), Seq(h)) =>
-      Some(Eval.FFile(termToHash.getOrElse(term, "<unknown>")))
+      Some(FSEvaluator.FFile(termToHash.getOrElse(term, "<unknown>")))
     case QualifiedIdentifier(Identifier(SSymbol("DoesNotExist"), _), _) => None
     case _ => throw Unexpected(term.toString)
 
