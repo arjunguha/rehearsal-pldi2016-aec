@@ -91,14 +91,6 @@ package repl {
           }
         }
       }
-      case "catalog-deter" :: List(catalogFile) => {
-        val rg = toGraph(eval(expandAll(Parser.parseFile(catalogFile))))
-        println(rg)
-        val g = toFileScriptGraph(rg)
-        val g1 = Slicing.sliceGraph(g)
-        println(rg)
-        println(SymbolicEvaluator.isDeterministic(g))
-      }
       case List("detersuite") => DeterminismBenchmarks.run()
       case List("detersizes") => DeterminismSizeTables.run()
       case List("deterstress") => DeterStressBenchmark.run()
