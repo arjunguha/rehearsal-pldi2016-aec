@@ -14,7 +14,6 @@ package object rehearsal {
   import scala.util.{Try, Success, Failure}
   import puppet.syntax.{TopLevel, parse}
   import ResourceToExpr.{toFileScriptGraph => toFS}
-  import Parser.parseFile
 
   def toFileScriptGraph(resourceGraph: ResourceGraph): FileScriptGraph = toFS(resourceGraph)
 
@@ -98,9 +97,7 @@ package object rehearsal {
 
   def isDeterministic(repo: String): Boolean = {
     val topLevel = findPuppetFiles(Paths.get(repo)).get
-    // val resourceGraph = topLevel.desugar.toGraph(Map()).head._2
-    val resourceGraph = toGraph(eval(expandAll(parseFile(repo))))
-    val fsGraph = toFileScriptGraph(resourceGraph)
+    val fsGraph = PuppetParser2.parseFile(repo).eval().resourceGraph().fsGraph()
     SymbolicEvaluator.isDeterministic(fsGraph)
   }
 
