@@ -1,0 +1,8 @@
+/usr/share/lintian/overrides/libapache2-mod-php5
+/usr/share/php5/sapi/apache2
+/usr/share/bug/libapache2-mod-php5/control
+/usr/share/doc/libapache2-mod-php5
+/etc/apache2/mods-available/php5.load
+/usr/share/bug/libapache2-mod-php5/script
+/etc/apache2/mods-available/php5.conf
+/usr/lib/apache2/modules/libphp5.so

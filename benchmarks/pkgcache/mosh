@@ -1,0 +1,11 @@
+/usr/bin/mosh-server
+/usr/share/man/man1/mosh.1.gz
+/usr/share/man/man1/mosh-server.1.gz
+/usr/bin/mosh
+/usr/share/doc/mosh/copyright
+/etc/ufw/applications.d/mosh
+/usr/share/man/man1/mosh-client.1.gz
+/usr/share/doc/mosh/README.md.gz
+/usr/share/doc/mosh/changelog.Debian.gz
+/etc/bash_completion.d/mosh
+/usr/bin/mosh-client

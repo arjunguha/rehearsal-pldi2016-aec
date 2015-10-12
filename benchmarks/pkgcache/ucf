@@ -1,0 +1,15 @@
+/usr/share/doc/ucf/examples/postrm
+/usr/bin/lcf
+/usr/share/man/man1/ucfq.1.gz
+/usr/share/man/man1/lcf.1.gz
+/etc/ucf.conf
+/usr/bin/ucfr
+/usr/share/doc/ucf/examples/postinst.gz
+/usr/share/doc/ucf/changelog.gz
+/usr/bin/ucf
+/usr/share/man/man1/ucf.1.gz
+/usr/share/man/man5/ucf.conf.5.gz
+/usr/share/doc/ucf/copyright
+/usr/share/lintian/overrides/ucf
+/usr/bin/ucfq
+/usr/share/man/man1/ucfr.1.gz

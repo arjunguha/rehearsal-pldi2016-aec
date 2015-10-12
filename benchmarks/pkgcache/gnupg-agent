@@ -1,0 +1,14 @@
+/usr/share/upstart/sessions/gpg-agent.conf
+/usr/lib/gnupg2/gpg-protect-tool
+/usr/bin/gpg-connect-agent
+/usr/share/man/man1/gpg-agent.1.gz
+/usr/share/man/man1/gpg-connect-agent.1.gz
+/usr/share/man/man1/gpg-preset-passphrase.1.gz
+/usr/bin/gpg-agent
+/usr/share/doc/gnupg-agent/changelog.Debian.gz
+/usr/share/doc/gnupg-agent/copyright
+/usr/lib/gnupg2/gpg-preset-passphrase
+/etc/X11/Xsession.d/90gpg-agent
+/usr/bin/gpgkey2ssh
+/usr/bin/symcryptrun
+/usr/share/man/man1/symcryptrun.1.gz

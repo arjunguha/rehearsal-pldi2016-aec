@@ -1,0 +1,12 @@
+/usr/lib/python3/dist-packages/softwareproperties/dbus/SoftwarePropertiesDBus.py
+/usr/share/doc/software-properties-common/copyright
+/usr/bin/add-apt-repository
+/usr/share/man/man1/add-apt-repository.1.gz
+/usr/lib/software-properties/software-properties-dbus
+/usr/share/polkit-1/actions/com.ubuntu.softwareproperties.policy
+/usr/share/dbus-1/system-services/com.ubuntu.SoftwareProperties.service
+/usr/lib/python3/dist-packages/softwareproperties/dbus/__init__.py
+/usr/share/man/man1/apt-add-repository.1.gz
+/usr/bin/apt-add-repository
+/usr/share/doc/software-properties-common/changelog.gz
+/etc/dbus-1/system.d/com.ubuntu.SoftwareProperties.conf
