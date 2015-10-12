@@ -262,7 +262,7 @@ object PuppetEval2 {
       case Str(str) => throw EvalError(s"user-defined failure: $str")
       case v => throw EvalError(s"expected string argument, got $v ${manifest.pos}")
     }
-    case MApp(f, _) => throw NotImplemented("unsupported function: $f ${manifest.pos}")
+    case MApp(f, _) => throw NotImplemented(s"unsupported function: $f ${manifest.pos}")
     case MCase(e, cases) => {
       val v = evalExpr(st, st.env, e)
       cases.find(c => matchCase(st, st.env, v, c)) match {
