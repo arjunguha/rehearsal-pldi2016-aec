@@ -13,10 +13,7 @@ package object rehearsal {
   import rehearsal.Implicits._
   import scala.util.{Try, Success, Failure}
   import puppet.syntax.{TopLevel, parse}
-  import ResourceToExpr.{toFileScriptGraph => toFS}
-
-  def toFileScriptGraph(resourceGraph: ResourceGraph): FileScriptGraph = toFS(resourceGraph)
-
+  
   def fileScriptGraphSize(g: FileScriptGraph): Int = {
     g.nodes.map(_.size).reduce(_ + _) + g.edges.size
   }

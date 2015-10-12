@@ -2,7 +2,7 @@ package rehearsal
 
 object ResourceModel {
 
-  import ResourceToExpr.pkgcache
+  val pkgcache = PackageCache()
 
   import java.nio.file.{Path, Paths}
   import scala.collection.immutable.Set
