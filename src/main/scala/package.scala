@@ -12,8 +12,7 @@ package object rehearsal {
   import scalax.collection.edge.Implicits._
   import rehearsal.Implicits._
   import scala.util.{Try, Success, Failure}
-  import puppet.syntax.{TopLevel, parse}
-  
+
   def fileScriptGraphSize(g: FileScriptGraph): Int = {
     g.nodes.map(_.size).reduce(_ + _) + g.edges.size
   }
@@ -78,26 +77,7 @@ package object rehearsal {
       else { scala.Seq(child) }
     }
   }
-
-  def findPuppetFiles(repo: Path): Try[TopLevel] = {
-    val ppFiles = recursiveDirListing(repo).filter(_.getFileName.toString.endsWith(".pp")).toList
-    if (ppFiles.length == 0) {
-      Failure(new RuntimeException("no Puppet files"))
-    }
-    else {
-      Try(ppFiles.map(p => parse(new String(Files.readAllBytes(p))))) match {
-        case Success(topLevels) => Success(TopLevel(topLevels.map(_.items).flatten))
-        case Failure(exn) => Failure(exn)
-      }
-    }
-  }
-
-  def isDeterministic(repo: String): Boolean = {
-    val topLevel = findPuppetFiles(Paths.get(repo)).get
-    val fsGraph = PuppetParser2.parseFile(repo).eval().resourceGraph().fsGraph()
-    SymbolicEvaluator.isDeterministic(fsGraph)
-  }
-
+  
   def time[A](thunk: => A): (A, Long) = {
     val start = System.currentTimeMillis
     val r = thunk
