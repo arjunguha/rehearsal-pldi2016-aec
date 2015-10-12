@@ -38,11 +38,11 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
   test("gazinzhou-apache.pp") {
     val g = parseFile(s"$root/ghoneycutt-xinetd.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministic(g) == true)
-  }  
+  }
 
   test("pdurbin-java-jpa-tutorial.pp") {
     val g = parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph.fsGraph
-    assert(SymbolicEvaluator.isDeterministic(g) == true)
+    assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)) == true)
   }
 
   test("thias-ntp.pp") {
