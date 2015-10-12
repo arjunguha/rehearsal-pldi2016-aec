@@ -1,10 +1,11 @@
 #!/bin/bash
-if [ -d "/home/travis/mydeps" ]; then
-  echo "/home/travis/mydeps exists, so not fetching any dependencies"
+if [ -x "/home/travis/mydeps/z3/bin/z3" ]; then
+  echo "Not fetching any dependencies"
   exit 0
 fi
 
 cd /home/travis
+rm -rf mydeps
 mkdir mydeps
 cd mydeps
 
