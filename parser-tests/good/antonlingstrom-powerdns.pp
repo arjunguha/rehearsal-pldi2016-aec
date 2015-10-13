@@ -1,5 +1,8 @@
 # From https://github.com/antonlindstrom/puppet-powerdns/tree/732fa339a15d3ea1d6fc39e806f978bc576b18ab
-# # Replaced usage of selector syntax with if expressions.
+# Replaced usage of selector syntax with if expressions.
+# Added instantiation with following include.
+
+include powerdns
 
 # Public: Set confguration directives in a .d directory
 #
