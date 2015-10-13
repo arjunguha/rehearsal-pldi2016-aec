@@ -4,7 +4,7 @@ import scala.util.parsing.combinator._
 import PuppetSyntax._
 import Implicits._
 
-class PuppetParser extends RegexParsers with PackratParsers {
+private class PuppetParser extends RegexParsers with PackratParsers {
 
   type P[T] = PackratParser[T]
 
@@ -182,6 +182,11 @@ object PuppetParser {
   def parseFile(filename: String): Manifest = {
     import java.nio.file._
     parse(new String(Files.readAllBytes(Paths.get(filename))))
+  }
+
+  def parseExpr(str: String): Option[Expr] = parseAll(expr, str) match {
+    case Success(e, _) => Some(e)
+    case _ => None
   }
 
 
