@@ -5,7 +5,7 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
   import ResourceModel._
   import UpdateSynth._
   import TranslationValidation._
-  import Eval._
+  import FSEvaluator._
 
   val bounds = DomainBounds.empty.withPaths(Paths.get("/a"), Paths.get("/b")).withContents("hello", "bye")
 

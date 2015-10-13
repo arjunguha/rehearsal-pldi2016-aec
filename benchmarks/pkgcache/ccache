@@ -1,0 +1,12 @@
+/usr/share/lintian/overrides/ccache
+/usr/share/man/man8/update-ccache-symlinks.8.gz
+/usr/share/doc/ccache/README.Debian
+/usr/share/man/man1/ccache.1.gz
+/usr/share/doc/ccache/manual.html
+/usr/share/doc/ccache/copyright
+/usr/share/doc/ccache/NEWS.Debian.gz
+/usr/share/doc/ccache/README.txt
+/usr/share/doc/ccache/changelog.Debian.gz
+/usr/bin/ccache
+/usr/share/doc-base/ccache
+/usr/sbin/update-ccache-symlinks

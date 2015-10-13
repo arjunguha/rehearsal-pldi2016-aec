@@ -1,0 +1,10 @@
+/etc/collectd/collectd.conf
+/etc/collectd/collectd.conf.d/filters.conf
+/etc/collectd/collectd.conf.d/thresholds.conf
+/usr/share/doc/collectd/AUTHORS.gz
+/usr/share/doc/collectd/README.Debian.gz
+/usr/share/doc/collectd/README.gz
+/usr/share/doc/collectd/TODO
+/usr/share/doc/collectd/changelog.Debian.gz
+/usr/share/doc/collectd/copyright
+/usr/share/doc/collectd/examples

@@ -1,7 +1,7 @@
 class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
 
   import rehearsal._
-  import PuppetParser2.parseFile
+  import PuppetParser.parseFile
 
   val root = "parser-tests/good"
 

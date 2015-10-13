@@ -1,0 +1,13 @@
+/usr/share/doc/memcached/protocol.txt.gz
+/usr/share/doc/memcached/copyright
+/etc/default/memcached
+/usr/share/memcached/scripts/start-memcached
+/usr/share/doc/memcached/README.Debian
+/usr/share/doc/memcached/NEWS.gz
+/usr/include/memcached/protocol_binary.h
+/usr/share/memcached/scripts/memcached-tool
+/usr/bin/memcached
+/usr/share/memcached/memcached.conf.default
+/usr/share/man/man1/memcached.1.gz
+/etc/init.d/memcached
+/usr/share/doc/memcached/changelog.Debian.gz

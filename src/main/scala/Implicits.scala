@@ -1,7 +1,7 @@
 package rehearsal
 
 trait Extractor2[T] {
-  def apply(from: PuppetSyntax2.Expr): Option[T]
+  def apply(from: PuppetSyntax.Expr): Option[T]
 }
 
 object Implicits {
@@ -52,40 +52,40 @@ object Implicits {
     }
   }
 
-  implicit class RichManifest(m: Syntax.Manifest) {
+  implicit class RichManifest(m: PuppetSyntax.Manifest) {
 
-    import Syntax._
+    import PuppetSyntax._
 
     def >>(other: Manifest) = (m, other) match {
-      case (Empty, _) => other
-      case (_, Empty) => m
-      case _ => Block(m, other)
+      case (MEmpty, _) => other
+      case (_, MEmpty) => m
+      case _ => MSeq(m, other)
     }
   }
 
 
   implicit def extractString = new Extractor2[String] {
-    import PuppetSyntax2._
+    import PuppetSyntax._
 
     def apply(e: Expr) = e match {
-      case Str(s) => Some(s)
+      case EStr(s) => Some(s)
       case _ => None
     }
   }
 
   implicit def extractSBool = new Extractor2[Boolean] {
-    import PuppetSyntax2._
+    import PuppetSyntax._
 
     def apply(e: Expr) = e match {
-      case Str("yes") => Some(true)
-      case Str("no") => Some(false)
-      case Bool(b) => Some(b)
+      case EStr("yes") => Some(true)
+      case EStr("no") => Some(false)
+      case EBool(b) => Some(b)
       case _ => None
     }
   }
 
-  implicit class RichExpr2(e: PuppetSyntax2.Expr) {
-    import PuppetSyntax2._
+  implicit class RichExpr2(e: PuppetSyntax.Expr) {
+    import PuppetSyntax._
 
     def value[T](implicit extractor: Extractor2[T]) = extractor(e)
 

@@ -5,8 +5,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
   import java.nio.file.{Files, Paths, Path}
   import ResourceModel._
   import FSSyntax.{Expr, Skip, Block}
-  import Eval._
-  import Evaluator.{expandAll, toGraph}
+  import FSEvaluator._
   import smtlib.parser.Commands._
   import smtlib.parser.Terms._
 
@@ -300,7 +299,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
 
   class UpdateSynth(val bounds: DomainBounds) extends SynthesizeVerify with GreedySynthesizer
 
-  val initState = Some(Map(Paths.get("/") -> Eval.FDir))
+  val initState = Some(Map(Paths.get("/") -> FSEvaluator.FDir))
 
   def filterCommon(v1: List[Res], v2: List[Res]): (List[Res], List[Res]) = (v1.filterNot(v2.contains), v2.filterNot(v1.contains))
 
@@ -330,16 +329,16 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
   }
 
   def exec(manifest1: String, manifest2: String): (Precond, List[Res]) = {
-    val graph1 = toGraph(Evaluator.eval(expandAll(Parser.parseFile(manifest1))))
-    val graph2 = toGraph(Evaluator.eval(expandAll(Parser.parseFile(manifest2))))
+    val graph1 = PuppetParser.parse(manifest1).eval.resourceGraph
+    val graph2 = PuppetParser.parse(manifest2).eval.resourceGraph
 
-    assert(SymbolicEvaluator.isDeterministic(toFileScriptGraph(graph1)),
+    assert(SymbolicEvaluator.isDeterministic(graph1.fsGraph),
            "V1 is not deterministic")
-    assert(SymbolicEvaluator.isDeterministic(toFileScriptGraph(graph2)),
+    assert(SymbolicEvaluator.isDeterministic(graph2.fsGraph),
            "V2 is not deterministic")
 
-    val ov1 = topologicalSort(graph1).map(r => ResourceToExpr.convertResource(r))
-    val ov2 = topologicalSort(graph2).map(r => ResourceToExpr.convertResource(r))
+    val ov1 = topologicalSort(graph1.deps).map(r => graph1.ress(r))
+    val ov2 = topologicalSort(graph2.deps).map(r => graph2.ress(r))
     execLists(ov1, ov2) match {
       case (_, precond, rs) => (precond, rs)
     }

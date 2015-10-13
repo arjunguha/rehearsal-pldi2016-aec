@@ -4,7 +4,6 @@ package repl {
 
   import java.nio.file.Paths
   import UpdateSynth._
-  import Evaluator._
 
   private object Main extends App {
     def uncurry[A, B, C](f: (A, B) => C)(t: (A, B)): C = f(t._1, t._2)

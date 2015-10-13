@@ -2,7 +2,7 @@ package rehearsal
 
 object ResourceModel {
 
-  import ResourceToExpr.pkgcache
+  val pkgcache = PackageCache()
 
   import java.nio.file.{Path, Paths}
   import scala.collection.immutable.Set
@@ -96,7 +96,7 @@ object ResourceModel {
       }
     }
     case Package(name, true) => {
-      val files = pkgcache.files(name).get
+      val files = pkgcache.files(name).getOrElse(throw Unexpected(s"package $name is not in the cache"))
       val dirs = allpaths(files) -- files - root
 
       val mkdirs = dirs.toSeq.sortBy(_.getNameCount)
@@ -113,14 +113,7 @@ object ResourceModel {
          Skip)
     }
     case Package(name, false) => {
-      // TODO(arjun): Quick hack to avoid changing the resource model to have
-      // a provider field.
-      val files = pkgcache.files(name) match {
-        case Some(paths) => paths.toList
-        case None => {
-          pkgcache.rpm(name).getOrElse(Set()).toList
-        }
-      }
+      val files = pkgcache.files(name).getOrElse(throw Unexpected(s"package $name is not in the cache")).toList
       val exprs = files.map(f => If(TestFileState(f, DoesNotExist), Skip, Rm(f)))
       val pkgInstallInfoPath = s"/packages/$name"
       // Append at end

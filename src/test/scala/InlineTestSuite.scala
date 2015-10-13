@@ -1,18 +1,15 @@
 trait InlineTestSuite extends org.scalatest.FunSuite {
 
   import rehearsal._
-  import puppet.syntax._
-  // import puppet.graph._
-  import puppet.Facter
-  import Evaluator._
+  import PuppetSyntax.ResourceGraph
 
   def genericTestRunner(resourceGraph: ResourceGraph,
                         fileScriptGraph: FileScriptGraph): Unit
 
   private def runTest(name: String, program: String): Unit = {
     test (name) {
-      val resourceGraph = toGraph(eval(expandAll(Parser.parse(program))))
-      val fileScriptGraph = toFileScriptGraph(resourceGraph)
+      val resourceGraph = PuppetParser.parse(program).eval().resourceGraph()
+      val fileScriptGraph = resourceGraph.fsGraph()
       genericTestRunner(resourceGraph, fileScriptGraph)
     }
   }

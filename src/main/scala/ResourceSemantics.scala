@@ -3,7 +3,7 @@ package rehearsal
 object ResourceSemantics {
 
   import Implicits._
-  import PuppetSyntax2._
+  import PuppetSyntax._
   import ResourceModel._
 
   case class FSCompileError(msg: String) extends RuntimeException(msg)
