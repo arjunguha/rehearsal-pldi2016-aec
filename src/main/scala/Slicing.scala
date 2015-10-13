@@ -38,10 +38,8 @@ object Slicing {
     counts.filter(_._2 > 1).keySet
   }
 
-  def sliceGraph(g: FileScriptGraph): FileScriptGraph = { Graph()
-    val paths  = interferingPaths(g.nodes.map(_.value).toList)
-    val nodes = g.nodes.map(p => slice(p, paths))
-    val edges = g.edges.map(e => slice(e.from, paths) ~> slice(e.to, paths))
-    Graph.from(nodes, edges)
+  def sliceGraph(g: FileScriptGraph): FileScriptGraph = {
+    val paths  = interferingPaths(g.exprs.values.map(_.value).toList)
+    FSGraph(g.exprs.mapValues(e => slice(e, paths)), g.deps)
   }
 }
