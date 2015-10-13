@@ -7,7 +7,7 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
 
   test("dhoppe-monit.pp") {
     val g = parseFile(s"$root/dhoppe-monit.pp").eval.resourceGraph.fsGraph
-    assert(SymbolicEvaluator.isDeterministicError(g) == true)
+    assert(SymbolicEvaluator.isDeterministic(g) == true)
   }
 
   test("thias-bind.pp") {

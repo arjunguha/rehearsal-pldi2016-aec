@@ -48,7 +48,7 @@ object SymbolicEvaluator {
       g.nodes.map(_.hashes).reduce(_ union _),
       None
     )
-    val result = impl.isDeterministic(g)
+    val result = impl.isDeterministicError(g)
     impl.free()
     result
   }
@@ -475,25 +475,17 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   def isDeterministicError(g: FileScriptGraph): Boolean = {
     val inST = initState
-
-    if(!isDeterministic(g))  false
-
-    val es = topologicalSort(g)
-    val f = es.foldRight(F.Skip: Expr)((e, expr) => F.Seq(e, expr))
-
-    val outST = evalExpr(inST, f)
-
+    val outST = evalGraph(inST, g)
     eval(Assert(Not(outST.isErr)))
-
-    eval(CheckSat()) match{
+    eval(CheckSat()) match {
       case CheckSatStatus(SatStatus) => false
       case CheckSatStatus(UnsatStatus) => true
       case CheckSatStatus(UnknownStatus) => throw new RuntimeException("got unknown")
       case s => throw Unexpected(s"got $s from check-sat")
     }
-
+    
   }
-
+  
   def free(): Unit = smt.free()
 
 }
