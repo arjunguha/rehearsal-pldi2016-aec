@@ -55,10 +55,9 @@ object SymbolicEvaluator {
     impl.free()
     result
   }
-
   def isDeterministicError[K](g: FSGraph[K]): Boolean = {
     val impl = mkImpl(g, None)
-    val result = impl.isDeterministic(g)
+    val result = impl.isDeterministicError(g)
     impl.free()
     result
   }
@@ -502,26 +501,17 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   def isDeterministicError[K](g: FSGraph[K]): Boolean = {
     val inST = initState
-
-    // TODO(arjun): has no effect, this is a bug
-    if(!isDeterministic(g))  false
-
-    val es = topologicalSort(g.deps)
-    val f = es.foldRight(F.Skip: Expr)((n, expr) => F.Seq(g.exprs(n), expr))
-
-    val outST = evalExpr(inST, f)
-
+    val outST = evalGraph(inST, g)
     eval(Assert(Not(outST.isErr)))
-
-    eval(CheckSat()) match{
+    eval(CheckSat()) match {
       case CheckSatStatus(SatStatus) => false
       case CheckSatStatus(UnsatStatus) => true
       case CheckSatStatus(UnknownStatus) => throw new RuntimeException("got unknown")
       case s => throw Unexpected(s"got $s from check-sat")
     }
-
+    
   }
-
+  
   def free(): Unit = smt.free()
 
 }
