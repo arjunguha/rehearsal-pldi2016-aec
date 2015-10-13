@@ -1,5 +1,5 @@
-# From https://github.com/antonlindstrom/puppet-powerdns
-# Replaced usage of selector syntax with if expressions.
+# From https://github.com/antonlindstrom/puppet-powerdns/tree/732fa339a15d3ea1d6fc39e806f978bc576b18ab
+# # Replaced usage of selector syntax with if expressions.
 
 # Public: Set confguration directives in a .d directory
 #
@@ -24,7 +24,7 @@ define powerdns::config(
     path    => "${powerdns::params::cfg_include_path}/${name}.conf",
     owner   => 'root',
     group   => 'root',
-    mode    => '0600',
+    mode    => '0700',
     content => "${name}=${value}\n",
     require => Class['powerdns::package'],
     notify  => Class['powerdns::service'],
@@ -63,58 +63,6 @@ class powerdns(
   Anchor['powerdns::begin'] -> Class['powerdns::service'] -> Anchor['powerdns::end']
   Anchor['powerdns::begin'] -> Class['powerdns::package'] -> Anchor['powerdns::end']
 }
-# Public: Install the powerdns ldap backend
-#
-# package  - which package to install
-# ensure   - ensure postgres backend to be present or absent
-# source   - where to get the package from
-# ldap_host   - host to connect to
-# ldap_basedn - which base in the ldap we must be searched in
-# ldap_binddn - which user powerdns should connect as
-# ldap_secret - which password to use with user
-#
-class powerdns::ldap(
-  $package     = $powerdns::params::package_ldap,
-  $ensure      = 'present',
-  $source      = '',
-  $ldap_host   = '',
-  $ldap_basedn = '',
-  $ldap_binddn = '',
-  $ldap_secret = '',
-) inherits powerdns::params {
-
-  require powerdns::package
-
-  $package_source = if $source == '' {
-    undef
-  } else {
-    $source
-  }
-
-  $package_provider = if $source == '' {
-    undef
-  } else {
-    $powerdns::params::package_provider
-  }
-
-  package { $package:
-    ensure   => $ensure,
-    require  => Package[$powerdns::params::package],
-    provider => $package_provider,
-    source   => $package_source
-  }
-
-  file { $powerdns::params::ldap_cfg_path:
-    ensure  => $ensure,
-    owner   => root,
-    group   => root,
-    mode    => '0600',
-    content => template('powerdns/pdns.ldap.local.erb'),
-    notify  => Service['pdns'],
-    require => Package[$package],
-  }
-}
-
 # Public: Install the powerdns mysql backend
 #
 # package  - which package to install
@@ -204,7 +152,6 @@ class powerdns::package(
     owner   => 'root',
     group   => 'root',
     mode    => '0755',
-    require => Package[$package],
   }
 
 }
@@ -240,40 +187,16 @@ class powerdns::params {
     'pdns-backend-mysql'
   }
 
-  $package_ldap = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
-    'pdns-backend-ldap'
-  } else {
-    'pdns-backend-ldap'
-  }
-
-  $package_recursor = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
-    'pdns-recursor'
-  } else {
-    'pdns-recursor'
-  }
-
   $postgresql_cfg_path = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
     '/etc/pdns/pdns.conf'
   } else {
-    '/etc/powerdns/pdns.d/pdns.local.gpgsql.conf'
+    '/etc/powerdns/pdns.d/pdns.local.gpgsql'
   }
 
   $mysql_cfg_path = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
     '/etc/pdns/pdns.conf'
   } else {
-    '/etc/powerdns/pdns.d/pdns.local.gmysql.conf'
-  }
-
-  $ldap_cfg_path = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
-    '/etc/pdns/pdns.conf'
-  } else {
-    '/etc/powerdns/pdns.d/pdns.local.ldap.conf'
-  }
-
-  $recursor_cfg_path = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
-    '/etc/pdns/recursor.conf'
-  } else {
-    '/etc/powerdns/recursor.conf'
+    '/etc/powerdns/pdns.d/pdns.local.mysql'
   }
 
   $cfg_include_name = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
@@ -357,95 +280,6 @@ class powerdns::postgresql(
   }
 
 }
-# Public: Install the powerdns-recursor server
-#
-# package - Name of the package to install
-# ensure  - Ensure powerdns to be present or absent
-# source  - Source package of powerdns server,
-#           default is package provider
-#
-# configs used into the template:
-#   forward_zones
-#   forward_zones_recurse
-#   local_address
-#   local_port
-#   log_common_errors
-#   logging_facility
-#   max_negative_ttl
-#   quiet
-#   setgid
-#   setuid
-#   trace
-#
-# Example:
-#
-#    # Include with default
-#    include powerdns::recursor
-#
-class powerdns::recursor(
-  $package               = $powerdns::params::package_recursor,
-  $ensure                = 'present',
-  $source                = '',
-  $forward_zones         = undef,
-  $forward_zones_recurse = undef,
-  $local_address         = '127.0.0.1',
-  $local_port            = '53',
-  $log_common_errors     = 'yes',
-  $logging_facility      = undef,
-  $max_negative_ttl      = undef,
-  $quiet                 = 'yes',
-  $setgid                = 'pdns',
-  $setuid                = 'pdns',
-  $trace                 = 'off',
-
-) inherits powerdns::params {
-
-  require powerdns
-
-  $package_source = if $source == '' {
-    undef
-  } else {
-    $source
-  }
-
-  $package_provider = if $source == '' {
-    undef
-  } else {
-    $powerdns::params::package_provider
-  }
-
-  package { $package:
-    ensure   => $ensure,
-    require  => Package[$powerdns::params::package],
-    provider => $package_provider,
-    source   => $package_source
-  }
-
-  file { $powerdns::params::recursor_cfg_path:
-    ensure  => $ensure,
-    owner   => root,
-    group   => root,
-    mode    => '0600',
-    content => template('powerdns/recursor.conf.erb'),
-    notify  => Service['pdns-recursor'],
-    require => Package[$package],
-  }
-
-  $ensure_service = if $ensure == 'present' {
-    'running'
-  } else {
-    'stopped'
-  }
-
-  service { 'pdns-recursor':
-    ensure     => $ensure_service,
-    enable     => true,
-    hasrestart => true,
-    hasstatus  => true,
-    require    => Package[$package],
-  }
-}
-
 # Internal: Ensure the service to be either started or stopped
 #
 # Example:
