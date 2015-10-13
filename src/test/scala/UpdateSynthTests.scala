@@ -100,13 +100,13 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
     val m1 = """
       file{'/foo': ensure => directory }
       file{'/foo/bar': ensure => directory }
-      File['/foo'] ~> File['/foo/bar']
+      File['/foo'] -> File['/foo/bar']
     """
 
     val m2 = """
       file{'/foo': ensure => directory }
       file{'/foo/bar': ensure => directory }
-      File['/foo/bar'] ~> File['/foo']
+      File['/foo/bar'] -> File['/foo']
     """
 
     // The precondition should be non-empty
