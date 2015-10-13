@@ -28,7 +28,7 @@ object DeterminismBenchmarks {
   def run(): Unit = {
     println("Name,Slicing,Size,Time")
     for (i <- 0.until(10)) {
-      bench("monit", s"$root/dhoppe-monit.pp", g => isDeterministicError(g) == true)
+      bench("monit", s"$root/dhoppe-monit.pp", g => isDeterministic(g) == true)
       bench("bind", s"$root/thias-bind.pp", g => isDeterministic(g) == false)
       bench("hosting", s"$root/puppet-hosting.pp", g => isDeterministic(g) == false)
       bench("dns", s"$root/antonlingstrom-powerdns.pp", g => isDeterministic(g) == false)
