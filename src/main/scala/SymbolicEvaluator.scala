@@ -301,15 +301,15 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   }
 
-  def stateFromTerm(st: ST): State = {
+  def stateFromTerm(st: ST): Option[State] = {
     val Seq((_, isErr)) = smt.getValue(Seq(st.isErr))
     isErr match {
-      case QualifiedIdentifier(Identifier(SSymbol("true"), Seq()), _) => throw Unexpected("counterexample is error")
+      case QualifiedIdentifier(Identifier(SSymbol("true"), Seq()), _) => None
       case QualifiedIdentifier(Identifier(SSymbol("false"), Seq()), _) => {
         val (paths, terms) = st.paths.toList.unzip
         val pathVals = smt.getValue(terms).map(_._2)
         // Filtering out the Nones with .flatten
-        paths.zip(pathVals).map({ case (path, t) => fstateFromTerm(t).map(f => path -> f) }).flatten.toMap
+        Some(paths.zip(pathVals).map({ case (path, t) => fstateFromTerm(t).map(f => path -> f) }).flatten.toMap)
       }
       case _ => throw Unexpected("unexpected value for isErr")
     }
@@ -366,7 +366,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         val _ = smt.getModel()
         val newPrecond = predFromTerm(st0)
         logger.info(s"precondition: $newPrecond")
-        Some((stateFromTerm(st0), newPrecond))
+        Some((stateFromTerm(st0).getOrElse(throw Unexpected("state is an error")), newPrecond))
       }
       case UnsatStatus => None
       case UnknownStatus => throw Unexpected("got unknown")
@@ -385,7 +385,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       eval(CheckSat()) match {
         case CheckSatStatus(SatStatus) => {
           val model: List[SExpr] = eval(GetModel()).asInstanceOf[GetModelResponseSuccess].model
-          Some(Some(stateFromTerm(st)))
+          Some(Some(stateFromTerm(st).getOrElse(throw Unexpected("error for initial state"))))
         }
         case CheckSatStatus(UnsatStatus) => None
         case CheckSatStatus(UnknownStatus) => throw Unexpected("got unknown")
@@ -454,6 +454,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     eval(CheckSat()) match {
       case CheckSatStatus(SatStatus) => {
         eval(GetModel())
+
         false
       }
       case CheckSatStatus(UnsatStatus) => true
