@@ -1,6 +1,6 @@
 package rehearsal
 
-object PuppetEval {
+private object PuppetEval {
 
   import PuppetSyntax._
   import scalax.collection.Graph
@@ -12,8 +12,6 @@ object PuppetEval {
   import scala.util.parsing.combinator._
 
   object StringInterpolator {
-    val parser = new PuppetParser()
-    import parser._
 
     def interpolate(st: State, env: Env, str: String): Expr = {
       val strs = str.split("""\$""")
@@ -37,10 +35,11 @@ object PuppetEval {
       }
     }
 
+    // TODO(arjun): We should really parse in the parser
     def evaluate(st: State, env: Env, str: String): String = {
       val strPrime = if(str.charAt(0) != '$') "$" + str else str
-      parseAll(expr, strPrime) match {
-        case Success(expr, _) => evalExpr(st, env, expr) match {
+      PuppetParser.parseExpr(strPrime) match {
+        case Some(expr) => evalExpr(st, env, expr) match {
           case EStr(s) => s
           case _ => throw EvalError(s"None string expression evaluated during string interpolation: $expr")
         }

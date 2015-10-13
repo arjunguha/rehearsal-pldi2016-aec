@@ -56,6 +56,8 @@ object FSSyntax {
       runtime.ScalaRunTime._hashCode(this)
 
     override def toString(): String = this.pretty()
+
+    def eval(st: FSEvaluator.State): Option[FSEvaluator.State] = FSEvaluator.eval(st, this)
   }
 
   case object Error extends Expr

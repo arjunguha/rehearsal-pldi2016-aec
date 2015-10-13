@@ -74,14 +74,17 @@ object PuppetSyntax {
   case class ECond(test: Expr, truePart: Expr, falsePart: Expr) extends Expr
   case class EResourceRef(typ: String, title: Expr) extends Expr
 
+  // Our representation of fully evaluataed manifests, where nodes are primitive resources.
+  case class EvaluatedManifest(ress: Map[Node, ResourceVal], deps: Graph[Node, DiEdge]) {
+    def resourceGraph(): ResourceGraph = ResourceGraph(ress.mapValues(x => ResourceSemantics.compile(x)), deps)
+  }
+
   case class ResourceVal(typ: String, title: String, attrs: Map[String, Expr]) {
     val node = Node(typ, title)
   }
 
-  case class Node(typ: String, title: String)
-
-  case class EvaluatedManifest(ress: Map[Node, ResourceVal], deps: Graph[Node, DiEdge]) {
-    def resourceGraph(): ResourceGraph = ResourceGraph(ress.mapValues(x => ResourceSemantics.compile(x)), deps)
+  case class Node(typ: String, title: String) {
+    lazy val isPrimitiveType = PuppetEval.primTypes.contains(typ)
   }
 
   case class ResourceGraph(ress: Map[Node, ResourceModel.Res], deps: Graph[Node, DiEdge]) {

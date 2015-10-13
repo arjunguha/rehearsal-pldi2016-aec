@@ -1,9 +1,8 @@
 class SimpleEvalTests extends org.scalatest.FunSuite {
 
 	import rehearsal._
-	import PuppetParser._
 	import PuppetSyntax._
-	import PuppetEval._
+	import PuppetParser.parse
 	import java.nio.file._
 	import scala.collection.JavaConversions._
   import scalax.collection.Graph
@@ -15,13 +14,12 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
 	for (path <- Files.newDirectoryStream(Paths.get("parser-tests/good"))) {
 
 		test(path.toString) {
-			parseFile(path.toString)
-			val EvaluatedManifest(resources, deps) = eval(parseFile(path.toString))
-			if (deps.nodes.length == 0) {
+			val EvaluatedManifest(resources, deps) = PuppetParser.parseFile(path.toString).eval()
+			if (deps.nodes.size == 0) {
 				info("No resources found -- a trivial test")
 			}
 			for (node <- deps.nodes) {
-				assert(primTypes.contains(node.value.typ), s"${node.value.typ} not elaborated")
+				assert(node.isPrimitiveType, s"${node.value.typ} not elaborated")
 			}
 		}
 
@@ -29,12 +27,12 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
 
 	test("simple before relationship") {
 
-		val EvaluatedManifest(r, g) = eval(parse("""
+		val EvaluatedManifest(r, g) = parse("""
       file{"A":
         before => File["B"]
       }
       file{"B": }
-    """))
+    """).eval()
 
     assert(r.size == 2)
     assert(g == Graph(Node("file", "A") ~> Node("file", "B")))
@@ -43,13 +41,13 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
 
 	test("require relationship with an array") {
 
-		val EvaluatedManifest(r, g) = eval(parse("""
+		val EvaluatedManifest(r, g) = parse("""
       file{"A":
         require => [File["B"], File["C"]]
       }
       file{"B": }
       file{"C": }
-    """))
+    """).eval()
 
     assert(r.size == 3)
     assert(g == Graph(Node("file", "B") ~> Node("file", "A"),
