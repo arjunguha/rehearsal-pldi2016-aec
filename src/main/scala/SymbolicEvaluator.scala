@@ -10,6 +10,8 @@ import CommandsResponses._
 import java.nio.file.{Path, Paths}
 import FSSyntax.{Block, Expr}
 import rehearsal.{FSSyntax => F}
+import scalax.collection.Graph
+import scalax.collection.GraphEdge.DiEdge
 import scalax.collection.GraphPredef._
 
 object SymbolicEvaluator {
@@ -28,26 +30,34 @@ object SymbolicEvaluator {
     impl.free()
     result
   }
-  def isDeterministic(g: FileScriptGraph,
-                      logFile: Option[String] = None): Boolean = {
-    if (g.nodes.size < 2) {
+
+  private def mkImpl[K](g: FSGraph[K], logFile: Option[String]) = {
+    new SymbolicEvaluatorImpl(
+      g.deps.nodes.map(n => g.exprs(n).paths).reduce(_ union _).toList,
+      g.deps.nodes.map(n => g.exprs(n).hashes).reduce(_ union _),
+      logFile)
+  }
+
+  def isDeterministic(g: Graph[Expr, DiEdge]): Boolean = {
+    isDeterministic(FSGraph(g.nodes.toList.map(x => x.value -> x.value).toMap, g))
+  }
+
+  def isDeterministicError(g: Graph[Expr, DiEdge]): Boolean = {
+    isDeterministicError(FSGraph(g.nodes.toList.map(x => x.value -> x.value).toMap, g))
+  }
+
+  def isDeterministic[K](g: FSGraph[K],  logFile: Option[String] = None): Boolean = {
+    if (g.deps.nodes.size < 2) {
       return true
     }
-    val impl = new SymbolicEvaluatorImpl(
-      g.nodes.map(e => e.paths).reduce(_ union _).toList,
-      g.nodes.map(_.hashes).reduce(_ union _),
-      logFile
-    )
+    val impl = mkImpl(g, logFile)
     val result = impl.isDeterministic(g)
     impl.free()
     result
   }
-  def isDeterministicError(g: FileScriptGraph): Boolean = {
-    val impl = new SymbolicEvaluatorImpl(
-      g.nodes.map(e => e.paths).reduce(_ union _).toList,
-      g.nodes.map(_.hashes).reduce(_ union _),
-      None
-    )
+
+  def isDeterministicError[K](g: FSGraph[K]): Boolean = {
+    val impl = mkImpl(g, None)
     val result = impl.isDeterministic(g)
     impl.free()
     result
@@ -397,38 +407,55 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  // Greedily breaks a list of expressions into groups that commute with each other
-  def commutingGroups(lst: List[Expr]): List[List[Expr]] = {
+  // partition2(f, lst) = (lst1, lst2), such that f(x, y) holds for all distinct x and y in lst1.
+  // Furthermore, lst1 ++ lst2 == lst without preserving ordering.
+  // We assume that f is a commutative function.
+  def partition2[A](f: (A, A) => Boolean, lst: List[A]): (List[A], List[A]) = {
     lst match {
-      case Nil => Nil
-      case x :: xs => {
-        val (others, commutes) = xs.foldLeft((List[Expr](), List(x))) {
-          case ((others, commutes), y) => {
-            if (commutes.forall(_.commutesWith(y))) {
-              (others, y :: commutes)
+      case Nil => (Nil, Nil)
+      case rep :: others => {
+        // Greedy: rep will be in the list
+        val init = (List(rep), List[A]())
+        others.foldLeft(init) {
+          case ((lst1, lst2), y) => {
+            if (lst1.forall(x => f(x, y))) {
+              (y :: lst1, lst2)
             }
             else {
-              (y :: others, commutes)
+              (lst1, y :: lst2)
             }
           }
         }
-        commutes :: commutingGroups(others)
       }
     }
   }
 
-  def evalGraph(st: ST, g: FileScriptGraph): ST = {
-    val fringe = g.nodes.filter(_.inDegree == 0).toList
+  def groupBy2[A](f: (A, A) => Boolean, lst: List[A]): List[List[A]] = partition2(f, lst) match {
+    case (Nil, Nil) => Nil
+    case (group, rest) => group :: groupBy2(f, rest)
+  }
+
+  // Greedily breaks a list of expressions into groups that commute with each other
+  def commutingGroups[K](exprs: Map[K, Expr], lst: List[K]): List[List[K]] = {
+    def f(m: K, n: K): Boolean = exprs(m).commutesWith(exprs(n))
+    groupBy2(f, lst)
+  }
+
+  def evalGraph[K](st: ST, g: FSGraph[K]): ST = {
+    val fringe = g.deps.nodes.filter(_.inDegree == 0).toSet.map[K, Set[K]](_.value).toList
     if (fringe.length == 0) {
       st
     }
     else {
-      val fringe1 = commutingGroups(fringe.map[Expr, List[Expr]](x => x))
+      val fringe1 = commutingGroups(g.exprs, fringe)
+
+
       if (fringe1.length == 1) {
-        evalExpr(st, Block(fringe1.head : _*))
+        evalExpr(st, Block(fringe1.head.map(n => g.exprs(n)) : _*))
       }
       else {
-        fringe1.map(p => evalGraph(evalExpr(st, Block(p : _*)), g -- p)).reduce({ (st1: ST, st2: ST) =>
+        fringe1.map(p => evalGraph(evalExpr(st, Block(p.map(n => g.exprs(n)) : _*)),
+                                   g.copy(deps = g.deps -- p))).reduce({ (st1: ST, st2: ST) =>
           val c = freshName("choice")
           val b = eval(DeclareConst(c, BoolSort()))
           ST(ite(c, st1.isErr, st2.isErr),
@@ -444,9 +471,9 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       (Not(st1.isErr) && Not(st2.isErr) && Or(allPaths.map(p => Not(Equals(st1.paths(p), st2.paths(p)))): _*))
   }
 
-  def isDeterministic(g: FileScriptGraph): Boolean = {
+  def isDeterministic[K](g: FSGraph[K]): Boolean = {
     val inST = initState
-    logger.info(s"Generating constraints for a graph with ${g.nodes.size} nodes")
+    logger.info(s"Generating constraints for a graph with ${g.exprs.size} nodes")
     val outST1 = evalGraph(inST, g)
     val outST2 = evalGraph(inST, g)
     eval(Assert(stNEq(outST1, outST2)))
@@ -473,13 +500,14 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   }
 
-  def isDeterministicError(g: FileScriptGraph): Boolean = {
+  def isDeterministicError[K](g: FSGraph[K]): Boolean = {
     val inST = initState
 
+    // TODO(arjun): has no effect, this is a bug
     if(!isDeterministic(g))  false
 
-    val es = topologicalSort(g)
-    val f = es.foldRight(F.Skip: Expr)((e, expr) => F.Seq(e, expr))
+    val es = topologicalSort(g.deps)
+    val f = es.foldRight(F.Skip: Expr)((n, expr) => F.Seq(g.exprs(n), expr))
 
     val outST = evalExpr(inST, f)
 

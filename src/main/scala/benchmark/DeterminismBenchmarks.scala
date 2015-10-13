@@ -11,14 +11,14 @@ object DeterminismBenchmarks {
     if (!onlySliced) {
       val (r, t) = time(check(g))
       assert(r == true, s"unexpected result from $label without slicing")
-      val size = fileScriptGraphSize(g)
+      val size = g.size
       println(s"$label,no-slicing,$size,$t")
     }
 
     val gSliced = Slicing.sliceGraph(g)
     val (r, t) = time(check(gSliced))
     assert(r == true, s"unexpected result from $label with slicing")
-    val size = fileScriptGraphSize(gSliced)
+    val size = gSliced.size
     println(s"$label,slicing,$size,$t")
   }
 

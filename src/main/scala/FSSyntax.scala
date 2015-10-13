@@ -3,6 +3,8 @@ package rehearsal
 object FSSyntax {
 
   import java.nio.file.Path
+  import scalax.collection.Graph
+  import scalax.collection.GraphEdge.DiEdge
 
   sealed trait FileState {
     def <(s: FileState): Boolean = (this, s) match {

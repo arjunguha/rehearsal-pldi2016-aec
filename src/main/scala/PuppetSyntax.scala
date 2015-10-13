@@ -88,11 +88,7 @@ object PuppetSyntax {
   }
 
   case class ResourceGraph(ress: Map[Node, ResourceModel.Res], deps: Graph[Node, DiEdge]) {
-    // TODO(arjun): This is not right. If two resources are mapped to exactly the same expression, they will be
-    // mapped to the same node.
-    def fsGraph(): Graph[FSSyntax.Expr, DiEdge] = {
-      nodeMap((node: Node) => ress(node).compile(), deps)
-    }
+    def fsGraph(): FileScriptGraph = FSGraph(ress.mapValues(_.compile()), deps)
   }
 
 }

@@ -8,7 +8,7 @@ object DeterminismSizeTables {
     val rg = PuppetParser.parseFile(path).eval().resourceGraph()
     val g = rg.fsGraph()
     val rSize = rg.deps.nodes.size
-    val fSize =  fileScriptGraphSize(g)
+    val fSize =  g.size
     println(s"$label & $rSize & $fSize \\\\")
   }
 
