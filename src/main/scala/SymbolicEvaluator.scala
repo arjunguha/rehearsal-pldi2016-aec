@@ -453,8 +453,17 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     logger.info("Checking satisfiability")
     eval(CheckSat()) match {
       case CheckSatStatus(SatStatus) => {
+        logger.info("program is non-deterministic")
         eval(GetModel())
-
+        (stateFromTerm(inST), stateFromTerm(outST1), stateFromTerm(outST2)) match {
+          case (None, _, _) => throw Unexpected("bad model: initial state should not be error")
+          case (Some(in), None, Some(out)) => logger.info(s"On input\n$in\nthe program produces error or output\n$out")
+          case (Some(in), Some(out), None) => logger.info(s"On input\n$in\nthe program produces error or output\n$out")
+          case (Some(in), Some(out1), Some(out2)) => {
+            logger.info(s"On input\n$in\nthe program produces two possible outputs!")
+          }
+          case (Some(_), None, None) => throw Unexpected("bad model: both outputs are identical errors")
+        }
         false
       }
       case CheckSatStatus(UnsatStatus) => true
