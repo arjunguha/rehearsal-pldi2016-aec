@@ -89,7 +89,10 @@ object PuppetSyntax {
   }
 
   case class ResourceGraph(ress: Map[Node, ResourceModel.Res], deps: Graph[Node, DiEdge]) {
+
     def fsGraph(): FileScriptGraph = FSGraph(ress.mapValues(_.compile()), deps)
+
+
   }
 
   // A potential issue with graphs of FS programs is that several resources may compile to the same FS expression.
@@ -98,9 +101,28 @@ object PuppetSyntax {
   // PuppetSyntax.Node is unique for every resource, so we use that when we load a Puppet file. For testing,
   // the keys can be anything.
   case class FSGraph[K](exprs: Map[K, FSSyntax.Expr], deps: Graph[K, DiEdge]) {
+
     lazy val size: Int = {
       deps.nodes.map(n => exprs(n).size).reduce(_ + _) + deps.edges.size
     }
+
+    /** Returns an FS program that represents the action of a <b>deterministic</b> graph.
+      *
+      * @return an FS program
+      */
+    def expr(): FSSyntax.Expr = {
+      FSSyntax.Block(topologicalSort(deps).map(k => exprs(k)): _*)
+    }
+
+    /** Checks if two <b>deterministic</b> FS graphs are equivalent.
+      *
+      * @param other the other FS graph
+      * @return [None] if they are equivalent and [Some cex] if they are not and [cex] witnesses the difference
+      */
+    def notEquiv(other: FSGraph[K]): Option[FSEvaluator.State] = {
+      SymbolicEvaluator.exprEquals(this.expr(), other.expr())
+    }
+
   }
 
   type FileScriptGraph = FSGraph[Node]
