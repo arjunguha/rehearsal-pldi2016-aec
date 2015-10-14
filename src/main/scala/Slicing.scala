@@ -6,6 +6,7 @@ object Slicing {
   import java.nio.file.Path
   import Implicits._
   import FSSyntax._
+  import PuppetSyntax.{FSGraph, FileScriptGraph}
   import scalax.collection.Graph
   import scalax.collection.GraphPredef._
 

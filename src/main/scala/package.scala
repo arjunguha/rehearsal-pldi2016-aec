@@ -11,34 +11,7 @@ package object rehearsal {
   import rehearsal.Implicits._
   import scala.util.{Try, Success, Failure}
 
-  def topologicalSort[V](graph: scalax.collection.Graph[V, DiEdge]): List[V] = {
-    if (graph.isEmpty) {
-      List()
-    }
-    else {
-      graph.nodes.find(_.inDegree == 0) match {
-        case None => throw CannotUpdate("cyclic graph")
-        case Some(node) => {
-          node :: topologicalSort(graph - node)
-        }
-      }
-    }
-  }
-
   def unions[A](sets: scala.Seq[Set[A]]): Set[A] = sets.foldLeft(Set[A]()) (_ union _)
-
-  // A potential issue with graphs of FS programs is that several resources may compile to the same FS expression.
-  // Slicing makes this problem more likely. To avoid this problem, we keep a map from unique keys to expressions
-  // and build a graph of the keys. The actual values of the keys don't matter, so long as they're unique.
-  // PuppetSyntax.Node is unique for every resource, so we use that when we load a Puppet file. For testing,
-  // the keys can be anything.
-  case class FSGraph[K](exprs: Map[K, Expr], deps: Graph[K, DiEdge]) {
-    lazy val size: Int = {
-      deps.nodes.map(n => exprs(n).size).reduce(_ + _) + deps.edges.size
-    }
-  }
-
-  type FileScriptGraph = FSGraph[PuppetSyntax.Node]
 
   val root = Paths.get("/")
 
@@ -82,5 +55,6 @@ package object rehearsal {
     val duration = System.currentTimeMillis - start
     r -> duration
   }
+
 
 }

@@ -8,6 +8,7 @@ import Terms._
 import theories.Core.{And => _, Or => _, _}
 import CommandsResponses._
 import java.nio.file.{Path, Paths}
+import PuppetSyntax.{FSGraph}
 import FSSyntax.{Block, Expr}
 import rehearsal.{FSSyntax => F}
 import scalax.collection.Graph
@@ -16,7 +17,7 @@ import scalax.collection.GraphPredef._
 
 object SymbolicEvaluator {
 
-  def exprEquals(e1: F.Expr, e2: F.Expr): Option[Option[State]] = {
+  def exprEquals(e1: F.Expr, e2: F.Expr): Option[State] = {
     val impl = new SymbolicEvaluatorImpl((e1.paths union e2.paths).toList,
       e1.hashes union e2.hashes, None)
     val result = impl.exprEquals(e1, e2)
@@ -382,11 +383,12 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  def exprEquals(e1: F.Expr, e2: F.Expr): Option[Option[State]] = {
+  def exprEquals(e1: F.Expr, e2: F.Expr): Option[State] = {
     try {
       eval(Push(1))
       // TODO(arjun): Must rule out error as the initial state
       val st = initState
+      assertPathConsistency(st)
       val st1 = evalExpr(st, e1)
       val st2 = evalExpr(st, e2)
 
@@ -394,7 +396,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       eval(CheckSat()) match {
         case CheckSatStatus(SatStatus) => {
           val model: List[SExpr] = eval(GetModel()).asInstanceOf[GetModelResponseSuccess].model
-          Some(Some(stateFromTerm(st).getOrElse(throw Unexpected("error for initial state"))))
+          Some(stateFromTerm(st).getOrElse(throw Unexpected("error for initial state")))
         }
         case CheckSatStatus(UnsatStatus) => None
         case CheckSatStatus(UnknownStatus) => throw Unexpected("got unknown")

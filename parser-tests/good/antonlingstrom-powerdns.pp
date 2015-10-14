@@ -1,5 +1,60 @@
-# From https://github.com/antonlindstrom/puppet-powerdns
+# From https://github.com/antonlindstrom/puppet-powerdns/tree/732fa339a15d3ea1d6fc39e806f978bc576b18ab
 # Replaced usage of selector syntax with if expressions.
+# Added instantiation with following include.
+# Removed params class and moved contents to top, updated references to variables accordingly.
+# Added facter variable.
+
+include powerdns
+
+$::operatingsystem = 'ubuntu'
+
+$package = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
+  'pdns'
+} else {
+  'pdns-server'
+}
+
+$package_provider = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
+  'rpm'
+} else {
+  'dpkg'
+}
+
+$package_psql = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
+  'pdns-backend-postgresql'
+} else {
+  'pdns-backend-pgsql'
+}
+
+$package_mysql = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
+  'pdns-backend-mysql'
+} else {
+  'pdns-backend-mysql'
+}
+
+$postgresql_cfg_path = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
+  '/etc/pdns/pdns.conf'
+} else {
+  '/etc/powerdns/pdns.d/pdns.local.gpgsql'
+}
+
+$mysql_cfg_path = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
+  '/etc/pdns/pdns.conf'
+} else {
+  '/etc/powerdns/pdns.d/pdns.local.mysql'
+}
+
+$cfg_include_name = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
+  'include-dir'
+} else {
+  'include'
+}
+
+$cfg_include_path = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
+  '/etc/pdns/conf.d'
+} else {
+  '/etc/powerdns/pdns.d'
+}
 
 # Public: Set confguration directives in a .d directory
 #
@@ -21,10 +76,10 @@ define powerdns::config(
 
   file { "${name}.conf":
     ensure  => $ensure,
-    path    => "${powerdns::params::cfg_include_path}/${name}.conf",
+    path    => "${cfg_include_path}/${name}.conf",
     owner   => 'root',
     group   => 'root',
-    mode    => '0600',
+    mode    => '0700',
     content => "${name}=${value}\n",
     require => Class['powerdns::package'],
     notify  => Class['powerdns::service'],
@@ -63,58 +118,6 @@ class powerdns(
   Anchor['powerdns::begin'] -> Class['powerdns::service'] -> Anchor['powerdns::end']
   Anchor['powerdns::begin'] -> Class['powerdns::package'] -> Anchor['powerdns::end']
 }
-# Public: Install the powerdns ldap backend
-#
-# package  - which package to install
-# ensure   - ensure postgres backend to be present or absent
-# source   - where to get the package from
-# ldap_host   - host to connect to
-# ldap_basedn - which base in the ldap we must be searched in
-# ldap_binddn - which user powerdns should connect as
-# ldap_secret - which password to use with user
-#
-class powerdns::ldap(
-  $package     = $powerdns::params::package_ldap,
-  $ensure      = 'present',
-  $source      = '',
-  $ldap_host   = '',
-  $ldap_basedn = '',
-  $ldap_binddn = '',
-  $ldap_secret = '',
-) inherits powerdns::params {
-
-  require powerdns::package
-
-  $package_source = if $source == '' {
-    undef
-  } else {
-    $source
-  }
-
-  $package_provider = if $source == '' {
-    undef
-  } else {
-    $powerdns::params::package_provider
-  }
-
-  package { $package:
-    ensure   => $ensure,
-    require  => Package[$powerdns::params::package],
-    provider => $package_provider,
-    source   => $package_source
-  }
-
-  file { $powerdns::params::ldap_cfg_path:
-    ensure  => $ensure,
-    owner   => root,
-    group   => root,
-    mode    => '0600',
-    content => template('powerdns/pdns.ldap.local.erb'),
-    notify  => Service['pdns'],
-    require => Package[$package],
-  }
-}
-
 # Public: Install the powerdns mysql backend
 #
 # package  - which package to install
@@ -128,7 +131,7 @@ class powerdns::ldap(
 # dnssec   - enable or disable dnssec either yes or no
 #
 class powerdns::mysql(
-  $package  = $powerdns::params::package_mysql,
+  $package  = $package_mysql,
   $ensure   = 'present',
   $source   = '',
   $user     = '',
@@ -148,17 +151,17 @@ class powerdns::mysql(
   $package_provider = if $source == '' {
     undef
   } else {
-    $powerdns::params::package_provider
+    $package_provider
   }
 
   package { $package:
     ensure   => $ensure,
-    require  => Package[$powerdns::params::package],
+    require  => Package[$package],
     provider => $package_provider,
     source   => $package_source
   }
 
-  file { $powerdns::params::mysql_cfg_path:
+  file { $mysql_cfg_path:
     ensure  => $ensure,
     owner   => root,
     group   => root,
@@ -166,7 +169,7 @@ class powerdns::mysql(
     backup  => '.bak',
     content => template('powerdns/pdns.mysql.local.erb'),
     notify  => Service['pdns'],
-    require => Package[$powerdns::params::package],
+    require => Package[$package],
   }
 }
 # Internal: Install the powerdns package
@@ -176,7 +179,7 @@ class powerdns::mysql(
 #    include powerdns::package
 #
 class powerdns::package(
-  $package = $powerdns::params::package,
+  $package = $package,
   $ensure = 'present',
   $source = ''
 ) inherits powerdns::params {
@@ -190,7 +193,7 @@ class powerdns::package(
   $package_provider = if $source == '' {
     undef
   } else {
-    $powerdns::params::package_provider
+    $package_provider
   }
 
   package { $package:
@@ -199,12 +202,11 @@ class powerdns::package(
     provider => $package_provider
   }
 
-  file { $powerdns::params::cfg_include_path :
+  file { $cfg_include_path :
     ensure  => directory,
     owner   => 'root',
     group   => 'root',
     mode    => '0755',
-    require => Package[$package],
   }
 
 }
@@ -215,78 +217,6 @@ class powerdns::package(
 #    include powerdns::params
 #
 class powerdns::params {
-
-  $package = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
-    'pdns'
-  } else {
-    'pdns-server'
-  }
-
-  $package_provider = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
-    'rpm'
-  } else {
-    'dpkg'
-  }
-
-  $package_psql = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
-    'pdns-backend-postgresql'
-  } else {
-    'pdns-backend-pgsql'
-  }
-
-  $package_mysql = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
-    'pdns-backend-mysql'
-  } else {
-    'pdns-backend-mysql'
-  }
-
-  $package_ldap = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
-    'pdns-backend-ldap'
-  } else {
-    'pdns-backend-ldap'
-  }
-
-  $package_recursor = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
-    'pdns-recursor'
-  } else {
-    'pdns-recursor'
-  }
-
-  $postgresql_cfg_path = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
-    '/etc/pdns/pdns.conf'
-  } else {
-    '/etc/powerdns/pdns.d/pdns.local.gpgsql.conf'
-  }
-
-  $mysql_cfg_path = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
-    '/etc/pdns/pdns.conf'
-  } else {
-    '/etc/powerdns/pdns.d/pdns.local.gmysql.conf'
-  }
-
-  $ldap_cfg_path = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
-    '/etc/pdns/pdns.conf'
-  } else {
-    '/etc/powerdns/pdns.d/pdns.local.ldap.conf'
-  }
-
-  $recursor_cfg_path = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
-    '/etc/pdns/recursor.conf'
-  } else {
-    '/etc/powerdns/recursor.conf'
-  }
-
-  $cfg_include_name = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
-    'include-dir'
-  } else {
-    'include'
-  }
-
-  $cfg_include_path = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
-    '/etc/pdns/conf.d'
-  } else {
-    '/etc/powerdns/pdns.d'
-  }
 }
 # Public: Install the powerdns postgresql backend
 #
@@ -301,7 +231,7 @@ class powerdns::params {
 # dnssec   - enable or disable dnssec either yes or no
 #
 class powerdns::postgresql(
-  $package  = $powerdns::params::package_psql,
+  $package  = $package_psql,
   $ensure   = 'present',
   $source   = '',
   $user     = '',
@@ -327,17 +257,17 @@ class powerdns::postgresql(
   $package_provider = if $source == '' {
     undef
   } else {
-    $powerdns::params::package_provider
+    $package_provider
   }
 
   package { $package:
     ensure   => $ensure,
-    require  => Package[$powerdns::params::package],
+    require  => Package[$package],
     provider => $package_provider,
     source   => $package_source
   }
 
-  file { $powerdns::params::postgresql_cfg_path:
+  file { $postgresql_cfg_path:
     ensure  => $ensure,
     owner   => root,
     group   => root,
@@ -345,7 +275,7 @@ class powerdns::postgresql(
     backup  => '.bak',
     content => template('powerdns/pdns.pgsql.local.erb'),
     notify  => Service['pdns'],
-    require => Package[$powerdns::params::package],
+    require => Package[$package],
   }
 
   file { '/opt/powerdns_schema.sql':
@@ -357,95 +287,6 @@ class powerdns::postgresql(
   }
 
 }
-# Public: Install the powerdns-recursor server
-#
-# package - Name of the package to install
-# ensure  - Ensure powerdns to be present or absent
-# source  - Source package of powerdns server,
-#           default is package provider
-#
-# configs used into the template:
-#   forward_zones
-#   forward_zones_recurse
-#   local_address
-#   local_port
-#   log_common_errors
-#   logging_facility
-#   max_negative_ttl
-#   quiet
-#   setgid
-#   setuid
-#   trace
-#
-# Example:
-#
-#    # Include with default
-#    include powerdns::recursor
-#
-class powerdns::recursor(
-  $package               = $powerdns::params::package_recursor,
-  $ensure                = 'present',
-  $source                = '',
-  $forward_zones         = undef,
-  $forward_zones_recurse = undef,
-  $local_address         = '127.0.0.1',
-  $local_port            = '53',
-  $log_common_errors     = 'yes',
-  $logging_facility      = undef,
-  $max_negative_ttl      = undef,
-  $quiet                 = 'yes',
-  $setgid                = 'pdns',
-  $setuid                = 'pdns',
-  $trace                 = 'off',
-
-) inherits powerdns::params {
-
-  require powerdns
-
-  $package_source = if $source == '' {
-    undef
-  } else {
-    $source
-  }
-
-  $package_provider = if $source == '' {
-    undef
-  } else {
-    $powerdns::params::package_provider
-  }
-
-  package { $package:
-    ensure   => $ensure,
-    require  => Package[$powerdns::params::package],
-    provider => $package_provider,
-    source   => $package_source
-  }
-
-  file { $powerdns::params::recursor_cfg_path:
-    ensure  => $ensure,
-    owner   => root,
-    group   => root,
-    mode    => '0600',
-    content => template('powerdns/recursor.conf.erb'),
-    notify  => Service['pdns-recursor'],
-    require => Package[$package],
-  }
-
-  $ensure_service = if $ensure == 'present' {
-    'running'
-  } else {
-    'stopped'
-  }
-
-  service { 'pdns-recursor':
-    ensure     => $ensure_service,
-    enable     => true,
-    hasrestart => true,
-    hasstatus  => true,
-    require    => Package[$package],
-  }
-}
-
 # Internal: Ensure the service to be either started or stopped
 #
 # Example:

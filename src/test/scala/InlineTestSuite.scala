@@ -1,7 +1,7 @@
 trait InlineTestSuite extends org.scalatest.FunSuite {
 
   import rehearsal._
-  import PuppetSyntax.ResourceGraph
+  import PuppetSyntax.{FileScriptGraph, ResourceGraph}
 
   def genericTestRunner(resourceGraph: ResourceGraph,
                         fileScriptGraph: FileScriptGraph): Unit

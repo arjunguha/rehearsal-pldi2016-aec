@@ -5,6 +5,7 @@ object PuppetSyntax {
   import scala.util.parsing.input.Positional
   import scalax.collection.Graph
   import scalax.collection.GraphEdge.DiEdge
+  import Implicits._
 
   // Documentation states that include can accept:
   //   * a single class name (apache) or a single class reference (Class['apache'])
@@ -77,6 +78,7 @@ object PuppetSyntax {
   // Our representation of fully evaluataed manifests, where nodes are primitive resources.
   case class EvaluatedManifest(ress: Map[Node, ResourceVal], deps: Graph[Node, DiEdge]) {
     def resourceGraph(): ResourceGraph = ResourceGraph(ress.mapValues(x => ResourceSemantics.compile(x)), deps)
+
   }
 
   case class ResourceVal(typ: String, title: String, attrs: Map[String, Expr]) {
@@ -88,7 +90,43 @@ object PuppetSyntax {
   }
 
   case class ResourceGraph(ress: Map[Node, ResourceModel.Res], deps: Graph[Node, DiEdge]) {
+
     def fsGraph(): FileScriptGraph = FSGraph(ress.mapValues(_.compile()), deps)
+
+
   }
+
+  // A potential issue with graphs of FS programs is that several resources may compile to the same FS expression.
+  // Slicing makes this problem more likely. To avoid this problem, we keep a map from unique keys to expressions
+  // and build a graph of the keys. The actual values of the keys don't matter, so long as they're unique.
+  // PuppetSyntax.Node is unique for every resource, so we use that when we load a Puppet file. For testing,
+  // the keys can be anything.
+  case class FSGraph[K](exprs: Map[K, FSSyntax.Expr], deps: Graph[K, DiEdge]) {
+
+    lazy val size: Int = {
+      deps.nodes.map(n => exprs(n).size).reduce(_ + _) + deps.edges.size
+    }
+
+    /** Returns an FS program that represents the action of a <b>deterministic</b> graph.
+      *
+      * @return an FS program
+      */
+    def expr(): FSSyntax.Expr = {
+      FSSyntax.Block(deps.topologicalSort().map(k => exprs(k)): _*)
+    }
+
+    /** Checks if two <b>deterministic</b> FS graphs are equivalent.
+      *
+      * @param other the other FS graph
+      * @return [None] if they are equivalent and [Some cex] if they are not and [cex] witnesses the difference
+      */
+    def notEquiv(other: FSGraph[K]): Option[FSEvaluator.State] = {
+      SymbolicEvaluator.exprEquals(this.expr(), other.expr())
+    }
+
+  }
+
+  type FileScriptGraph = FSGraph[Node]
+
 
 }

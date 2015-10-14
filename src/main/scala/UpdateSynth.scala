@@ -8,6 +8,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
   import FSEvaluator._
   import smtlib.parser.Commands._
   import smtlib.parser.Terms._
+  import Implicits._
 
   // Calculates the "distance" between two states. The distance is in the range [0.0, 1.0], where 0.0 means
   // identical and 1.0 means "very different.
@@ -337,8 +338,8 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     assert(SymbolicEvaluator.isDeterministic(graph2.fsGraph),
            "V2 is not deterministic")
 
-    val ov1 = topologicalSort(graph1.deps).map(r => graph1.ress(r))
-    val ov2 = topologicalSort(graph2.deps).map(r => graph2.ress(r))
+    val ov1 = graph1.deps.topologicalSort().map(r => graph1.ress(r))
+    val ov2 = graph2.deps.topologicalSort().map(r => graph2.ress(r))
     execLists(ov1, ov2) match {
       case (_, precond, rs) => (precond, rs)
     }

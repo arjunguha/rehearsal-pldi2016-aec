@@ -295,13 +295,14 @@ private object PuppetEval {
     case ENum(n) => ENum(n)
     case EStr(str) => StringInterpolator.interpolate(st, env, str)
     case EBool(b) => EBool(b)
+    case ERegex(r) => ERegex(r)
     case EResourceRef(typ, title) => EResourceRef(typ.toLowerCase, evalExpr(st, env, title))
     case EEq(e1, e2) => EBool(evalExpr(st, env, e1) == evalExpr(st, env, e2))
     case ELT(e1, e2) => (evalExpr(st, env, e1), evalExpr(st, env, e2)) match {
       case (ENum(n1), ENum(n2)) => EBool(n1 < n2)
       case _ => throw EvalError(s"expected args to LT to evaluate to Nums")
     }
-    
+
     case ENot(e) => EBool(!evalBool(st, env, e))
     case EAnd(e1, e2) => EBool(evalBool(st, env, e1) && evalBool(st, env, e2))
     case EOr(e1, e2) => EBool(evalBool(st, env, e1) || evalBool(st, env, e2))
@@ -322,6 +323,16 @@ private object PuppetEval {
     case ECond(e1, e2, e3) => evalBool(st, env, e1) match {
       case true => evalExpr(st, env, e2)
       case false => evalExpr(st, env, e3)
+    }
+    case EMatch(e1, e2) => (evalExpr(st, env, e1), evalExpr(st, env, e2)) match {
+      case (EStr(s), ERegex(r)) => {
+        val pat = r.r
+        s match {
+          case pat(_) => EBool(true)
+          case _ => EBool(false)
+        }
+      }
+      case _ => throw EvalError(s"expected match to find a string on the LHS and a regex on the RHS")
     }
     case _ => throw NotImplemented(expr.toString)
   }
@@ -471,8 +482,17 @@ private object PuppetEval {
     st.copy(deps = deps, aliases = Map())
   }
 
+  def eliminateAnchors(st: State): State = {
+    val anchors: Set[st.deps.NodeT] = st.deps.nodes.toSet.filter(_.typ == "anchor")
+    val edges = anchors.map(anchor => anchor.diPredecessors.foldRight[Set[DiEdge[Node]]](Set()) {
+      case (pred, acc) => acc ++ anchor.diSuccessors.map(succ => DiEdge(pred.value, succ.value))
+    }).flatten
+    val graph: Graph[Node, DiEdge]  = st.deps ++ edges
+    st.copy(resources = st.resources -- anchors.map(_.value), deps = graph -- anchors)
+  }
+
   def eval(manifest: Manifest): EvaluatedManifest = {
-    val st = eliminateAliases(stageExpansion(evalLoop(evalManifest(emptyState, manifest))))
+    val st = eliminateAnchors(eliminateAliases(stageExpansion(evalLoop(evalManifest(emptyState, manifest)))))
     EvaluatedManifest(st.resources, st.deps)
   }
 }
