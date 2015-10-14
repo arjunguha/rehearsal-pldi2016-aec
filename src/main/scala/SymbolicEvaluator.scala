@@ -388,6 +388,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       eval(Push(1))
       // TODO(arjun): Must rule out error as the initial state
       val st = initState
+      assertPathConsistency(st)
       val st1 = evalExpr(st, e1)
       val st2 = evalExpr(st, e2)
 
