@@ -481,8 +481,17 @@ private object PuppetEval {
     st.copy(deps = deps, aliases = Map())
   }
 
+  def eliminateAnchors(st: State): State = {
+    val anchors: Set[st.deps.NodeT] = st.deps.nodes.toSet.filter(_.typ == "anchor")
+    val edges = anchors.map(anchor => anchor.diPredecessors.foldRight[Set[DiEdge[Node]]](Set()) {
+      case (pred, acc) => acc ++ anchor.diSuccessors.map(succ => DiEdge(pred.value, succ.value))
+    }).flatten
+    val graph: Graph[Node, DiEdge]  = st.deps ++ edges
+    st.copy(resources = st.resources -- anchors.map(_.value), deps = graph -- anchors)
+  }
+
   def eval(manifest: Manifest): EvaluatedManifest = {
-    val st = eliminateAliases(stageExpansion(evalLoop(evalManifest(emptyState, manifest))))
+    val st = eliminateAnchors(eliminateAliases(stageExpansion(evalLoop(evalManifest(emptyState, manifest)))))
     EvaluatedManifest(st.resources, st.deps)
   }
 }
