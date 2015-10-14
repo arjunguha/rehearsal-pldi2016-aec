@@ -5,6 +5,7 @@ object PuppetSyntax {
   import scala.util.parsing.input.Positional
   import scalax.collection.Graph
   import scalax.collection.GraphEdge.DiEdge
+  import Implicits._
 
   // Documentation states that include can accept:
   //   * a single class name (apache) or a single class reference (Class['apache'])
@@ -111,7 +112,7 @@ object PuppetSyntax {
       * @return an FS program
       */
     def expr(): FSSyntax.Expr = {
-      FSSyntax.Block(topologicalSort(deps).map(k => exprs(k)): _*)
+      FSSyntax.Block(deps.topologicalSort().map(k => exprs(k)): _*)
     }
 
     /** Checks if two <b>deterministic</b> FS graphs are equivalent.

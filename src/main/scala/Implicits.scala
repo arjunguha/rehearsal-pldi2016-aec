@@ -8,6 +8,8 @@ object Implicits {
 
   import FSSyntax._
   import scala.language.implicitConversions
+  import scalax.collection.Graph
+  import scalax.collection.GraphEdge.DiEdge
   import java.nio.file.{Path, Paths, Files}
 
   implicit def stringToPath(str: String): Path = Paths.get(str)
@@ -88,6 +90,22 @@ object Implicits {
     import PuppetSyntax._
 
     def value[T](implicit extractor: Extractor2[T]) = extractor(e)
+
+  }
+
+  implicit class RichDiGraph[V](graph: Graph[V, DiEdge]) {
+
+    def topologicalSort(): List[V] = {
+      if (graph.isEmpty) {
+        List()
+      }
+      else {
+        graph.nodes.find(_.inDegree == 0) match {
+          case None => throw new IllegalArgumentException("cannot topologically sort a cyclic graph")
+          case Some(node) => node :: (graph - node).topologicalSort()
+        }
+      }
+    }
 
   }
 

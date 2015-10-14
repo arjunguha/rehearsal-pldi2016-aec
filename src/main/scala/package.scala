@@ -11,20 +11,6 @@ package object rehearsal {
   import rehearsal.Implicits._
   import scala.util.{Try, Success, Failure}
 
-  def topologicalSort[V](graph: scalax.collection.Graph[V, DiEdge]): List[V] = {
-    if (graph.isEmpty) {
-      List()
-    }
-    else {
-      graph.nodes.find(_.inDegree == 0) match {
-        case None => throw CannotUpdate("cyclic graph")
-        case Some(node) => {
-          node :: topologicalSort(graph - node)
-        }
-      }
-    }
-  }
-
   def unions[A](sets: scala.Seq[Set[A]]): Set[A] = sets.foldLeft(Set[A]()) (_ union _)
 
   val root = Paths.get("/")
@@ -69,5 +55,6 @@ package object rehearsal {
     val duration = System.currentTimeMillis - start
     r -> duration
   }
+
 
 }
