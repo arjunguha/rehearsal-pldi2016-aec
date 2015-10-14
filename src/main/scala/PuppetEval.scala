@@ -380,6 +380,7 @@ private object PuppetEval {
           val env2 = (env.newScope ++ evaluated).default("title", EStr(node.title)).default("name", EStr(node.title))
           val st1 = evalManifest(st.copy(deps = Graph.empty, env = env2), m)
           st1.copy(
+            resources = st1.resources - node,
             deps = splice(st.deps, st.deps.get(Node("class", title)), st1.deps),
             classGraph = st1.classGraph + (title -> st1.deps)
           )
