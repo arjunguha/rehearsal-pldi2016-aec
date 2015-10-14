@@ -3,7 +3,8 @@ package rehearsal
 object DeterminismBenchmarks {
 
   import SymbolicEvaluator._
-  import PuppetEval._
+
+  import PuppetSyntax.{FileScriptGraph}
 
   def bench(label: String, path: String, check: FileScriptGraph => Boolean, onlySliced: Boolean = false): Unit = {
     val g = PuppetParser.parseFile(path).eval.resourceGraph.fsGraph

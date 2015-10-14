@@ -8,6 +8,7 @@ import Terms._
 import theories.Core.{And => _, Or => _, _}
 import CommandsResponses._
 import java.nio.file.{Path, Paths}
+import PuppetSyntax.{FSGraph}
 import FSSyntax.{Block, Expr}
 import rehearsal.{FSSyntax => F}
 import scalax.collection.Graph
