@@ -2,8 +2,11 @@
 # Replaced usage of selector syntax with if expressions.
 # Added instantiation with following include.
 # Removed params class and moved contents to top, updated references to variables accordingly.
+# Added facter variable.
 
 include powerdns
+
+$::operatingsystem = 'ubuntu'
 
 $package = if $::operatingsystem =~ /(?i:centos|redhat|amazon)/ {
   'pdns'
