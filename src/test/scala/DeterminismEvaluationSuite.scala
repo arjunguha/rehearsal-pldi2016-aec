@@ -9,7 +9,7 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
   import rehearsal.Implicits._
   import java.nio.file.Paths
   import SymbolicEvaluator.{predEquals, exprEquals, isDeterministic, isDeterministicError}
-  import PuppetSyntax._ 
+  import PuppetSyntax._
 
   val root = "parser-tests/good"
 
@@ -34,8 +34,8 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
-  test("antonlingstrom-powerdns.pp") {
-    val g = parseFile(s"$root/antonlingstrom-powerdns.pp").eval.resourceGraph.fsGraph
+  test("antonlindstrom-powerdns.pp") {
+    val g = parseFile(s"$root/antonlindstrom-powerdns.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
