@@ -13,37 +13,38 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
 
   val root = "parser-tests/good"
 
-  ignore("dhoppe-monit.pp") {
+  test("dhoppe-monit.pp") {
     val g = parseFile(s"$root/dhoppe-monit.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministic(g) == true)
   }
 
   test("dhoppe-monit_BUG.pp") {
-    val g = parseFile(s"$root/dhoppe-monit_BUG.pp").eval.resourceGraph.fsGraph
+    val rg = parseFile(s"$root/dhoppe-monit_BUG.pp").eval.resourceGraph
+    val g = rg.fsGraph
     assert(SymbolicEvaluator.isDeterministicError(g) == true)
   }
 
-  ignore("thias-bind.pp") {
+  test("thias-bind.pp") {
     val g = parseFile(s"$root/thias-bind.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
-  ignore("puppet-hosting.pp") {
+  test("puppet-hosting.pp") {
     val g = parseFile(s"$root/puppet-hosting.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
-  ignore("antonlingstrom-powerdns.pp") {
+  test("antonlingstrom-powerdns.pp") {
     val g = parseFile(s"$root/antonlingstrom-powerdns.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
-  ignore("nfisher-SpikyIRC.pp") {
+  test("nfisher-SpikyIRC.pp") {
     val g = parseFile(s"$root/nfisher-SpikyIRC.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)) == false)
   }
 
-  ignore("ghoneycutt-xinetd.pp") {
+  test("ghoneycutt-xinetd.pp") {
     val g = parseFile(s"$root/ghoneycutt-xinetd.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
@@ -53,17 +54,17 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)) == true)
   }
 
-  ignore("thias-ntp.pp") {
+  test("thias-ntp.pp") {
     val g = parseFile(s"$root/thias-ntp.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
-  ignore("xdrum-rsyslog.pp") {
+  test("xdrum-rsyslog.pp") {
     val g = parseFile(s"$root/xdrum-rsyslog.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
-  ignore("BenoitCattie-puppet-nginx.pp") {
+  test("BenoitCattie-puppet-nginx.pp") {
     val g = parseFile(s"$root/BenoitCattie-puppet-nginx.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministic(g))
   }

@@ -36,12 +36,11 @@ object ResourceModel {
          Rm(p) >> CreateFile(p, c),
          If(TestFileState(p, DoesNotExist),
             CreateFile(p, c),
-            Skip))
+            Error))
     case File(p, c, true) =>
     // TODO(arjun): needs support for recursive directory removal and can simplify too
-     If(TestFileState(p, IsDir),
-         Rm(p),
-         If(TestFileState(p, IsFile), Rm(p), Skip)) >>
+     If(Or (TestFileState(p, IsDir), TestFileState(p, IsFile)),
+         Rm(p), Skip) >>
       CreateFile(p, c)
     case AbsentPath(p, false) =>
       // TODO(arjun): why doesn't this work for directories too?
