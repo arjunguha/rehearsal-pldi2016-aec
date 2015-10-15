@@ -1,0 +1,13 @@
+/usr/share/doc/keyboard-configuration/copyright
+/usr/share/initramfs-tools/hooks/console_setup
+/lib/udev/rules.d/85-keyboard-configuration.rules
+/usr/share/initramfs-tools/scripts/panic/console_setup
+/lib/udev/console-setup-tty
+/usr/share/doc/keyboard-configuration/README.Debian
+/usr/share/console-setup/keyboard
+/etc/init.d/console-setup
+/usr/share/initramfs-tools/scripts/init-top/console_setup
+/etc/init/console-setup.conf
+/usr/share/doc/keyboard-configuration/examples/keyboard
+/usr/share/doc/keyboard-configuration/changelog.gz
+/usr/share/apport/package-hooks/source_console-setup.py

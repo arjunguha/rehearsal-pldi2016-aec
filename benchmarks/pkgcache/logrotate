@@ -1,0 +1,10 @@
+/usr/share/doc/logrotate/copyright
+/usr/share/doc/logrotate/NEWS.Debian.gz
+/etc/cron.daily/logrotate
+/etc/logrotate.conf
+/usr/share/man/man5/logrotate.conf.5.gz
+/usr/share/doc/logrotate/changelog.Debian.gz
+/usr/sbin/logrotate
+/usr/share/doc/logrotate/README.Debian
+/usr/share/man/man8/logrotate.8.gz
+/usr/share/bug/logrotate/script

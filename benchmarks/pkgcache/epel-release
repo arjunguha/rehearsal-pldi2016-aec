@@ -1,0 +1,7 @@
+/etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-7
+/etc/yum.repos.d/epel-testing.repo
+/etc/yum.repos.d/epel.repo
+/usr/lib/rpm/macros.d/macros.epel
+/usr/lib/systemd/system-preset/90-epel.preset
+/usr/share/doc/epel-release-7
+/usr/share/doc/epel-release-7/GPL

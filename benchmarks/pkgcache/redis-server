@@ -1,0 +1,10 @@
+/usr/share/man/man1/redis-server.1.gz
+/etc/default/redis-server
+/etc/redis/redis.conf
+/etc/redis/sentinel.conf
+/usr/share/doc/redis-server/copyright
+/usr/share/doc/redis-server/changelog.Debian.gz
+/usr/bin/redis-server
+/etc/init.d/redis-server
+/etc/logrotate.d/redis-server
+/usr/bin/redis-sentinel

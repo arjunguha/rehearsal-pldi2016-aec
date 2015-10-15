@@ -1,0 +1,9 @@
+/usr/bin/php5-cgi
+/etc/apache2/conf-available/php5-cgi.conf
+/usr/share/lintian/overrides/php5-cgi
+/usr/share/php5/sapi/cgi
+/usr/share/man/man1/php5-cgi.1.gz
+/usr/share/bug/php5-cgi/script
+/usr/lib/cgi-bin/php5
+/usr/share/bug/php5-cgi/control
+/usr/share/doc/php5-cgi

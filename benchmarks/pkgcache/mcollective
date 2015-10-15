@@ -1,0 +1,9 @@
+/etc/init.d/mcollective
+/lib/systemd/system/mcollective.service
+/usr/share/doc/mcollective/examples/activemq.xml
+/usr/share/doc/mcollective/README.Debian
+/etc/default/mcollective
+/usr/share/mcollective/server.cfg
+/usr/share/doc/mcollective/changelog.Debian.gz
+/usr/share/doc/mcollective/copyright
+/usr/sbin/mcollectived
