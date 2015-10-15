@@ -63,14 +63,15 @@ class autodeploy {
   }
 }
 class collectd {
-  package { 'collectd':
+  # HACK(jcollard): collectd contains different files on centos
+  package { 'collectd-centos':
     ensure  => latest,
     require => Class['epel'],
   }
 
   package { 'collectd-rrdtool':
     ensure  => latest,
-    require => Package['collectd'],
+    require => Package['collectd-centos'],
     notify  => Service['collectd'],
   }
 
@@ -81,14 +82,14 @@ class collectd {
     owner   => 'root',
     group   => 'root',
     mode    => '0644',
-    require => Package['collectd'],
+    require => Package['collectd-centos'],
     notify  => Service['collectd'],
   }
 
   service { 'collectd':
     ensure  => running,
     enable  => true,
-    require => Package['collectd'],
+    require => Package['collectd-centos'],
   }
 }
 
