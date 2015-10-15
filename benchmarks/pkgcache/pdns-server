@@ -1,6 +1,7 @@
 /etc/init.d/pdns
 /etc/insserv.d/pdns-server
 /etc/resolvconf/update.d/pdns
+/etc/powerdns/.hidden
 /usr/bin/dnsreplay
 /usr/bin/dnsscope
 /usr/bin/dnswasher
