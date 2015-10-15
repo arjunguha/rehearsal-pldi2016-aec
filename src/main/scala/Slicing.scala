@@ -41,6 +41,6 @@ object Slicing {
 
   def sliceGraph(g: FileScriptGraph): FileScriptGraph = {
     val paths  = interferingPaths(g.exprs.values.map(_.value).toList)
-    FSGraph(g.exprs.mapValues(e => slice(e, paths)), g.deps)
+    FSGraph(g.exprs.mapValues(e => slice(e, paths)).view.force, g.deps)
   }
 }
