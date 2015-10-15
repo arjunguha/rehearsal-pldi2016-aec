@@ -469,7 +469,8 @@ private object PuppetEval {
           deps = st1.deps ++ dependencies.map(x => DiEdge(x, n))
         )
       )
-    st2.copy( deps = st2.deps - stage )
+    st2.copy( deps = st2.deps - stage,
+              resources = st.resources - stage)
   }
 
   def stageExpansion(st: State): State = {
