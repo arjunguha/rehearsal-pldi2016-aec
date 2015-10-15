@@ -6,9 +6,10 @@ object Slicing {
   import java.nio.file.Path
   import Implicits._
   import FSSyntax._
-  import PuppetSyntax.{FSGraph, FileScriptGraph}
+  import PuppetSyntax.{FSGraph, FileScriptGraph, Node}
   import scalax.collection.Graph
   import scalax.collection.GraphPredef._
+  import scalax.collection.GraphEdge.DiEdge
 
   def allPathsPred(p: Pred): Set[Path] = p match {
     case True | False => Set()
@@ -41,6 +42,15 @@ object Slicing {
 
   def sliceGraph(g: FileScriptGraph): FileScriptGraph = {
     val paths  = interferingPaths(g.exprs.values.map(_.value).toList)
-    FSGraph(g.exprs.mapValues(e => slice(e, paths)).view.force, g.deps)
+    val newG = FSGraph(g.exprs.mapValues(e => slice(e, paths)).view.force, g.deps)
+    val diff = g.exprs.filterKeys(k => { val x = g.exprs.get(k); (x != Skip && x != newG.exprs.get(k))}).keySet
+    diff.foldRight(newG)(skipSkips)
+  }
+
+  def skipSkips(useless: Node, g: FileScriptGraph): FileScriptGraph = {
+    val in: Set[Node] = g.deps.get(useless).incoming.map(_.head.value)
+    val out: Set[Node] = g.deps.get(useless).outgoing.map(_.last.value)
+    val newEdges = in.foldRight(Set[DiEdge[Node]]())({ case (i, set) => set union out.map(o => DiEdge(i, o)) })
+    FSGraph(g.exprs - useless, g.deps - useless)
   }
 }
