@@ -159,7 +159,29 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
                   """
     val g = PuppetParser.parse(program).eval().resourceGraph().fsGraph()
     assert(false == isDeterministic(g))
-  }  
+  }
+
+  test("createFile should check that parent is a directory") {
+    val p1 = If(TestFileState("/packages/monit", DoesNotExist),
+      If(TestFileState("/etc", DoesNotExist),
+        Mkdir("/etc"), Skip) >> If(TestFileState("/etc/monit", DoesNotExist),
+        Mkdir("/etc/monit"), Skip) >> CreateFile("/etc/monit/monitrc", "") >> CreateFile("/packages/monit", ""), Skip)
+
+    val p2 = If(TestFileState("/etc/monit/conf.d", IsFile),
+              Rm("/etc/monit/conf.d") >> CreateFile("/etc/monit/conf.d", ""),
+              If(TestFileState("/etc/monit/conf.d", DoesNotExist),
+                CreateFile("/etc/monit/conf.d", ""), Error))
+
+    val p3 = If(TestFileState("/etc/monit/conf.d/myservice", IsFile),
+             Rm("/etc/monit/conf.d/myservice") >> CreateFile("/etc/monit/conf.d/myservice", ""),
+             If(TestFileState("/etc/monit/conf.d/myservice", DoesNotExist), CreateFile("/etc/monit/conf.d/myservice", ""), Error))
+
+
+    val p = p1 >> p2 >> p3
+    val s = new SymbolicEvaluatorImpl(p.paths.toList, p.hashes, None)
+    println(s.exprEquals(p, Error))
+
+  }
 
 //    val example1 = {
 //    import rehearsal.fsmodel._
