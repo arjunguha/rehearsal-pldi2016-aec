@@ -449,10 +449,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
     else {
       val fringe1 = commutingGroups(g.exprs, fringe)
-
-
       if (fringe1.length == 1) {
-        evalExpr(st, Block(fringe1.head.map(n => g.exprs(n)) : _*))
+        evalGraph(evalExpr(st, Block(fringe1.head.map(n => g.exprs(n)) : _*)), g.copy(deps = g.deps -- fringe1.head))
       }
       else {
         fringe1.map(p => evalGraph(evalExpr(st, Block(p.map(n => g.exprs(n)) : _*)),
@@ -503,6 +501,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   def isDeterministicError[K](g: FSGraph[K]): Boolean = {
     val inST = initState
+    assertPathConsistency(inST)
     val outST = evalGraph(inST, g)
     eval(Assert(Not(outST.isErr)))
     eval(CheckSat()) match {
