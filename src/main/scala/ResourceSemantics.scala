@@ -27,6 +27,10 @@ object ResourceSemantics {
 
     def consume[T](key: String, default: => T)(implicit extractor: Extractor2[T]): T = {
       state.get(key) match {
+        case Some(EUndef) => {
+          state -= key
+          default
+        }
         case Some(v) => {
           val r = v.value[T].getOrElse(throw FSCompileError(s"unexpected value for $key"))
           state -= key
