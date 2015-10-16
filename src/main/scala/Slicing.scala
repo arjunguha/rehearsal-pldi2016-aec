@@ -46,7 +46,7 @@ object Slicing {
   def sliceGraph(g: FileScriptGraph): FileScriptGraph = {
     val paths  = interferingPaths(g.exprs.values.map(_.value).toList)
     val newG = FSGraph(g.exprs.mapValues(e => slice(e, paths)).view.force, g.deps)
-    val diff = g.exprs.filterKeys(k => { val x = g.exprs.get(k); (x != Skip && x != newG.exprs.get(k))}).keySet
+    val diff = g.exprs.filterKeys(k => newG.exprs(k) == Skip).keySet
     diff.foldRight(newG)(skipSkips)
   }
 
