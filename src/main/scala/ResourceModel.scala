@@ -95,13 +95,14 @@ object ResourceModel {
       }
     }
     case Package(name, true) => {
-      val files = pkgcache.files(name).getOrElse(throw Unexpected(s"package $name is not in the cache"))
-      val dirs = allpaths(files) -- files - root
+      val paths = pkgcache.files(name).getOrElse(throw Unexpected(s"package $name is not in the cache"))
+      val dirs = allpaths(paths) -- paths - root
+      val files = paths -- dirs - root
 
       val mkdirs = dirs.toSeq.sortBy(_.getNameCount)
         .map(d => If(TestFileState(d, DoesNotExist),
                      Mkdir(d),
-                     Skip))
+                     If(TestFileState(d, IsDir), Skip, Error)))
 
       val somecontent = ""
       val createfiles = files.toSeq.map((f) => CreateFile(f, somecontent))
