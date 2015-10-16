@@ -195,4 +195,34 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
 //
 //  }
 
+  test("slicing regression: thias-bind-buggy") {
+    val m = PuppetParser.parse(
+      """
+        package { 'bind': ensure => installed }
+
+        service { 'named':
+            require   => Package['bind'],
+            hasstatus => true,
+            enable    => true,
+            ensure    => running,
+            restart   => '/sbin/service named reload',
+        }
+
+        file { "/var/named":
+            require => Package['bind'],
+            ensure  => directory,
+            owner   => 'root',
+            group   => 'named',
+            mode    => '0770',
+            seltype => 'named_log_t',
+        }
+
+          file { "/var/named/example.com":
+              content => "lol",
+              notify  => Service['named'],
+          }
+      """).eval().resourceGraph().fsGraph()
+
+    assert(isDeterministic(Slicing.sliceGraph(m)) == false, "slicing changed the result of determinism")
+  }
 }
