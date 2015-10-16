@@ -19,14 +19,13 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
   }
 
   test("dhoppe-monit_BUG.pp") {
-    val rg = parseFile(s"$root/dhoppe-monit_BUG.pp").eval.resourceGraph
-    val g = rg.fsGraph
+    val g = parseFile(s"$root/dhoppe-monit_BUG.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministicError(g) == true)
   }
 
   test("thias-bind.pp") {
     val g = parseFile(s"$root/thias-bind.pp").eval.resourceGraph.fsGraph
-    assert(SymbolicEvaluator.isDeterministic(g) == false)
+    assert(SymbolicEvaluator.isDeterministic(g))
   }
 
   test("puppet-hosting.pp") {
@@ -39,8 +38,10 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
-  test("nfisher-SpikyIRC.pp") {
+  ignore("nfisher-SpikyIRC.pp") {
     val g = parseFile(s"$root/nfisher-SpikyIRC.pp").eval.resourceGraph.fsGraph
+    val homeSlice = Slicing.sliceGraph(g)
+    println(homeSlice.exprs)
     assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)) == false)
   }
 
@@ -49,7 +50,7 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
-  ignore("pdurbin-java-jpa-tutorial.pp") {
+  test("pdurbin-java-jpa-tutorial.pp") {
     val g = parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)) == true)
   }
