@@ -19,8 +19,7 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
   }
 
   test("dhoppe-monit_BUG.pp") {
-    val rg = parseFile(s"$root/dhoppe-monit_BUG.pp").eval.resourceGraph
-    val g = rg.fsGraph
+    val g = parseFile(s"$root/dhoppe-monit_BUG.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministicError(g) == true)
   }
 
@@ -33,7 +32,6 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     val g = parseFile(s"$root/thias-bind-buggy.pp").eval.resourceGraph.fsGraph()
     assert(SymbolicEvaluator.isDeterministicError(Slicing.sliceGraph(g)) == false)
     assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)) == false)
-
   }
 
   test("puppet-hosting.pp") {
@@ -47,18 +45,10 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
   }
 
   ignore("nfisher-SpikyIRC.pp") {
-    val rg = parseFile(s"$root/nfisher-SpikyIRC.pp").eval.resourceGraph
-    val g =  rg.fsGraph
-    val g1 = Slicing.sliceGraph(g)
-    val gPaths = g.exprs.values.toList.map(_.paths).reduce(_ ++ _).size
-    val g1Paths = g1.exprs.values.toList.map(_.paths).reduce(_ ++ _)
-    println(s"rg has ${rg.deps.nodes.size} nodes")
-    println(s"g has ${g.deps.nodes.size} nodes and $gPaths")
-    println(s"g1 has ${g1.deps.nodes.size} nodes and ${g1Paths.size}")
-    for (x <- g1Paths) {
-      println(x)
-    }
-    assert(SymbolicEvaluator.isDeterministic(g1) == false)
+    val g = parseFile(s"$root/nfisher-SpikyIRC.pp").eval.resourceGraph.fsGraph
+    val homeSlice = Slicing.sliceGraph(g)
+    println(homeSlice.exprs)
+    assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)) == false)
   }
 
   test("ghoneycutt-xinetd.pp") {
@@ -66,7 +56,7 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
-  ignore("pdurbin-java-jpa-tutorial.pp") {
+  test("pdurbin-java-jpa-tutorial.pp") {
     val g = parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph.fsGraph
     assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)) == true)
   }

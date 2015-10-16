@@ -337,16 +337,20 @@ private object PuppetEval {
     case _ => throw NotImplemented(expr.toString)
   }
 
+  //Filters will not remove all unnecessary edges that are contained in inner graph
   def splice[A](outer: Graph[A, DiEdge], node: A,
                 inner: Graph[A, DiEdge]): Graph[A, DiEdge] = {
     val innerNode = outer.get(node)
+    val removeable = inner.nodes.filter(outer.nodes.contains(_))
+    val newInner = removeable.foldRight(inner)({ case (n, g) => g - n })
     val toEdges = (for (from <- innerNode.diPredecessors;
-                        to <- inner.nodes.filter(_.inDegree == 0))
+                        to <- newInner.nodes.filter(_.inDegree == 0))
                    yield (DiEdge(from.value, to.value)))
-    val fromEdges = (for (from <- inner.nodes.filter(_.outDegree == 0);
+    val fromEdges = (for (from <- newInner.nodes.filter(_.outDegree == 0);
                           to <- innerNode.diSuccessors)
                      yield (DiEdge(from.value, to.value)))
-    outer ++ inner ++ fromEdges ++ toEdges - innerNode
+    val g = outer ++ inner ++ fromEdges ++ toEdges - innerNode
+    g
   }
 
   def mergeNodes[A](g: Graph[A, DiEdge], src1: A, src2: A, dst: A): Graph[A, DiEdge] = {

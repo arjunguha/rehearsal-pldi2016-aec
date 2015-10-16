@@ -17,7 +17,7 @@ object Slicing {
                      else Skip
     case CreateFile(p, _) => if (paths.contains(p) || paths.contains(p.getParent)) e
                              else Skip
-    case Rm(p) => if(paths.contains(p) || paths.exists(_.startsWith(p))) e
+    case Rm(p) => if(paths.exists(_.startsWith(p))) e
                   else Skip
     case Cp(p1, p2) => 
       if(paths.contains(p1) || paths.contains(p2) || paths.contains(p2.getParent)) e
