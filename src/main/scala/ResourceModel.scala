@@ -100,9 +100,7 @@ object ResourceModel {
       val files = paths -- dirs - root
 
       val mkdirs = dirs.toSeq.sortBy(_.getNameCount)
-        .map(d => If(TestFileState(d, DoesNotExist),
-                     Mkdir(d),
-                     If(TestFileState(d, IsDir), Skip, Error)))
+        .map(d => If(TestFileState(d, IsDir), Skip, Mkdir(d)))
 
       val somecontent = ""
       val createfiles = files.toSeq.map((f) => CreateFile(f, somecontent))
