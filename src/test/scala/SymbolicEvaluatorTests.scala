@@ -225,4 +225,30 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
 
     assert(isDeterministic(Slicing.sliceGraph(m)) == false, "slicing changed the result of determinism")
   }
+
+  test("spiky-openssh") {
+    val m = PuppetParser.parse("""
+      package {'openssh':
+        ensure => latest,
+      }
+
+      service {'sshd':
+        ensure     => running,
+        enable     => true,
+      }
+
+      file {'sshd_config':
+        ensure => present,
+        path   => '/etc/ssh/sshd_config',
+        mode   => '0600',
+        owner  => 'root',
+        group  => 'root',
+        source => 'puppet:///modules/ssh/sshd_config',
+        notify => Service['sshd'],
+      }
+    """).eval().resourceGraph().fsGraph()
+
+    assert(isDeterministic(m) == false)
+
+  }
 }
