@@ -99,8 +99,6 @@ object ResourceModel {
       val dirs = paths.map(_.ancestors()).reduce(_ union _) - root
       val files = paths -- dirs
 
-      println(s"Package $name creates files $files")
-
       val mkdirs = dirs.toSeq.sortBy(_.getNameCount)
         .map(d => If(TestFileState(d, IsDir), Skip, Mkdir(d)))
 
