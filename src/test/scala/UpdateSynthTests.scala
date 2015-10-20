@@ -9,7 +9,7 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
 
   val bounds = DomainBounds.empty.withPaths(Paths.get("/a"), Paths.get("/b")).withContents("hello", "bye")
 
-  test("trivial guess") {
+  ignore("trivial guess") {
     val upd = new UpdateSynth(bounds)
 
     import upd._
@@ -21,7 +21,7 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
 
   }
 
-  test("trivial guess with a state that leads to error") {
+  ignore("trivial guess with a state that leads to error") {
     val upd = new UpdateSynth(bounds)
     import upd._
     val r = guess(Seq(Some(Map(Paths.get("/") -> FDir)),
@@ -32,7 +32,7 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
     assert(r.isDefined)
   }
 
-  test("trivial guess with error as input") {
+  ignore("trivial guess with error as input") {
     val upd = new UpdateSynth(bounds)
     import upd._
     val r = guess(Seq(Some(Map(Paths.get("/") -> FDir)),
@@ -43,7 +43,7 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
     assert(r.isDefined)
   }
 
-  test("synthesizing file with common prefix") {
+  ignore("synthesizing file with common prefix") {
     val m1 =
     """
       file { '/common':
@@ -72,7 +72,7 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
     assert(exec(m1, m2) == ((PrecondTrue, List(EnsureFile("/not", "b")))))
   }
 
-  test("synthesizing differences in users") {
+  ignore("synthesizing differences in users") {
     val m1 =
     """
       file{'/home': ensure => directory, before => User['aaron'] }
@@ -96,7 +96,7 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
     assert(exec(m1, m2)._2 == List(AbsentPath("/home/aaron", true)))
   }
 
-  test("m1 and m2 are equivalent only when /foo and /foo/bar are directories") {
+  ignore("m1 and m2 are equivalent only when /foo and /foo/bar are directories") {
     val m1 = """
       file{'/foo': ensure => directory }
       file{'/foo/bar': ensure => directory }
@@ -114,7 +114,7 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
   }
 
   def testCase(name: String, r1: List[Res], r2: List[Res]) = {
-    test(name) {
+    ignore(name) {
       val (eval, precond, delta) = execLists(r1, r2)
       assert(validate(eval, precond, r1, delta, r2))
     }
