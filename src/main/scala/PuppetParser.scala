@@ -84,6 +84,8 @@ private class PuppetParser extends RegexParsers with PackratParsers {
       { case x => Seq(x) }
 
   lazy val resource: P[Resource] =
+    word ~ "{" ~ attributes ~ "}" ^^
+      { case typ ~ _ ~ attrs ~ _ => ResourceDecl(typ, Seq((EStr(""), attrs)))} | 
     word ~ "{" ~ rep1sep(resourcePair, ";") ~ opt(";") ~ "}" ^^
       { case typ ~ _ ~ lst ~ _ ~ _ => ResourceDecl(typ, lst) } |
     word ~ "[" ~ expr ~ "]" ~ "{" ~ attributes ~ "}" ^^
