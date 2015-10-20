@@ -96,8 +96,10 @@ object ResourceModel {
     }
     case Package(name, true) => {
       val paths = pkgcache.files(name).getOrElse(throw Unexpected(s"package $name is not in the cache"))
-      val dirs = allpaths(paths) -- paths - root
-      val files = paths -- dirs - root
+      val dirs = paths.map(_.ancestors()).reduce(_ union _) - root
+      val files = paths -- dirs
+
+      println(s"Package $name creates files $files")
 
       val mkdirs = dirs.toSeq.sortBy(_.getNameCount)
         .map(d => If(TestFileState(d, IsDir), Skip, Mkdir(d)))
@@ -122,8 +124,8 @@ object ResourceModel {
     case self@SshAuthorizedKey(_, present, _, key) => {
       val p = self.keyPath
       present match {
-        case true => If(Not(TestFileState(p, DoesNotExist)), Rm(p), Skip) >> CreateFile(p, key)
-        case false => If(Not(TestFileState(p, DoesNotExist)), Rm(p), Skip)
+        case true => CreateFile(p, key)
+        case false => Rm(p)
       }
     }
     case self@Service(name) => If(TestFileState(self.path, IsFile), Skip, Error)

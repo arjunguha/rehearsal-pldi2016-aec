@@ -109,4 +109,20 @@ object Implicits {
 
   }
 
+  implicit class RichPath(path: Path) {
+
+    def ancestors(): Set[Path] = {
+      def loop(p: Path, set: Set[Path]): Set[Path] = {
+        if (p == null) {
+          set
+        }
+        else {
+          loop(p.getParent(), set + p)
+        }
+      }
+      loop(path.getParent(), Set())
+    }
+
+  }
+
 }
