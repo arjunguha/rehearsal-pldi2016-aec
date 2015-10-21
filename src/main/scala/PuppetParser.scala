@@ -14,7 +14,8 @@ private class PuppetParser extends RegexParsers with PackratParsers {
   lazy val stringVal: P[String] =
     "\"" ~> "[^\"]*".r <~ "\"" |
     "'" ~> "[^']*".r <~ "'"
-  lazy val word: P[String] = "(::)?[a-zA-Z]([a-zA-Z_]*(::)?[a-zA-Z]+)*".r ^^ {case x => x}
+  lazy val word: P[String] = "((::)?[a-zA-Z][a-zA-Z_]*)+".r ^^ {case x => x}
+  lazy val capWord: P[String] = "((::)?[A-Z][a-zA-Z_]*)+".r ^^ {case x => x}
   lazy val id: P[String] = "" ~> "[a-z_][a-zA-Z0-9_]*".r
   lazy val attributeName: P[String] = "" ~> "[a-z]+".r
   lazy val dataType: P[String] = "" ~> "[A-Z][a-zA-Z]+".r
@@ -84,13 +85,13 @@ private class PuppetParser extends RegexParsers with PackratParsers {
       { case x => Seq(x) }
 
   lazy val resource: P[Resource] =
-    word ~ "{" ~ attributes ~ "}" ^^
+    capWord ~ "{" ~ attributes ~ "}" ^^
       { case typ ~ _ ~ attrs ~ _ => ResourceDecl(typ, Seq((EStr(""), attrs)))} | 
     word ~ "{" ~ rep1sep(resourcePair, ";") ~ opt(";") ~ "}" ^^
       { case typ ~ _ ~ lst ~ _ ~ _ => ResourceDecl(typ, lst) } |
-    word ~ "[" ~ expr ~ "]" ~ "{" ~ attributes ~ "}" ^^
+    capWord ~ "[" ~ expr ~ "]" ~ "{" ~ attributes ~ "}" ^^
       { case typ ~ _ ~ title ~ _ ~ _ ~ attrs ~ _ => ResourceRef(typ, title, attrs) } |
-    word ~ "[" ~ expr ~ "]" ^^
+    capWord ~ "[" ~ expr ~ "]" ^^
       { case typ ~ _ ~ title ~ _ => ResourceRef(typ, title, Seq()) }
 
   lazy val resourcePair: P[(Expr, Seq[Attribute])] = (expr <~ ":") ~ attributes ^^ {
