@@ -207,6 +207,30 @@ private object PuppetEval {
     }
   }
 
+  //will call evalResDefaults as follows
+  //for given default resource of type t and with attribute map attrs and the complete list of ResourceVals ress:
+  //  evalResDefaults(attrs, ress.filter(r => typ == r.typ), Seq())
+  //assume ress is a list of all resources of same type
+
+  def evalResDefaults(st: State) = {
+    // val ress: Seq[ResourceVal] = st.resources.map(_._2)
+    val ress: Seq[ResourceVal] = Seq()
+    val defaultRess = ress.filter(r => r.title == "")
+    val newRess = defaultRess.map(r => evalResDefault(r.attrs, ress.filter(s => s.typ == r.typ))).flatten
+  }
+
+  def evalResDefault(attrs: Map[String, Expr], ress: Seq[ResourceVal]): Seq[ResourceVal] = {
+    ress match {
+      case Seq() => Seq()
+      case r :: t => {
+        val newAttrs: Map[String, Expr] = attrs.filter(a => !r.attrs.contains(a._1))
+        val newRes = ResourceVal(r.typ, r.title, r.attrs ++ newAttrs)
+        newRes +: evalResDefault(attrs, t)
+      }
+    }
+    
+  }
+
   def evalEdges(st: State, lst: Seq[Resource]): (State, List[Node]) = lst match {
     case Seq() => (st, Nil)
     case r :: rest => {
