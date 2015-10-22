@@ -6,6 +6,7 @@ import parser._
 import Commands._
 import Terms._
 import theories.Core.{And => _, Or => _, _}
+import scala.util.{Try, Success, Failure}
 import CommandsResponses._
 import java.nio.file.{Path, Paths}
 import PuppetSyntax.{FSGraph}
@@ -442,7 +443,11 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     groupBy2(f, lst)
   }
 
-  def evalGraph[K](st: ST, g: FSGraph[K]): ST = {
+  def evalGraph[K](st: ST, g: FSGraph[K]): ST = evalGraphAbort(st, g)((_, _) => false)
+
+  case object AbortEarlyError extends RuntimeException("evalGraph aborted early")
+
+  def evalGraphAbort[K](st: ST, g: FSGraph[K])(shouldAbort: (ST, ST) => Boolean): ST = {
     val fringe = g.deps.nodes.filter(_.inDegree == 0).toSet.map[K, Set[K]](_.value).toList
     if (fringe.length == 0) {
       st
@@ -450,11 +455,14 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     else {
       val fringe1 = commutingGroups(g.exprs, fringe)
       if (fringe1.length == 1) {
-        evalGraph(evalExpr(st, Block(fringe1.head.map(n => g.exprs(n)) : _*)), g.copy(deps = g.deps -- fringe1.head))
+        evalGraphAbort(evalExpr(st, Block(fringe1.head.map(n => g.exprs(n)) : _*)), g.copy(deps = g.deps -- fringe1.head))(shouldAbort)
       }
       else {
-        fringe1.map(p => evalGraph(evalExpr(st, Block(p.map(n => g.exprs(n)) : _*)),
-                                   g.copy(deps = g.deps -- p))).reduce({ (st1: ST, st2: ST) =>
+        fringe1.toStream.map(p => evalGraphAbort(evalExpr(st, Block(p.map(n => g.exprs(n)) : _*)),
+                                   g.copy(deps = g.deps -- p))(shouldAbort)).reduce({ (st1: ST, st2: ST) =>
+          if (shouldAbort(st1, st2)) {
+            throw AbortEarlyError
+          }
           val c = freshName("choice")
           val b = eval(DeclareConst(c, BoolSort()))
           ST(ite(c, st1.isErr, st2.isErr),
@@ -464,16 +472,37 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
+  def stXorErr(st1: ST, st2: ST): Term = {
+    st1.isErr && Not(st2.isErr) ||
+    Not(st1.isErr) && st2.isErr
+  }
+
   def stNEq(st1: ST, st2: ST): Term = {
     (st1.isErr && Not(st2.isErr)) ||
       (st2.isErr && Not(st1.isErr)) ||
       (Not(st1.isErr) && Not(st2.isErr) && Or(allPaths.map(p => Not(Equals(st1.paths(p), st2.paths(p)))): _*))
   }
 
+  def diverged(st1: ST, st2: ST): Boolean = smt.pushPop {
+    logger.info("Running divergence check.")
+    eval(Assert(stXorErr(st1, st2)))
+    eval(CheckSat()) match {
+      case CheckSatStatus(SatStatus) => logger.info("Divergence check showed true."); true
+      case _ => logger.info("Divergence check showed false."); false
+    }
+  }
+
   def isDeterministic[K](g: FSGraph[K]): Boolean = {
     val inST = initState
     logger.info(s"Generating constraints for a graph with ${g.exprs.size} nodes")
-    val outST1 = evalGraph(inST, g)
+    val outST1 = Try(evalGraphAbort(inST, g)(diverged)) match {
+      case Failure(AbortEarlyError) => {
+        logger.info("Program is non-deterministic according to early error check.")
+        return false
+      }
+      case Failure(e) => throw e
+      case Success(st) => st
+    }
     val outST2 = evalGraph(inST, g)
     eval(Assert(stNEq(outST1, outST2)))
     logger.info("Checking satisfiability")
@@ -510,9 +539,9 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       case CheckSatStatus(UnknownStatus) => throw new RuntimeException("got unknown")
       case s => throw Unexpected(s"got $s from check-sat")
     }
-    
+
   }
-  
+
   def free(): Unit = smt.free()
 
 }
