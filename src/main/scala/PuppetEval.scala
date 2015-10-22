@@ -105,7 +105,6 @@ private object PuppetEval {
 
   }
 
-
   case class State(resources: Map[Node, ResourceVal],
                    deps: Graph[Node, DiEdge],
                    env: Env,
@@ -207,16 +206,29 @@ private object PuppetEval {
     }
   }
 
-  //will call evalResDefaults as follows
-  //for given default resource of type t and with attribute map attrs and the complete list of ResourceVals ress:
-  //  evalResDefaults(attrs, ress.filter(r => typ == r.typ), Seq())
-  //assume ress is a list of all resources of same type
-
-  def evalResDefaults(st: State) = {
-    // val ress: Seq[ResourceVal] = st.resources.map(_._2)
-    val ress: Seq[ResourceVal] = Seq()
+  def evalResDefaults(st: State): State = {
+    val ress: Seq[ResourceVal] = st.resources.map(_._2).toSeq
     val defaultRess = ress.filter(r => r.title == "")
     val newRess = defaultRess.map(r => evalResDefault(r.attrs, ress.filter(s => s.typ == r.typ))).flatten
+    val newResMap = newRess.map(r => (Node(r.typ, r.title), r)).toMap
+
+    //TODO: (rolivia) This is not right
+    st.copy(resources = (newResMap ++ st.resources).filter(_._2.title != ""), 
+            deps = st.deps -- st.deps.nodes.filter(_.title == ""))
+  }
+
+  def evalResDefaults2(st: State): State = {
+    // val defaultRess = st.resources.filter(_._1.title == "")
+    // defaultRess.map(r => evalResDefault(r._2.attrs, 
+                            // st.resources.filter(_._1.typ == r._1.typ).map(_._2).toSeq))
+    val resources = st.resources.groupBy(_._1.typ)
+    resources.map(r => {
+        
+      })
+    //defaultsT = map of default attributes for type T
+    //resValsT = list of ResourceVals of type T
+    // evalResDefault(defaultsT, resValsT)
+    st
   }
 
   def evalResDefault(attrs: Map[String, Expr], ress: Seq[ResourceVal]): Seq[ResourceVal] = {
@@ -227,8 +239,7 @@ private object PuppetEval {
         val newRes = ResourceVal(r.typ, r.title, r.attrs ++ newAttrs)
         newRes +: evalResDefault(attrs, t)
       }
-    }
-    
+    }    
   }
 
   def evalEdges(st: State, lst: Seq[Resource]): (State, List[Node]) = lst match {
@@ -521,7 +532,7 @@ private object PuppetEval {
   }
 
   def eval(manifest: Manifest): EvaluatedManifest = {
-    val st = eliminateAnchors(eliminateAliases(stageExpansion(evalLoop(evalManifest(emptyState, manifest)))))
+    val st = eliminateAnchors(eliminateAliases(stageExpansion(evalResDefaults(evalLoop(evalManifest(emptyState, manifest))))))
     EvaluatedManifest(st.resources, st.deps)
   }
 }
