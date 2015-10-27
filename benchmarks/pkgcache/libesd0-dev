@@ -1,8 +1,0 @@
-/usr/lib/x86_64-linux-gnu/pkgconfig/esound.pc
-/usr/share/doc/libesd0-dev
-/usr/share/aclocal/esd.m4
-/usr/lib/x86_64-linux-gnu/libesd.so
-/usr/share/man/man1/esd-config.1.gz
-/usr/lib/x86_64-linux-gnu/libesd.a
-/usr/bin/esd-config
-/usr/include/esd.h
