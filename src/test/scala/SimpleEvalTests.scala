@@ -190,7 +190,7 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
                       Node("file", "/") ~> Node("file", "/usr/rian/")))
   }
 
-  test("default resources"){
+  ignore("default resources"){
   	val prog = """
   		File{
   			content => "default",
