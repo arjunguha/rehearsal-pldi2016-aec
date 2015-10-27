@@ -161,7 +161,8 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     assert(false == isDeterministic(g))
   }
 
-  test("createFile should check that parent is a directory") {
+  // TODO(arjun): not a test case
+  ignore("createFile should check that parent is a directory") {
     val p1 = If(TestFileState("/packages/monit", DoesNotExist),
       If(TestFileState("/etc", DoesNotExist),
         Mkdir("/etc"), Skip) >> If(TestFileState("/etc/monit", DoesNotExist),
@@ -221,7 +222,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
               content => "lol",
               notify  => Service['named'],
           }
-      """).eval().resourceGraph().fsGraph("ubuntu-trusty")
+      """).eval().resourceGraph().fsGraph("centos-6")
 
     assert(isDeterministic(Slicing.sliceGraph(m)) == false, "slicing changed the result of determinism")
   }
@@ -246,7 +247,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
         source => 'puppet:///modules/ssh/sshd_config',
         notify => Service['sshd'],
       }
-    """).eval().resourceGraph().fsGraph("ubuntu-trusty")
+    """).eval().resourceGraph().fsGraph("centos-6")
 
     assert(isDeterministic(m) == false)
 
