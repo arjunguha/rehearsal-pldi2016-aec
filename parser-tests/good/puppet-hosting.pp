@@ -162,14 +162,13 @@ class hosting {
 
 class hosting::mysql {
 
-  package { 'mysql-server':
+  package { 'mysql':
     ensure => present,
   }
 
   service { 'mysql':
     ensure  => running,
-    # note(awe): the actual bug was that it said mysql instead of mysql-server
-    require => Package['mysql-server'] #TODO(arjun): fixed
+    require => Package['mysql']
   }
 
 }

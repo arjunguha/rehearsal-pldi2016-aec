@@ -105,7 +105,7 @@ object ResourceModel {
     }
     case Package(name, true) => {
 
-      val paths = queryPackage(distro, name).getOrElse(throw Unexpected(s"package $name is not in the cache"))
+      val paths = queryPackage(distro, name).getOrElse(throw PackageNotFound(distro, name))
       val dirs = paths.map(_.ancestors()).reduce(_ union _) - root -- Set[Path]("/bin", "/usr", "/etc")
       val files = paths -- dirs
 
@@ -122,7 +122,7 @@ object ResourceModel {
     }
     case Package(name, false) => {
       // TODO(arjun): Shouldn't this only remove files and newly created directories?
-      val files =  queryPackage(distro, name).getOrElse(throw Unexpected(s"package $name is not in the cache")).toList
+      val files =  queryPackage(distro, name).getOrElse(throw PackageNotFound(distro, name)).toList
       val exprs = files.map(f => If(TestFileState(f, DoesNotExist), Skip, Rm(f)))
       val pkgInstallInfoPath = s"/packages/$name"
       // Append at end

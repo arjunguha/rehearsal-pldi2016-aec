@@ -35,8 +35,11 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
   }
 
   test("puppet-hosting.pp") {
-    val g = parseFile(s"$root/puppet-hosting.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isDeterministic(g) == false)
+    intercept[PackageNotFound] {
+      val g = parseFile(s"$root/puppet-hosting.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
+      // TODO(arjun): This line shouldn't be necessary, but .fsGraph produces a lazy data structure!s
+      assert(SymbolicEvaluator.isDeterministic(g) == false)
+    }
   }
 
   test("antonlindstrom-powerdns.pp") {
