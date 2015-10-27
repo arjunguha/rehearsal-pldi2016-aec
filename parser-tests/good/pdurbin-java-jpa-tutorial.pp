@@ -21,7 +21,7 @@ class packages {
 #    'git',
     'ant',
 #    'apache2',
-    'vim',
+    'vim-enhanced',
   ]
 
   package { $packages_to_install:
