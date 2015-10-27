@@ -251,4 +251,19 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     assert(isDeterministic(m) == false)
 
   }
+
+  test("pdurbin-java-jpa reduced") {
+    // This test illustrates a subtle issue with the way we model package vs. file resources. We have packages
+    // create their entire directory tree, but files do not (and should not). In this example, the vim-enhanced
+    // package creates a file in /etc. So, if it runs first, it creates the /etc directory. But, if the file
+    // /etc/inittab runs first, it will signal an error if /etc does not exist.
+    val m = PuppetParser.parse(
+      """
+         file {"/etc/inittab":
+            content => "my contents"
+          }
+        package{"vim-enhanced": }
+      """).eval.resourceGraph.fsGraph("centos-6")
+    assert(isDeterministic(m) == true)
+  }
 }
