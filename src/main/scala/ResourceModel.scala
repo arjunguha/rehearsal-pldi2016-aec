@@ -2,8 +2,6 @@ package rehearsal
 
 object ResourceModel {
 
-  val pkgcache = PackageCache()
-
   import java.nio.file.{Path, Paths}
   import scala.collection.immutable.Set
   import FSSyntax._
