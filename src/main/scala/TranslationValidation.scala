@@ -16,8 +16,8 @@ object TranslationValidation {
 
   def validate(eval: SymbolicEvaluatorImpl, precond: Precond,
                v1: List[Res], delta: List[Res], v2: List[Res]): Boolean = {
-    val e1 = Seq(Block(v1.map(_.compile): _*), Block(v2.map(_.compile): _*))
-    val e2 = Block(v2.map(_.compile): _*)
+    val e1 = Seq(Block(v1.map(_.compile("ubuntu-trusty")): _*), Block(v2.map(_.compile("ubuntu-trusty")): _*))
+    val e2 = Block(v2.map(_.compile("ubuntu-trusty")): _*)
     validate(eval, precond, e1, e2)
   }
 }

@@ -1,0 +1,143 @@
+package rehearsal
+
+object UpdateSynth2 extends com.typesafe.scalalogging.LazyLogging {
+
+  import Implicits._
+  import PuppetSyntax.ResourceGraph
+  import FSEvaluator.State
+  import PuppetSyntax.Node
+  import FSSyntax.{Block, Expr}
+
+  /*
+
+   High-level idea:
+
+   Every input-output pair reveals a potential resource to apply. Essentially, any resource that makes the input
+   more like the output is a candidate for the manifest.
+
+   Can we determine if M may contain R?
+
+   - If it may, then [[R; M] st = [[M]] st for all st
+
+   - To prove that R definitely is not in M:
+
+     - exists st . [[R; M]] st != [[M]] st
+
+   Q: What is the higher-level property of manifests that gives the test above?
+
+   The test above generalizes to tests of manifest containment.
+
+
+
+
+
+
+   Input: Manifests M1 and M2
+   Output: Manifest H and predicate a, where forall st, a(st) => [[M1; H]] st = [[M2]] st
+
+   1. Initialize H to M2 and a to true.
+   2. Check if forall st, a(st) => [[M1; H]] st = [[M2]] st
+   3. If the property above holds, return (H, a)
+   4. If not, get a counterexample state cex, such that [[M1; H]] cex != [[M2]] cex
+   5.
+
+
+
+   1. Hypothesize a resource graph, H. If correct, done. If wrong, we get a counterexample, cex, on which H diverges
+      from the actual graph, G.
+   2. To use cex, repeat for all 1 <= i < H.nodes.length:
+      a. Let pre be the program that represents the first i resources in H
+      b  Let suf be the program that represents the rest of the resources in H
+
+         Claim: Since H is deterministic, pre and suf are unique.
+
+      c. Find the maximum value of i where [[G]]([[pre]](cex)) == [[G]](cex)
+
+         Claim: on this prefix, H agrees with G on cex. So, H starts to diverge on suf
+
+      d. Find a resource R, such that [[G]]([[pre; R]](cex) == [[G]](cex)
+
+
+        The trouble now is that pre; R; suf may not make sense. What if R conflicts with something in suf or even
+        in pre?
+
+        Claim: R won't conflict with anything in pre. R may subsume something in suf, so remove it.
+
+        Do we have to worry about resources that may not be co-instantiable? The procedure above should produce
+        minimal H.
+
+        Claim: If the smallest H has resources that are not co-instantiable, then a larger H' will also have
+         resources that are not co-instantiable. (REALLY?)
+
+    3. GOTO 1
+   */
+
+  /** If [g] and [h] are not equivalent, produces a counterexample and a prefix of [h] on which the
+    *
+    * @param g
+    * @param h
+    * @return
+    */
+  def equivPrefix(g: ResourceGraph, h: ResourceGraph): Option[(State, List[Node])] = {
+    g.fsGraph().expr().notEquiv(h.fsGraph().expr()) match {
+      case None => None
+      case Some(cex) => {
+        println(cex)
+        def cexAgree(pre: List[Node]): Boolean = {
+          val preResources = pre.map(n => h.ress(n))
+          println(preResources)
+          Block(preResources.map(_.compile()): _*).eval(cex) match {
+            case None => g.fsGraph().expr().eval(cex).isEmpty
+            case Some(st) => g.fsGraph().expr().eval(st) == g.fsGraph().expr.eval(cex)
+          }
+        }
+        Some((cex, h.deps.topologicalSort().inits.toSeq.reverse.takeWhile(cexAgree).toSeq.last))
+      }
+    }
+  }
+
+ /*
+  def learn(target: ResourceGraph): Option[ResourceGraph] = {
+
+    val targetExpr = target.fsGraph().expr()
+
+    def loop(hyp: ResourceGraph): Option[ResourceGraph] = hyp.fsGraph().expr().notEquiv(targetExpr) match {
+      case None => Some(hyp)
+      case Some(cex) => {
+
+        def cexOK(pre: List[Expr]): Boolean = {
+          Block(pre: _*).eval(cex)
+
+        val okPrefix  = hyp.deps.topologicalSort().inits.takeWhile(cexOk).last
+
+      }
+    }
+    None
+  }
+  */
+
+  def graphContains(g: ResourceGraph, h: ResourceGraph): Boolean = {
+    throw NotImplemented("")
+  }
+
+  def graphEquiv(g: ResourceGraph, h: ResourceGraph): Option[State] = throw NotImplemented("")
+
+
+  // The candidates should not have any resources that have no effect on the state
+  def candidates(in: FSEvaluator.State, out: FSEvaluator.State): Iterator[ResourceGraph] = {
+    // Consider a candidate with just two resource A and B that do not depend on each other.  Could it be that B has an
+    // effect in AB and no effect in BA? If so, that would violate the property we are after. But, I don't think that's
+    // the case.
+    throw NotImplemented("")
+  }
+
+  def synth(posExamples: List[(State, State)], negExamples: List[State]): Iterator[ResourceGraph] = {
+    throw NotImplemented("")
+  }
+
+  def union(g: ResourceGraph, h: ResourceGraph): Option[ResourceGraph] = {
+  throw NotImplemented("")
+  }
+
+
+}

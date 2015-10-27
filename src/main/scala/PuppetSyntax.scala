@@ -91,7 +91,7 @@ object PuppetSyntax {
 
   case class ResourceGraph(ress: Map[Node, ResourceModel.Res], deps: Graph[Node, DiEdge]) {
 
-    def fsGraph(): FileScriptGraph = FSGraph(ress.mapValues(_.compile()), deps)
+    def fsGraph(distro: String): FileScriptGraph = FSGraph(ress.mapValues(_.compile(distro)), deps)
 
 
   }

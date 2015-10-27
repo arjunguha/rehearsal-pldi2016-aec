@@ -8,9 +8,10 @@ object ResourceModel {
   import scala.collection.immutable.Set
   import FSSyntax._
   import rehearsal.Implicits._
+  import scalaj.http.Http
 
   sealed trait Res {
-    def compile(): Expr = ResourceModel.compile(this)
+    def compile(distro: String): Expr = ResourceModel.compile(this, distro)
   }
 
   case class File(path: Path, content: String, force: Boolean) extends Res
@@ -28,7 +29,17 @@ object ResourceModel {
     val keyPath = s"/home/$user/.ssh/$name"
   }
 
-  def compile(r: Res): Expr = r match {
+  def queryPackage(distro: String, pkg: String): Option[Set[Path]] = {
+    val resp = Http(s"http://104.197.140.244:8080/query/$distro/$pkg").timeout(2 * 1000, 60 * 1000).asString
+    if (resp.isError) {
+      None
+    }
+    else {
+      Some(resp.body.lines.map(s => Paths.get(s)).toSet)
+    }
+  }
+
+  def compile(r: Res, distro: String): Expr = r match {
     case EnsureFile(p, c) =>
       If(TestFileState(p, IsFile), Rm(p), Skip) >> CreateFile(p, c)
     case File(p, c, false) =>
@@ -95,7 +106,8 @@ object ResourceModel {
       }
     }
     case Package(name, true) => {
-      val paths = pkgcache.files(name).getOrElse(throw Unexpected(s"package $name is not in the cache"))
+
+      val paths = queryPackage(distro, name).getOrElse(throw Unexpected(s"package $name is not in the cache"))
       val dirs = paths.map(_.ancestors()).reduce(_ union _) - root
       val files = paths -- dirs
 
@@ -111,7 +123,7 @@ object ResourceModel {
          Skip)
     }
     case Package(name, false) => {
-      val files = pkgcache.files(name).getOrElse(throw Unexpected(s"package $name is not in the cache")).toList
+      val files =  queryPackage(distro, name).getOrElse(throw Unexpected(s"package $name is not in the cache")).toList
       val exprs = files.map(f => If(TestFileState(f, DoesNotExist), Skip, Rm(f)))
       val pkgInstallInfoPath = s"/packages/$name"
       // Append at end

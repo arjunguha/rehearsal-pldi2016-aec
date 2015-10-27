@@ -7,7 +7,7 @@ object DeterminismBenchmarks {
   import PuppetSyntax.{FileScriptGraph}
 
   def bench(label: String, path: String, check: FileScriptGraph => Boolean, onlySliced: Boolean = false): Unit = {
-    val g = PuppetParser.parseFile(path).eval.resourceGraph.fsGraph
+    val g = PuppetParser.parseFile(path).eval.resourceGraph.fsGraph("ubuntu-trusty")
 
     if (!onlySliced) {
       val (r, t) = time(check(g))

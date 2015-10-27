@@ -190,7 +190,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
                  targets: Seq[S],
                  options: Seq[Res]):(Res, Seq[S], Seq[Double]) = {
       options.map({ res =>
-        val inits_ = inits.map(st => evalErr(st, res.compile))
+        val inits_ = inits.map(st => evalErr(st, res.compile("ubuntu-trusty")))
         val dists = inits_.zip(targets).map({ case (x, y) => distance(x, y) })
         (res, inits_, dists)
       })
@@ -234,14 +234,14 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     import bounds._
 
     def evalErrRes(st: S, lst: List[Res]) = {
-      evalErr(st, Block(lst.map(_.compile): _*))
+      evalErr(st, Block(lst.map(_.compile("ubuntu-trusty")): _*))
     }
 
     def guess(inputs: Seq[S], v1: List[Res], v2: List[Res]): Option[List[Res]] = {
 
       val all = allResources.filterNot(_.isEmpty)
-      val expr1 = Block(v1.map(_.compile): _*)
-      val expr2 = Block(v2.map(_.compile): _*) // TODO(arjun): needless work
+      val expr1 = Block(v1.map(_.compile("ubuntu-trusty")): _*)
+      val expr2 = Block(v2.map(_.compile("ubuntu-trusty")): _*) // TODO(arjun): needless work
       val inits = inputs.map(st => evalErr(st, expr1))
       val targets = inputs.map(st => evalErr(st, expr2))
       val dists = inits.zip(targets).map({ case(x, y) => distance(x, y) })
@@ -261,9 +261,9 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
               precond: Precond,
               inputs: Seq[S],
               v1: List[Res], delta: List[Res], v2: List[Res]): (Precond, List[Res]) = {
-      val e1 = Block(v1.map(_.compile): _*)
-      val eDelta = Block((delta).map(_.compile): _*)
-      val e2 = Block(v2.map(_.compile): _*) // TODO(arjun): needless work
+      val e1 = Block(v1.map(_.compile("ubuntu-trusty")): _*)
+      val eDelta = Block((delta).map(_.compile("ubuntu-trusty")): _*)
+      val e2 = Block(v2.map(_.compile("ubuntu-trusty")): _*) // TODO(arjun): needless work
       eval.verifyUpdate(precond, e1, eDelta, e2) match {
         case None => (precond, delta)
         case Some((cex, cexPred)) => {
@@ -333,9 +333,9 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     val graph1 = PuppetParser.parse(manifest1).eval.resourceGraph
     val graph2 = PuppetParser.parse(manifest2).eval.resourceGraph
 
-    assert(SymbolicEvaluator.isDeterministic(graph1.fsGraph),
+    assert(SymbolicEvaluator.isDeterministic(graph1.fsGraph("ubuntu-trusty")),
            "V1 is not deterministic")
-    assert(SymbolicEvaluator.isDeterministic(graph2.fsGraph),
+    assert(SymbolicEvaluator.isDeterministic(graph2.fsGraph("ubuntu-trusty")),
            "V2 is not deterministic")
 
     val ov1 = graph1.deps.topologicalSort().map(r => graph1.ress(r))

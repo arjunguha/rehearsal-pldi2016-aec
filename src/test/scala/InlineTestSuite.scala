@@ -9,7 +9,7 @@ trait InlineTestSuite extends org.scalatest.FunSuite {
   private def runTest(name: String, program: String): Unit = {
     test (name) {
       val resourceGraph = PuppetParser.parse(program).eval().resourceGraph()
-      val fileScriptGraph = resourceGraph.fsGraph()
+      val fileScriptGraph = resourceGraph.fsGraph("ubuntu-trusty")
       genericTestRunner(resourceGraph, fileScriptGraph)
     }
   }

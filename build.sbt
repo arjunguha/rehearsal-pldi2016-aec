@@ -18,8 +18,10 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "2.2.1" % "test",
   "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
   "com.assembla.scala-incubator" %% "graph-core" % "1.9.0",
+  "com.assembla.scala-incubator" %% "graph-dot" % "1.9.0",
   "scala-smt-lib" %% "scala-smt-lib" % "0.1",
-  "io.spray" %%  "spray-json" % "1.3.2")
+  "io.spray" %%  "spray-json" % "1.3.2",
+  "org.scalaj" %% "scalaj-http" % "1.1.6")
 
 parallelExecution in Test := false
 

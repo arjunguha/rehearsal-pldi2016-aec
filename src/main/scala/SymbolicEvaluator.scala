@@ -487,7 +487,11 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     logger.info("Running divergence check.")
     eval(Assert(stXorErr(st1, st2)))
     eval(CheckSat()) match {
-      case CheckSatStatus(SatStatus) => logger.info("Divergence check showed true."); true
+      case CheckSatStatus(SatStatus) => {
+
+        logger.info("Divergence check showed true.")
+        true
+      }
       case _ => logger.info("Divergence check showed false."); false
     }
   }

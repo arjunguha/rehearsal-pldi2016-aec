@@ -6,7 +6,7 @@ object DeterminismSizeTables {
 
   def bench(label: String, path: String): Unit = {
     val rg = PuppetParser.parseFile(path).eval().resourceGraph()
-    val g = rg.fsGraph()
+    val g = rg.fsGraph("ubuntu-trusty")
     val rSize = rg.deps.nodes.size
     val fSize =  g.size
     println(s"$label & $rSize & $fSize \\\\")

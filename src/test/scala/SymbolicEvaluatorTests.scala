@@ -127,7 +127,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
       file {'/usr/games/sl': ensure => present, content => "something"}
       package {'sl': ensure => present }
                   """
-    val g = PuppetParser.parse(program).eval().resourceGraph().fsGraph()
+    val g = PuppetParser.parse(program).eval().resourceGraph().fsGraph("ubuntu-trusty")
     assert(false == isDeterministic(g))
   }
 
@@ -147,7 +147,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
       file {'/foo/bar': ensure => file, before => Service['foo'] }
       service {'foo':}
                   """
-    val g = PuppetParser.parse(program).eval().resourceGraph().fsGraph()
+    val g = PuppetParser.parse(program).eval().resourceGraph().fsGraph("ubuntu-trusty")
     assert(false == isDeterministic(g))
   }  
 
@@ -157,7 +157,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
       file {'/foo/bar': ensure => file, before => File['/etc/foo'] }
       file {'/etc/foo': ensure => file}
                   """
-    val g = PuppetParser.parse(program).eval().resourceGraph().fsGraph()
+    val g = PuppetParser.parse(program).eval().resourceGraph().fsGraph("ubuntu-trusty")
     assert(false == isDeterministic(g))
   }
 
@@ -221,7 +221,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
               content => "lol",
               notify  => Service['named'],
           }
-      """).eval().resourceGraph().fsGraph()
+      """).eval().resourceGraph().fsGraph("ubuntu-trusty")
 
     assert(isDeterministic(Slicing.sliceGraph(m)) == false, "slicing changed the result of determinism")
   }
@@ -246,7 +246,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
         source => 'puppet:///modules/ssh/sshd_config',
         notify => Service['sshd'],
       }
-    """).eval().resourceGraph().fsGraph()
+    """).eval().resourceGraph().fsGraph("ubuntu-trusty")
 
     assert(isDeterministic(m) == false)
 
