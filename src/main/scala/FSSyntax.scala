@@ -6,7 +6,18 @@ object FSSyntax {
   import scalax.collection.Graph
   import scalax.collection.GraphEdge.DiEdge
 
-  sealed trait FileState {
+  sealed trait FileState extends Ordered[FileState] {
+
+
+    def compare(that: FileState): Int = {
+      def toInt(x: FileState): Int = x match {
+        case IsFile => 0
+        case IsDir => 1
+        case DoesNotExist => 2
+      }
+      toInt(this).compare(toInt(that))
+    }
+
     def <(s: FileState): Boolean = (this, s) match {
       case (IsFile, IsDir) => true
       case (IsFile, DoesNotExist) => true
