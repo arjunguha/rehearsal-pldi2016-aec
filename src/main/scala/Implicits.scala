@@ -52,6 +52,18 @@ object Implicits {
       }
     }
 
+    def dotString(): String = {
+      import scalax.collection.io.dot._
+
+      val root = DotRootGraph(directed = true, id = Some("DirectedGraph"))
+
+      // The types of the edge transformers are awful. Inlining them let's type inference figure them out.
+      graph.toDot(root,
+        innerEdge => Some(root, DotEdgeStmt(innerEdge.edge.from.toString,  innerEdge.edge.to.toString,  Nil)),
+        None, None,
+        Some(isolatedNode => Some(root, DotNodeStmt(isolatedNode.toString, Nil))))
+    }
+
   }
 
   implicit class RichPath(path: Path) {
