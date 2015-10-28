@@ -25,7 +25,7 @@ object ResourceSemantics {
 
     private val state = MutableMap[String, Expr](attrs.toSeq: _*)
 
-    def consume[T](key: String, default: => T)(implicit extractor: Extractor2[T]): T = {
+    def consume[T](key: String, default: => T)(implicit extractor: Extractor[Expr, T]): T = {
       state.get(key) match {
         case Some(EUndef) => {
           state -= key
@@ -40,7 +40,7 @@ object ResourceSemantics {
       }
     }
 
-    def consume[T](key: String)(implicit extractor: Extractor2[T]): T = {
+    def consume[T](key: String)(implicit extractor: Extractor[Expr, T]): T = {
       consume[T](key, throw FSCompileError(s"key not found: $key"))
     }
 

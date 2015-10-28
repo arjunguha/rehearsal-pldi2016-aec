@@ -40,6 +40,13 @@ object PuppetSyntax {
   case class CaseExpr(e: Expr, m: Manifest) extends Case
 
   sealed trait Manifest extends Positional {
+
+    def >>(other: Manifest) = (this, other) match {
+      case (MEmpty, _) => other
+      case (_, MEmpty) => this
+      case _ => MSeq(this, other)
+    }
+
    def eval(): EvaluatedManifest = PuppetEval.eval(this)
   }
 
@@ -56,7 +63,12 @@ object PuppetSyntax {
   case class MApp(name: String, args: Seq[Expr]) extends Manifest
 
    // Manifests must not appear in Expr, either directly or indirectly
-  sealed trait Expr extends Positional
+  sealed trait Expr extends Positional {
+
+     def value[T](implicit extractor: Extractor[Expr, T]) = extractor(this)
+
+   }
+
   case object EUndef extends Expr
   case class EStr(s: String) extends Expr
   case class ENum(n: Int) extends Expr

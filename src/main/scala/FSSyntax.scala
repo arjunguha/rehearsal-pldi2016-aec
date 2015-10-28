@@ -32,6 +32,28 @@ object FSSyntax {
     override def toString(): String = Pretty.prettyPred(Pretty.NotCxt, this)
 
     lazy val readSet = Commutativity.predReadSet(this)
+
+    def &&(b: Pred): Pred = (this, b) match {
+      case (True, _) => b
+      case (_, True) => this
+      case _ => And(this, b)
+    }
+
+    def ||(b: Pred): Pred = (this, b) match {
+      case (True, _) => True
+      case (False, _) => b
+      case (_, True) => True
+      case (_, False) => this
+      case _ => Or(this, b)
+    }
+
+    def unary_!(): Pred = this match {
+      case Not(True) => False
+      case Not(False) => True
+      case Not(a) => a
+      case _ => Not(this)
+    }
+
   }
 
   case object True extends Pred
@@ -64,7 +86,17 @@ object FSSyntax {
 
     override def toString(): String = this.pretty()
 
+
+    def >>(e2: Expr) = (this, e2) match {
+      case (Skip, _) => e2
+      case (_, Skip) => this
+      case (Error, _) => Error
+      case (_, Error) => Error
+      case _ => Seq(this, e2)
+    }
+
     def eval(st: FSEvaluator.State): Option[FSEvaluator.State] = FSEvaluator.eval(st, this)
+
   }
 
   case object Error extends Expr
