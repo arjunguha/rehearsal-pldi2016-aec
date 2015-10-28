@@ -18,12 +18,6 @@ object FSSyntax {
       toInt(this).compare(toInt(that))
     }
 
-    def <(s: FileState): Boolean = (this, s) match {
-      case (IsFile, IsDir) => true
-      case (IsFile, DoesNotExist) => true
-      case (IsDir, DoesNotExist) => true
-      case _ => false
-    }
   }
 
   case object IsFile extends FileState
