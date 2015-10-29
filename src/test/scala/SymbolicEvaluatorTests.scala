@@ -6,7 +6,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
   import scalax.collection.GraphEdge.DiEdge
   import rehearsal.Implicits._
   import java.nio.file.Paths
-  import SymbolicEvaluator.{predEquals, exprEquals, isDeterministic, isDeterministicError}
+  import SymbolicEvaluator.{predEquals, exprEquals, isDeterministic, isDeterministicError, isIdempotent}
 
   test("simple equality") {
     val x = TestFileState(Paths.get("/usr"), IsFile)
@@ -266,5 +266,10 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
         package{"vim-enhanced": }
       """).eval.resourceGraph.fsGraph("centos-6")
     assert(isDeterministic(m) == true)
+  }
+
+  test("check for non-idempotence"){
+    val g = PuppetParser.parseFile(s"parser-tests/good/non-idempotent.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(isIdempotent(g) == false)
   }
 }

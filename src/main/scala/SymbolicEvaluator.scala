@@ -12,6 +12,7 @@ import java.nio.file.{Path, Paths}
 import PuppetSyntax.{FSGraph}
 import FSSyntax.{Block, Expr}
 import rehearsal.{FSSyntax => F}
+import rehearsal.Implicits._
 import scalax.collection.Graph
 import scalax.collection.GraphEdge.DiEdge
 import scalax.collection.GraphPredef._
@@ -48,6 +49,10 @@ object SymbolicEvaluator {
     isDeterministicError(FSGraph(g.nodes.toList.map(x => x.value -> x.value).toMap, g))
   }
 
+  def isIdempotent(g: Graph[Expr, DiEdge]): Boolean = {
+    isIdempotent(FSGraph(g.nodes.toList.map(x => x.value -> x.value).toMap, g))
+  }  
+
   def isDeterministic[K](g: FSGraph[K],  logFile: Option[String] = None): Boolean = {
     if (g.deps.nodes.size < 2) {
       return true
@@ -60,6 +65,12 @@ object SymbolicEvaluator {
   def isDeterministicError[K](g: FSGraph[K]): Boolean = {
     val impl = mkImpl(g, None)
     val result = impl.isDeterministicError(g)
+    impl.free()
+    result
+  }
+  def isIdempotent[K](g: FSGraph[K]): Boolean = {
+    val impl = mkImpl(g, None)
+    val result = impl.isIdempotent(g)
     impl.free()
     result
   }
@@ -494,6 +505,24 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
       case _ => logger.info("Divergence check showed false."); false
     }
+  }
+
+  def isIdempotent[K](g: FSGraph[K]): Boolean = {
+    assert(isDeterministic(g), "g is not deterministic; cannot determine idempotence")
+    val nodes: List[K] = g.deps.topologicalSort()
+    val exprs: List[Expr] = nodes.map(n => g.exprs.get(n).get)
+    val e: Expr = exprs.foldRight(FSSyntax.Skip: Expr)((e, expr) => e >> expr)
+    val inST = initState
+    val outST1 = evalExpr(evalExpr(inST, e), e)
+    val outST2 = evalExpr(inST, e)
+    eval(Assert(stNEq(outST1, outST2)))
+    eval(CheckSat()) match {
+      case CheckSatStatus(SatStatus) => false
+      case CheckSatStatus(UnsatStatus) => true
+      case CheckSatStatus(UnknownStatus) => throw new RuntimeException("got unknown")
+      case s => throw Unexpected(s"go $s from check-sat")
+    }
+    
   }
 
   def isDeterministic[K](g: FSGraph[K]): Boolean = {
