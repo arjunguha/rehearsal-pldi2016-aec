@@ -7,6 +7,7 @@ class hi {
 
 class hiiii {
   Notify { message => "greetings"}
+  notify{"notification2": }
 
 }
 include hiiii

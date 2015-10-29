@@ -44,8 +44,10 @@ private class PuppetParser extends RegexParsers with PackratParsers {
     rep1sep(resource, "->") ^^
       { case lst => MResources(lst) } |
     word ~ "(" ~ repsep(expr, ",") ~ ")" ^^
-      { case f ~ _ ~ xs ~ _  => MApp(f, xs) }
-    }
+      { case f ~ _ ~ xs ~ _  => MApp(f, xs) } |
+    capWord ~ "{" ~ attributes ~ "}" ^^
+        { case typ ~ _ ~ attrs ~ _ => MResourceDefault(typ, attrs) }
+  }
 
   lazy val elses: P[Manifest] = positioned {
     "else" ~ body ^^
@@ -85,8 +87,6 @@ private class PuppetParser extends RegexParsers with PackratParsers {
       { case x => Seq(x) }
 
   lazy val resource: P[Resource] =
-    capWord ~ "{" ~ attributes ~ "}" ^^
-      { case typ ~ _ ~ attrs ~ _ => ResourceDecl(typ, Seq((EStr(""), attrs)))} | 
     word ~ "{" ~ rep1sep(resourcePair, ";") ~ opt(";") ~ "}" ^^
       { case typ ~ _ ~ lst ~ _ ~ _ => ResourceDecl(typ, lst) } |
     capWord ~ "[" ~ expr ~ "]" ~ "{" ~ attributes ~ "}" ^^

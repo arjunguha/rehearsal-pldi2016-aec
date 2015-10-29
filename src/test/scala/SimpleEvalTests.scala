@@ -190,53 +190,20 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
                       Node("file", "/") ~> Node("file", "/usr/rian/")))
   }
 
-  ignore("default resources"){
+  test("default resources"){
   	val prog = """
   		File{
   			content => "default",
   			ensure => present
   		}
 
-  		file{ "file1": }
-  		file{ "file2": 
-  			before => File["file1"]
-  		}
-  		file{ "file3" :
-  			content => "content file3"
-  		}
-  		file{ " file4": 
-  			content => "content file4",
-  			ensure => absent
-  		}
-  		file{ " file5": 
-  			content => "content file4",
-  			ensure => absent,
-  			before => File["file1"]
-  		}
+      file{ "file1": }
   	"""
 	  val res = """
 			file{ "file1": 
 				content => "default",
 				ensure => present
 			}
-			file{ "file2": 
-				before => File["file1"],
-				content => "default",
-				ensure => present
-			}
-			file{ "file3" :
-				content => "content file3",
-				ensure => present
-			}
-			file{ " file4": 
-				content => "content file4",
-				ensure => absent
-			}
-			file{ " file5": 
-				content => "content file4",
-				ensure => absent,
-				before => File["file1"]
-	 		}
 		"""
 		assert(parse(prog).eval() == parse(res).eval())	
   }

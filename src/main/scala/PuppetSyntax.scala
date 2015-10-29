@@ -61,6 +61,7 @@ object PuppetSyntax {
   case class MInclude(es: List[Expr]) extends Manifest
   case class MRequire(e: Expr) extends Manifest
   case class MApp(name: String, args: Seq[Expr]) extends Manifest
+  case class MResourceDefault(typ: String, attrs: Seq[Attribute]) extends Manifest
 
    // Manifests must not appear in Expr, either directly or indirectly
   sealed trait Expr extends Positional {

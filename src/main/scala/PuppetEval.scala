@@ -52,8 +52,11 @@ private object PuppetEval {
   val primTypes =  Set("file", "package", "user", "group", "service",
                        "ssh_authorized_key", "augeas", "notify")
 
-  case class VClass(name: String, env: Env,
-                    args: Map[String, Option[Expr]], body: Manifest)
+  case class VClass(
+    name: String,
+    env: Env,
+    args: Map[String, Option[Expr]],
+    body: Manifest)
 
   case class VDefinedType(
     name: String,
@@ -61,7 +64,7 @@ private object PuppetEval {
     args: Map[String, Option[Expr]],
     body: Manifest)
 
-  case class Env(scope: Map[String, Expr], enclosing: Option[Env]) {
+  case class Env(scope: Map[String, Expr], resourceDefaults: Map[String, Map[String, Expr]], enclosing: Option[Env]) {
 
     // NOTE(arjun): Do not change this. Strictly speaking, this is not an
     // error. But, silently returning undef will make us miss other bugs in
@@ -74,10 +77,10 @@ private object PuppetEval {
       })
     }
 
-    def newScope(): Env = Env(Map(), Some(this))
+    def newScope(): Env = Env(Map(), Map(), Some(this))
 
     def default(x: String, v: Expr) = scope.get(x) match {
-      case None => Env(scope + (x -> v), enclosing)
+      case None => Env(scope + (x -> v), resourceDefaults, enclosing)
       case Some(_) => this
     }
 
@@ -87,21 +90,43 @@ private object PuppetEval {
         throw EvalError(s"identifier already set: $x")
       }
       else {
-        Env(scope + (x -> v), enclosing)
+        Env(scope + (x -> v), resourceDefaults, enclosing)
       }
     }
 
-    def forceSet(x: String, v: Expr) = new Env(scope + (x -> v), enclosing)
+    def forceSet(x: String, v: Expr) = new Env(scope + (x -> v), resourceDefaults, enclosing)
 
     def ++(other: Map[String, Expr]): Env = {
-      Env(scope ++ other, enclosing)
+      Env(scope ++ other, resourceDefaults, enclosing)
+    }
+
+    def getDefaults(typ: String): Map[String, Expr] = resourceDefaults.getOrElse(typ, Map())
+
+    def updateDefaults(typ: String, map: Map[String, Expr]): Env = {
+     if (resourceDefaults.contains(typ) == false) {
+       Env(scope, resourceDefaults + (typ -> map), enclosing)
+     }
+      else {
+       val oldMap = resourceDefaults(typ)
+       val alreadySet = oldMap.keySet
+       val newlySet = map.keySet
+       val overlap = alreadySet.intersect(newlySet)
+       if (overlap.isEmpty) {
+         val resourceDefaults1 = resourceDefaults + (typ -> (oldMap ++ map))
+         Env(scope, resourceDefaults1, enclosing)
+       }
+       else {
+         throw EvalError(s"already have default attributes for $typ ($overlap)")
+       }
+
+     }
     }
 
   }
 
   object Env {
 
-    val empty = Env(Map(), None)
+    val empty = Env(Map(), Map(), None)
 
   }
 
@@ -172,7 +197,7 @@ private object PuppetEval {
       }
       case ResourceDecl(typ, lst) => {
         val (vals, relationships, aliases) = lst.map({ case (titleExpr, attrs) =>
-          val attrVals = evalAttrs(st, st.env, attrs)
+          val attrVals = st.env.getDefaults(typ) ++ evalAttrs(st, st.env, attrs)
           val resources = evalTitles(st, st.env, titleExpr).map(title => ResourceVal(typ, title, attrVals -- metaparameters))
           val relationships: Seq[Graph[Node, DiEdge]] = resources.map(r => extractRelationships(r.node, attrVals))
           val aliases = attrVals.get("alias") match {
@@ -304,6 +329,10 @@ private object PuppetEval {
         case Some(CaseDefault(m)) => evalManifest(st, m)
         case Some(CaseExpr(_, m)) => evalManifest(st, m)
       }
+    }
+    case MResourceDefault(typ, attrs) => {
+      val map = evalAttrs(st, st.env, attrs)
+      st.copy(env =  st.env.updateDefaults(typ.toLowerCase, map))
     }
   }
 
@@ -532,7 +561,7 @@ private object PuppetEval {
   }
 
   def eval(manifest: Manifest): EvaluatedManifest = {
-    val st = eliminateAnchors(eliminateAliases(stageExpansion(evalResDefaults(evalLoop(evalManifest(emptyState, manifest))))))
+    val st = eliminateAnchors(eliminateAliases(stageExpansion(evalLoop(evalManifest(emptyState, manifest)))))
     EvaluatedManifest(st.resources, st.deps)
   }
 }
