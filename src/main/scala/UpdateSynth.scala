@@ -70,8 +70,8 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     val allResources: Seq[Seq[Res]] =
       allPaths.map { p =>
         allContents.flatMap { c =>
-          Seq(EnsureFile(p, c)) ++
-            b.map { f => File(p, c, f) }
+          Seq(EnsureFile(p, c, "")) ++
+            b.map { f => File(p, c, f, "") }
         } ++
           b.map { f => AbsentPath(p, f) } ++
           Seq(Directory(p))
@@ -95,8 +95,8 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
       }).map(Paths.get(_)).toSet
 
     private def allPaths(r: Res): Set[Path] = r match {
-      case File(p, _, _) => findAllSubPaths(p)
-      case EnsureFile(p, _) => findAllSubPaths(p)
+      case File(p, _, _, _) => findAllSubPaths(p)
+      case EnsureFile(p, _, _) => findAllSubPaths(p)
       case AbsentPath(p, _) => findAllSubPaths(p)
       case Directory(p) => findAllSubPaths(p)
       case Package(_, _) => Set()
@@ -108,8 +108,8 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     }
 
     private def allContents(r: Res): Set[String] = r match {
-      case File(_, c, _) => Set(c)
-      case EnsureFile(_, c) => Set(c)
+      case File(_, c, _, _) => Set(c)
+      case EnsureFile(_, c, _) => Set(c)
       case AbsentPath(_, _) => Set()
       case Directory(_) => Set()
       case Package(_, _) => Set()
@@ -120,8 +120,8 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     }
 
     private def allPackages(r: Res): Set[String] = r match {
-      case File(_, _, _) => Set()
-      case EnsureFile(_, _) => Set()
+      case File(_, _, _, _) => Set()
+      case EnsureFile(_, _, _) => Set()
       case AbsentPath(_, _) => Set()
       case Directory(_) => Set()
       case Package(p, _) => Set(p)
@@ -132,8 +132,8 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     }
 
     private def allUsers(r: Res): Set[String] = r match {
-      case File(_, _, _) => Set()
-      case EnsureFile(_, _) => Set()
+      case File(_, _, _, _) => Set()
+      case EnsureFile(_, _, _) => Set()
       case AbsentPath(_, _) => Set()
       case Directory(_) => Set()
       case Package(_, _) => Set()
@@ -144,8 +144,8 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     }
 
     private def allGroups(r: Res): Set[String] = r match {
-      case File(_, _, _) => Set()
-      case EnsureFile(_, _) => Set()
+      case File(_, _, _, _) => Set()
+      case EnsureFile(_, _, _) => Set()
       case AbsentPath(_, _) => Set()
       case Directory(_) => Set()
       case Package(_, _) => Set()
@@ -358,10 +358,10 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
   }
 
   val fileResources = Stream.from(0).map { n =>
-    EnsureFile(Paths.get(s"/$n"), "contents")
+    EnsureFile(Paths.get(s"/$n"), "contents", "")
   }
 
-  def genRes(x: Int): Res = EnsureFile(Paths.get("/" + x.toString.hashCode.toString), "contents")
+  def genRes(x: Int): Res = EnsureFile(Paths.get("/" + x.toString.hashCode.toString), "contents", "")
   def genPrefix(size: Int): List[Res] = 0.to(size).map(genRes).toList
   def gen(n: Int, m: Int): (List[Res], List[Res]) = {
 

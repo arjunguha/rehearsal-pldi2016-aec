@@ -60,6 +60,7 @@ object ResourceSemantics {
         val path = attrs.consume("path", resource.title)
         val content = attrs.consume("content", "")
         val force = attrs.consume("force", false)
+        val source = attrs.consume("source", "") // TODO(arjun): I think this is meant to be mutually exclusive with "content"
 
         attrs.consume("seltype", "") // TODO(jcollard): Explicityl ignoring seltype.
         attrs.consume("alias", "") // TODO(arjun): Does this induce edges?
@@ -68,14 +69,13 @@ object ResourceSemantics {
         attrs.consume("mode", "0644")
         attrs.consume("recurse", false) // TODO(arjun): necessary to model?
         attrs.consume("purge", false) // TODO(arjun): necessary to model?
-        attrs.consume("source", "") // TODO(arjun): I think this is meant to be mutually exclusive with "content"
 
         attrs.consume("ensure", "present") match {
-          case "present" => File(path, content, force)
+          case "present" => File(path, content, force, source)
           case "absent" => AbsentPath(path, force)
-          case "file" => EnsureFile(path, content)
+          case "file" => EnsureFile(path, content, source)
           case "directory" => Directory(path)
-          case "link" => File(attrs.consume[String]("target"), "", true) // TODO(arjun): contents?
+          case "link" => File(attrs.consume[String]("target"), "", true, "") // TODO(arjun): contents?
           case _ => throw FSCompileError("unexpected ensure value")
         }
       }

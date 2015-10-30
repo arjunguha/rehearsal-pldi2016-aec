@@ -513,9 +513,9 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     val exprs: List[Expr] = nodes.map(n => g.exprs.get(n).get)
     val e: Expr = exprs.foldRight(FSSyntax.Skip: Expr)((e, expr) => e >> expr)
     val inST = initState
-    val outST1 = evalExpr(evalExpr(inST, e), e)
-    val outST2 = evalExpr(inST, e)
-    eval(Assert(stNEq(outST1, outST2)))
+    val once = evalExpr(inST, e)
+    val twice = evalExpr(once, e)
+    eval(Assert(stNEq(once, twice)))
     eval(CheckSat()) match {
       case CheckSatStatus(SatStatus) => false
       case CheckSatStatus(UnsatStatus) => true

@@ -7,7 +7,7 @@ define monit::service() {
     owner   => 'root',
     group   => 'root',
     mode    => '0644',
-    source  => "puppet:///modules/monit/common/etc/monit/conf.d/${name}",
+    #source  => "puppet:///modules/monit/common/etc/monit/conf.d/${name}",
     notify  => Service['monit'],
     require => [
       File['/etc/monit/conf.d'], 
@@ -23,7 +23,7 @@ class monit {
 		group   => root,
 		mode    => '0644',
 		alias   => 'monit',
-		source  => "puppet:///modules/monit/${::lsbdistcodename}/etc/default/monit",
+		#source  => "puppet:///modules/monit/${::lsbdistcodename}/etc/default/monit",
 		notify  => Service['monit'],
 		require => Package['monit'],
 	}

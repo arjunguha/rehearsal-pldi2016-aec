@@ -93,5 +93,5 @@ bind::server::conf { '/etc/named.conf':
 }
 
 bind::server::file { 'example.com':
-    source => 'puppet:///modules/bind/named.empty',
+    #source => 'puppet:///modules/bind/named.empty',
 }

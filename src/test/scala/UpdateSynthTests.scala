@@ -132,7 +132,7 @@ class UpdateSynth2Tests extends org.scalatest.FunSuite {
 
   object EnsureFile {
     def apply(path: String, contents: String): Res =
-      rehearsal.ResourceModel.EnsureFile(Paths.get(path), contents)
+      rehearsal.ResourceModel.EnsureFile(Paths.get(path), contents, "")
   }
 
 

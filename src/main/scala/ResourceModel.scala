@@ -12,8 +12,8 @@ object ResourceModel {
     def compile(distro: String): Expr = ResourceModel.compile(this, distro)
   }
 
-  case class File(path: Path, content: String, force: Boolean) extends Res
-  case class EnsureFile(path: Path, content: String) extends Res
+  case class File(path: Path, content: String, force: Boolean, source: String) extends Res
+  case class EnsureFile(path: Path, content: String, source: String) extends Res
   case class AbsentPath(path: Path, force: Boolean) extends Res
   case class Directory(path: Path) extends Res
   case class Package(name: String, present: Boolean) extends Res
@@ -38,19 +38,31 @@ object ResourceModel {
   }
 
   def compile(r: Res, distro: String): Expr = r match {
-    case EnsureFile(p, c) =>
+    case EnsureFile(p, c, "") =>
       If(TestFileState(p, IsFile), Rm(p), Skip) >> CreateFile(p, c)
-    case File(p, c, false) =>
+    case EnsureFile(p, c, s) => 
+      If(TestFileState(p, IsFile), Rm(p), Skip) >> Cp(s, p)
+    case File(p, c, false, "") =>
       If(TestFileState(p, IsFile),
          Rm(p) >> CreateFile(p, c),
          If(TestFileState(p, DoesNotExist),
             CreateFile(p, c),
             Error))
-    case File(p, c, true) =>
+    case File(p, c, true, "") =>
     // TODO(arjun): needs support for recursive directory removal and can simplify too
      If(Or (TestFileState(p, IsDir), TestFileState(p, IsFile)),
          Rm(p), Skip) >>
       CreateFile(p, c)
+    case File(p, c, false, s) => 
+      If(TestFileState(p, IsFile),
+        Rm(p) >> Cp(s, p),
+        If(TestFileState(p, DoesNotExist),
+          Cp(s, p),
+          Error))
+    case File(p, c, true, s) => 
+      If(Or(TestFileState(p, IsDir), TestFileState(p, IsFile)),
+        Rm(p), Skip) >>
+      Cp(s, p)
     case AbsentPath(p, false) =>
       // TODO(arjun): why doesn't this work for directories too?
       If(TestFileState(p, IsFile), Rm(p), Skip)
