@@ -250,6 +250,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     """).eval().resourceGraph().fsGraph("centos-6")
 
     assert(isDeterministic(m) == false)
+    assert(isDeterministic(Slicing.sliceGraph(m)) == false)
 
   }
 

@@ -16,6 +16,7 @@ import rehearsal.Implicits._
 import scalax.collection.Graph
 import scalax.collection.GraphEdge.DiEdge
 import scalax.collection.GraphPredef._
+import scala.reflect.runtime.universe.TypeTag
 
 object SymbolicEvaluator {
 
@@ -34,7 +35,7 @@ object SymbolicEvaluator {
     result
   }
 
-  private def mkImpl[K](g: FSGraph[K], logFile: Option[String]) = {
+   def mkImpl[K](g: FSGraph[K], logFile: Option[String]) = {
     new SymbolicEvaluatorImpl(
       g.deps.nodes.map(n => g.exprs(n).paths).reduce(_ union _).toList,
       g.deps.nodes.map(n => g.exprs(n).hashes).reduce(_ union _),
@@ -62,6 +63,7 @@ object SymbolicEvaluator {
     impl.free()
     result
   }
+
   def isDeterministicError[K](g: FSGraph[K]): Boolean = {
     val impl = mkImpl(g, None)
     val result = impl.isDeterministicError(g)
@@ -465,6 +467,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
     else {
       val fringe1 = commutingGroups(g.exprs, fringe)
+      logger.info(s"${fringe1.length} commuting groups")
       if (fringe1.length == 1) {
         evalGraphAbort(evalExpr(st, Block(fringe1.head.map(n => g.exprs(n)) : _*)), g.copy(deps = g.deps -- fringe1.head))(shouldAbort)
       }
@@ -494,12 +497,21 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       (Not(st1.isErr) && Not(st2.isErr) && Or(allPaths.map(p => Not(Equals(st1.paths(p), st2.paths(p)))): _*))
   }
 
-  def diverged(st1: ST, st2: ST): Boolean = smt.pushPop {
+  def diverged(inSt: ST)(st1: ST, st2: ST): Boolean = smt.pushPop {
     logger.info("Running divergence check.")
     eval(Assert(stXorErr(st1, st2)))
     eval(CheckSat()) match {
       case CheckSatStatus(SatStatus) => {
-
+        eval(GetModel())
+        (stateFromTerm(inSt), stateFromTerm(st1), stateFromTerm(st2)) match {
+          case (None, _, _) => throw Unexpected("bad model: initial state should not be error")
+          case (Some(in), None, Some(out)) => logger.info(s"On input\n$in\nthe program produces error or output\n$out")
+          case (Some(in), Some(out), None) => logger.info(s"On input\n$in\nthe program produces error or output\n$out")
+          case (Some(in), Some(out1), Some(out2)) => {
+            logger.info(s"On input\n$in\nthe program produces two possible outputs!")
+          }
+          case (Some(_), None, None) => throw Unexpected("bad model: both outputs are identical errors")
+        }
         logger.info("Divergence check showed true.")
         true
       }
@@ -531,7 +543,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   def isDeterministic[K](g: FSGraph[K]): Boolean = smt.pushPop {
     val inST = initState
     logger.info(s"Generating constraints for a graph with ${g.exprs.size} nodes")
-    val outST1 = Try(evalGraphAbort(inST, g)(diverged)) match {
+    val outST1 = Try(evalGraphAbort(inST, g)(diverged(inST))) match {
       case Failure(AbortEarlyError) => {
         logger.info("Program is non-deterministic according to early error check.")
         return false
