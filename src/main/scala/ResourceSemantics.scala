@@ -70,12 +70,14 @@ object ResourceSemantics {
         attrs.consume("recurse", false) // TODO(arjun): necessary to model?
         attrs.consume("purge", false) // TODO(arjun): necessary to model?
 
-        attrs.consume("ensure", "present") match {
-          case "present" => File(path, content, force, source)
-          case "absent" => AbsentPath(path, force)
-          case "file" => EnsureFile(path, content, source)
-          case "directory" => Directory(path)
-          case "link" => File(attrs.consume[String]("target"), "", true, "") // TODO(arjun): contents?
+        (attrs.consume("ensure", "present"), source) match {
+          case ("present", "") => File(path, CInline(content), force)
+          case ("present", s) => File(path, CFile(s), force)
+          case ("absent", _) => AbsentPath(path, force)
+          case ("file", "") => EnsureFile(path, CInline(content))
+          case ("file", s) => EnsureFile(path, CFile(s))
+          case ("directory", _) => Directory(path)
+          case ("link", _) => File(attrs.consume[String]("target"), CInline(""), true) // TODO(arjun): contents?
           case _ => throw FSCompileError("unexpected ensure value")
         }
       }

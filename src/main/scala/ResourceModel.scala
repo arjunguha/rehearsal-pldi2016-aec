@@ -8,12 +8,16 @@ object ResourceModel {
   import rehearsal.Implicits._
   import scalaj.http.Http
 
+  sealed trait Content
+  case class CInline(src: String) extends Content
+  case class CFile(src: String) extends Content
+
   sealed trait Res {
     def compile(distro: String): Expr = ResourceModel.compile(this, distro)
   }
 
-  case class File(path: Path, content: String, force: Boolean, source: String) extends Res
-  case class EnsureFile(path: Path, content: String, source: String) extends Res
+  case class File(path: Path, content: Content, force: Boolean) extends Res
+  case class EnsureFile(path: Path, content: Content) extends Res
   case class AbsentPath(path: Path, force: Boolean) extends Res
   case class Directory(path: Path) extends Res
   case class Package(name: String, present: Boolean) extends Res
@@ -38,28 +42,28 @@ object ResourceModel {
   }
 
   def compile(r: Res, distro: String): Expr = r match {
-    case EnsureFile(p, c, "") =>
+    case EnsureFile(p, CInline(c)) =>
       If(TestFileState(p, IsFile), Rm(p), Skip) >> CreateFile(p, c)
-    case EnsureFile(p, c, s) => 
+    case EnsureFile(p, CFile(s)) => 
       If(TestFileState(p, IsFile), Rm(p), Skip) >> Cp(s, p)
-    case File(p, c, false, "") =>
+    case File(p, CInline(c), false) =>
       If(TestFileState(p, IsFile),
          Rm(p) >> CreateFile(p, c),
          If(TestFileState(p, DoesNotExist),
             CreateFile(p, c),
             Error))
-    case File(p, c, true, "") =>
+    case File(p, CInline(c), true) =>
     // TODO(arjun): needs support for recursive directory removal and can simplify too
      If(Or (TestFileState(p, IsDir), TestFileState(p, IsFile)),
          Rm(p), Skip) >>
       CreateFile(p, c)
-    case File(p, c, false, s) => 
+    case File(p, CFile(s), false) => 
       If(TestFileState(p, IsFile),
         Rm(p) >> Cp(s, p),
         If(TestFileState(p, DoesNotExist),
           Cp(s, p),
           Error))
-    case File(p, c, true, s) => 
+    case File(p, CFile(s), true) => 
       If(Or(TestFileState(p, IsDir), TestFileState(p, IsFile)),
         Rm(p), Skip) >>
       Cp(s, p)
