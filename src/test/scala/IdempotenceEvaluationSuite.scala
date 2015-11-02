@@ -38,4 +38,28 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite {
     assert(SymbolicEvaluator.isIdempotent(g) == true)
   }
 
+
+  test("trivial non-idempotent case") {
+   import FSSyntax._
+    val dst = "/dst.txt"
+    val src = "/src.txt"
+    val e1 = If(TestFileState(dst, IsFile),
+      Rm(dst) >> Cp(src, dst),
+      If(TestFileState(dst, DoesNotExist),
+        Cp(src, dst),
+        Error))
+    val e2 = If(TestFileState(src, IsFile), Rm(src), Skip)
+    val e = e1 >> e2
+
+    val s = new SymbolicEvaluatorImpl(e.paths.toList, e.hashes, None)
+    assert(s.isIdempotent(e) == false)
+  }
+
+  test("trivial check for non-idempotence"){
+    val g = PuppetParser.parseFile(s"$root/non-idempotent.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
+    isIdempotent(g)
+    assert(isIdempotent(g) == false)
+
+  }
+
 }

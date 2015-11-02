@@ -507,11 +507,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  def isIdempotent[K](g: FSGraph[K]): Boolean = {
-    assert(isDeterministic(g), "g is not deterministic; cannot determine idempotence")
-    val nodes: List[K] = g.deps.topologicalSort()
-    val exprs: List[Expr] = nodes.map(n => g.exprs.get(n).get)
-    val e: Expr = exprs.foldRight(FSSyntax.Skip: Expr)((e, expr) => e >> expr)
+  def isIdempotent[K](e: Expr): Boolean = {
     val inST = initState
     val once = evalExpr(inST, e)
     val twice = evalExpr(once, e)
@@ -522,10 +518,17 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       case CheckSatStatus(UnknownStatus) => throw new RuntimeException("got unknown")
       case s => throw Unexpected(s"go $s from check-sat")
     }
-    
+
   }
 
-  def isDeterministic[K](g: FSGraph[K]): Boolean = {
+  def isIdempotent[K](g: FSGraph[K]): Boolean = smt.pushPop {
+    assert(isDeterministic(g), "g is not deterministic; cannot determine idempotence")
+    val nodes: List[K] = g.deps.topologicalSort()
+    val exprs: List[Expr] = nodes.map(n => g.exprs.get(n).get)
+    isIdempotent(exprs.foldRight(FSSyntax.Skip: Expr)((e, expr) => e >> expr))
+  }
+
+  def isDeterministic[K](g: FSGraph[K]): Boolean = smt.pushPop {
     val inST = initState
     logger.info(s"Generating constraints for a graph with ${g.exprs.size} nodes")
     val outST1 = Try(evalGraphAbort(inST, g)(diverged)) match {

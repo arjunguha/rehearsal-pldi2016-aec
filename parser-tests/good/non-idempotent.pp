@@ -1,14 +1,8 @@
-file{"/vagrant": 
-	before => File["/vagrant/dst.txt"],
-	ensure => directory
+file{"/dst.txt":
+  source => "/src.txt"
 }
 
-file{"/vagrant/dst.txt":
-  ensure => file,
-  source => "/vagrant/src.txt"
-}
-
-file{"/vagrant/src.txt":
+file{"/src.txt":
   ensure => absent,
-  require => File["/vagrant/dst.txt"]
+  require => File["/dst.txt"]
 }

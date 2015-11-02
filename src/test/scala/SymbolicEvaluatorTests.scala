@@ -268,9 +268,4 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     assert(isDeterministic(m) == true)
   }
 
-  test("check for non-idempotence"){
-    val g = PuppetParser.parseFile(s"parser-tests/good/non-idempotent.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    
-    assert(isIdempotent(g) == false)
-  }
 }
