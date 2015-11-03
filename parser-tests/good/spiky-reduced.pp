@@ -165,6 +165,7 @@ class ssh {
     enable     => true,
     hasrestart => true,
     hasstatus  => true,
+    require => Package["openssh-server"]
   }
 
   file { 'sshd_config':
@@ -175,6 +176,7 @@ class ssh {
     group  => 'root',
     source => 'puppet:///modules/ssh/sshd_config',
     notify => Service['sshd'],
+    require => Package["openssh-server"]
   }
 }
 

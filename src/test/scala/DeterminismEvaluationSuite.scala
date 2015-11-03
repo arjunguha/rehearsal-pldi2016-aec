@@ -54,7 +54,7 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
 
   test("spiky-reduced.pp") {
     val g = parseFile(s"$root/spiky-reduced.pp").eval.resourceGraph.fsGraph("centos-6")
-    assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)) == false)
+    assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)) == true)
   }
 
   test("ghoneycutt-xinetd.pp") {
