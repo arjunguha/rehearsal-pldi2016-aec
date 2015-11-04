@@ -52,7 +52,7 @@ object SymbolicEvaluator {
 
   def isIdempotent(g: Graph[Expr, DiEdge]): Boolean = {
     isIdempotent(FSGraph(g.nodes.toList.map(x => x.value -> x.value).toMap, g))
-  }  
+  }
 
   def isDeterministic[K](g: FSGraph[K],  logFile: Option[String] = None): Boolean = {
     if (g.deps.nodes.size < 2) {
@@ -499,7 +499,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   def diverged(inSt: ST)(st1: ST, st2: ST): Boolean = smt.pushPop {
     logger.info("Running divergence check.")
-    eval(Assert(stXorErr(st1, st2)))
+    eval(Assert(stNEq(st1, st2)))
     eval(CheckSat()) match {
       case CheckSatStatus(SatStatus) => {
         eval(GetModel())
@@ -543,37 +543,14 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   def isDeterministic[K](g: FSGraph[K]): Boolean = smt.pushPop {
     val inST = initState
     logger.info(s"Generating constraints for a graph with ${g.exprs.size} nodes")
-    val outST1 = Try(evalGraphAbort(inST, g)(diverged(inST))) match {
+    Try(evalGraphAbort(inST, g)(diverged(inST))) match {
       case Failure(AbortEarlyError) => {
         logger.info("Program is non-deterministic according to early error check.")
         return false
       }
       case Failure(e) => throw e
-      case Success(st) => st
+      case Success(st) => true
     }
-    val outST2 = evalGraph(inST, g)
-    eval(Assert(stNEq(outST1, outST2)))
-    logger.info("Checking satisfiability")
-    eval(CheckSat()) match {
-      case CheckSatStatus(SatStatus) => {
-        logger.info("program is non-deterministic")
-        eval(GetModel())
-        (stateFromTerm(inST), stateFromTerm(outST1), stateFromTerm(outST2)) match {
-          case (None, _, _) => throw Unexpected("bad model: initial state should not be error")
-          case (Some(in), None, Some(out)) => logger.info(s"On input\n$in\nthe program produces error or output\n$out")
-          case (Some(in), Some(out), None) => logger.info(s"On input\n$in\nthe program produces error or output\n$out")
-          case (Some(in), Some(out1), Some(out2)) => {
-            logger.info(s"On input\n$in\nthe program produces two possible outputs!")
-          }
-          case (Some(_), None, None) => throw Unexpected("bad model: both outputs are identical errors")
-        }
-        false
-      }
-      case CheckSatStatus(UnsatStatus) => true
-      case CheckSatStatus(UnknownStatus) => throw new RuntimeException("got unknown")
-      case s => throw Unexpected(s"got $s from check-sat")
-    }
-
   }
 
   def isDeterministicError[K](g: FSGraph[K]): Boolean = {
