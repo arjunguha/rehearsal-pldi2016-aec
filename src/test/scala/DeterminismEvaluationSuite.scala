@@ -52,9 +52,31 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)) == false)
   }
 
-  test("spiky-reduced.pp") {
-    val g = parseFile(s"$root/spiky-reduced.pp").eval.resourceGraph.fsGraph("centos-6")
-    assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)) == true)
+  val spikyGraph = FSGraph(Map(
+      Node("package","rrdtool") -> If(TestFileState("/x", IsDir), Skip, Mkdir("/x")),
+      Node("file","swap") -> 
+        Seq(If(TestFileState("/x/swap.conf", IsFile), Rm("/x/swap.conf"), Skip),
+            CreateFile("/x/swap.conf", "")
+        )
+    ), Graph(Node("package","rrdtool"), Node("file","swap")))
+
+  println()
+
+  test("spiky-reduced.pp Pruned") {
+    // val g = parseFile(s"$root/spiky-reduced.pp").eval.resourceGraph.fsGraph("centos-6")
+
+    val sliced = Slicing.sliceGraph(spikyGraph)
+    println(spikyGraph)
+    println()
+    assert(SymbolicEvaluator.isDeterministic(sliced) == true)
+  }
+
+  test("spiky-reduced.pp Not pruned") {
+    // val g = parseFile(s"$root/spiky-reduced.pp").eval.resourceGraph.fsGraph("centos-6")
+
+
+    println(spikyGraph)
+    assert(SymbolicEvaluator.isDeterministic(spikyGraph) == true)
   }
 
   test("ghoneycutt-xinetd.pp") {
