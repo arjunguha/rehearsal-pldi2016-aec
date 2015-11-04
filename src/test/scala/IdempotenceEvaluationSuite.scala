@@ -24,8 +24,19 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite {
   }
 
   test("thias-bind.pp") {
-    val g = parseFile(s"$root/thias-bind.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isIdempotent(g) == true)
+    assert(parseFile(s"$root/thias-bind.pp").eval.resourceGraph
+            .fsGraph("ubuntu-trusty").expr().isIdempotent() == true)
+  }
+
+  test("thias-bind.pp pruned") {
+    assert(parseFile(s"$root/thias-bind.pp").eval.resourceGraph
+      .fsGraph("ubuntu-trusty").expr().pruneIdem().isIdempotent() == true)
+  }
+
+  test("spiky-reduced.pp pruned") {
+    val e = parseFile(s"$root/spiky-reduced.pp").eval.resourceGraph
+      .fsGraph("centos-6").expr().pruneIdem()
+    assert(e.isIdempotent() == true)
   }
 
   test("pdurbin-java-jpa-tutorial.pp") {

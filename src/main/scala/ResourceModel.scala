@@ -130,10 +130,10 @@ object ResourceModel {
 
       val somecontent = ""
       val createfiles = files.toSeq.map((f) => CreateFile(f, somecontent))
-      val exprs = mkdirs ++ createfiles :+ CreateFile(s"/packages/$name", "")
+      val exprs = mkdirs ++ createfiles
 
       If(TestFileState(s"/packages/${name}", DoesNotExist),
-         Block(exprs: _*),
+         Seq(CreateFile(s"/packages/${name}", ""), Block(exprs: _*)),
          Skip)
     }
     case Package(name, false) => {
