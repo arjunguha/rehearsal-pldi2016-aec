@@ -33,10 +33,26 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite {
       .fsGraph("ubuntu-trusty").expr().pruneIdem().isIdempotent() == true)
   }
 
-  test("spiky-reduced.pp pruned") {
-    val e = parseFile(s"$root/spiky-reduced.pp").eval.resourceGraph
-      .fsGraph("centos-6").expr().pruneIdem()
-    assert(e.isIdempotent() == true)
+  test("ssh_authorized_keys should be idempotent (regression)") {
+    val manifest =
+      """
+      user { 'deployer':
+        ensure     => present,
+        managehome => true,
+      }
+
+      ssh_authorized_key { 'deployer_key':
+        ensure  => present,
+        key     => 'X',
+        user    => 'deployer',
+        require => User['deployer'],
+      }
+      """
+    val g = PuppetParser.parse(manifest).eval.resourceGraph().fsGraph("centos-6")
+    val e = g.expr()
+
+    assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)), "not deterministic")
+    assert(e.pruneIdem().isIdempotent() == true, "not idempotent")
   }
 
   test("pdurbin-java-jpa-tutorial.pp") {
@@ -48,7 +64,7 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite {
     val g = parseFile(s"$root/BenoitCattie-puppet-nginx.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
     assert(SymbolicEvaluator.isIdempotent(g) == true)
   }
-  
+
   test("small non-idempotent example (in FS)") {
    import FSSyntax._
     val dst = "/dst.txt"

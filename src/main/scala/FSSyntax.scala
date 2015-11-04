@@ -101,7 +101,9 @@ object FSSyntax {
 
     def isIdempotent(): Boolean = {
       val impl = new SymbolicEvaluatorImpl(this.paths.toList, this.hashes, None)
-      impl.isIdempotent(this)
+      val r = impl.isIdempotent(this)
+      impl.smt.free()
+      r
     }
 
   }

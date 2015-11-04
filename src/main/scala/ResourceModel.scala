@@ -149,8 +149,12 @@ object ResourceModel {
     case self@SshAuthorizedKey(_, present, _, key) => {
       val p = self.keyPath
       present match {
-        case true => CreateFile(p, key)
-        case false => Rm(p)
+        case true => {
+          If(TestFileState(p, IsFile), Rm(p), Skip) >> CreateFile(p, key)
+        }
+        case false => {
+          If(TestFileState(p, IsFile), Rm(p), Skip)
+        }
       }
     }
     case self@Service(name) => If(TestFileState(self.path, IsFile), Skip, Error)
