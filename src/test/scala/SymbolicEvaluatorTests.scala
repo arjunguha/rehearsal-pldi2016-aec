@@ -269,4 +269,21 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     assert(isDeterministic(m) == true)
   }
 
+  test("slicing limitation") {
+    val g = PuppetParser.parse(
+      """
+        file{"/alpha": ensure => directory}
+        file{"/alpha/gamma": content => "dummy", require => File["/alpha"]}
+        file{"/beta": ensure => directory}
+        file{"/beta/delta": content => "dummy", require => File["/beta"]}
+      """).eval().resourceGraph().fsGraph("ubuntu-trusty")
+    val g_ = Slicing.sliceGraph(g)
+    //g.exprs.values.head.valu
+    info(s"Interfering paths: ${Slicing.interferingPaths(g.exprs.values.toList)}")
+    info(s"Original: ${g.deps.nodes.size}, Sliced: ${g_.deps.nodes.size}")
+    for ((_, v) <- g.exprs) {
+      info(s"Sliced node: $v")
+    }
+  }
+
 }

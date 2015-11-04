@@ -8,14 +8,14 @@ object FSSyntax {
 
   sealed trait FileState extends Ordered[FileState] {
 
-
     def compare(that: FileState): Int = {
       def toInt(x: FileState): Int = x match {
         case IsFile => 0
         case IsDir => 1
         case DoesNotExist => 2
       }
-      toInt(this).compare(toInt(that))
+      val x = toInt(this).compare(toInt(that))
+      if (x > 0) 1 else if (x < 0) -1 else 0
     }
 
   }
@@ -96,6 +96,15 @@ object FSSyntax {
     }
 
     def eval(st: FSEvaluator.State): Option[FSEvaluator.State] = FSEvaluator.eval(st, this)
+
+    def pruneIdem(): Expr = IdempotenceOptimizer.prune(this)
+
+    def isIdempotent(): Boolean = {
+      val impl = new SymbolicEvaluatorImpl(this.paths.toList, this.hashes, None)
+      val r = impl.isIdempotent(this)
+      impl.smt.free()
+      r
+    }
 
   }
 

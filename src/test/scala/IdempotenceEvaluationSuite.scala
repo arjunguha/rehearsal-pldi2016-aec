@@ -24,8 +24,35 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite {
   }
 
   test("thias-bind.pp") {
-    val g = parseFile(s"$root/thias-bind.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isIdempotent(g) == true)
+    assert(parseFile(s"$root/thias-bind.pp").eval.resourceGraph
+            .fsGraph("ubuntu-trusty").expr().isIdempotent() == true)
+  }
+
+  test("thias-bind.pp pruned") {
+    assert(parseFile(s"$root/thias-bind.pp").eval.resourceGraph
+      .fsGraph("ubuntu-trusty").expr().pruneIdem().isIdempotent() == true)
+  }
+
+  test("ssh_authorized_keys should be idempotent (regression)") {
+    val manifest =
+      """
+      user { 'deployer':
+        ensure     => present,
+        managehome => true,
+      }
+
+      ssh_authorized_key { 'deployer_key':
+        ensure  => present,
+        key     => 'X',
+        user    => 'deployer',
+        require => User['deployer'],
+      }
+      """
+    val g = PuppetParser.parse(manifest).eval.resourceGraph().fsGraph("centos-6")
+    val e = g.expr()
+
+    assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)), "not deterministic")
+    assert(e.pruneIdem().isIdempotent() == true, "not idempotent")
   }
 
   test("pdurbin-java-jpa-tutorial.pp") {
@@ -38,8 +65,7 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite {
     assert(SymbolicEvaluator.isIdempotent(g) == true)
   }
 
-
-  test("trivial non-idempotent case") {
+  test("small non-idempotent example (in FS)") {
    import FSSyntax._
     val dst = "/dst.txt"
     val src = "/src.txt"
@@ -51,11 +77,11 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite {
     val e2 = If(TestFileState(src, IsFile), Rm(src), Skip)
     val e = e1 >> e2
 
-    val s = new SymbolicEvaluatorImpl(e.paths.toList, e.hashes, None)
-    assert(s.isIdempotent(e) == false)
+    assert(e.isIdempotent() == false)
+    assert(e.pruneIdem().isIdempotent() == false)
   }
 
-  test("trivial check for non-idempotence"){
+  test("small non-idempotent example (in Puppet)"){
     val g = PuppetParser.parseFile(s"$root/non-idempotent.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
     isIdempotent(g)
     assert(isIdempotent(g) == false)

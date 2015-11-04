@@ -130,10 +130,10 @@ object ResourceModel {
 
       val somecontent = ""
       val createfiles = files.toSeq.map((f) => CreateFile(f, somecontent))
-      val exprs = mkdirs ++ createfiles :+ CreateFile(s"/packages/$name", "")
+      val exprs = mkdirs ++ createfiles
 
       If(TestFileState(s"/packages/${name}", DoesNotExist),
-         Block(exprs: _*),
+         Seq(CreateFile(s"/packages/${name}", ""), Block(exprs: _*)),
          Skip)
     }
     case Package(name, false) => {
@@ -149,8 +149,12 @@ object ResourceModel {
     case self@SshAuthorizedKey(_, present, _, key) => {
       val p = self.keyPath
       present match {
-        case true => CreateFile(p, key)
-        case false => Rm(p)
+        case true => {
+          If(TestFileState(p, IsFile), Rm(p), Skip) >> CreateFile(p, key)
+        }
+        case false => {
+          If(TestFileState(p, IsFile), Rm(p), Skip)
+        }
       }
     }
     case self@Service(name) => If(TestFileState(self.path, IsFile), Skip, Error)

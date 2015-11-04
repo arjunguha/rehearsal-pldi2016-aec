@@ -5,7 +5,7 @@ scala:
 jdk: openjdk7
 script:
   - ./fetch-travis-deps.sh
-  - PATH=$PATH:/home/travis/mydeps/z3/bin sbt test
+  - PATH=$PATH:/home/travis/mydeps/z3/bin sbt test -- -oD
 cache:
   directories:
     - /home/travis/.ivy2
