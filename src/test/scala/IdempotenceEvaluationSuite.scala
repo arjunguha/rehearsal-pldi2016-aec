@@ -48,9 +48,8 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite {
     val g = parseFile(s"$root/BenoitCattie-puppet-nginx.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
     assert(SymbolicEvaluator.isIdempotent(g) == true)
   }
-
-
-  test("trivial non-idempotent case") {
+  
+  test("small non-idempotent example (in FS)") {
    import FSSyntax._
     val dst = "/dst.txt"
     val src = "/src.txt"
@@ -62,11 +61,11 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite {
     val e2 = If(TestFileState(src, IsFile), Rm(src), Skip)
     val e = e1 >> e2
 
-    val s = new SymbolicEvaluatorImpl(e.paths.toList, e.hashes, None)
-    assert(s.isIdempotent(e) == false)
+    assert(e.isIdempotent() == false)
+    assert(e.pruneIdem().isIdempotent() == false)
   }
 
-  test("trivial check for non-idempotence"){
+  test("small non-idempotent example (in Puppet)"){
     val g = PuppetParser.parseFile(s"$root/non-idempotent.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
     isIdempotent(g)
     assert(isIdempotent(g) == false)
