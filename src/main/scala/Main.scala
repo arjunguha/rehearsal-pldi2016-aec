@@ -90,6 +90,31 @@ package repl {
           }
         }
       }
+      case List("parseall", path) => {
+        import java.io.File
+        import scala.util.{Try, Success, Failure}
+        def walkTree(file: File): Iterable[File] = {
+          val children = new Iterable[File] {
+            def iterator = if (file.isDirectory) file.listFiles.iterator else Iterator.empty
+          }
+          Seq(file) ++: children.flatMap(walkTree(_))
+        }
+        var count = 0
+        var total = 0
+        println(s"Running parser on all Puppet files within $path.")
+        walkTree(new File(path)).filter(_.getPath().endsWith(".pp")) foreach { file =>
+          total += 1
+          Try(PuppetParser.parseFile(file.getPath())) match {
+            case Failure(_) => ()
+            case Success(_) => {
+              println(s"Successfully parsed ${file.getPath()}.")
+              count += 1
+              ()
+            }
+          }
+        }
+        println(s"Parsed $count files out of $total. (${(count * 100) / total}%)")
+      }
       case List("detersuite") => DeterminismBenchmarks.run()
       case List("detersizes") => DeterminismSizeTables.run()
       case List("deterstress") => DeterStressBenchmark.run()
