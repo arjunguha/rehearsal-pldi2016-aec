@@ -54,7 +54,7 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
 
   val spikyGraph = FSGraph(Map(
       Node("package","rrdtool") -> If(TestFileState("/x", IsDir), Skip, Mkdir("/x")),
-      Node("file","swap") -> 
+      Node("file","swap") ->
         Seq(If(TestFileState("/x/swap.conf", IsFile), Rm("/x/swap.conf"), Skip),
             CreateFile("/x/swap.conf", "")
         )
@@ -82,6 +82,12 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
   test("thias-ntp.pp") {
     val g = parseFile(s"$root/thias-ntp.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
     assert(SymbolicEvaluator.isDeterministic(g) == false)
+  }
+
+
+  test("vamsee-solr.pp") {
+    val g = parseFile(s"$root/vamsee-solr.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(SymbolicEvaluator.isDeterministic(g))
   }
 
   test("xdrum-rsyslog.pp") {
