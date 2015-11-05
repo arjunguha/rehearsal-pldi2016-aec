@@ -62,11 +62,11 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
 
   test("spiky-reduced.pp Pruned") {
     val sliced = Slicing.sliceGraph(spikyGraph)
-    assert(SymbolicEvaluator.isDeterministic(sliced) == true)
+    assert(SymbolicEvaluator.isDeterministic(sliced) == false)
   }
 
   test("spiky-reduced.pp Not pruned") {
-    assert(SymbolicEvaluator.isDeterministic(spikyGraph) == true)
+    assert(SymbolicEvaluator.isDeterministic(spikyGraph) == false)
   }
 
   test("ghoneycutt-xinetd.pp") {
