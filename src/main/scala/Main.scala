@@ -104,13 +104,9 @@ package repl {
         println(s"Running parser on all Puppet files within $path.")
         walkTree(new File(path)).filter(_.getPath().endsWith(".pp")) foreach { file =>
           total += 1
-          Try(PuppetParser.parseFile(file.getPath())) match {
-            case Failure(_) => ()
-            case Success(_) => {
-              println(s"Successfully parsed ${file.getPath()}.")
-              count += 1
-              ()
-            }
+          if (Try(PuppetParser.parseFile(file.getPath())).isSuccess) {
+            println(s"Successfully parsed ${file.getPath()}.")
+            count += 1
           }
         }
         println(s"Parsed $count files out of $total. (${(count * 100) / total}%)")
