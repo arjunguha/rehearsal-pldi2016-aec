@@ -5,22 +5,6 @@ private[rehearsal] object Commutativity {
   import java.nio.file.Path
   import FSSyntax._
 
-  /*
-   * Take in approx file sets and return exact files sets
-   *
-   * If there is an overlap between read-write and idempotent
-   * set of an expr, then the idempotent op on the intersecting
-   * path is not idempotent
-   */
-  def refinedFileSets(readSet: Set[Path],
-                      writeSet: Set[Path],
-                      idemSet: Set[Path]): FileSets = {
-    val intersection = idemSet intersect (readSet ++ writeSet)
-    FileSets(readSet ++ intersection,
-             writeSet ++ intersection,
-             idemSet diff intersection)
-  }
-
   // Cacluates read, write and Idem sets simultaneously
   def exprFileSets(expr: Expr): FileSets = expr match {
     case Error => FileSets(Set.empty, Set.empty, Set.empty)
@@ -31,16 +15,8 @@ private[rehearsal] object Commutativity {
     case If(TestFileState(d1, DoesNotExist), Mkdir(d2), Skip) if d1 == d2 => {
       FileSets(Set.empty, Set.empty, Set(d1))
     }
-    case If(a, p, q) => {
-      refinedFileSets(a.readSet ++ p.fileSets.reads ++ q.fileSets.reads,
-                      p.fileSets.writes ++ q.fileSets.writes,
-                      p.fileSets.dirs ++ q.fileSets.dirs)
-    }
-    case Seq(p, q) => {
-      refinedFileSets(p.fileSets.reads ++ q.fileSets.reads,
-                      p.fileSets.writes ++ q.fileSets.writes,
-                      p.fileSets.dirs ++ q.fileSets.dirs)
-    }
+    case If(a, p, q) => exprFileSets(p).combine(exprFileSets(q)).withReads(a.readSet)
+    case Seq(p, q) => exprFileSets(p).combine(exprFileSets(q))
     case Mkdir(path) => {
       if (path.getParent == null) {
         FileSets(Set.empty, Set(path), Set.empty)
