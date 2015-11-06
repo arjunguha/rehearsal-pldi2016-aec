@@ -6,6 +6,22 @@ object FSSyntax {
   import scalax.collection.Graph
   import scalax.collection.GraphEdge.DiEdge
 
+  case class FileSets(reads: Set[Path], writes: Set[Path], dirs: Set[Path]) {
+    require((reads intersect dirs).isEmpty, "read-set overlaps with dir-set")
+    require((writes intersect dirs).isEmpty, "write-set overlaps with dir-set")
+
+    def commutes(other: FileSets): Boolean = {
+      (this.reads intersect other.writes).isEmpty &&
+      (this.writes intersect other.reads).isEmpty &&
+      (this.writes intersect other.writes).isEmpty &&
+      (this.dirs intersect other.reads).isEmpty &&
+      (this.dirs intersect other.writes).isEmpty &&
+      (other.dirs intersect this.reads).isEmpty &&
+      (other.dirs intersect this.writes).isEmpty
+    }
+
+  }
+
   sealed trait FileState extends Ordered[FileState] {
 
     def compare(that: FileState): Int = {
@@ -74,12 +90,13 @@ object FSSyntax {
 
   sealed abstract trait Expr extends Product {
     def pretty(): String = Pretty.pretty(this)
-    def commutesWith(other: Expr) = Commutativity.commutes(this, other)
+    def commutesWith(other: Expr) = this.fileSets.commutes(other.fileSets)
 
     val size = Helpers.size(this)
     val paths = Helpers.exprPaths(this)
     val hashes = Helpers.exprHashes(this)
-    val (readSet, writeSet, idemSet) = Commutativity.exprFileSets(this)
+
+    val fileSets = Commutativity.exprFileSets(this)
 
     override lazy val hashCode: Int =
       runtime.ScalaRunTime._hashCode(this)

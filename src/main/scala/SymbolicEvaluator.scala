@@ -525,7 +525,12 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     val twice = evalExpr(once, e)
     eval(Assert(stNEq(once, twice)))
     eval(CheckSat()) match {
-      case CheckSatStatus(SatStatus) => false
+      case CheckSatStatus(SatStatus) => {
+        eval(GetModel())
+
+        println(stateFromTerm(inST))
+        false
+      }
       case CheckSatStatus(UnsatStatus) => true
       case CheckSatStatus(UnknownStatus) => throw new RuntimeException("got unknown")
       case s => throw Unexpected(s"go $s from check-sat")

@@ -5,10 +5,6 @@ private[rehearsal] object Commutativity {
   import java.nio.file.Path
   import FSSyntax._
 
-  type ReadSet = Set[Path]
-  type WriteSet = Set[Path]
-  type IdemSet = Set[Path]
-
   /*
    * Take in approx file sets and return exact files sets
    *
@@ -16,38 +12,46 @@ private[rehearsal] object Commutativity {
    * set of an expr, then the idempotent op on the intersecting
    * path is not idempotent
    */
-  def refinedFileSets(readSet: ReadSet,
-                      writeSet: WriteSet,
-                      idemSet: IdemSet): (ReadSet, WriteSet, IdemSet) = {
+  def refinedFileSets(readSet: Set[Path],
+                      writeSet: Set[Path],
+                      idemSet: Set[Path]): FileSets = {
     val intersection = idemSet intersect (readSet ++ writeSet)
-    (readSet ++ intersection,
-     writeSet ++ intersection,
-     idemSet diff intersection)
+    FileSets(readSet ++ intersection,
+             writeSet ++ intersection,
+             idemSet diff intersection)
   }
 
   // Cacluates read, write and Idem sets simultaneously
-  def exprFileSets(expr: Expr): (ReadSet, WriteSet, IdemSet) = expr match {
-    case Error => (Set.empty, Set.empty, Set.empty)
-    case Skip => (Set.empty, Set.empty, Set.empty)
-    case If(TestFileState(d1, IsDir), Skip, Mkdir(d2)) if d1 == d2 => (Set.empty, Set.empty, Set(d1))
-    case If(TestFileState(d1, DoesNotExist), Mkdir(d2), Skip) if d1 == d2 => (Set.empty, Set.empty, Set(d1))
-    case If(a, p, q) => refinedFileSets(a.readSet ++ p.readSet ++ q.readSet,
-                                        p.writeSet ++ q.writeSet,
-                                        p.idemSet ++ q.idemSet)
-    case Seq(p, q) => refinedFileSets(p.readSet ++ q.readSet,
-                                      p.writeSet ++ q.writeSet,
-                                      p.idemSet ++ q.idemSet)
+  def exprFileSets(expr: Expr): FileSets = expr match {
+    case Error => FileSets(Set.empty, Set.empty, Set.empty)
+    case Skip => FileSets(Set.empty, Set.empty, Set.empty)
+    case If(TestFileState(d1, IsDir), Skip, Mkdir(d2)) if d1 == d2 => {
+      FileSets(Set.empty, Set.empty, Set(d1))
+    }
+    case If(TestFileState(d1, DoesNotExist), Mkdir(d2), Skip) if d1 == d2 => {
+      FileSets(Set.empty, Set.empty, Set(d1))
+    }
+    case If(a, p, q) => {
+      refinedFileSets(a.readSet ++ p.fileSets.reads ++ q.fileSets.reads,
+                      p.fileSets.writes ++ q.fileSets.writes,
+                      p.fileSets.dirs ++ q.fileSets.dirs)
+    }
+    case Seq(p, q) => {
+      refinedFileSets(p.fileSets.reads ++ q.fileSets.reads,
+                      p.fileSets.writes ++ q.fileSets.writes,
+                      p.fileSets.dirs ++ q.fileSets.dirs)
+    }
     case Mkdir(path) => {
       if (path.getParent == null) {
-        (Set.empty, Set(path), Set.empty)
+        FileSets(Set.empty, Set(path), Set.empty)
       }
       else {
-        (Set(path.getParent), Set(path), Set())
+        FileSets(Set(path.getParent), Set(path), Set())
       }
     }
-    case CreateFile(path, _) => (Set.empty, Set(path), Set.empty)
-    case Rm(path) => (Set.empty, Set(path), Set.empty)
-    case Cp(src, dst) => (Set(src), Set(dst), Set.empty)
+    case CreateFile(path, _) => FileSets(Set.empty, Set(path), Set.empty)
+    case Rm(path) => FileSets(Set.empty, Set(path), Set.empty)
+    case Cp(src, dst) => FileSets(Set(src), Set(dst), Set.empty)
   }
 
   def predReadSet(pred: Pred): Set[Path] = pred match {
@@ -59,24 +63,4 @@ private[rehearsal] object Commutativity {
     case ITE(a, b, c) => a.readSet ++ b.readSet ++ c.readSet
   }
 
-  def commutes(p: Expr, q: Expr): Boolean = {
-
-    val pr = p.readSet
-    val pw = p.writeSet
-    val qr = q.readSet
-    val qw = q.writeSet
-    val pi = p.idemSet
-    val qi = q.idemSet
-
-    // no write-write conflicts
-    (pw intersect qw).isEmpty &&
-    // no read-write conflicts
-    (pr intersect qw).isEmpty && (pw intersect qr).isEmpty &&
-    /* its ok to have same paths in idemSets for p and q
-     * but any path in p expr's idemSet should not occur
-     * in read and write set of q expr and vice versa.
-     */
-    (pi intersect qr).isEmpty && (pi intersect qw).isEmpty &&
-    (pr intersect qi).isEmpty && (pw intersect qi).isEmpty
-  }
 }
