@@ -10,11 +10,12 @@ object Slicing {
 
 
   def sliceGraph[K](g: FSGraph[K]): FSGraph[K] = {
-    val newG = DeterminismPruning2.pruneGraph(g)
+    val newG = DeterminismPruning.pruneGraph(g)
     val diff = g.exprs.filterKeys(k => newG.exprs(k) == Skip).keySet
     diff.foldRight(newG)(skipSkips)
   }
 
+  // TODO(arjun): This is no longer effective
   def skipSkips[K](useless: K, g: FSGraph[K]): FSGraph[K] = {
     val in = g.deps.get(useless).incoming.map(_.head.value)
     val out = g.deps.get(useless).outgoing.map(_.last.value)

@@ -232,7 +232,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
           }
       """).eval().resourceGraph().fsGraph("centos-6")
 
-    assert(isDeterministic(Slicing.sliceGraph(m)) == false, "slicing changed the result of determinism")
+    assert(isDeterministic(m.pruneWrites()) == false, "slicing changed the result of determinism")
   }
 
   test("spiky-openssh") {
@@ -258,7 +258,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     """).eval().resourceGraph().fsGraph("centos-6")
 
     val r1 = isDeterministic(m)
-    val r2 = isDeterministic(Slicing.sliceGraph(m))
+    val r2 = isDeterministic(m.pruneWrites())
     assert(r1 == r2)
     assert(r2 == false)
   }
@@ -271,7 +271,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
       """).eval().resourceGraph().fsGraph("centos-6")
 
     assert(isDeterministic(m) == false, "should be non-deterministic")
-    assert(isDeterministic(Slicing.sliceGraph(m)) == false,
+    assert(isDeterministic(m.pruneWrites()) == false,
            "slicing removed nondeterminism")
   }
 
@@ -298,8 +298,8 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
         file{"/beta": ensure => directory}
         file{"/beta/delta": content => "dummy", require => File["/beta"]}
       """).eval().resourceGraph().fsGraph("ubuntu-trusty")
-    val g_ = Slicing.sliceGraph(g)
-    println(g_)
+    val g_ = g.pruneWrites()
+
     val sets = Block(g_.exprs.values.toSeq: _*).fileSets
     val writes = sets.writes ++ sets.dirs
     assert(writes.contains("/alpha/gamma") == false)
@@ -319,7 +319,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
           }
 
             """.stripMargin).eval.resourceGraph.fsGraph("centos-6")
-    val pruned = Slicing.sliceGraph(m)
+    val pruned = m.pruneWrites()
     assert(SymbolicEvaluator.isDeterministic(pruned) == true)
   }
 
@@ -340,7 +340,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
   }
 
       """.stripMargin).eval.resourceGraph.fsGraph("centos-6")
-    val pruned = Slicing.sliceGraph(m)
+    val pruned = m.pruneWrites()
     println(pruned)
     println(m.exprs(Node("file", "/otherb")))
     assert(SymbolicEvaluator.isDeterministic(pruned) == true)

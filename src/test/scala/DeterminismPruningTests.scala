@@ -9,7 +9,7 @@ class DeterminismPruningTests extends org.scalatest.FunSuite {
   import ResourceModel._
   import scalax.collection.Graph
   import scalax.collection.GraphEdge.DiEdge
-
+  import DeterminismPruning._
   import scalax.collection.GraphPredef._
 
 
@@ -61,7 +61,7 @@ class DeterminismPruningTests extends org.scalatest.FunSuite {
 
       file{"/dir/file": ensure => present}
                                """).eval().resourceGraph().fsGraph("")
-    val pruned = Slicing.sliceGraph(m)
+    val pruned = m.pruneWrites()
 
     assert(SymbolicEvaluator.isDeterministic(pruned) == false)
   }
@@ -70,18 +70,13 @@ class DeterminismPruningTests extends org.scalatest.FunSuite {
     val mydir = Directory("/mydir").compile("")
     val myfile = File("/mydir/myfile", CInline("hi"), false).compile("")
 
-    import DeterminismPruning2._
     val g = FSGraph(Map(1 -> mydir, 2 -> myfile),
       Graph[Int, DiEdge](1, 2))
-    val st = absGraph(g).map.get
-    info(st.toString)
-    val g_ = pruneGraph(g)
-    info(g_.toString)
+    val g_ = g.pruneWrites()
     assert(pruneablePaths(g) == Set[Path]("/mydir/myfile"))
   }
 
   test("2: slicing limitation") {
-    import DeterminismPruning2._
     val g = FSGraph(Map(1 -> mydir, 2 -> myfile, 3 -> mydir2, 4 -> myfile2),
                     Graph[Int, DiEdge](1 ~> 2, 3 ~> 4))
     val st = absGraph(g).map.get
@@ -92,7 +87,6 @@ class DeterminismPruningTests extends org.scalatest.FunSuite {
   }
 
   test("2: pruning packages") {
-    import DeterminismPruning2._
     val e = Package("vim", true).compile("ubuntu-trusty")
     val st = absEval(e).map.get
     // /packages/vim could be file or dir
@@ -100,13 +94,11 @@ class DeterminismPruningTests extends org.scalatest.FunSuite {
   }
 
   test("2: single file") {
-    import DeterminismPruning2._
     val st = absEval(File("/mydir/myfile", CInline("hi"), false).compile("")).map.get
     assert(st("/mydir/myfile") == Known(Set(AIsFile)))
   }
 
   test("2: file resource reduced") {
-    import DeterminismPruning2._
     val p = "/mydir/myfile".toPath
     val c = "hi"
     val e = If(TestFileState(p, IsFile),
@@ -120,7 +112,6 @@ class DeterminismPruningTests extends org.scalatest.FunSuite {
 
 
   test("2: create file or error") {
-    import DeterminismPruning2._
     val p = "/mydir/myfile".toPath
     val c = "hi"
     val e = If(TestFileState(p, DoesNotExist),
@@ -131,7 +122,6 @@ class DeterminismPruningTests extends org.scalatest.FunSuite {
   }
 
   test("2: rm(p) >> create(p)") {
-    import DeterminismPruning2._
     val p = "/mydir/myfile".toPath
     val c = "hi"
     val e = Rm(p) >> CreateFile(p, c)

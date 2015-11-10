@@ -16,7 +16,7 @@ object DeterminismBenchmarks {
       println(s"$label,no-slicing,$size,$t")
     }
 
-    val gSliced = Slicing.sliceGraph(g)
+    val gSliced = g.pruneWrites()
     val (r, t) = time(check(gSliced))
     assert(r == true, s"unexpected result from $label with slicing")
     val size = gSliced.size

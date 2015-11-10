@@ -25,13 +25,13 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
 
   test("thias-bind.pp") {
     val g = parseFile(s"$root/thias-bind.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)) == true)
+    assert(SymbolicEvaluator.isDeterministic(g.pruneWrites()) == true)
   }
 
   test("thias-bind-buggy.pp") {
     val g = parseFile(s"$root/thias-bind-buggy.pp").eval.resourceGraph.fsGraph("centos-6")
-    assert(SymbolicEvaluator.isDeterministicError(Slicing.sliceGraph(g)) == false)
-    assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)) == false)
+    assert(SymbolicEvaluator.isDeterministicError(g.pruneWrites()) == false)
+    assert(SymbolicEvaluator.isDeterministic(g.pruneWrites()) == false)
   }
 
   test("puppet-hosting.pp") {
@@ -49,7 +49,7 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
 
   ignore("nfisher-SpikyIRC.pp") {
     val g = parseFile(s"$root/nfisher-SpikyIRC.pp").eval.resourceGraph.fsGraph("centos-6")
-    assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)) == false)
+    assert(SymbolicEvaluator.isDeterministic(g.pruneWrites()) == false)
   }
 
   val spikyGraph = FSGraph(Map(
@@ -61,7 +61,7 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     ), Graph(Node("package","rrdtool"), Node("file","swap")))
 
   test("spiky-reduced.pp Pruned") {
-    val sliced = Slicing.sliceGraph(spikyGraph)
+    val sliced = spikyGraph.pruneWrites()
     assert(SymbolicEvaluator.isDeterministic(sliced) == false)
   }
 
@@ -91,7 +91,7 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
 
   test("pdurbin-java-jpa-tutorial.pp") {
     val g = parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph.fsGraph("centos-6")
-    assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)) == true)
+    assert(SymbolicEvaluator.isDeterministic(g.pruneWrites()) == true)
   }
 
   test("thias-ntp.pp") {

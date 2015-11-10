@@ -51,7 +51,7 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite {
     val g = PuppetParser.parse(manifest).eval.resourceGraph().fsGraph("centos-6")
     val e = g.expr()
 
-    assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)), "not deterministic")
+    assert(SymbolicEvaluator.isDeterministic(g.pruneWrites()), "not deterministic")
     assert(e.pruneIdem().isIdempotent() == true, "not idempotent")
   }
 

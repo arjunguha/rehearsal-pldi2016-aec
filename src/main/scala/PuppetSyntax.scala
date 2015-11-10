@@ -128,6 +128,11 @@ object PuppetSyntax {
       FSSyntax.Block(deps.topologicalSort().map(k => exprs(k)): _*)
     }
 
+    /** Prunes writes from this graph to make determinism-checking faster. */
+    def pruneWrites(): FSGraph[K] = {
+      DeterminismPruning.pruneGraph(this)
+    }
+
     /** Checks if two <b>deterministic</b> FS graphs are equivalent.
       *
       * @param other the other FS graph

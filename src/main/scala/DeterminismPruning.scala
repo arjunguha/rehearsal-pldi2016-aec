@@ -1,6 +1,6 @@
 package rehearsal
 
-object DeterminismPruning2 extends com.typesafe.scalalogging.LazyLogging   {
+object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
 
   import rehearsal.PuppetSyntax.FSGraph
   import java.nio.file.Path
