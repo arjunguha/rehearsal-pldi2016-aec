@@ -127,6 +127,12 @@ object ResourceSemantics {
         attrs.consume("type", "rsa") // TODO(arjun): What is the actual default type?
         SshAuthorizedKey(user, present, name, key)
       }
+      case "notify" => {
+        attrs.consume("name", "")
+        attrs.consume("message", "")
+        attrs.consume("withpath", "")
+        Notify
+      }
       case _ => throw NotImplemented(resource.toString)
     }
     attrs.assertAllUsed()

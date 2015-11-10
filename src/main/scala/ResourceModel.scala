@@ -31,6 +31,8 @@ object ResourceModel {
     val keyPath = s"/home/$user/.ssh/$name"
   }
 
+  case object Notify extends Res
+
   def queryPackage(distro: String, pkg: String): Option[Set[Path]] = {
     val resp = Http(s"http://104.197.140.244:8080/query/$distro/$pkg").timeout(2 * 1000, 60 * 1000).asString
     if (resp.isError) {
@@ -44,7 +46,7 @@ object ResourceModel {
   def compile(r: Res, distro: String): Expr = r match {
     case EnsureFile(p, CInline(c)) =>
       If(TestFileState(p, IsFile), Rm(p), Skip) >> CreateFile(p, c)
-    case EnsureFile(p, CFile(s)) => 
+    case EnsureFile(p, CFile(s)) =>
       If(TestFileState(p, IsFile), Rm(p), Skip) >> Cp(s, p)
     case File(p, CInline(c), false) =>
       If(TestFileState(p, IsFile),
@@ -57,13 +59,13 @@ object ResourceModel {
      If(Or (TestFileState(p, IsDir), TestFileState(p, IsFile)),
          Rm(p), Skip) >>
       CreateFile(p, c)
-    case File(p, CFile(s), false) => 
+    case File(p, CFile(s), false) =>
       If(TestFileState(p, IsFile),
         Rm(p) >> Cp(s, p),
         If(TestFileState(p, DoesNotExist),
           Cp(s, p),
           Error))
-    case File(p, CFile(s), true) => 
+    case File(p, CFile(s), true) =>
       If(Or(TestFileState(p, IsDir), TestFileState(p, IsFile)),
         Rm(p), Skip) >>
       Cp(s, p)
@@ -158,6 +160,7 @@ object ResourceModel {
       }
     }
     case self@Service(name) => If(TestFileState(self.path, IsFile), Skip, Error)
+    case Notify => Skip
     case _ => throw NotImplemented(r.toString)
   }
 
