@@ -62,7 +62,7 @@ object ResourceSemantics {
         val force = attrs.consume("force", false)
         val source = attrs.consume("source", "") // TODO(arjun): I think this is meant to be mutually exclusive with "content"
 
-        attrs.consume("seltype", "") // TODO(jcollard): Explicityl ignoring seltype.
+        attrs.consume("seltype", "")
         attrs.consume("group", "root")
         attrs.consume("owner", "root")
         attrs.consume("mode", "0644")
@@ -106,7 +106,6 @@ object ResourceSemantics {
       }
       case "service" => {
         val name = attrs.consume("name", resource.title)
-        // TODO(arjun): Ignored attributes
         attrs.consume("hasstatus", false)
         attrs.consume("hasrestart", false)
         attrs.consume("enable", false)
