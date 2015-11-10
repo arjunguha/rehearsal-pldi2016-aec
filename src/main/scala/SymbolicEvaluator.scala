@@ -83,44 +83,6 @@ object SymbolicEvaluator {
 
 case class ST(isErr: Term, paths: Map[Path, Term])
 
-sealed trait Precond {
-
-  def apply(st: ST): Term
-}
-
-case class PrecondAtom(files: Map[Path, Either[Term, Term => Term]]) extends Precond {
-
-  import smtlib.parser.Terms._
-  import SMT._
-  override def toString() = files.toList.map({ case (p, t) => (p, t match {
-    case Left(t) => t
-    case Right(t) => t(QualifiedIdentifier(Identifier(SSymbol("_"), Seq()), None))
-  }) }).toMap.toString
-
-  def restrictPath(tup: (Path, Term)) = {
-    val (p, x) = tup
-    files(p) match {
-      case Left(term) => Equals(x, term)
-      case Right(f) => f(x)
-    }
-  }
-
-  def apply(st: ST): Term = {
-    Not(And(Equals(st.isErr, False()),  And(st.paths.toList.map(restrictPath): _*)))
-  }
-
-}
-
-case class PrecondAnd(p1: Precond, p2: Precond) extends Precond {
-  import SMT._
-  def apply(st: ST): Term = And(p1(st), p2(st))
-}
-
-case object PrecondTrue extends Precond {
-  import smtlib.parser.Terms._
-  def apply(st: ST): Term = True()
-}
-
 class SymbolicEvaluatorImpl(allPaths: List[Path],
                             hashes: Set[String],
                             readOnlyPaths: Set[Path],
@@ -196,32 +158,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  def buildPrecondition(st: ST, state: State): Term =
-    st.paths.foldRight[Term](True())( { case ((p, t), pre: Term) =>
-      state.get(p) match {
-        case None => pre // DoesNotExist
-        case Some(FDir) => pre && FunctionApplication("is-IsDir", Seq(t))
-        case Some(FFile(hash)) => {
-          hashToZ3.get(hash) match {
-            case None => pre && FunctionApplication("is-IsFile", Seq(t))
-            case Some(h) => pre && Equals(t, FunctionApplication("IsFile", Seq(h)))
-          }
-        }
-      }
-    })
-
-  def buildST(precond: Precond): Option[ST] = {
-    val (st, _) = freshST()
-    eval(Assert(precond(st)))
-    smt.checkSat() match {
-      case SatStatus => {
-        val _ = smt.getModel()
-        Some(st)
-      }
-      case UnsatStatus => None
-      case UnknownStatus => throw Unexpected("got unknown")
-    }
-  }
 
   def freshST(): (ST, List[Command]) = {
 
@@ -355,64 +291,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         Some(paths.zip(pathVals).map({ case (path, t) => fstateFromTerm(t).map(f => path -> f) }).flatten.toMap)
       }
       case _ => throw Unexpected("unexpected value for isErr")
-    }
-  }
-
-
-  def predFromTerm(st: ST): Precond = {
-    val Seq((_, isErr)) = smt.getValue(Seq(st.isErr))
-    isErr match {
-      case QualifiedIdentifier(Identifier(SSymbol("true"), Seq()), _) => throw Unexpected("counterexample is error")
-      case QualifiedIdentifier(Identifier(SSymbol("false"), Seq()), _) => {
-        PrecondAtom(st.paths.toList.map({
-          case (p, term) => smt.getValue(Seq(term)).head._2 match {
-            case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("IsFile"), _), _), Seq(h))
-              if (termToHash.contains(h) == false) => p -> Right((y: Term) =>  FunctionApplication("is-IsFile", Seq(y)))
-            case x => p -> Left(x)
-          }
-        }).toMap)
-      }
-      case _ => throw Unexpected("unexpected value for isErr")
-    }
-  }
-
-  // Produces None if this formula is valid:
-  //
-  //  forall s . precond(s) => [[e1; delta]] s == [[e2] s
-  //
-  // This is equivalent to proving this formula unsatisfiable:
-  //
-  // exists s . precond(s) && [[e1; delta]] s != [[e2] s
-  //
-  // If the formula is invalid, produces Some((pred, cex)) such that:
-  //
-  // - [[e1; delta]] cex != [[e2]] cex
-  // - forall s . pred(s) => [[e1; delta]] s != [[e2]] s
-  def verifyUpdate(precond: Precond, e1: F.Expr, delta: F.Expr, e2: F.Expr): Option[(State, Precond)] = smt.pushPop {
-    //logger.info(s"verifyUpdate($precond, $delta)")
-    val st0 = initState
-    assertPathConsistency(st0)
-    eval(Assert(precond(st0)))
-
-    val stInter = evalExpr(st0, e1)
-    val st1 = evalExpr(stInter, delta)
-    val st2 = evalExpr(st0, e2)
-
-    // TODO(arjun): This asserts that e1 has "some effect". Are we actually relying on it? We need to either
-    // remove this or justify it.
-    eval(Assert(Not(stEquals(stInter, st0))))
-
-    eval(Assert(Not(stEquals(st1, st2))))
-
-    smt.checkSat() match {
-      case SatStatus => {
-        val _ = smt.getModel()
-        val newPrecond = predFromTerm(st0)
-        logger.info(s"precondition: $newPrecond")
-        Some((stateFromTerm(st0).getOrElse(throw Unexpected("state is an error")), newPrecond))
-      }
-      case UnsatStatus => None
-      case UnknownStatus => throw Unexpected("got unknown")
     }
   }
 
