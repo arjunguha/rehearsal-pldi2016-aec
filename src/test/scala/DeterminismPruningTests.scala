@@ -82,7 +82,7 @@ class DeterminismPruningTests extends org.scalatest.FunSuite {
     info(st.toString)
     val g_ = pruneGraph(g)
     info(g_.toString)
-    assert(pruneablePaths(g) == Set("/mydir/myfile"))
+    assert(pruneablePaths(g) == Set[Path]("/mydir/myfile"))
   }
 
   test("2: slicing limitation") {
