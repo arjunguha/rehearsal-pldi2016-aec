@@ -79,6 +79,11 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     assert(SymbolicEvaluator.isDeterministic(g))
   }
 
+  test("mjhas-clamav.pp") {
+    val g = parseFile(s"$root/mjhas-clamav.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(SymbolicEvaluator.isDeterministic(g))
+  }
+
   test("pdurbin-java-jpa-tutorial.pp") {
     val g = parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph.fsGraph("centos-6")
     assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)) == true)
