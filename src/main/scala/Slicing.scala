@@ -43,17 +43,18 @@ object Slicing {
     counts.filter(_._2 > 1).keySet
   }
 
-  def sliceGraph(g: FileScriptGraph): FileScriptGraph = {
+  def sliceGraph[K](g: FSGraph[K]): FSGraph[K] = {
     val paths  = interferingPaths(g.exprs.values.map(_.value).toList)
-    val newG = FSGraph(g.exprs.mapValues(e => slice(e, paths)).view.force, g.deps)
+    //val newG = FSGraph(g.exprs.mapValues(e => slice(e, paths)).view.force, g.deps)
+    val newG = DeterminismPruning2.pruneGraph(g)
     val diff = g.exprs.filterKeys(k => newG.exprs(k) == Skip).keySet
     diff.foldRight(newG)(skipSkips)
   }
 
-  def skipSkips(useless: Node, g: FileScriptGraph): FileScriptGraph = {
-    val in: Set[Node] = g.deps.get(useless).incoming.map(_.head.value)
-    val out: Set[Node] = g.deps.get(useless).outgoing.map(_.last.value)
-    val newEdges = in.foldRight(Set[DiEdge[Node]]())({ case (i, set) => set union out.map(o => DiEdge(i, o)) })
+  def skipSkips[K](useless: K, g: FSGraph[K]): FSGraph[K] = {
+    val in = g.deps.get(useless).incoming.map(_.head.value)
+    val out = g.deps.get(useless).outgoing.map(_.last.value)
+    val newEdges = in.foldRight(Set[DiEdge[K]]())({ case (i, set) => set union out.map(o => DiEdge(i, o)) })
     FSGraph(g.exprs - useless, g.deps - useless)
   }
 }

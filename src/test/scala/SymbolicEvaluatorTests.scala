@@ -1,3 +1,5 @@
+import rehearsal.PuppetSyntax.Node
+
 class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
 
   import rehearsal._
@@ -148,8 +150,14 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
       service {'foo':}
                   """
     val g = PuppetParser.parse(program).eval().resourceGraph().fsGraph("ubuntu-trusty")
+    val exprs = g.exprs.values.toArray
+    println(s"${exprs(0)}")
+    println(s"${exprs(1)}")
+    println(s"${exprs(2)}")
+    println(exprs(0).fileSets)
+    println(exprs(2).fileSets)
     assert(false == isDeterministic(g))
-  }  
+  }
 
   test("blah") {
     val program = """
@@ -179,7 +187,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
 
 
     val p = p1 >> p2 >> p3
-    val s = new SymbolicEvaluatorImpl(p.paths.toList, p.hashes, None)
+    val s = new SymbolicEvaluatorImpl(p.paths.toList, p.hashes, Set(), None)
     println(s.exprEquals(p, Error))
 
   }
@@ -249,9 +257,22 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
       }
     """).eval().resourceGraph().fsGraph("centos-6")
 
-    assert(isDeterministic(m) == false)
-    assert(isDeterministic(Slicing.sliceGraph(m)) == false)
+    val r1 = isDeterministic(m)
+    val r2 = isDeterministic(Slicing.sliceGraph(m))
+    assert(r1 == r2)
+    assert(r2 == false)
+  }
 
+  test("missing dependency between file and directory") {
+    val m = PuppetParser.parse("""
+      file{"/dir": ensure => directory }
+
+      file{"/dir/file": ensure => present}
+      """).eval().resourceGraph().fsGraph("centos-6")
+
+    assert(isDeterministic(m) == false, "should be non-deterministic")
+    assert(isDeterministic(Slicing.sliceGraph(m)) == false,
+           "slicing removed nondeterminism")
   }
 
   test("pdurbin-java-jpa reduced") {
@@ -278,12 +299,50 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
         file{"/beta/delta": content => "dummy", require => File["/beta"]}
       """).eval().resourceGraph().fsGraph("ubuntu-trusty")
     val g_ = Slicing.sliceGraph(g)
-    //g.exprs.values.head.valu
-    info(s"Interfering paths: ${Slicing.interferingPaths(g.exprs.values.toList)}")
-    info(s"Original: ${g.deps.nodes.size}, Sliced: ${g_.deps.nodes.size}")
-    for ((_, v) <- g.exprs) {
-      info(s"Sliced node: $v")
-    }
+    println(g_)
+    val sets = Block(g_.exprs.values.toSeq: _*).fileSets
+    val writes = sets.writes ++ sets.dirs
+    assert(writes.contains("/alpha/gamma") == false)
+    assert(writes.contains("/beta/delta") == false)
   }
 
+  test("java-reduced") {
+    val m = PuppetParser.parse(
+      """
+          $packages_to_install = [
+            'unzip',
+            'ant',
+          ]
+
+          package { $packages_to_install:
+            ensure => installed,
+          }
+
+            """.stripMargin).eval.resourceGraph.fsGraph("centos-6")
+    val pruned = Slicing.sliceGraph(m)
+    assert(SymbolicEvaluator.isDeterministic(pruned) == true)
+  }
+
+  test("java-reduced-less") {
+    val m = PuppetParser.parse(
+      """
+  $packages_to_install = [
+    'unzip',
+    'ant',
+  ]
+
+  package { $packages_to_install:
+    ensure => installed,
+  }
+
+  file { '/otherb':
+    content => "foobar"
+  }
+
+      """.stripMargin).eval.resourceGraph.fsGraph("centos-6")
+    val pruned = Slicing.sliceGraph(m)
+    println(pruned)
+    println(m.exprs(Node("file", "/otherb")))
+    assert(SymbolicEvaluator.isDeterministic(pruned) == true)
+  }
 }

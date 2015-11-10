@@ -12,6 +12,7 @@ private[rehearsal] object Pretty {
   def prettyPred(cxt: PredCxt, pred: Pred): String = pred match {
     case True => "true"
     case False => "false"
+    case Flip => "flip"
     case TestFileState(p, s) => s"$s($p)"
     case Not(True) => "!true"
     case Not(False) => "!false"

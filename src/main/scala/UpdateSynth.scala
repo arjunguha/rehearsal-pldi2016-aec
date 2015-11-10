@@ -320,7 +320,7 @@ object UpdateSynth extends com.typesafe.scalalogging.LazyLogging {
     val paths = allpaths(bounds.allPaths.toSet ++
       unions(bounds.allUsers.map(u => Set(Paths.get(s"/etc/users/$u"), Paths.get(s"/etc/groups/$u"))))).toList
 
-    val eval = new SymbolicEvaluatorImpl(paths, bounds.allContents.toSet, None)
+    val eval = new SymbolicEvaluatorImpl(paths, bounds.allContents.toSet, Set(), None)
     val (precond, r) = upd.guess(Seq(initState), v1, v2) match {
       case None => throw Unexpected("failed immediately")
       case Some(delta1) => upd.synth(eval, PrecondTrue, Seq(initState), v1, delta1, v2)

@@ -1,6 +1,6 @@
 package rehearsal
 
-private[rehearsal] object Commutativity {
+object Commutativity {
 
   import java.nio.file.Path
   import FSSyntax._
@@ -32,6 +32,7 @@ private[rehearsal] object Commutativity {
 
   def predReadSet(pred: Pred): Set[Path] = pred match {
     case True | False => Set()
+    case Flip => Set()
     case And(a, b) => a.readSet ++ b.readSet
     case Or(a, b) => a.readSet ++ b.readSet
     case Not(a) => a.readSet

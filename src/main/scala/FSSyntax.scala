@@ -107,6 +107,7 @@ object FSSyntax {
       }
     }
   }
+  case object Flip extends Pred
   case class ITE(a: Pred, b: Pred, c: Pred) extends Pred
 
   sealed abstract trait Expr extends Product {
@@ -138,7 +139,7 @@ object FSSyntax {
     def pruneIdem(): Expr = IdempotenceOptimizer.prune(this)
 
     def isIdempotent(): Boolean = {
-      val impl = new SymbolicEvaluatorImpl(this.paths.toList, this.hashes, None)
+      val impl = new SymbolicEvaluatorImpl(this.paths.toList, this.hashes, Set(), None)
       val r = impl.isIdempotent(this)
       impl.smt.free()
       r

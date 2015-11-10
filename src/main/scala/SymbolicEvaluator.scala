@@ -22,23 +22,26 @@ object SymbolicEvaluator {
 
   def exprEquals(e1: F.Expr, e2: F.Expr): Option[State] = {
     val impl = new SymbolicEvaluatorImpl((e1.paths union e2.paths).toList,
-      e1.hashes union e2.hashes, None)
+      e1.hashes union e2.hashes, Set(), None)
     val result = impl.exprEquals(e1, e2)
     impl.free()
     result
   }
 
   def predEquals(a: F.Pred, b: F.Pred): Boolean = {
-    val impl = new SymbolicEvaluatorImpl((a.readSet union b.readSet).toList, Set(), None)
+    val impl = new SymbolicEvaluatorImpl((a.readSet union b.readSet).toList, Set(), Set(), None)
     val result = impl.predEquals(a, b)
     impl.free()
     result
   }
 
    def mkImpl[K](g: FSGraph[K], logFile: Option[String]) = {
+     val sets = Block(g.exprs.values.toSeq: _*).fileSets
+     val ro = sets.reads -- sets.writes -- sets.dirs
     new SymbolicEvaluatorImpl(
       g.deps.nodes.map(n => g.exprs(n).paths).reduce(_ union _).toList,
       g.deps.nodes.map(n => g.exprs(n).hashes).reduce(_ union _),
+      ro,
       logFile)
   }
 
@@ -120,12 +123,16 @@ case object PrecondTrue extends Precond {
 
 class SymbolicEvaluatorImpl(allPaths: List[Path],
                             hashes: Set[String],
-                            logFile: Option[String]) extends com.typesafe.scalalogging.LazyLogging {
+                            readOnlyPaths: Set[Path],
+                            logFile: Option[String]
+                            ) extends com.typesafe.scalalogging.LazyLogging {
   import SMT._
   import SMT.Implicits._
 
   logger.info(s"Started with ${allPaths.size} paths and ${hashes.size} hashes")
   logger.info(allPaths.toString)
+
+  val writablePaths = allPaths.filterNot(p => readOnlyPaths.contains(p))
 
   val smt = new SMT(logFile)
   import smt.eval
@@ -158,7 +165,18 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   val statSort = Sort(SimpleIdentifier(SSymbol("stat")))
 
+  val readOnlyMap = {
+    val ids = readOnlyPaths.map(p => {
+      val z = freshName("path")
+      ((p, QualifiedIdentifier(Identifier(z))), DeclareConst(z, statSort))
+    })
+    val (paths, cmds) = ids.unzip
+    for (c <- cmds) { eval(c) }
+    paths.toMap
+  }
   val (initState, _) = freshST()
+
+
   val reverseMap = initState.paths.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
   val reverseHash = hashToZ3.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
 
@@ -206,7 +224,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   }
 
   def freshST(): (ST, List[Command]) = {
-    val ids = allPaths.map(p => {
+
+    val ids = writablePaths.map(p => {
       val z = freshName("path")
       ((p, QualifiedIdentifier(Identifier(z))), DeclareConst(z, statSort))
     })
@@ -214,12 +233,12 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     val isErr = freshName("isErr")
     val commands = DeclareConst(isErr, BoolSort()) +: cmds
     commands.map(eval(_))
-    (ST(QualifiedIdentifier(Identifier(isErr)), paths.toMap), commands)
+    (ST(QualifiedIdentifier(Identifier(isErr)), paths.toMap ++ readOnlyMap), commands)
   }
 
   def stEquals(st1: ST, st2: ST): Term = {
     (st1.isErr && st2.isErr) ||
-      (Not(st1.isErr) && Not(st2.isErr) && And(allPaths.map(p => Equals(st1.paths(p), st2.paths(p))): _*))
+      (Not(st1.isErr) && Not(st2.isErr) && And(writablePaths.map(p => Equals(st1.paths(p), st2.paths(p))): _*))
   }
 
   def evalPred(st: ST, pred: F.Pred): Term = pred match {
@@ -235,6 +254,11 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     //    case fsmodel.ITE(a, b, c) => ite(evalPred(st, a),
     //      evalPred(st, b),
     //      evalPred(st, c))
+    case F.Flip => {
+      val c = freshName("flip")
+      val b = eval(DeclareConst(c, BoolSort()))
+      c
+    }
     case _ => throw NotImplemented(pred.toString)
   }
 
@@ -274,7 +298,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       val stInter = evalExpr(st, p)
       val (stInter1, _) = freshST()
       eval(Assert(Equals(stInter.isErr, stInter1.isErr)))
-      for (p <- allPaths) {
+      for (p <- writablePaths) {
         eval(Assert(Equals(stInter.paths(p), stInter1.paths(p))))
       }
       evalExpr(stInter1, q)
@@ -286,19 +310,22 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       eval(DeclareConst(b, BoolSort()))
       eval(Assert(Equals(b, evalPred(st, a))))
       ST(ite(b, st1.isErr, st2.isErr),
-        allPaths.map(p => (p, ite(b, st1.paths(p), st2.paths(p)))).toMap)
+        writablePaths.map(p => (p, ite(b, st1.paths(p), st2.paths(p)))).toMap ++ readOnlyMap)
     }
     case F.CreateFile(p, h) => {
+      assert(readOnlyPaths.contains(p) == false)
       val pre = Equals(st.paths(p), "DoesNotExist") && Equals(st.paths(p.getParent), "IsDir")
       ST(st.isErr || Not(pre),
         st.paths + (p -> FunctionApplication("IsFile", Seq(hashToZ3(h)))))
     }
     case F.Mkdir(p) => {
+      assert(readOnlyPaths.contains(p) == false)
       val pre = Equals(st.paths(p), "DoesNotExist") && Equals(st.paths(p.getParent), "IsDir")
       ST(st.isErr || Not(pre),
         st.paths + (p -> "IsDir"))
     }
     case F.Rm(p) => {
+      assert(readOnlyPaths.contains(p) == false)
       val descendants = st.paths.filter(p1 => p1._1 != p && p1._1.startsWith(p)).map(_._2).toSeq
       val pre = FunctionApplication("is-IsFile", Seq(st.paths(p))) ||
         (FunctionApplication("is-IsDir", Seq(st.paths(p))) &&
@@ -307,6 +334,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         st.paths + (p -> "DoesNotExist"))
     }
     case F.Cp(src, dst) => {
+      assert(readOnlyPaths.contains(dst) == false)
       val pre = FunctionApplication("is-IsFile", Seq(st.paths(src))) &&
         Equals(st.paths(dst.getParent), "IsDir") &&
         Equals(st.paths(dst), "DoesNotExist")
@@ -480,7 +508,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
           val c = freshName("choice")
           val b = eval(DeclareConst(c, BoolSort()))
           ST(ite(c, st1.isErr, st2.isErr),
-            allPaths.map(p => p -> ite(c, st1.paths(p),st2.paths(p))).toMap)
+            writablePaths.map(p => p -> ite(c, st1.paths(p),st2.paths(p))).toMap ++ readOnlyMap)
         })
       }
     }
@@ -494,7 +522,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   def stNEq(st1: ST, st2: ST): Term = {
     (st1.isErr && Not(st2.isErr)) ||
       (st2.isErr && Not(st1.isErr)) ||
-      (Not(st1.isErr) && Not(st2.isErr) && Or(allPaths.map(p => Not(Equals(st1.paths(p), st2.paths(p)))): _*))
+      (Not(st1.isErr) && Not(st2.isErr) && Or(writablePaths.map(p => Not(Equals(st1.paths(p), st2.paths(p)))): _*))
   }
 
   def diverged(inSt: ST)(st1: ST, st2: ST): Boolean = smt.pushPop {
@@ -546,6 +574,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   }
 
   def isDeterministic[K](g: FSGraph[K]): Boolean = smt.pushPop {
+
     val inST = initState
     logger.info(s"Generating constraints for a graph with ${g.exprs.size} nodes")
     Try(evalGraphAbort(inST, g)(diverged(inST))) match {
