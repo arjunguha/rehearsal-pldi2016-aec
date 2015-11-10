@@ -63,7 +63,6 @@ object ResourceSemantics {
         val source = attrs.consume("source", "") // TODO(arjun): I think this is meant to be mutually exclusive with "content"
 
         attrs.consume("seltype", "") // TODO(jcollard): Explicityl ignoring seltype.
-        attrs.consume("alias", "") // TODO(arjun): Does this induce edges?
         attrs.consume("group", "root")
         attrs.consume("owner", "root")
         attrs.consume("mode", "0644")
