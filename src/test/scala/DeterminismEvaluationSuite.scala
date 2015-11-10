@@ -74,6 +74,21 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
+  test("mjhas-amavis.pp") {
+    val g = parseFile(s"$root/mjhas-amavis.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(SymbolicEvaluator.isDeterministic(g))
+  }
+
+  test("mjhas-clamav.pp") {
+    val g = parseFile(s"$root/mjhas-clamav.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(SymbolicEvaluator.isDeterministic(g))
+  }
+
+  test("Nelmo-logstash.pp") {
+    val g = parseFile(s"$root/Nelmo-logstash.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(SymbolicEvaluator.isDeterministic(g) == false)
+  }
+
   test("pdurbin-java-jpa-tutorial.pp") {
     val g = parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph.fsGraph("centos-6")
     assert(SymbolicEvaluator.isDeterministic(Slicing.sliceGraph(g)) == true)
@@ -82,12 +97,6 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
   test("thias-ntp.pp") {
     val g = parseFile(s"$root/thias-ntp.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
     assert(SymbolicEvaluator.isDeterministic(g) == false)
-  }
-
-
-  test("vamsee-solr.pp") {
-    val g = parseFile(s"$root/vamsee-solr.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isDeterministic(g))
   }
 
   test("xdrum-rsyslog.pp") {
