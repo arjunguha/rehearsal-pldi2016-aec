@@ -15,14 +15,12 @@ object IdempotenceOptimizer {
 
   def countPathsPred(pred: Pred, paths: Map[Path, Int]): Map[Path, Int] = {
     pred match {
-      case Flip => paths
       case Not(a) => countPathsPred(pred, paths)
       case And(a, b) => countPathsPred(a, countPathsPred(b, paths))
       case Or(a, b) => countPathsPred(a, countPathsPred(b, paths))
       case TestFileState(p, _) => addPath(p, paths)
       case True => paths
       case False => paths
-      case ITE(a, b, c) => throw Unexpected("ITE")
     }
   }
 

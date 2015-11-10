@@ -251,15 +251,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     case F.TestFileState(p, F.DoesNotExist) => Equals(st.paths(p), "DoesNotExist")
     case F.TestFileState(p, F.IsFile) =>
       FunctionApplication("is-IsFile", Seq(st.paths(p)))
-    //    case fsmodel.ITE(a, b, c) => ite(evalPred(st, a),
-    //      evalPred(st, b),
-    //      evalPred(st, c))
-    case F.Flip => {
-      val c = freshName("flip")
-      val b = eval(DeclareConst(c, BoolSort()))
-      c
-    }
-    case _ => throw NotImplemented(pred.toString)
   }
 
   def predEquals(a: F.Pred, b: F.Pred): Boolean = {

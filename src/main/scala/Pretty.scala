@@ -12,7 +12,6 @@ private[rehearsal] object Pretty {
   def prettyPred(cxt: PredCxt, pred: Pred): String = pred match {
     case True => "true"
     case False => "false"
-    case Flip => "flip"
     case TestFileState(p, s) => s"$s($p)"
     case Not(True) => "!true"
     case Not(False) => "!false"
@@ -33,12 +32,6 @@ private[rehearsal] object Pretty {
         case AndCxt => s"($pStr || $qStr)"
         case OrCxt | NotCxt => s"$pStr || $qStr"
       }
-    }
-    case ITE(a, b, c) => {
-      val aStr = prettyPred(NotCxt, a)
-      val bStr = prettyPred(NotCxt, b)
-      val cStr = prettyPred(NotCxt, c)
-      s"if ($aStr) { $bStr } else { $cStr }"
     }
   }
 

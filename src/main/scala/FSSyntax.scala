@@ -107,8 +107,6 @@ object FSSyntax {
       }
     }
   }
-  case object Flip extends Pred
-  case class ITE(a: Pred, b: Pred, c: Pred) extends Pred
 
   sealed abstract trait Expr extends Product {
     def pretty(): String = Pretty.pretty(this)

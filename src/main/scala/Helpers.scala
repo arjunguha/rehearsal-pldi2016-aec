@@ -13,8 +13,6 @@ private[rehearsal] object Helpers {
     case TestFileState(_, _) => 1
     case True => 1
     case False => 1
-    case Flip => 1
-    case ITE(a, b, c) => 1 + a.size + b.size + c.size
   }
 
   def size(expr: Expr): Int = expr match {

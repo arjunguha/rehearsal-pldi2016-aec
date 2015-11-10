@@ -153,24 +153,6 @@ object DeterminismPruning2 extends com.typesafe.scalalogging.LazyLogging   {
       .toSet
   }
 
-  def prunePred(toPrune: Set[Path], pred: Pred): Pred = pred match {
-    case True => True
-    case False => False
-    case Flip => Flip
-    case And(a, b) => prunePred(toPrune, a) && prunePred(toPrune, b)
-    case Or(a, b) => prunePred(toPrune, a) || prunePred(toPrune, b)
-    case Not(a) => Not(prunePred(toPrune, a))
-    case TestFileState(p, s) => {
-      if (toPrune.contains(p)) {
-        Flip
-      }
-      else {
-        pred
-      }
-    }
-    case ITE(_, _, _) => throw Unexpected("ITE")
-  }
-
   def assertDir(p: Path) = If(TestFileState(p, IsDir), Skip, Error)
 
   def mayAssertParent(toPrune: Set[Path], p: Path) = {

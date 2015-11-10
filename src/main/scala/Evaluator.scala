@@ -28,15 +28,6 @@ object FSEvaluator {
   def evalPred(st: State, pred: Pred): Boolean = pred match {
     case True => true
     case False => false
-    case Flip => throw Unexpected("cannot evaluate predicates with Flip")
-    case ITE(a, b, c) => {
-      if (evalPred(st, a)) {
-        evalPred(st, b)
-      }
-      else {
-        evalPred(st, c)
-      }
-    }
     case And(a, b) => evalPred(st, a) && evalPred(st, b)
     case Or(a, b) =>  evalPred(st, a) || evalPred(st, b)
     case Not(a) => !evalPred(st ,a)

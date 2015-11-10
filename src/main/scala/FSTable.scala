@@ -70,8 +70,6 @@ class FSTable {
       case (None, _) => ActionSemiRing.one
     }
     case TestFileState(p, s) => Branch(TestFileState(p, s), Leaf(ActionSemiRing.zero), Leaf(ActionSemiRing.one))
-    case ITE(_, _, _) => throw NotImplemented("ITE")
-    case Flip  => throw NotImplemented("ITE")
   }
 
   def mkddExpr(expr: Expr): Node = expr match {

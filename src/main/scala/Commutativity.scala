@@ -32,12 +32,10 @@ object Commutativity {
 
   def predReadSet(pred: Pred): Set[Path] = pred match {
     case True | False => Set()
-    case Flip => Set()
     case And(a, b) => a.readSet ++ b.readSet
     case Or(a, b) => a.readSet ++ b.readSet
     case Not(a) => a.readSet
     case TestFileState(path, _) => Helpers.ancestors(path)
-    case ITE(a, b, c) => a.readSet ++ b.readSet ++ c.readSet
   }
 
 }
