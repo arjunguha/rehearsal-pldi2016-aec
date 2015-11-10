@@ -6,7 +6,6 @@ class DeterminismPruningTests extends org.scalatest.FunSuite {
   import rehearsal._
   import Implicits._
   import FSSyntax._
-  import DeterminismPruning._
   import ResourceModel._
   import scalax.collection.Graph
   import scalax.collection.GraphEdge.DiEdge
@@ -20,42 +19,41 @@ class DeterminismPruningTests extends org.scalatest.FunSuite {
   val mydir2 = Directory("/mydir2").compile("")
   val myfile2 = File("/mydir2/myfile2", CInline("hi2"), false).compile("")
 
-  test("directory resource ensures directory") {
-    val absSt = absEval(mydir)
-    assert(absSt("/mydir") == ADir)
-    assert(absSt("/") == ARead)
-  }
-
-  test("file resource writes file and reads directory") {
-    val absSt = absEval(myfile)
-    assert(absSt("/mydir") == ARead)
-    assert(absSt("/mydir/myfile") == AWrite)
-    assert(absSt("/") == ARead)
-  }
-
-  test("pruning a lone file resource ") {
-    val g = PuppetParser.parse(
-      """
-        file{"/foo": ensure => present }
-      """).eval().resourceGraph().fsGraph("")
-    val pruned = Slicing.sliceGraph(g)
-    assert(pruned.exprs.values.head.fileSets.writes.isEmpty)
-  }
-
-  test("pruning a file resource that may commute with a directory ") {
-    val absSt = join(absEval(myfile), absEval(mydir))
-    val e_ = pruneExpr(Set("/mydir/myfile"), absSt, Map.empty, myfile)._2
-    assert(e_ != Skip)
-  }
-
-  test("pruning a directory that may commute with a file") {
-    val absSt = join(absEval(myfile), absEval(mydir))
-    val e_ = pruneExpr(Set("/mydir/myfile"), absSt, Map.empty, mydir)._2
-    info(mydir.toString)
-    info(absEval(mydir).toString)
-    assert(e_ != Skip)
-
-  }
+//  test("directory resource ensures directory") {
+//    val absSt = absEval(mydir)
+//    assert(absSt("/mydir") == ADir)
+//    assert(absSt("/") == ARead)
+//  }
+//
+//  test("file resource writes file and reads directory") {
+//    val absSt = absEval(myfile)
+//    assert(absSt("/mydir") == ARead)
+//    assert(absSt("/mydir/myfile") == AWrite)
+//    assert(absSt("/") == ARead)
+//  }
+//
+//  test("pruning a lone file resource ") {
+//    val g = PuppetParser.parse(
+//      """
+//        file{"/foo": ensure => present }
+//      """).eval().resourceGraph().fsGraph("")
+//    val pruned = Slicing.sliceGraph(g)
+//    assert(pruned.exprs.values.head.fileSets.writes.isEmpty)
+//  }
+//
+//  test("pruning a file resource that may commute with a directory ") {
+//    val absSt = join(absEval(myfile), absEval(mydir))
+//    val e_ = pruneExpr(Set("/mydir/myfile"), absSt, Map.empty, myfile)._2
+//    assert(e_ != Skip)
+//  }
+//
+//  test("pruning a directory that may commute with a file") {
+//    val absSt = join(absEval(myfile), absEval(mydir))
+//    val e_ = pruneExpr(Set("/mydir/myfile"), absSt, Map.empty, mydir)._2
+//    info(mydir.toString)
+//    info(absEval(mydir).toString)
+//    assert(e_ != Skip)
+//  }
 
   test("missing dependency between file and directory") {
     val m = PuppetParser.parse("""
@@ -65,9 +63,6 @@ class DeterminismPruningTests extends org.scalatest.FunSuite {
                                """).eval().resourceGraph().fsGraph("")
     val pruned = Slicing.sliceGraph(m)
 
-    info(m.toString)
-    info(pruned.toString)
-    info(summarizeGraph(Map(), m).toString)
     assert(SymbolicEvaluator.isDeterministic(pruned) == false)
   }
 
