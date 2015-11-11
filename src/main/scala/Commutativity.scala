@@ -3,6 +3,7 @@ package rehearsal
 object Commutativity {
 
   import java.nio.file.Path
+  import Implicits._
   import FSSyntax._
 
   // Cacluates read, write and Idem sets simultaneously
@@ -35,7 +36,7 @@ object Commutativity {
     case And(a, b) => a.readSet ++ b.readSet
     case Or(a, b) => a.readSet ++ b.readSet
     case Not(a) => a.readSet
-    case TestFileState(path, _) => Helpers.ancestors(path)
+    case TestFileState(path, _) => path.ancestors() + path
   }
 
 }

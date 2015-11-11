@@ -93,7 +93,7 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
 
     def file(p: Path) = singleton(p, Known(Set(AIsFile)))
 
-    def create(p: Path, a: Stat) = AbstractState(Some(Map(p -> Known(Set(a)))))
+    def create(p: Path, a: Stat) = singleton(p, Known(Set(a)))
 
     def write(p: Path) = singleton(p,  allStat)
 

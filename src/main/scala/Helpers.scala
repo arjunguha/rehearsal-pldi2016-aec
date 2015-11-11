@@ -25,28 +25,16 @@ private[rehearsal] object Helpers {
     case Rm(_) => 1
     case Cp(_, _) => 1
   }
-
-  def ancestors(path: Path): Set[Path] = {
-    if (path.getParent == null) {
-      Set(path)
-    }
-    else {
-      //TODO(jcollard): The comment on this was reversed when I found it
-      // I am assuming there was some reason for it but I cannot figure it out.
-      //Set(path, path.getParent)
-      ancestors(path.getParent) + path
-    }
-  }
-
+  
   def exprPaths(expr: Expr): Set[Path] = expr match {
     case Error => Set()
     case Skip => Set()
     case If(a, p, q) => a.readSet union exprPaths(p) union exprPaths(q)
     case Seq(p, q) => exprPaths(p) union exprPaths(q)
-    case Mkdir(f) => ancestors(f)
-    case CreateFile(f, _) => ancestors(f)
-    case Rm(f) => ancestors(f)
-    case Cp(src, dst) => ancestors(src) union ancestors(dst)
+    case Mkdir(f) => f.ancestors() + f
+    case CreateFile(f, _) => f.ancestors() + f
+    case Rm(f) => f.ancestors() + f
+    case Cp(src, dst) => src.ancestors() union dst.ancestors() union Set(src, dst)
   }
 
   def exprHashes(expr: Expr): Set[String] = expr match{
