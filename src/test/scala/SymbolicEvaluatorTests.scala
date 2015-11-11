@@ -235,7 +235,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     assert(isDeterministic(m.pruneWrites()) == false, "slicing changed the result of determinism")
   }
 
-  test("spiky-openssh") {
+  test("openssh class from SpikyIRC benchmark") {
     val m = PuppetParser.parse("""
       package {'openssh':
         ensure => latest,
@@ -306,19 +306,19 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     assert(writes.contains("/beta/delta") == false)
   }
 
-  test("java-reduced") {
+  test("two independent packages") {
     val m = PuppetParser.parse(
       """
           $packages_to_install = [
             'unzip',
-            'ant',
+            'vim-enhanced',
           ]
 
           package { $packages_to_install:
             ensure => installed,
           }
 
-            """.stripMargin).eval.resourceGraph.fsGraph("centos-6")
+            """).eval.resourceGraph.fsGraph("centos-6")
     val pruned = m.pruneWrites()
     assert(SymbolicEvaluator.isDeterministic(pruned) == true)
   }
@@ -341,8 +341,6 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
 
       """.stripMargin).eval.resourceGraph.fsGraph("centos-6")
     val pruned = m.pruneWrites()
-    println(pruned)
-    println(m.exprs(Node("file", "/otherb")))
     assert(SymbolicEvaluator.isDeterministic(pruned) == true)
   }
 }

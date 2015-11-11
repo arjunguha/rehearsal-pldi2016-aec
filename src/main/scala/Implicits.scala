@@ -82,4 +82,18 @@ object Implicits {
 
   }
 
+  implicit class RichMap[A,B](self: Map[A, B]) {
+
+    def combine[C, D](other: Map[A, C])(f: (Option[B], Option[C]) => Option[D]) = {
+      val keys = self.keySet ++ other.keySet
+      keys.foldLeft(Map[A,D]())({ case (map, k) =>
+        f(self.get(k), other.get(k)) match {
+          case None => map
+          case Some(v) => map + (k -> v)
+        }
+      })
+    }
+
+  }
+
 }

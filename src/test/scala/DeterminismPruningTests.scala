@@ -76,30 +76,34 @@ class DeterminismPruningTests extends org.scalatest.FunSuite {
     assert(pruneablePaths(g) == Set[Path]("/mydir/myfile"))
   }
 
-  test("2: slicing limitation") {
+  test("Can prune writes to file resources that are not read elsewhere") {
     val g = FSGraph(Map(1 -> mydir, 2 -> myfile, 3 -> mydir2, 4 -> myfile2),
                     Graph[Int, DiEdge](1 ~> 2, 3 ~> 4))
-    val st = absGraph(g).map.get
-    val g_ = pruneGraph(g)
-    info(g_.exprs.toString)
+    val ps = pruneablePaths(g)
+    assert(ps.contains("/mydir/myfile"))
+    assert(ps.contains("/mydir2/myfile2"))
     assert(SymbolicEvaluator.isDeterministic(g.pruneWrites()) == true)
-    assert(st("/mydir/myfile") == Known(Set(AIsFile)))
-    assert(st("/mydir2/myfile2") == Known(Set(AIsFile)))
   }
 
-  test("2: pruning packages") {
+  test("pruning packages") {
     val e = Package("vim", true).compile("ubuntu-trusty")
-    val st = absEval(e).map.get
-    // /packages/vim could be file or dir
-    assert(st.values.toList.filter(x => x != Known(Set(AIsDir)) && x != Known(Set(AIsFile))).length == 1)
+    val st = absEval(e).get
+    // Remove everything that is definitely a file or a directory. That should
+    // only leave /packages/vim, which must simply exist
+    info(st.toString)
+    assert(st.toList
+           .filterNot({ case (_, x) => x.subsetOf(Set(ADir, AUntouched)) ||
+                                       x.subsetOf(Set(AFile, AUntouched)) })
+           .length == 2)
   }
 
-  test("2: single file") {
-    val st = absEval(File("/mydir/myfile", CInline("hi"), false).compile("")).map.get
-    assert(st("/mydir/myfile") == Known(Set(AIsFile)))
+  test("a file resource completely determines the state of the file") {
+    val resource = File("/mydir/myfile", CInline("hi"), false)
+    val st = absEval(resource.compile("")).get
+    assert(st("/mydir/myfile") == Set(AFile))
   }
 
-  test("2: file resource reduced") {
+  test("file resource reduced") {
     val p = "/mydir/myfile".toPath
     val c = "hi"
     val e = If(TestFileState(p, IsFile),
@@ -107,8 +111,8 @@ class DeterminismPruningTests extends org.scalatest.FunSuite {
       If(TestFileState(p, DoesNotExist),
         CreateFile(p, c),
         Error))
-    val st = absEval(e).map.get
-    assert(st(p) == Known(Set(AIsFile)))
+    val st = absEval(e).get
+    assert(st(p) == Set(AFile))
   }
 
 
@@ -118,17 +122,25 @@ class DeterminismPruningTests extends org.scalatest.FunSuite {
     val e = If(TestFileState(p, DoesNotExist),
                CreateFile(p, c),
                Error)
-    val st = absEval(e).map.get
-    assert(st("/mydir/myfile") == Known(Set(AIsFile)))
+    val st = absEval(e).get
+    assert(st("/mydir/myfile") == Set(AFile))
   }
 
   test("2: rm(p) >> create(p)") {
     val p = "/mydir/myfile".toPath
     val c = "hi"
     val e = Rm(p) >> CreateFile(p, c)
-    val st = absEval(e).map.get
-    assert(st == Map("/mydir".toPath -> Known(Set(AIsDir)),
-                     "/mydir/myfile".toPath -> Known(Set(AIsFile))))
+    val st = absEval(e).get
+    assert(st == Map("/mydir".toPath -> Set(ADir),
+                     "/mydir/myfile".toPath -> Set(AFile)))
+  }
+
+  test("a conditional write leaves path in an indeterminate state") {
+    val e = If(TestFileState("/a", IsDir), Skip, Mkdir("/b"))
+    val st = absEval(e).get
+    info(st.toString)
+    assert(st("/b") == Set(ADir, AUntouched))
+    assert(st("/a") == Set(ADir, AFile, ADoesNotExist))
   }
 
 }

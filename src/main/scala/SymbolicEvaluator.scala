@@ -91,8 +91,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   import SMT._
   import SMT.Implicits._
 
-  logger.info(s"Started with ${allPaths.size} paths and ${hashes.size} hashes")
-  logger.info(allPaths.toString)
+  logger.info(s"Started with ${allPaths.size} paths, ${hashes.size} hashes, and ${readOnlyPaths.size} read-only paths")
 
   val writablePaths = allPaths.filterNot(p => readOnlyPaths.contains(p))
 
@@ -389,6 +388,22 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       (Not(st1.isErr) && Not(st2.isErr) && Or(writablePaths.map(p => Not(Equals(st1.paths(p), st2.paths(p)))): _*))
   }
 
+  def logDiff[A,B](m1: Map[A,B], m2: Map[A,B]): Unit = {
+    val keys = m1.keySet ++ m2.keySet
+    for (key <- keys) {
+      (m1.get(key), m2.get(key)) match {
+        case (None, None) => throw Unexpected("should have been in one")
+        case (Some(x), None) => logger.info(s"$key -> $x REMOVED")
+        case (None, Some(x)) => logger.info(s"$key -> $x ADDED")
+        case (Some(x), Some(y)) => {
+          if (x != y) {
+            logger.info(s"$key -> $x -> $y CHANGED")
+          }
+        }
+      }
+    }
+  }
+
   def diverged(inSt: ST)(st1: ST, st2: ST): Boolean = smt.pushPop {
     logger.info("Running divergence check.")
     eval(Assert(stNEq(st1, st2)))
@@ -397,8 +412,14 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         eval(GetModel())
         (stateFromTerm(inSt), stateFromTerm(st1), stateFromTerm(st2)) match {
           case (None, _, _) => throw Unexpected("bad model: initial state should not be error")
-          case (Some(in), None, Some(out)) => logger.info(s"On input\n$in\nthe program produces error or output\n$out")
-          case (Some(in), Some(out), None) => logger.info(s"On input\n$in\nthe program produces error or output\n$out")
+          case (Some(in), None, Some(out)) => {
+            logger.info(s"On input\n$in\nthe program produces error or output\n$out")
+            logDiff(in, out)
+          }
+          case (Some(in), Some(out), None) => {
+            logger.info(s"On input\n$in\nthe program produces error or output\n$out")
+            logDiff(in, out)
+          }
           case (Some(in), Some(out1), Some(out2)) => {
             logger.info(s"On input\n$in\nthe program produces two possible outputs!")
           }
@@ -419,8 +440,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     eval(CheckSat()) match {
       case CheckSatStatus(SatStatus) => {
         eval(GetModel())
-
-        println(stateFromTerm(inST))
         false
       }
       case CheckSatStatus(UnsatStatus) => true

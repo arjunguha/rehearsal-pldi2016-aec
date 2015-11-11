@@ -6,147 +6,110 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
   import java.nio.file.Path
   import FSSyntax._
   import Implicits._
+  import AbstractEval.{EvalLike, StateLike, Stat}
 
-  sealed trait Stat
-  case object AIsFile extends Stat
-  case object AIsDir extends Stat
-  case object ADoesNotExist extends Stat
+  sealed trait AStat
+  case object ADir extends AStat
+  case object AFile extends AStat
+  case object ADoesNotExist extends AStat
+  case object AUntouched extends AStat
 
-  val allStat = Known(Set(AIsFile, AIsDir, ADoesNotExist))
+  type H = Map[Path, Set[AStat]]
 
-  sealed trait A {
+  val allStats = Set[AStat](AFile, ADir, ADoesNotExist)
 
-    def >>(other: A): A = (this, other) match {
-      case (ABot, x) => x
-      case (x, ABot) => x
-      case (Known(set1), Known(set2)) => other
-    }
-
-    def +(other: A): A = (this, other) match {
-      case (ABot, y) => y
-      case (x, ABot) => x
-      case (Known(set1), Known(set2)) => Known(set1 union set2)
-    }
-
-    def ||(other: A): A = (this, other) match {
-      case (ABot, y) => y
-      case (x, ABot) => x
-      case _ => allStat
-
-    }
-  }
-
-  case class Known(set: Set[Stat]) extends A
-  case object ABot extends A
-
-  def combineMaps[A, B, C, D](m1: Map[A, B], m2: Map[A, C])(f: (Option[B], Option[C]) => Option[D]) = {
-    val keys = m1.keySet ++ m2.keySet
-    keys.foldLeft(Map[A,D]())({ case (map, k) =>
-      f(m1.get(k), m2.get(k)) match {
-        case None => map
-        case Some(v) => map + (k -> v)
-      }
+  def hUnion(h1: Option[H], h2: Option[H]) = (h1, h2) match {
+    case (None, _) => h2
+    case (_, None) => h1
+    case (Some(h1), Some(h2)) => Some(h1.combine(h2) {
+      case (None, None) => throw Unexpected("bug in combineMaps")
+      case (Some(s1), None) => Some(s1 + AUntouched)
+      case (None, Some(s2)) => Some(s2 + AUntouched)
+      case (Some(s1), Some(s2)) => Some(s1 union s2)
     })
   }
 
-  case class AbstractState(map: Option[Map[Path, A]]) {
+  case class Abs(f: H => Option[H]) extends StateLike[Abs] {
 
-    def >>(other: AbstractState): AbstractState = {
-      val m = (this.map, other.map) match {
-        case (None, _) => None
-        case (_, None) => None
-        case (Some(m1), Some(m2)) =>
-          Some(combineMaps(m1, m2)((x, y) => Some(x.getOrElse(ABot) >> y.getOrElse(ABot))))
+    def >>(other: Abs) = Abs(st => f(st) match {
+      case None => None
+      case Some(h) => other.f(h)
+    })
+
+    def +(other: Abs) = Abs(st => hUnion(this.f(st), other.f(st)))
+
+    def unary_!(): Abs = Abs(st => f(st) match {
+      case None => Some(st.mapValues(_ => allStats))
+      case Some(map) => {
+        if (map.values.exists(_.size == allStats.size)) {
+          None
+        }
+        else {
+          Some(map.mapValues(set => allStats diff set))
+        }
       }
+    })
 
-      AbstractState(m)
-    }
+  }
 
-    def +(other: AbstractState): AbstractState = {
-      AbstractState((this.map, other.map) match {
-        case (None, m2) => m2
-        case (m1, None) => m1
-        case (Some(m1), Some(m2)) =>
-          Some(combineMaps(m1, m2)((x, y) =>  Some(x.getOrElse(ABot) + y.getOrElse(ABot))))
+  def toAStat(stat: Stat) = stat match {
+    case AbstractEval.Dir => ADir
+    case AbstractEval.File => AFile
+    case AbstractEval.DoesNotExist => ADoesNotExist
+  }
+
+  object AEval extends EvalLike {
+    type State = Abs
+
+    def test(p: Path, stat: Stat): Abs = {
+      val aStat = toAStat(stat)
+      Abs(st => st.get(p) match {
+        case None => Some(st + (p -> Set(aStat)))
+        case Some(set) => {
+          if (set.contains(aStat)) {
+            Some(st + (p -> Set(aStat)))
+          }
+          else {
+            None
+          }
+        }
       })
     }
 
-    def ||(other: AbstractState): AbstractState = {
-      AbstractState((this.map, other.map) match {
-        case (None, m2) => m2
-        case (m1, None) => m1
-        case (Some(m1), Some(m2)) =>
-          Some(combineMaps(m1, m2)((x, y) =>  Some(x.getOrElse(ABot) || y.getOrElse(ABot))))
-      })
-    }
+    def set(p: Path, stat: Stat): Abs = Abs(st => Some(st + (p -> Set(toAStat(stat)))))
 
+    val error = Abs(_ => None)
+
+    val skip =  Abs(st => Some(st))
   }
 
-  object AbstractState {
-
-    def singleton(p: Path, a: A) = AbstractState(Some(Map(p -> a)))
-
-    def read(p: Path) = singleton(p, allStat)
-
-    def dir(p: Path) = singleton(p, Known(Set(AIsDir)))
-
-    def file(p: Path) = singleton(p, Known(Set(AIsFile)))
-
-    def write(p: Path) = singleton(p,  allStat)
-
-    def rm(p: Path) = singleton(p, Known(Set(ADoesNotExist)))
-
-    def exists(p: Path) = singleton(p, Known(Set(AIsFile, AIsDir)))
-
-    def notDir(p: Path) = singleton(p, Known(Set(ADoesNotExist, AIsFile)))
-
-    def notFile(p: Path) = singleton(p, Known(Set(ADoesNotExist, AIsDir)))
-
-    val empty = AbstractState(Some(Map()))
-    val error = AbstractState(None)
-
-  }
-
-  import AbstractState._
-
-  def absEval(expr: Expr): AbstractState = expr match {
-    case Mkdir(p) => dir(p) + dir(p.getParent)
-    case Error => error
-    case Skip => empty
-    case If(TestFileState(p, IsDir), e1, e2) => (dir(p) >> absEval(e1)) + (notDir(p) >> absEval(e2))
-    case If(TestFileState(p, IsFile), e1, e2) => (file(p) >> absEval(e1)) + (notFile(p) >> absEval(e2))
-    case If(TestFileState(p, DoesNotExist), e1, e2) => (rm(p) >> absEval(e1)) + (exists(p) >> absEval(e2))
-    case If(a, e1, e2) => {
-      val st = a.readSet.foldLeft(empty)((st, p) => st + read(p))
-      (st >> absEval(e1)) + (st >> absEval(e2))
-    }
-    case Seq(e1, e2) => absEval(e1) >> absEval(e2)
-    case CreateFile(p, _) => dir(p.getParent) + file(p)
-    case Rm(p) => rm(p)
-    case Cp(src, dst) => file(src) + dir(dst.getParent) + file(dst)
-  }
-
-  def absGraph[K](g: FSGraph[K]): AbstractState = {
-    if (g.deps.isEmpty) {
-      empty
-    }
-      else {
-        val fringe = g.deps.nodes.filter(_.outDegree == 0).toList
-        fringe.map(node => absEval(g.exprs(node.value))).reduce(_ || _)
-      }
-  }
+  def absEval(expr: FSSyntax.Expr) = AEval.eval(expr).f(Map())
 
   def pruneablePaths[A](graph: FSGraph[A]): Set[Path] = {
-    val absStates = graph.exprs.mapValues(absEval)
-    val combinedAbsState = absStates.values.reduce(_ || _)
-    require(combinedAbsState.map.isDefined, "static error here--wow")
-    combinedAbsState.map.get.toList
-      .filter({
-        case (_, Known(r)) => r.size == 1 && r.head == AIsFile
-        case (_, ABot) => false
-      })
-      .map({ case (p, _) => p })
-      .toSet
+
+    //val absStates = graph.exprs.mapValues(absEval)
+    val absStates2 = graph.exprs.values.map(absEval)
+    val maybeFiles = absStates2.foldLeft[Option[Set[Path]]](Some(Set())) {
+      case (None, _) => None
+      case (_ ,None) => None
+      case (Some(files), Some(st)) => {
+        // files that st does not touch
+        val preserved = files.filter(p => st.get(p) match {
+          case None => true // st does not touch p
+          case Some(st) => st == Set(AUntouched)
+        })
+
+
+        val newFiles = st.keySet
+          .filter({ case p =>
+            st(p).contains(AFile) &&
+            (st(p).subsetOf(Set(AFile, AUntouched))) &&
+            !files.contains(p) })
+        Some(preserved union newFiles)
+      }
+    }
+    assert(maybeFiles.isDefined, "wow-- a static error here")
+    maybeFiles.get
   }
 
   def assertDir(p: Path) = If(TestFileState(p, IsDir), Skip, Error)

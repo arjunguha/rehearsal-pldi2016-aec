@@ -33,10 +33,6 @@ class FSTableTests extends org.scalatest.FunSuite with org.scalatest.Matchers {
     val a = tbl.mkddPred(TestFileState("/x", IsDir))
     val e1 = tbl.mkddExpr(Mkdir("/y"))
     val n = tbl.seq(a, e1)
-    println(a)
-    println(e1)
-    println(tbl.dd)
-    println(n)
   }
 
   test("two resources") {
