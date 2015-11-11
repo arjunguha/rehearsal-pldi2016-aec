@@ -62,9 +62,6 @@ object FSSyntax {
   case object DoesNotExist extends FileState
 
   sealed trait Pred {
-    def nnf(): Pred = Helpers.nnf(this)
-    def cnf(): Pred = Helpers.cnf(this)
-    def replace(a: Pred, b: Pred): Pred = Helpers.replace(this, a, b)
     def size = Helpers.predSize(this)
     override def toString(): String = Pretty.prettyPred(Pretty.NotCxt, this)
 
