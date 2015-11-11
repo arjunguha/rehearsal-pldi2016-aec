@@ -25,7 +25,7 @@ private[rehearsal] object Helpers {
     case Rm(_) => 1
     case Cp(_, _) => 1
   }
-  
+
   def exprPaths(expr: Expr): Set[Path] = expr match {
     case Error => Set()
     case Skip => Set()

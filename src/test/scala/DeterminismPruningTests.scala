@@ -82,6 +82,7 @@ class DeterminismPruningTests extends org.scalatest.FunSuite {
     val st = absGraph(g).map.get
     val g_ = pruneGraph(g)
     info(g_.exprs.toString)
+    assert(SymbolicEvaluator.isDeterministic(g.pruneWrites()) == true)
     assert(st("/mydir/myfile") == Known(Set(AIsFile)))
     assert(st("/mydir2/myfile2") == Known(Set(AIsFile)))
   }

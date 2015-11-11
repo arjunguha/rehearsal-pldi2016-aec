@@ -49,7 +49,6 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
     })
   }
 
-
   case class AbstractState(map: Option[Map[Path, A]]) {
 
     def >>(other: AbstractState): AbstractState = {
@@ -93,8 +92,6 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
 
     def file(p: Path) = singleton(p, Known(Set(AIsFile)))
 
-    def create(p: Path, a: Stat) = singleton(p, Known(Set(a)))
-
     def write(p: Path) = singleton(p,  allStat)
 
     def rm(p: Path) = singleton(p, Known(Set(ADoesNotExist)))
@@ -110,11 +107,10 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
 
   }
 
-
   import AbstractState._
 
   def absEval(expr: Expr): AbstractState = expr match {
-    case Mkdir(p) => create(p, AIsDir) + dir(p.getParent)
+    case Mkdir(p) => dir(p) + dir(p.getParent)
     case Error => error
     case Skip => empty
     case If(TestFileState(p, IsDir), e1, e2) => (dir(p) >> absEval(e1)) + (notDir(p) >> absEval(e2))
@@ -125,9 +121,9 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
       (st >> absEval(e1)) + (st >> absEval(e2))
     }
     case Seq(e1, e2) => absEval(e1) >> absEval(e2)
-    case CreateFile(p, _) => dir(p.getParent) + create(p, AIsFile)
+    case CreateFile(p, _) => dir(p.getParent) + file(p)
     case Rm(p) => rm(p)
-    case Cp(src, dst) => file(src) + dir(dst.getParent) + create(dst, AIsFile)
+    case Cp(src, dst) => file(src) + dir(dst.getParent) + file(dst)
   }
 
   def absGraph[K](g: FSGraph[K]): AbstractState = {

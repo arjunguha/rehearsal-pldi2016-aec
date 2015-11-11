@@ -424,7 +424,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         false
       }
       case CheckSatStatus(UnsatStatus) => true
-      case CheckSatStatus(UnknownStatus) => throw new RuntimeException("got unknown")
+      case CheckSatStatus(UnknownStatus) => throw Unexpected("got unknown")
       case s => throw Unexpected(s"go $s from check-sat")
     }
 
@@ -459,7 +459,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     eval(CheckSat()) match {
       case CheckSatStatus(SatStatus) => false
       case CheckSatStatus(UnsatStatus) => true
-      case CheckSatStatus(UnknownStatus) => throw new RuntimeException("got unknown")
+      case CheckSatStatus(UnknownStatus) => throw Unexpected("unknown")
       case s => throw Unexpected(s"got $s from check-sat")
     }
 

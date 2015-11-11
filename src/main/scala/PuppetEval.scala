@@ -183,10 +183,6 @@ private object PuppetEval {
 
   val metaparameters = Seq("before", "require", "notify", "subscribe", "alias")
 
-
-  def evalResourceTitles(titleExpr: Expr, attrVals: Map[String, Expr]): List[ResourceVal] =
-    throw new Exception()
-
   // Produces a new state and a list of resource titles
   // TODO(arjun): Handle "require" and "before" dependencies.
   def evalResource(st: State, resource: Resource): (State, List[Node]) = {
@@ -238,17 +234,17 @@ private object PuppetEval {
     val newResMap = newRess.map(r => (Node(r.typ, r.title), r)).toMap
 
     //TODO: (rolivia) This is not right
-    st.copy(resources = (newResMap ++ st.resources).filter(_._2.title != ""), 
+    st.copy(resources = (newResMap ++ st.resources).filter(_._2.title != ""),
             deps = st.deps -- st.deps.nodes.filter(_.title == ""))
   }
 
   def evalResDefaults2(st: State): State = {
     // val defaultRess = st.resources.filter(_._1.title == "")
-    // defaultRess.map(r => evalResDefault(r._2.attrs, 
+    // defaultRess.map(r => evalResDefault(r._2.attrs,
                             // st.resources.filter(_._1.typ == r._1.typ).map(_._2).toSeq))
     val resources = st.resources.groupBy(_._1.typ)
     resources.map(r => {
-        
+
       })
     //defaultsT = map of default attributes for type T
     //resValsT = list of ResourceVals of type T
@@ -264,7 +260,7 @@ private object PuppetEval {
         val newRes = ResourceVal(r.typ, r.title, r.attrs ++ newAttrs)
         newRes +: evalResDefault(attrs, t)
       }
-    }    
+    }
   }
 
   def evalEdges(st: State, lst: Seq[Resource]): (State, List[Node]) = lst match {
@@ -529,8 +525,8 @@ private object PuppetEval {
 
   def expandStage(stage: Node, st: State): State = {
     require(stage.typ == "stage")
-    val stageNodes = st.stages.getOrElse(stage.title, throw new Exception(s"Stage should be in map. $stage")).filter(x => st.deps.contains(x))
-    val dependencies = st.deps.get(stage).incoming.map(x => st.stages.getOrElse(x.head.value.title, throw new Exception(s"Stage should be in map. $stage"))).flatten.filter(x => st.deps.contains(x))
+    val stageNodes = st.stages.getOrElse(stage.title, throw Unexpected(s"Stage should be in map. $stage")).filter(x => st.deps.contains(x))
+    val dependencies = st.deps.get(stage).incoming.map(x => st.stages.getOrElse(x.head.value.title, throw Unexpected(s"Stage should be in map. $stage"))).flatten.filter(x => st.deps.contains(x))
     val st2 =
       stageNodes.foldRight(st)((n, st1) =>
         st1.copy(

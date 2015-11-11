@@ -58,7 +58,7 @@ class FSBDDTests extends org.scalatest.FunSuite with org.scalatest.Matchers {
       case (_, 1) => 1
       case (1, _) => 1
       case (0, 0) => 0
-      case (_, _) => throw new Exception("impossible")
+      case (_, _) => throw Unexpected("impossible")
     }
     assert(t.restrict(TestFileState("/x", IsFile), true) eq Leaf(1))
 
