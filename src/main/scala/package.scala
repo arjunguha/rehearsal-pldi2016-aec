@@ -1,38 +1,9 @@
 package object rehearsal {
 
-  import scala.reflect.runtime.universe.TypeTag
-  import scalax.collection.GraphPredef._
-  import scalax.collection.Graph
-  import scalax.collection.GraphEdge.DiEdge
   import java.nio.file.{Paths, Path, Files}
-  import scala.annotation.tailrec
-  import FSSyntax._
-  import scalax.collection.edge.Implicits._
   import rehearsal.Implicits._
-  import scala.util.{Try, Success, Failure}
-
-  def unions[A](sets: scala.Seq[Set[A]]): Set[A] = sets.foldLeft(Set[A]()) (_ union _)
 
   val root = Paths.get("/")
-
-  // returns all paths along with their ancestors
-  def allpaths(pathSet: Set[Path]): Set[Path] = {
-    @tailrec
-    def loop(p: Path, result: Set[Path]): Set[Path] = {
-      // Check if we have already solved this problem
-      if (!result(p)) {
-        p.getParent match {
-          case null => result + p.normalize
-          case parent: Path => loop(parent, result + p.normalize)
-        }
-      }
-      else {
-        result
-      }
-    }
-
-    pathSet.foldLeft(Set.empty[Path]) { (pathSet, path) => loop(path, pathSet) }
-  }
 
   def dirListing(p: Path): scala.Seq[Path] = {
     import scala.collection.JavaConversions._
