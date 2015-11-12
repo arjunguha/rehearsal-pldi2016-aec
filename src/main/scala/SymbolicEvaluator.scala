@@ -406,9 +406,12 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   def diverged(inSt: ST)(st1: ST, st2: ST): Boolean = smt.pushPop {
     logger.info("Running divergence check.")
+    val startTime = System.currentTimeMillis();
     eval(Assert(stNEq(st1, st2)))
     eval(CheckSat()) match {
       case CheckSatStatus(SatStatus) => {
+        val endTime = System.currentTimeMillis();
+        logger.info(s"Check SAT in diverged took ${endTime - startTime} ms to report SAT.")
         eval(GetModel())
         (stateFromTerm(inSt), stateFromTerm(st1), stateFromTerm(st2)) match {
           case (None, _, _) => throw Unexpected("bad model: initial state should not be error")
@@ -428,7 +431,12 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         logger.info("Divergence check showed true.")
         true
       }
-      case _ => logger.info("Divergence check showed false."); false
+      case _ => {
+        val endTime = System.currentTimeMillis();
+        logger.info(s"Check SAT in diverged took ${endTime - startTime} ms to report UNSAT/UNKNWN.")
+        logger.info("Divergence check showed false.")
+        false
+      }
     }
   }
 
