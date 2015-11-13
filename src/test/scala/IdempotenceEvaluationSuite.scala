@@ -33,6 +33,16 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite {
       .fsGraph("ubuntu-trusty").expr().pruneIdem().isIdempotent() == true)
   }
 
+  test("puppet-hosting_deter.pp") {
+    assert(parseFile(s"$root/puppet-hosting_deter.pp").eval.resourceGraph
+            .fsGraph("ubuntu-trusty").expr().isIdempotent() == true)
+  }
+
+  test("puppet-hosting_deter.pp pruned") {
+    assert(parseFile(s"$root/puppet-hosting_deter.pp").eval.resourceGraph
+      .fsGraph("ubuntu-trusty").expr().pruneIdem().isIdempotent() == true)
+  }
+
   test("ssh_authorized_keys should be idempotent (regression)") {
     val manifest =
       """
