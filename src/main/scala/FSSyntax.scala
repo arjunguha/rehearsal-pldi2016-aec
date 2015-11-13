@@ -126,6 +126,7 @@ object FSSyntax {
       case (_, Skip) => this
       case (Error, _) => Error
       case (_, Error) => Error
+      case (If (a, Skip, Error), If (b, Skip, Error)) => If (a && b, Skip, Error)
       case _ => Seq(this, e2)
     }
 
