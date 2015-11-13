@@ -146,10 +146,10 @@ class DeterminismPruningTests extends org.scalatest.FunSuite {
   test("mkdir(p) >> if(dir(p))..."){
     val p = "/mydir"
     val e = Mkdir(p) >> If(TestFileState(p, IsDir), Skip, Error)
-    val pruned = If(TestFileState(p, DoesNotExist) && TestFileState(p.getParent, IsDir), 
+    val pruned = If(TestFileState(p, DoesNotExist) && TestFileState(p.getParent, IsDir),
                     Skip, Error) >>
                  If(True, Skip, Error)
-    assert(prune(p, e) == pruned)
+    assert(prune(Set(p), e) == pruned)
 
   }
 

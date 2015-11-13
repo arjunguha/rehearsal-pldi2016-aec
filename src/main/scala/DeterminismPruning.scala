@@ -130,61 +130,66 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
   }
 
   def specPred(pred: Pred, h: Map[Path, AStat]): Pred = pred match {
-    case TestFileState(p, s) => if(!h.contains(p)) pred
-                                else if(h(p) == s) True
-                                else                  False
+    case TestFileState(p, s) => {
+      if (!h.contains(p)) {
+        pred
+      }
+      else {
+        if (h(p) == s) True else False
+      }
+    }
     case True | False => pred
     case Or(e1, e2) => specPred(e1, h) || specPred(e2, h)
     case And(e1, e2) => specPred(e1, h) && specPred(e2, h)
     case Not(e) => !specPred(e, h)
-  }  
+  }
 
-  def pruneRec(toPrune: Path, e: Expr, h: Map[Path, AStat]): 
+  def pruneRec(canPrune: Set[Path], e: Expr, h: Map[Path, AStat]):
     (Expr, Map[Path, AStat]) = {
       e match {
         case Skip => (e, h)
         case Error => (e, h)
-        case Mkdir(p) if p == toPrune => 
-          (If(TestFileState(p, DoesNotExist) && TestFileState(p.getParent, IsDir), 
+        case Mkdir(p) if canPrune.contains(p) =>
+          (If(TestFileState(p, DoesNotExist) && TestFileState(p.getParent, IsDir),
               Skip, Error),
            h + (p -> ADir) + (p.getParent -> ADir))
         case Mkdir(p) => (e, h + (p -> ADir) + (p.getParent -> ADir))
-        case CreateFile(p, _) if p == toPrune => 
-          (If(TestFileState(p, DoesNotExist) && TestFileState(p.getParent, IsDir), 
+        case CreateFile(p, _) if canPrune.contains(p) =>
+          (If(TestFileState(p, DoesNotExist) && TestFileState(p.getParent, IsDir),
               Skip, Error),
            h + (p -> AFile) + (p.getParent -> ADir))
         case CreateFile(p, _) => (e, h + (p -> AFile) + (p.getParent -> ADir))
         /*TODO [Rian]: this only prunes RmFiles not RmDirs; need IsEmpty predicate*/
-        case Rm(p) if p == toPrune => (If(!TestFileState(p, IsFile), Skip, Error),
+        case Rm(p) if canPrune.contains(p) => (If(!TestFileState(p, IsFile), Skip, Error),
                                         h + (p -> ADoesNotExist))
         case Rm(_) => (e, h)
-        case Cp(p1, p2) if p2 == toPrune => 
+        case Cp(p1, p2) if canPrune.contains(p2) =>
           (If(TestFileState(p1, IsFile) && TestFileState(p2, DoesNotExist) &&
-                TestFileState(p2.getParent, IsDir), 
+                TestFileState(p2.getParent, IsDir),
               Skip, Error),
            h + (p1 -> AFile) + (p2 -> AFile) + (p2.getParent -> ADir))
         case Cp(p1, p2) => (e, h + (p1 -> AFile) + (p2 -> AFile) + (p2.getParent -> ADir))
         case Seq(e1, e2) => {
-          val e1Pruned = pruneRec(toPrune, e1, h)
-          val e2Pruned = pruneRec(toPrune, e2, h ++ e1Pruned._2)
+          val e1Pruned = pruneRec(canPrune, e1, h)
+          val e2Pruned = pruneRec(canPrune, e2, h ++ e1Pruned._2)
           (e1Pruned._1 >> e2Pruned._1, e2Pruned._2)
         }
         case If(a, e1, e2) => {
-          val e1Pruned = pruneRec(toPrune, e1, h)
-          val e2Pruned = pruneRec(toPrune, e2, h)
+          val e1Pruned = pruneRec(canPrune, e1, h)
+          val e2Pruned = pruneRec(canPrune, e2, h)
           (If(specPred(a, h), e1Pruned._1, e2Pruned._1), h)
         }
       }
     }
 
-  def prune(toPrune: Path, e: Expr): Expr = pruneRec(toPrune, e, Map())._1
+  def prune(canPrune: Set[Path], e: Expr): Expr = pruneRec(canPrune, e, Map())._1
 
   def pruneGraph[A](graph: FSGraph[A]): FSGraph[A] = {
     val toPrune = pruneablePaths(graph)
     logger.info(s"Pruning: $toPrune")
     //val toPrune = toPrune_.filterNot(p => toPrune_.exists(p_ => p_ != p && p_.startsWith(p)))
     logger.info(s"Pruning removes ${toPrune.size} paths")
-    FSGraph(graph.exprs.mapValues(e => toPrune.foldRight(e)(prune)), graph.deps)
+    FSGraph(graph.exprs.mapValues(e => prune(toPrune, e)), graph.deps)
   }
 
 }
