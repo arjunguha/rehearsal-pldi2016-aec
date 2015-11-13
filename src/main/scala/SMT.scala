@@ -140,7 +140,19 @@ class SMT(outputFile: Option[String]) extends smtlib.Interpreter with com.typesa
 
   def getModel(): List[SExpr] = eval(GetModel()).asInstanceOf[GetModelResponseSuccess].model
 
-  def checkSat(): Status = eval(CheckSat()).asInstanceOf[CheckSatStatus].status
+  def checkSat(): Boolean = {
+    time(eval(CheckSat()).asInstanceOf[CheckSatStatus].status) match {
+      case (SatStatus, t) => {
+        logger.info(s"Solver produced sat in $t ms")
+        true
+      }
+      case (UnsatStatus, t) => {
+        logger.info(s"Solver produced unsat in $t ms")
+        false
+      }
+      case (UnknownStatus, t) => throw Unexpected(s"CheckSat produced unknown in $t milliseconds")
+    }
+  }
 
   def getValue(terms: Seq[Term]): Seq[(Term, Term)] = terms match {
     case Seq() => Seq()

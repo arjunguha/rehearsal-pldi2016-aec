@@ -188,24 +188,10 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       FunctionApplication("is-IsFile", Seq(st.paths(p)))
   }
 
-  def predEquals(a: F.Pred, b: F.Pred): Boolean = {
-    try {
-      eval(Push(1))
-      val st = initState
-      eval(Assert(Not(Equals(evalPred(st, a), evalPred(st, b)))))
-      eval(CheckSat()) match {
-        case CheckSatStatus(SatStatus) => {
-          eval(GetModel())
-          false
-        }
-        case CheckSatStatus(UnsatStatus) => true
-        case CheckSatStatus(UnknownStatus) => throw Unexpected("got unknown")
-        case s => throw Unexpected(s"got $s from check-sat")
-      }
-    }
-    finally {
-      eval(Pop(1))
-    }
+  def predEquals(a: F.Pred, b: F.Pred): Boolean = smt.pushPop {
+    val st = initState
+     eval(Assert(Not(Equals(evalPred(st, a), evalPred(st, b)))))
+    !smt.checkSat()
   }
 
   def ite(cond: Term, tru: Term, fls: Term): Term = {
@@ -293,28 +279,19 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  def exprEquals(e1: F.Expr, e2: F.Expr): Option[State] = {
-    try {
-      eval(Push(1))
-      // TODO(arjun): Must rule out error as the initial state
-      val st = initState
-      assertPathConsistency(st)
-      val st1 = evalExpr(st, e1)
-      val st2 = evalExpr(st, e2)
-
-      eval(Assert(Not(stEquals(st1, st2))))
-      eval(CheckSat()) match {
-        case CheckSatStatus(SatStatus) => {
-          val model: List[SExpr] = eval(GetModel()).asInstanceOf[GetModelResponseSuccess].model
-          Some(stateFromTerm(st).getOrElse(throw Unexpected("error for initial state")))
-        }
-        case CheckSatStatus(UnsatStatus) => None
-        case CheckSatStatus(UnknownStatus) => throw Unexpected("got unknown")
-        case s => throw Unexpected(s"got $s from check-sat")
-      }
+  def exprEquals(e1: F.Expr, e2: F.Expr): Option[State] = smt.pushPop {
+    // TODO(arjun): Must rule out error as the initial state
+    val st = initState
+    assertPathConsistency(st)
+    val st1 = evalExpr(st, e1)
+    val st2 = evalExpr(st, e2)
+    eval(Assert(Not(stEquals(st1, st2))))
+    if (smt.checkSat()) {
+      val model: List[SExpr] = eval(GetModel()).asInstanceOf[GetModelResponseSuccess].model
+      Some(stateFromTerm(st).getOrElse(throw Unexpected("error for initial state")))
     }
-    finally {
-      eval(Pop(1))
+    else {
+      None
     }
   }
 
@@ -406,55 +383,44 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   def diverged(inSt: ST)(st1: ST, st2: ST): Boolean = smt.pushPop {
     logger.info("Running divergence check.")
-    val startTime = System.currentTimeMillis();
     eval(Assert(stNEq(st1, st2)))
-    eval(CheckSat()) match {
-      case CheckSatStatus(SatStatus) => {
-        val endTime = System.currentTimeMillis();
-        logger.info(s"Check SAT in diverged took ${endTime - startTime} ms to report SAT.")
-        eval(GetModel())
-        (stateFromTerm(inSt), stateFromTerm(st1), stateFromTerm(st2)) match {
-          case (None, _, _) => throw Unexpected("bad model: initial state should not be error")
-          case (Some(in), None, Some(out)) => {
-            logger.info(s"On input\n$in\nthe program produces error or output\n$out")
-            logDiff(in, out)
-          }
-          case (Some(in), Some(out), None) => {
-            logger.info(s"On input\n$in\nthe program produces error or output\n$out")
-            logDiff(in, out)
-          }
-          case (Some(in), Some(out1), Some(out2)) => {
-            logger.info(s"On input\n$in\nthe program produces two possible outputs!")
-          }
-          case (Some(_), None, None) => throw Unexpected("bad model: both outputs are identical errors")
+    if (smt.checkSat()) {
+      eval(GetModel())
+      (stateFromTerm(inSt), stateFromTerm(st1), stateFromTerm(st2)) match {
+        case (None, _, _) => throw Unexpected("bad model: initial state should not be error")
+        case (Some(in), None, Some(out)) => {
+          logger.info(s"On input\n$in\nthe program produces error or output\n$out")
+          logDiff(in, out)
         }
-        logger.info("Divergence check showed true.")
-        true
+        case (Some(in), Some(out), None) => {
+          logger.info(s"On input\n$in\nthe program produces error or output\n$out")
+          logDiff(in, out)
+        }
+        case (Some(in), Some(out1), Some(out2)) => {
+          logger.info(s"On input\n$in\nthe program produces two possible outputs!")
+        }
+        case (Some(_), None, None) => throw Unexpected("bad model: both outputs are identical errors")
       }
-      case _ => {
-        val endTime = System.currentTimeMillis();
-        logger.info(s"Check SAT in diverged took ${endTime - startTime} ms to report UNSAT/UNKNWN.")
-        logger.info("Divergence check showed false.")
-        false
-      }
+      logger.info("Divergence check showed true.")
+      true
+    }
+    else {
+      logger.info("Divergence check showed false.")
+      false
     }
   }
-
   def isIdempotent[K](e: Expr): Boolean = {
     val inST = initState
     val once = evalExpr(inST, e)
     val twice = evalExpr(once, e)
     eval(Assert(stNEq(once, twice)))
-    eval(CheckSat()) match {
-      case CheckSatStatus(SatStatus) => {
-        eval(GetModel())
-        false
-      }
-      case CheckSatStatus(UnsatStatus) => true
-      case CheckSatStatus(UnknownStatus) => throw Unexpected("got unknown")
-      case s => throw Unexpected(s"go $s from check-sat")
+    if (smt.checkSat) {
+      eval(GetModel())
+      false
     }
-
+    else {
+      true
+    }
   }
 
   def isIdempotent[K](g: FSGraph[K]): Boolean = smt.pushPop {
@@ -478,18 +444,12 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  def isDeterministicError[K](g: FSGraph[K]): Boolean = {
+  def isDeterministicError[K](g: FSGraph[K]): Boolean = smt.pushPop {
     val inST = initState
     assertPathConsistency(inST)
     val outST = evalGraph(inST, g)
     eval(Assert(Not(outST.isErr)))
-    eval(CheckSat()) match {
-      case CheckSatStatus(SatStatus) => false
-      case CheckSatStatus(UnsatStatus) => true
-      case CheckSatStatus(UnknownStatus) => throw Unexpected("unknown")
-      case s => throw Unexpected(s"got $s from check-sat")
-    }
-
+    !smt.checkSat()
   }
 
   def free(): Unit = smt.free()
