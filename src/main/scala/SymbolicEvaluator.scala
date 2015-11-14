@@ -437,7 +437,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   }
 
   def isDeterministic[K](g: FSGraph[K]): Boolean = smt.pushPop {
-    println(g.exprs)
     val inST = initState
     logger.info(s"Generating constraints for a graph with ${g.exprs.size} nodes")
     Try(evalGraphAbort(inST, g)(diverged(inST))) match {
