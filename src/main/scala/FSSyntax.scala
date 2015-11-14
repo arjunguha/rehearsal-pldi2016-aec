@@ -105,7 +105,7 @@ object FSSyntax {
     }
   }
 
-  sealed abstract trait Expr extends Product {
+  sealed abstract trait Expr {
     def pretty(): String = Pretty.pretty(this)
     def commutesWith(other: Expr) = this.fileSets.commutes(other.fileSets)
 
@@ -115,11 +115,7 @@ object FSSyntax {
 
     val fileSets = Commutativity.exprFileSets(this)
 
-    override lazy val hashCode: Int =
-      runtime.ScalaRunTime._hashCode(this)
-
     override def toString(): String = this.pretty()
-
 
     def >>(e2: Expr) = (this, e2) match {
       case (Skip, _) => e2
