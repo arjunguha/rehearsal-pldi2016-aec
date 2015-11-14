@@ -363,6 +363,36 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
         case (Some(x), Some(y)) => Some(x+y)
       }
     )
+    val singleFiles = m.filter({ case (_, n) => n == 1}).keySet
+
+    def symDiff[A](x: Set[A], y: Set[A]): Set[A] = {
+      val i = x intersect y
+      (x diff i) union (y diff i)
+    }
+
+    def evalPred(pred: Pred): Set[java.nio.file.Path] = pred match {
+      case True => Set()
+      case False => Set()
+      case And(a, b) => symDiff(evalPred(a), evalPred(b))
+      case Or(a, b) => symDiff(evalPred(a), evalPred(b))
+      case Not(a) => evalPred(a)
+      case TestFileState(p, _) => Set(p)
+    }
+
+    def eval(expr: Expr): Set[java.nio.file.Path] = expr match {
+      case Mkdir(p) => Set(p)
+      case CreateFile(p, _) => Set(p)
+      case Rm(p) => Set(p)
+      case Cp(src, dst) => Set(src, dst)
+      case Error => Set()
+      case Skip => Set()
+      case If(pred, e1, e2) => symDiff(evalPred(pred), symDiff(eval(e1), eval(e2)))
+      case Seq(e1, e2) => symDiff(eval(e1), eval(e2))
+    }
+
+    val r = g.exprs.values.map(e => eval(e)).reduce((x, y) => symDiff(x, y))
+
+    info(s"Candidates: ${r.size}")
 
   }
 
