@@ -1,4 +1,6 @@
-class IdempotenceEvaluationSuite extends org.scalatest.FunSuite {
+class IdempotenceEvaluationSuite extends org.scalatest.FunSuite
+  with org.scalatest.BeforeAndAfterEach {
+
 
   import rehearsal._
   import PuppetParser.parseFile
@@ -12,6 +14,10 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite {
   import PuppetSyntax._
 
   val root = "parser-tests/good"
+
+  override def beforeEach() = {
+    FSSyntax.clearCache()
+  }
 
   test("dhoppe-monit.pp") {
     val g = parseFile(s"$root/dhoppe-monit.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
