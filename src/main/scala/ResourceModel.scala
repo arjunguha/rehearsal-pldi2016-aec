@@ -45,46 +45,46 @@ object ResourceModel {
 
   def compile(r: Res, distro: String): Expr = r match {
     case EnsureFile(p, CInline(c)) =>
-      If(TestFileState(p, IsFile), Rm(p), Skip) >> CreateFile(p, c)
+      ite(TestFileState(p, IsFile), rm(p), Skip) >> createFile(p, c)
     case EnsureFile(p, CFile(s)) =>
-      If(TestFileState(p, IsFile), Rm(p), Skip) >> Cp(s, p)
+      ite(TestFileState(p, IsFile), rm(p), Skip) >> cp(s, p)
     case File(p, CInline(c), false) =>
-      If(TestFileState(p, IsFile),
-         Rm(p) >> CreateFile(p, c),
-         If(TestFileState(p, DoesNotExist),
-            CreateFile(p, c),
+      ite(TestFileState(p, IsFile),
+         rm(p) >> createFile(p, c),
+         ite(TestFileState(p, DoesNotExist),
+            createFile(p, c),
             Error))
     case File(p, CInline(c), true) =>
     // TODO(arjun): needs support for recursive directory removal and can simplify too
-     If(Or (TestFileState(p, IsDir), TestFileState(p, IsFile)),
-         Rm(p), Skip) >>
-      CreateFile(p, c)
+     ite(Or (TestFileState(p, IsDir), TestFileState(p, IsFile)),
+         rm(p), Skip) >>
+      createFile(p, c)
     case File(p, CFile(s), false) =>
-      If(TestFileState(p, IsFile),
-        Rm(p) >> Cp(s, p),
-        If(TestFileState(p, DoesNotExist),
-          Cp(s, p),
+      ite(TestFileState(p, IsFile),
+        rm(p) >> cp(s, p),
+        ite(TestFileState(p, DoesNotExist),
+          cp(s, p),
           Error))
     case File(p, CFile(s), true) =>
-      If(Or(TestFileState(p, IsDir), TestFileState(p, IsFile)),
-        Rm(p), Skip) >>
-      Cp(s, p)
+      ite(Or(TestFileState(p, IsDir), TestFileState(p, IsFile)),
+        rm(p), Skip) >>
+      cp(s, p)
     case AbsentPath(p, false) =>
       // TODO(arjun): why doesn't this work for directories too?
-      If(TestFileState(p, IsFile), Rm(p), Skip)
+      ite(TestFileState(p, IsFile), rm(p), Skip)
     case AbsentPath(p, true) =>
       // TODO(arjun): Can simplify the program below
-      If(TestFileState(p, IsDir),
-          Rm(p), // TODO(arjun): need to implement directory removal in fsmodel
-          If(TestFileState(p, IsFile),
-             Rm(p),
+      ite(TestFileState(p, IsDir),
+          rm(p), // TODO(arjun): need to implement directory removal in fsmodel
+          ite(TestFileState(p, IsFile),
+             rm(p),
              Skip))
     case Directory(p) =>
-      If(TestFileState(p, IsDir),
+      ite(TestFileState(p, IsDir),
          Skip,
-         If(TestFileState(p, IsFile),
-            Rm(p) >> Mkdir(p),
-            Mkdir(p)))
+         ite(TestFileState(p, IsFile),
+            rm(p) >> mkdir(p),
+            mkdir(p)))
     case User(name, present, manageHome) => {
       val u = Paths.get(s"/etc/users/$name")
       val g = Paths.get(s"/etc/groups/$name")
@@ -92,24 +92,24 @@ object ResourceModel {
       present match {
         case true => {
           val homeCmd = if (manageHome) {
-            If(TestFileState(h, DoesNotExist), Mkdir(h), Skip)
+            ite(TestFileState(h, DoesNotExist), mkdir(h), Skip)
           }
           else {
             Skip
           }
-          If(TestFileState(u, DoesNotExist), Mkdir(u), Skip) >>
-          If(TestFileState(g, DoesNotExist), Mkdir(g), Skip) >>
+          ite(TestFileState(u, DoesNotExist), mkdir(u), Skip) >>
+          ite(TestFileState(g, DoesNotExist), mkdir(g), Skip) >>
           homeCmd
         }
         case false => {
           val homeCmd = if (manageHome) {
-            If(TestFileState(h, DoesNotExist), Skip, Rm(h))
+            ite(TestFileState(h, DoesNotExist), Skip, rm(h))
           }
           else {
             Skip
           }
-          If(TestFileState(u, DoesNotExist), Skip, Rm(u)) >>
-          If(TestFileState(g, DoesNotExist), Skip, Rm(g)) >>
+          ite(TestFileState(u, DoesNotExist), Skip, rm(u)) >>
+          ite(TestFileState(g, DoesNotExist), Skip, rm(g)) >>
           homeCmd
         }
       }
@@ -117,8 +117,8 @@ object ResourceModel {
     case Group(name, present) => {
       val p = s"/etc/groups/$name"
       present match {
-        case true => If(TestFileState(p, DoesNotExist), Mkdir(p), Skip)
-        case false => If(!TestFileState(p, DoesNotExist), Rm(p), Skip)
+        case true => ite(TestFileState(p, DoesNotExist), mkdir(p), Skip)
+        case false => ite(!TestFileState(p, DoesNotExist), rm(p), Skip)
       }
     }
     case Package(name, true) => {
@@ -128,38 +128,38 @@ object ResourceModel {
       val files = paths -- dirs
 
       val mkdirs = dirs.toSeq.sortBy(_.getNameCount)
-        .map(d => If(TestFileState(d, IsDir), Skip, Mkdir(d)))
+        .map(d => ite(TestFileState(d, IsDir), Skip, mkdir(d)))
 
       val somecontent = ""
-      val createfiles = files.toSeq.map((f) => CreateFile(f, somecontent))
+      val createfiles = files.toSeq.map((f) => createFile(f, somecontent))
       val exprs = mkdirs ++ createfiles
 
-      If(TestFileState(s"/packages/${name}", DoesNotExist),
-         Seq(CreateFile(s"/packages/${name}", ""), Block(exprs: _*)),
+      ite(TestFileState(s"/packages/${name}", DoesNotExist),
+         createFile(s"/packages/${name}", "") >> Block(exprs: _*),
          Skip)
     }
     case Package(name, false) => {
       // TODO(arjun): Shouldn't this only remove files and newly created directories?
       val files =  queryPackage(distro, name).getOrElse(throw PackageNotFound(distro, name)).toList
-      val exprs = files.map(f => If(TestFileState(f, DoesNotExist), Skip, Rm(f)))
+      val exprs = files.map(f => ite(TestFileState(f, DoesNotExist), Skip, rm(f)))
       val pkgInstallInfoPath = s"/packages/$name"
       // Append at end
-      If(TestFileState(pkgInstallInfoPath, DoesNotExist),
+      ite(TestFileState(pkgInstallInfoPath, DoesNotExist),
           Skip,
-          Block((Rm(pkgInstallInfoPath) :: exprs) :_*))
+          Block((rm(pkgInstallInfoPath) :: exprs) :_*))
     }
     case self@SshAuthorizedKey(_, present, _, key) => {
       val p = self.keyPath
       present match {
         case true => {
-          If(TestFileState(p, IsFile), Rm(p), Skip) >> CreateFile(p, key)
+          ite(TestFileState(p, IsFile), rm(p), Skip) >> createFile(p, key)
         }
         case false => {
-          If(TestFileState(p, IsFile), Rm(p), Skip)
+          ite(TestFileState(p, IsFile), rm(p), Skip)
         }
       }
     }
-    case self@Service(name) => If(TestFileState(self.path, IsFile), Skip, Error)
+    case self@Service(name) => ite(TestFileState(self.path, IsFile), Skip, Error)
     case Notify => Skip
     case _ => throw NotImplemented(r.toString)
   }

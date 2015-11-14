@@ -79,12 +79,12 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite {
    import FSSyntax._
     val dst = "/dst.txt"
     val src = "/src.txt"
-    val e1 = If(TestFileState(dst, IsFile),
-      Rm(dst) >> Cp(src, dst),
-      If(TestFileState(dst, DoesNotExist),
-        Cp(src, dst),
+    val e1 = ite(TestFileState(dst, IsFile),
+      rm(dst) >> cp(src, dst),
+      ite(TestFileState(dst, DoesNotExist),
+        cp(src, dst),
         Error))
-    val e2 = If(TestFileState(src, IsFile), Rm(src), Skip)
+    val e2 = ite(TestFileState(src, IsFile), rm(src), Skip)
     val e = e1 >> e2
 
     assert(e.isIdempotent() == false)

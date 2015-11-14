@@ -13,7 +13,7 @@ object DeterStressBenchmark {
   // stream.
   val es: Stream[Expr] = Stream.from(0).map { n =>
     val p = Paths.get(s"/$n")
-    If(TestFileState(p, IsFile), Skip, CreateFile(p, ""))
+    ite(TestFileState(p, IsFile), Skip, createFile(p, ""))
   }
 
 //  def interferingGraph(numNodes: Int, numOverlap: Int): FileScriptGraph = {

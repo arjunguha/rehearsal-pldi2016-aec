@@ -58,17 +58,11 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     assert(SymbolicEvaluator.isDeterministic(g.pruneWrites()) == false)
   }
 
-  val spikyGraph = FSGraph(Map(
-      Node("package","rrdtool") -> If(TestFileState("/x", IsDir), Skip, Mkdir("/x")),
-      Node("file","swap") ->
-        Seq(If(TestFileState("/x/swap.conf", IsFile), Rm("/x/swap.conf"), Skip),
-            CreateFile("/x/swap.conf", "")
-        )
-    ), Graph(Node("package","rrdtool"), Node("file","swap")))
+  val spikyGraph = parseFile(s"$root/spiky-reduced.pp").eval.resourceGraph.fsGraph("centos-6")
 
-  test("spiky-reduced.pp Pruned") {
-    val sliced = spikyGraph.pruneWrites()
-    assert(SymbolicEvaluator.isDeterministic(sliced) == false)
+  test("spiky-reduced.pp pruned") {
+    val g = parseFile(s"$root/spiky-reduced.pp").eval.resourceGraph.fsGraph("centos-6").pruneWrites()
+    assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
   test("spiky-reduced.pp Not pruned") {

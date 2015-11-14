@@ -13,9 +13,12 @@ object FSSyntax {
     require((writes intersect dirs).isEmpty, "write-set overlaps with dir-set")
 
     def commutes(other: FileSets): Boolean = {
-      (this.reads intersect other.writes).isEmpty &&
-      (this.writes intersect other.reads).isEmpty &&
-      (this.writes intersect other.writes).isEmpty &&
+      val w = this.writes intersect other.writes
+      val rw = this.reads intersect other.writes
+      val wr = this.writes intersect other.reads
+      rw.isEmpty &&
+      wr.isEmpty &&
+      w.isEmpty &&
       (this.dirs intersect other.reads).isEmpty &&
       (this.dirs intersect other.writes).isEmpty &&
       (other.dirs intersect this.reads).isEmpty &&
@@ -109,11 +112,11 @@ object FSSyntax {
     def pretty(): String = Pretty.pretty(this)
     def commutesWith(other: Expr) = this.fileSets.commutes(other.fileSets)
 
-    val size = Helpers.size(this)
-    val paths = Helpers.exprPaths(this)
-    val hashes = Helpers.exprHashes(this)
+    lazy val size = Helpers.size(this)
+    lazy val paths = Helpers.exprPaths(this)
+    lazy val hashes = Helpers.exprHashes(this)
 
-    val fileSets = Commutativity.exprFileSets(this)
+    lazy val fileSets = Commutativity.exprFileSets(this)
 
     override def toString(): String = this.pretty()
 
@@ -122,8 +125,8 @@ object FSSyntax {
       case (_, Skip) => this
       case (Error, _) => Error
       case (_, Error) => Error
-      case (If (a, Skip, Error), If (b, Skip, Error)) => If (a && b, Skip, Error)
-      case _ => Seq(this, e2)
+      case (If (a, Skip, Error), If (b, Skip, Error)) => ite(a && b, Skip, Error)
+      case _ => seq(this, e2)
     }
 
     def eval(st: FSEvaluator.State): Option[FSEvaluator.State] = FSEvaluator.eval(st, this)
@@ -141,12 +144,30 @@ object FSSyntax {
 
   case object Error extends Expr
   case object Skip extends Expr
-  case class If(a: Pred, p: Expr, q: Expr) extends Expr
-  case class Seq(p: Expr, q: Expr) extends Expr
-  case class Mkdir(path: Path) extends Expr
-  case class CreateFile(path: Path, contents: String) extends Expr
-  case class Rm(path: Path) extends Expr
-  case class Cp(src: Path, dst: Path) extends Expr
+  case class If private[FSSyntax] (a: Pred, p: Expr, q: Expr) extends Expr
+  case class Seq private[FSSyntax] (p: Expr, q: Expr) extends Expr
+  case class Mkdir private[FSSyntax] (path: Path) extends Expr
+  case class CreateFile private[FSSyntax] (path: Path, contents: String) extends Expr
+  case class Rm private[FSSyntax] (path: Path) extends Expr
+  case class Cp private[FSSyntax] (src: Path, dst: Path) extends Expr
+
+  private val exprCache = scala.collection.mutable.HashMap[Expr, Expr]()
+
+  private def intern(e: Expr): Expr = exprCache.getOrElseUpdate(e, e)
+
+  def ite(a: Pred, p: Expr, q: Expr): Expr = {
+    if (p eq q) p else intern(If(a, p, q))
+  }
+
+  def seq(p: Expr, q: Expr) = intern(Seq(p, q))
+
+  def mkdir(p: Path) = intern(Mkdir(p))
+
+  def createFile(p: Path, c: String) = intern(CreateFile(p, c))
+
+  def rm(p: Path) = intern(Rm(p))
+
+  def cp(src: Path, dst: Path) = intern(Cp(src, dst))
 
   object Block {
     import Implicits._

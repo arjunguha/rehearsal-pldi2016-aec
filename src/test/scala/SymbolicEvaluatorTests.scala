@@ -22,106 +22,106 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
   }
 
   test("program equivalence") {
-    val x = CreateFile(Paths.get("/usr"), "astring")
+    val x = createFile(Paths.get("/usr"), "astring")
     assert(exprEquals(x, x) == None)
   }
 
 
   test("program equivalence 2") {
-    val x = CreateFile(Paths.get("/usr"), "astring")
-    val y = CreateFile(Paths.get("/lib"), "astring")
-    assert(exprEquals(Seq(x, y), Seq(y, x)) == None)
+    val x = createFile(Paths.get("/usr"), "astring")
+    val y = createFile(Paths.get("/lib"), "astring")
+    assert(exprEquals(seq(x, y), seq(y, x)) == None)
   }
 
   test("program equivalence 3") {
-    val x = CreateFile(Paths.get("/usr/bin"), "astring")
-    val y = CreateFile(Paths.get("/usr"), "astring")
+    val x = createFile(Paths.get("/usr/bin"), "astring")
+    val y = createFile(Paths.get("/usr"), "astring")
     assert(exprEquals(x, y) != None)
   }
 
   test("program equivalence 4 - Mkdir"){
-    val x = Mkdir(Paths.get("/usr"))
+    val x = mkdir(Paths.get("/usr"))
     assert(exprEquals(x, x) == None)
   }
 
   test("program equivalence 5 - Mkdir") {
-    val x = Mkdir(Paths.get("/usr"))
-    val y = CreateFile(Paths.get("/usr/bin"), "astring")
-    assert(exprEquals(Seq(x, y), Seq(y, x)) != None)
+    val x = mkdir(Paths.get("/usr"))
+    val y = createFile(Paths.get("/usr/bin"), "astring")
+    assert(exprEquals(seq(x, y), seq(y, x)) != None)
   }
 
   test("program equivalence 6 - Mkdir"){
-    val x = Mkdir(Paths.get("/usr"))
-    val y = Mkdir(Paths.get("/lib"))
-    assert(exprEquals(Seq(x, y), Seq(y, x)) == None)
+    val x = mkdir(Paths.get("/usr"))
+    val y = mkdir(Paths.get("/lib"))
+    assert(exprEquals(seq(x, y), seq(y, x)) == None)
   }
 
   test("program equivalence 7 - Rm"){
-    val y = CreateFile(Paths.get("/usr"), "astring")
-    val x = Rm(Paths.get("/usr"))
-    assert(exprEquals(Seq(y, x), Seq(x, y)) != None)
+    val y = createFile(Paths.get("/usr"), "astring")
+    val x = rm(Paths.get("/usr"))
+    assert(exprEquals(seq(y, x), seq(x, y)) != None)
   }
 
   test("program equivalence 8 - Rm"){
-    val x = CreateFile(Paths.get("/usr"), "astring")
-    val y = CreateFile(Paths.get("/lib"), "astring")
-    val x1 = Rm(Paths.get("/usr"))
-    val y1 = Rm(Paths.get("/lib"))
-    assert(exprEquals(Seq(Seq(x, y), Seq(x1, y1)),
-                      Seq(Seq(x, y), Seq(y1, x1))) == None)
+    val x = createFile(Paths.get("/usr"), "astring")
+    val y = createFile(Paths.get("/lib"), "astring")
+    val x1 = rm(Paths.get("/usr"))
+    val y1 = rm(Paths.get("/lib"))
+    assert(exprEquals(seq(seq(x, y), seq(x1, y1)),
+                      seq(seq(x, y), seq(y1, x1))) == None)
   }
 
   test("program equivalence 9 - Cp"){
-    val x = CreateFile(Paths.get("/usr"), "a")
-    val y = Cp(Paths.get("/usr"), Paths.get("/lib"))
-    val z = CreateFile(Paths.get("/lib"), "a")
-    assert(exprEquals(Seq(x, y), Seq(x, z)) == None)
+    val x = createFile(Paths.get("/usr"), "a")
+    val y = cp(Paths.get("/usr"), Paths.get("/lib"))
+    val z = createFile(Paths.get("/lib"), "a")
+    assert(exprEquals(seq(x, y), seq(x, z)) == None)
   }
 
   test("trivial program with non-deterministic output") {
-    val g = Graph[Expr, DiEdge](If(TestFileState(Paths.get("/foo"), IsDir), Mkdir(Paths.get("/bar")), Skip),
-                                Mkdir(Paths.get("/foo")))
+    val g = Graph[Expr, DiEdge](ite(TestFileState(Paths.get("/foo"), IsDir), mkdir(Paths.get("/bar")), Skip),
+                                mkdir(Paths.get("/foo")))
 
     assert(isDeterministic(g) == false)
   }
 
   test("trivial program with non-deterministic error"){
-    val g = Graph[Expr, DiEdge](Mkdir("/foo"), Mkdir("/foo/bar"))
+    val g = Graph[Expr, DiEdge](mkdir("/foo"), mkdir("/foo/bar"))
     assert(isDeterministic(g) == false)
   }
 
   test("Is a singleton graph deterministic") {
-    val g = Graph[Expr, DiEdge](If(TestFileState(Paths.get("/foo"), IsDir), Skip,
-                                            Mkdir(Paths.get("/foo"))))
+    val g = Graph[Expr, DiEdge](ite(TestFileState(Paths.get("/foo"), IsDir), Skip,
+                                            mkdir(Paths.get("/foo"))))
     assert(true == isDeterministic(g))
     assert(false == isDeterministicError(g))
   }
 
   test("Two-node non-deterministic graph") {
-    assert(false == isDeterministic(Graph[Expr, DiEdge](Mkdir(Paths.get("/foo")),
-      If(TestFileState(Paths.get("/foo"), IsDir), Skip, Mkdir(Paths.get("/bar"))))))
+    assert(false == isDeterministic(Graph[Expr, DiEdge](mkdir(Paths.get("/foo")),
+      ite(TestFileState(Paths.get("/foo"), IsDir), Skip, mkdir(Paths.get("/bar"))))))
   }
 
   test("a bug") {
     val p = Paths.get("/usr/games/sl")
     val c = ""
-    val n1 = CreateFile(p, c)
-    val n2 = If(TestFileState(p, IsFile),
-      Rm(p) >> CreateFile(p, c),
-      If(TestFileState(p, DoesNotExist), CreateFile(p, c), Skip))
+    val n1 = createFile(p, c)
+    val n2 = ite(TestFileState(p, IsFile),
+      rm(p) >> createFile(p, c),
+      ite(TestFileState(p, DoesNotExist), createFile(p, c), Skip))
     assert(false == isDeterministic(Graph[Expr, DiEdge](n1, n2)))
   }
 
   test("should be deterministic") {
     val p = Paths.get("/usr/foo")
     val c = "c"
-    val n = CreateFile(p, c)
+    val n = createFile(p, c)
     assert(true == isDeterministic(Graph[Expr, DiEdge](n, n)))
   }
 
   test("file removal and creation should be non-deterministic") {
     val p = Paths.get("/usr/foo")
-    assert(false == isDeterministic(Graph[Expr, DiEdge](Rm(p), CreateFile(p, ""))))
+    assert(false == isDeterministic(Graph[Expr, DiEdge](rm(p), createFile(p, ""))))
   }
 
   test("package with config file non-deterministic graph") {
@@ -138,8 +138,8 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     val p = Paths.get("/usr/foo")
     val c1 = "contents 1"
     val c2 = "contents 2"
-    val stmt1 = If(TestFileState(p, DoesNotExist), CreateFile(p, c1), Rm(p) >> CreateFile(p, c1))
-    val stmt2 = If(TestFileState(p, DoesNotExist), CreateFile(p, c2), Rm(p) >> CreateFile(p, c2))
+    val stmt1 = ite(TestFileState(p, DoesNotExist), createFile(p, c1), rm(p) >> createFile(p, c1))
+    val stmt2 = ite(TestFileState(p, DoesNotExist), createFile(p, c2), rm(p) >> createFile(p, c2))
     assert(false == isDeterministic(Graph[Expr, DiEdge](stmt1, stmt2)))
   }
 
@@ -171,19 +171,19 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
 
   // TODO(arjun): not a test case
   ignore("createFile should check that parent is a directory") {
-    val p1 = If(TestFileState("/packages/monit", DoesNotExist),
-      If(TestFileState("/etc", DoesNotExist),
-        Mkdir("/etc"), Skip) >> If(TestFileState("/etc/monit", DoesNotExist),
-        Mkdir("/etc/monit"), Skip) >> CreateFile("/etc/monit/monitrc", "") >> CreateFile("/packages/monit", ""), Skip)
+    val p1 = ite(TestFileState("/packages/monit", DoesNotExist),
+      ite(TestFileState("/etc", DoesNotExist),
+        mkdir("/etc"), Skip) >> ite(TestFileState("/etc/monit", DoesNotExist),
+        mkdir("/etc/monit"), Skip) >> createFile("/etc/monit/monitrc", "") >> createFile("/packages/monit", ""), Skip)
 
-    val p2 = If(TestFileState("/etc/monit/conf.d", IsFile),
-              Rm("/etc/monit/conf.d") >> CreateFile("/etc/monit/conf.d", ""),
-              If(TestFileState("/etc/monit/conf.d", DoesNotExist),
-                CreateFile("/etc/monit/conf.d", ""), Error))
+    val p2 = ite(TestFileState("/etc/monit/conf.d", IsFile),
+              rm("/etc/monit/conf.d") >> createFile("/etc/monit/conf.d", ""),
+              ite(TestFileState("/etc/monit/conf.d", DoesNotExist),
+                createFile("/etc/monit/conf.d", ""), Error))
 
-    val p3 = If(TestFileState("/etc/monit/conf.d/myservice", IsFile),
-             Rm("/etc/monit/conf.d/myservice") >> CreateFile("/etc/monit/conf.d/myservice", ""),
-             If(TestFileState("/etc/monit/conf.d/myservice", DoesNotExist), CreateFile("/etc/monit/conf.d/myservice", ""), Error))
+    val p3 = ite(TestFileState("/etc/monit/conf.d/myservice", IsFile),
+             rm("/etc/monit/conf.d/myservice") >> createFile("/etc/monit/conf.d/myservice", ""),
+             ite(TestFileState("/etc/monit/conf.d/myservice", DoesNotExist), createFile("/etc/monit/conf.d/myservice", ""), Error))
 
 
     val p = p1 >> p2 >> p3
@@ -302,6 +302,14 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
 
     val sets = Block(g_.exprs.values.toSeq: _*).fileSets
     val writes = sets.writes ++ sets.dirs
+    val alpha = g.exprs(Node("file", "/alpha"))
+    val beta = g.exprs(Node("file", "/beta"))
+    val gamma = g.exprs(Node("file", "/alpha/gamma"))
+    val delta = g.exprs(Node("file", "/beta/delta"))
+
+    assert(alpha.commutesWith(beta))
+    assert(gamma.commutesWith(delta))
+
     assert(writes.contains("/alpha/gamma") == false)
     assert(writes.contains("/beta/delta") == false)
     assert(SymbolicEvaluator.isDeterministic(g_))

@@ -119,14 +119,10 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
     maybeFiles.get
   }
 
-  def assertDir(p: Path) = If(TestFileState(p, IsDir), Skip, Error)
+  def assertDir(p: Path) = ite(TestFileState(p, IsDir), Skip, Error)
 
   def mayAssertParent(toPrune: Set[Path], p: Path) = {
     if (toPrune.contains(p.getParent)) Skip else assertDir(p.getParent)
-  }
-
-  def mkIf(a: Pred, e1: Expr, e2: Expr) = {
-    if (e1 == e2) e1 else If(a, e1, e2)
   }
 
   def specPred(pred: Pred, h: Map[Path, AStat]): Pred = pred match {
@@ -150,21 +146,21 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
         case Skip => (e, h)
         case Error => (e, h)
         case Mkdir(p) if canPrune.contains(p) =>
-          (If(TestFileState(p, DoesNotExist) && TestFileState(p.getParent, IsDir),
+          (ite(TestFileState(p, DoesNotExist) && TestFileState(p.getParent, IsDir),
               Skip, Error),
            h + (p -> ADir) + (p.getParent -> ADir))
         case Mkdir(p) => (e, h + (p -> ADir) + (p.getParent -> ADir))
         case CreateFile(p, _) if canPrune.contains(p) =>
-          (If(TestFileState(p, DoesNotExist) && TestFileState(p.getParent, IsDir),
+          (ite(TestFileState(p, DoesNotExist) && TestFileState(p.getParent, IsDir),
               Skip, Error),
            h + (p -> AFile) + (p.getParent -> ADir))
         case CreateFile(p, _) => (e, h + (p -> AFile) + (p.getParent -> ADir))
         /*TODO [Rian]: this only prunes RmFiles not RmDirs; need IsEmpty predicate*/
-        case Rm(p) if canPrune.contains(p) => (If(!TestFileState(p, IsFile), Skip, Error),
+        case Rm(p) if canPrune.contains(p) => (ite(!TestFileState(p, IsFile), Skip, Error),
                                         h + (p -> ADoesNotExist))
         case Rm(_) => (e, h)
         case Cp(p1, p2) if canPrune.contains(p2) =>
-          (If(TestFileState(p1, IsFile) && TestFileState(p2, DoesNotExist) &&
+          (ite(TestFileState(p1, IsFile) && TestFileState(p2, DoesNotExist) &&
                 TestFileState(p2.getParent, IsDir),
               Skip, Error),
            h + (p1 -> AFile) + (p2 -> AFile) + (p2.getParent -> ADir))
@@ -177,7 +173,7 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
         case If(a, e1, e2) => {
           val e1Pruned = pruneRec(canPrune, e1, h)
           val e2Pruned = pruneRec(canPrune, e2, h)
-          (If(specPred(a, h), e1Pruned._1, e2Pruned._1), h)
+          (ite(specPred(a, h), e1Pruned._1, e2Pruned._1), h)
         }
       }
     }

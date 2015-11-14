@@ -11,7 +11,7 @@ class FSTableTests extends org.scalatest.FunSuite with org.scalatest.Matchers {
   test("mkdir(x) >> mkdir(y)") {
     val tbl = new FSTable()
     import tbl.dd._
-    tbl.mkddExpr(Mkdir("/foo") >> Mkdir("/bar")) match {
+    tbl.mkddExpr(mkdir("/foo") >> mkdir("/bar")) match {
       case Leaf(Some(map)) => {
         assert(map ==  Map[Path, FileState](Paths.get("/foo") -> IsDir, Paths.get("/bar") -> IsDir))
       }
@@ -22,8 +22,8 @@ class FSTableTests extends org.scalatest.FunSuite with org.scalatest.Matchers {
   test("mkdir(x) >> mkdir(x) == mkdir(x)") {
     val tbl = new FSTable()
     import tbl.dd._
-    val n1 = tbl.mkddExpr(Mkdir("/foo") >> Mkdir("/foo"))
-    val n2 = tbl.mkddExpr(Mkdir("/foo"))
+    val n1 = tbl.mkddExpr(mkdir("/foo") >> mkdir("/foo"))
+    val n2 = tbl.mkddExpr(mkdir("/foo"))
     assert(n1 == n2)
   }
 
@@ -31,7 +31,7 @@ class FSTableTests extends org.scalatest.FunSuite with org.scalatest.Matchers {
     val tbl = new FSTable()
     import tbl.dd._
     val a = tbl.mkddPred(TestFileState("/x", IsDir))
-    val e1 = tbl.mkddExpr(Mkdir("/y"))
+    val e1 = tbl.mkddExpr(mkdir("/y"))
     val n = tbl.seq(a, e1)
   }
 
