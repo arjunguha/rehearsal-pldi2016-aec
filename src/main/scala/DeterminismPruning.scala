@@ -119,7 +119,7 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
     maybeFiles.get
   }
 
-  def assertDir(p: Path) = ite(TestFileState(p, IsDir), Skip, Error)
+  def assertDir(p: Path) = ite(testFileState(p, IsDir), Skip, Error)
 
   def mayAssertParent(toPrune: Set[Path], p: Path) = {
     if (toPrune.contains(p.getParent)) Skip else assertDir(p.getParent)
@@ -146,22 +146,22 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
         case Skip => (e, h)
         case Error => (e, h)
         case Mkdir(p) if canPrune.contains(p) =>
-          (ite(TestFileState(p, DoesNotExist) && TestFileState(p.getParent, IsDir),
+          (ite(testFileState(p, DoesNotExist) && testFileState(p.getParent, IsDir),
               Skip, Error),
            h + (p -> ADir) + (p.getParent -> ADir))
         case Mkdir(p) => (e, h + (p -> ADir) + (p.getParent -> ADir))
         case CreateFile(p, _) if canPrune.contains(p) =>
-          (ite(TestFileState(p, DoesNotExist) && TestFileState(p.getParent, IsDir),
+          (ite(testFileState(p, DoesNotExist) && testFileState(p.getParent, IsDir),
               Skip, Error),
            h + (p -> AFile) + (p.getParent -> ADir))
         case CreateFile(p, _) => (e, h + (p -> AFile) + (p.getParent -> ADir))
         /*TODO [Rian]: this only prunes RmFiles not RmDirs; need IsEmpty predicate*/
-        case Rm(p) if canPrune.contains(p) => (ite(!TestFileState(p, IsFile), Skip, Error),
+        case Rm(p) if canPrune.contains(p) => (ite(!testFileState(p, IsFile), Skip, Error),
                                         h + (p -> ADoesNotExist))
         case Rm(_) => (e, h)
         case Cp(p1, p2) if canPrune.contains(p2) =>
-          (ite(TestFileState(p1, IsFile) && TestFileState(p2, DoesNotExist) &&
-                TestFileState(p2.getParent, IsDir),
+          (ite(testFileState(p1, IsFile) && testFileState(p2, DoesNotExist) &&
+                testFileState(p2.getParent, IsDir),
               Skip, Error),
            h + (p1 -> AFile) + (p2 -> AFile) + (p2.getParent -> ADir))
         case Cp(p1, p2) => (e, h + (p1 -> AFile) + (p2 -> AFile) + (p2.getParent -> ADir))

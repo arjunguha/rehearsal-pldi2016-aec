@@ -73,7 +73,7 @@ object FSSyntax {
     def &&(b: Pred): Pred = (this, b) match {
       case (True, _) => b
       case (_, True) => this
-      case _ => And(this, b)
+      case _ => internPred(And(this, b))
     }
 
     def ||(b: Pred): Pred = (this, b) match {
@@ -81,24 +81,24 @@ object FSSyntax {
       case (False, _) => b
       case (_, True) => True
       case (_, False) => this
-      case _ => Or(this, b)
+      case _ => internPred(Or(this, b))
     }
 
     def unary_!(): Pred = this match {
       case Not(True) => False
       case Not(False) => True
       case Not(a) => a
-      case _ => Not(this)
+      case _ => internPred(Not(this))
     }
 
   }
 
   case object True extends Pred
   case object False extends Pred
-  case class And(a: Pred, b: Pred) extends Pred
-  case class Or(a: Pred, b: Pred) extends Pred
-  case class Not(a: Pred) extends Pred
-  case class TestFileState(path: Path, s: FileState) extends Pred {
+  case class And private[FSSyntax](a: Pred, b: Pred) extends Pred
+  case class Or private[FSSyntax](a: Pred, b: Pred) extends Pred
+  case class Not private[FSSyntax](a: Pred) extends Pred
+  case class TestFileState private[FSSyntax](path: Path, s: FileState) extends Pred {
     def <(tfs: TestFileState): Boolean = (this, tfs) match {
       case (TestFileState(f, x), TestFileState(g, y)) => if (f.toString == g.toString) {
         x < y
@@ -153,6 +153,10 @@ object FSSyntax {
 
   private val exprCache = scala.collection.mutable.HashMap[Expr, Expr]()
 
+  private val predCache = scala.collection.mutable.HashMap[Pred, Pred]()
+
+  private def internPred(a: Pred) = predCache.getOrElseUpdate(a, a)
+
   private def intern(e: Expr): Expr = exprCache.getOrElseUpdate(e, e)
 
   def ite(a: Pred, p: Expr, q: Expr): Expr = {
@@ -168,6 +172,8 @@ object FSSyntax {
   def rm(p: Path) = intern(Rm(p))
 
   def cp(src: Path, dst: Path) = intern(Cp(src, dst))
+
+  def testFileState(p: Path, s: FileState): TestFileState = internPred(TestFileState(p, s)).asInstanceOf[TestFileState]
 
   def clearCache(): Unit = {
     exprCache.clear()

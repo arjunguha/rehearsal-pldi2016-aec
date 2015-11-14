@@ -69,7 +69,7 @@ class FSTable {
       case (Some(_), _) => ActionSemiRing.zero
       case (None, _) => ActionSemiRing.one
     }
-    case TestFileState(p, s) => Branch(TestFileState(p, s), Leaf(ActionSemiRing.zero), Leaf(ActionSemiRing.one))
+    case TestFileState(p, s) => Branch(testFileState(p, s), Leaf(ActionSemiRing.zero), Leaf(ActionSemiRing.one))
   }
 
   def mkddExpr(expr: Expr): Node = expr match {
@@ -77,7 +77,7 @@ class FSTable {
     case Skip => Leaf(one)
     case If(a, e1, e2) => {
       val aNode = mkddPred(a)
-      seq(aNode, mkddExpr(e1)).applyOp(seq(mkddPred(Not(a)), mkddExpr(e2))) {
+      seq(aNode, mkddExpr(e1)).applyOp(seq(mkddPred(!a), mkddExpr(e2))) {
         case (None, None) => None
         case (Some(m1), None) => Some(m1)
         case (None, Some(m2)) => Some(m2)

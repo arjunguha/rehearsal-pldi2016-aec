@@ -11,13 +11,13 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
   import SymbolicEvaluator.{predEquals, exprEquals, isDeterministic, isDeterministicError, isIdempotent}
 
   test("simple equality") {
-    val x = TestFileState(Paths.get("/usr"), IsFile)
+    val x = testFileState(Paths.get("/usr"), IsFile)
     assert(predEquals(x, x))
   }
 
   test("basic predicates") {
-    val x = TestFileState(Paths.get("/usr"), IsFile)
-    val y = TestFileState(Paths.get("/usr"), IsDir)
+    val x = testFileState(Paths.get("/usr"), IsFile)
+    val y = testFileState(Paths.get("/usr"), IsDir)
     assert(predEquals(x, y) == false)
   }
 
@@ -79,7 +79,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
   }
 
   test("trivial program with non-deterministic output") {
-    val g = Graph[Expr, DiEdge](ite(TestFileState(Paths.get("/foo"), IsDir), mkdir(Paths.get("/bar")), Skip),
+    val g = Graph[Expr, DiEdge](ite(testFileState(Paths.get("/foo"), IsDir), mkdir(Paths.get("/bar")), Skip),
                                 mkdir(Paths.get("/foo")))
 
     assert(isDeterministic(g) == false)
@@ -91,7 +91,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
   }
 
   test("Is a singleton graph deterministic") {
-    val g = Graph[Expr, DiEdge](ite(TestFileState(Paths.get("/foo"), IsDir), Skip,
+    val g = Graph[Expr, DiEdge](ite(testFileState(Paths.get("/foo"), IsDir), Skip,
                                             mkdir(Paths.get("/foo"))))
     assert(true == isDeterministic(g))
     assert(false == isDeterministicError(g))
@@ -99,16 +99,16 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
 
   test("Two-node non-deterministic graph") {
     assert(false == isDeterministic(Graph[Expr, DiEdge](mkdir(Paths.get("/foo")),
-      ite(TestFileState(Paths.get("/foo"), IsDir), Skip, mkdir(Paths.get("/bar"))))))
+      ite(testFileState(Paths.get("/foo"), IsDir), Skip, mkdir(Paths.get("/bar"))))))
   }
 
   test("a bug") {
     val p = Paths.get("/usr/games/sl")
     val c = ""
     val n1 = createFile(p, c)
-    val n2 = ite(TestFileState(p, IsFile),
+    val n2 = ite(testFileState(p, IsFile),
       rm(p) >> createFile(p, c),
-      ite(TestFileState(p, DoesNotExist), createFile(p, c), Skip))
+      ite(testFileState(p, DoesNotExist), createFile(p, c), Skip))
     assert(false == isDeterministic(Graph[Expr, DiEdge](n1, n2)))
   }
 
@@ -138,8 +138,8 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     val p = Paths.get("/usr/foo")
     val c1 = "contents 1"
     val c2 = "contents 2"
-    val stmt1 = ite(TestFileState(p, DoesNotExist), createFile(p, c1), rm(p) >> createFile(p, c1))
-    val stmt2 = ite(TestFileState(p, DoesNotExist), createFile(p, c2), rm(p) >> createFile(p, c2))
+    val stmt1 = ite(testFileState(p, DoesNotExist), createFile(p, c1), rm(p) >> createFile(p, c1))
+    val stmt2 = ite(testFileState(p, DoesNotExist), createFile(p, c2), rm(p) >> createFile(p, c2))
     assert(false == isDeterministic(Graph[Expr, DiEdge](stmt1, stmt2)))
   }
 
@@ -171,19 +171,19 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
 
   // TODO(arjun): not a test case
   ignore("createFile should check that parent is a directory") {
-    val p1 = ite(TestFileState("/packages/monit", DoesNotExist),
-      ite(TestFileState("/etc", DoesNotExist),
-        mkdir("/etc"), Skip) >> ite(TestFileState("/etc/monit", DoesNotExist),
+    val p1 = ite(testFileState("/packages/monit", DoesNotExist),
+      ite(testFileState("/etc", DoesNotExist),
+        mkdir("/etc"), Skip) >> ite(testFileState("/etc/monit", DoesNotExist),
         mkdir("/etc/monit"), Skip) >> createFile("/etc/monit/monitrc", "") >> createFile("/packages/monit", ""), Skip)
 
-    val p2 = ite(TestFileState("/etc/monit/conf.d", IsFile),
+    val p2 = ite(testFileState("/etc/monit/conf.d", IsFile),
               rm("/etc/monit/conf.d") >> createFile("/etc/monit/conf.d", ""),
-              ite(TestFileState("/etc/monit/conf.d", DoesNotExist),
+              ite(testFileState("/etc/monit/conf.d", DoesNotExist),
                 createFile("/etc/monit/conf.d", ""), Error))
 
-    val p3 = ite(TestFileState("/etc/monit/conf.d/myservice", IsFile),
+    val p3 = ite(testFileState("/etc/monit/conf.d/myservice", IsFile),
              rm("/etc/monit/conf.d/myservice") >> createFile("/etc/monit/conf.d/myservice", ""),
-             ite(TestFileState("/etc/monit/conf.d/myservice", DoesNotExist), createFile("/etc/monit/conf.d/myservice", ""), Error))
+             ite(testFileState("/etc/monit/conf.d/myservice", DoesNotExist), createFile("/etc/monit/conf.d/myservice", ""), Error))
 
 
     val p = p1 >> p2 >> p3
@@ -194,13 +194,13 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
 
 //    val example1 = {
 //    import rehearsal.fsmodel._
-//    (And(TestFileState(Paths.get("/usr"), IsFile),
-//      TestFileState(Paths.get("/lib"), IsDir)))
+//    (And(testFileState(Paths.get("/usr"), IsFile),
+//      testFileState(Paths.get("/lib"), IsDir)))
 //  }
 //
 //  val example2 = {
 //    import rehearsal.fsmodel._
-//    TestFileState(Paths.get("/usr"), IsFile)
+//    testFileState(Paths.get("/usr"), IsFile)
 //
 //  }
 

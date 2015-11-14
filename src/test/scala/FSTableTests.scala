@@ -30,7 +30,7 @@ class FSTableTests extends org.scalatest.FunSuite with org.scalatest.Matchers {
   test("disjoint predicates") {
     val tbl = new FSTable()
     import tbl.dd._
-    val a = tbl.mkddPred(TestFileState("/x", IsDir))
+    val a = tbl.mkddPred(testFileState("/x", IsDir))
     val e1 = tbl.mkddExpr(mkdir("/y"))
     val n = tbl.seq(a, e1)
   }

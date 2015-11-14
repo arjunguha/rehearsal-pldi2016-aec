@@ -46,7 +46,7 @@ object IdempotenceOptimizer {
     case If(TestFileState(p, DoesNotExist), Seq(CreateFile(p_, ""), body), Skip)
       if p == p_ && paths(p) == 2 => {
       try {
-        ite(TestFileState(p, DoesNotExist),
+        ite(testFileState(p, DoesNotExist),
           createFile(p_, "") >> pruneFiles(paths, body),
           Skip)
       }

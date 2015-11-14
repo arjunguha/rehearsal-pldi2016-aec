@@ -106,9 +106,9 @@ class DeterminismPruningTests extends org.scalatest.FunSuite {
   test("file resource reduced") {
     val p = "/mydir/myfile".toPath
     val c = "hi"
-    val e = ite(TestFileState(p, IsFile),
+    val e = ite(testFileState(p, IsFile),
       rm(p) >> createFile(p, c),
-      ite(TestFileState(p, DoesNotExist),
+      ite(testFileState(p, DoesNotExist),
         createFile(p, c),
         Error))
     val st = absEval(e).get
@@ -119,7 +119,7 @@ class DeterminismPruningTests extends org.scalatest.FunSuite {
   test("2: create file or error") {
     val p = "/mydir/myfile".toPath
     val c = "hi"
-    val e = ite(TestFileState(p, DoesNotExist),
+    val e = ite(testFileState(p, DoesNotExist),
                createFile(p, c),
                Error)
     val st = absEval(e).get
@@ -136,7 +136,7 @@ class DeterminismPruningTests extends org.scalatest.FunSuite {
   }
 
   test("a conditional write leaves path in an indeterminate state") {
-    val e = ite(TestFileState("/a", IsDir), Skip, mkdir("/b"))
+    val e = ite(testFileState("/a", IsDir), Skip, mkdir("/b"))
     val st = absEval(e).get
     info(st.toString)
     assert(st("/b") == Set(ADir, AUntouched))
@@ -145,8 +145,8 @@ class DeterminismPruningTests extends org.scalatest.FunSuite {
 
   test("mkdir(p) >> if(dir(p))..."){
     val p = "/mydir"
-    val e = mkdir(p) >> ite(TestFileState(p, IsDir), Skip, Error)
-    val pruned = ite(TestFileState(p, DoesNotExist) && TestFileState(p.getParent, IsDir),
+    val e = mkdir(p) >> ite(testFileState(p, IsDir), Skip, Error)
+    val pruned = ite(testFileState(p, DoesNotExist) && testFileState(p.getParent, IsDir),
                     Skip, Error) >>
                  ite(True, Skip, Error)
     assert(prune(Set(p), e) == pruned)
