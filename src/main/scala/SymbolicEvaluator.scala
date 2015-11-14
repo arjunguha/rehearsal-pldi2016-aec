@@ -67,6 +67,23 @@ object SymbolicEvaluator {
     result
   }
 
+  def isDeterministicWithTimeout[K](g: FSGraph[K], timeout: Int,  logFile: Option[String] = None): Option[Boolean] = {
+    if (g.deps.nodes.size < 2) {
+      return Some(true)
+    }
+    val impl = mkImpl(g, logFile)
+    new Thread(new Runnable {
+      def run() {
+        Thread.sleep(timeout * 1000)
+        impl.free()
+      }
+    }).run
+    Try(impl.isDeterministic(g)) match {
+      case Success(res) => impl.free(); Some(res)
+      case Failure(e) => None
+    }
+  }
+
   def isDeterministicError[K](g: FSGraph[K]): Boolean = {
     val impl = mkImpl(g, None)
     val result = impl.isDeterministicError(g)
@@ -460,4 +477,5 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   def free(): Unit = smt.free()
 
 }
+
 
