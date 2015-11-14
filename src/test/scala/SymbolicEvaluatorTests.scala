@@ -304,6 +304,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     val writes = sets.writes ++ sets.dirs
     assert(writes.contains("/alpha/gamma") == false)
     assert(writes.contains("/beta/delta") == false)
+    assert(SymbolicEvaluator.isDeterministic(g_))
   }
 
   test("two independent packages") {

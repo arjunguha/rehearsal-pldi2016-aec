@@ -26,8 +26,8 @@ object Commutativity {
         FileSets(Set(path.getParent), Set(path), Set())
       }
     }
-    case CreateFile(path, _) => FileSets(Set.empty, Set(path), Set.empty)
-    case Rm(path) => FileSets(Set.empty, Set(path), Set.empty)
+    case CreateFile(path, _) => FileSets(Set(path.getParent), Set(path), Set.empty)
+    case Rm(path) => FileSets(Set(path.getParent), Set(path), Set.empty)
     case Cp(src, dst) => FileSets(Set(src), Set(dst), Set.empty)
   }
 
@@ -36,7 +36,7 @@ object Commutativity {
     case And(a, b) => a.readSet ++ b.readSet
     case Or(a, b) => a.readSet ++ b.readSet
     case Not(a) => a.readSet
-    case TestFileState(path, _) => path.ancestors() + path
+    case TestFileState(path, _) => Set(path)
   }
 
 }
