@@ -38,8 +38,7 @@ object SymbolicEvaluator {
    def mkImpl[K](g: FSGraph[K], logFile: Option[String]) = {
      val sets = Block(g.exprs.values.toSeq: _*).fileSets
      val ro = sets.reads -- sets.writes -- sets.dirs
-    new SymbolicEvaluatorImpl(
-      g.deps.nodes.map(n => g.exprs(n).paths).reduce(_ union _).toList,
+    new SymbolicEvaluatorImpl(g.allPaths.toList,
       g.deps.nodes.map(n => g.exprs(n).hashes).reduce(_ union _),
       ro,
       logFile)

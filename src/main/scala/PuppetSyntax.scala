@@ -1,7 +1,8 @@
 package rehearsal
 
-object PuppetSyntax {
+object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
 
+  import java.nio.file.Path
   import scala.util.parsing.input.Positional
   import scalax.collection.Graph
   import scalax.collection.GraphEdge.DiEdge
@@ -130,7 +131,11 @@ object PuppetSyntax {
 
     /** Prunes writes from this graph to make determinism-checking faster. */
     def pruneWrites(): FSGraph[K] = {
-      DeterminismPruning.pruneGraph(this)
+      val n = allPaths.size
+      val r = DeterminismPruning.pruneGraph(this)
+      val m = r.allPaths.size
+      logger.info(s"Pruning removed ${n - m} paths")
+      r
     }
 
     /** Checks if two <b>deterministic</b> FS graphs are equivalent.
@@ -141,6 +146,10 @@ object PuppetSyntax {
     def notEquiv(other: FSGraph[K]): Option[FSEvaluator.State] = {
       SymbolicEvaluator.exprEquals(this.expr(), other.expr())
     }
+
+    /** All paths used by the nodes of this graph. */
+    lazy val allPaths = this.deps.nodes.map(n => this.exprs(n).paths)
+      .foldLeft(Set.empty[Path])(_ union _)
 
   }
 
