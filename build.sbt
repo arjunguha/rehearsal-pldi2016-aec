@@ -31,3 +31,5 @@ libraryDependencies ++=
       "org.slf4j" % "slf4j-simple" % "1.7.12")
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4"
+
+testOptions in Test += Tests.Argument("-oD")
