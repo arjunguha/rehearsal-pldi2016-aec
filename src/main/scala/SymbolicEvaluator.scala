@@ -346,11 +346,11 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
     else {
       val fringe1 = commutingGroups(g.exprs, fringe)
-      logger.info(s"${fringe1.length} commuting groups")
       if (fringe1.length == 1) {
         evalGraphAbort(evalExpr(st, Block(fringe1.head.map(n => g.exprs(n)) : _*)), g.copy(deps = g.deps -- fringe1.head))(shouldAbort)
       }
       else {
+        logger.info(s"Choices: ${fringe1.length}")
         fringe1.toStream.map(p => evalGraphAbort(evalExpr(st, Block(p.map(n => g.exprs(n)) : _*)),
                                    g.copy(deps = g.deps -- p))(shouldAbort)).reduce({ (st1: ST, st2: ST) =>
           if (shouldAbort(st1, st2)) {

@@ -169,6 +169,11 @@ object FSSyntax {
 
   def cp(src: Path, dst: Path) = intern(Cp(src, dst))
 
+  def clearCache(): Unit = {
+    println("Clear cache")
+    exprCache.clear()
+  }
+
   object Block {
     import Implicits._
     def apply(es: Expr*): Expr = es.foldRight(Skip: Expr)((e, expr) => e >> expr)
