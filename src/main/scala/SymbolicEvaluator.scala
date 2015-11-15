@@ -91,7 +91,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   import SMT.Implicits._
 
   logger.info(s"Started with ${allPaths.size} paths, ${hashes.size} hashes, and ${readOnlyPaths.size} read-only paths")
-  logger.info(s"Writable paths: ${allPaths.toSet.diff(readOnlyPaths)}")
 
   val writablePaths = allPaths.filterNot(p => readOnlyPaths.contains(p))
 

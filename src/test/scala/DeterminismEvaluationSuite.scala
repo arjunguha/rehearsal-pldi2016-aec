@@ -63,7 +63,7 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite
     assert(SymbolicEvaluator.isDeterministic(g.pruneWrites()) == false)
   }
 
-  ignore("spiky-reduced.pp pruned") {
+  test("spiky-reduced.pp pruned") {
     val g = parseFile(s"$root/spiky-reduced.pp").eval.resourceGraph.fsGraph("centos-6").pruneWrites()
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
@@ -92,7 +92,7 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite
     val g = parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph.fsGraph("centos-6")
     assert(SymbolicEvaluator.isDeterministic(g.pruneWrites()) == true)
   }
-  
+
   test("thias-ntp.pp") {
     val g = parseFile(s"$root/thias-ntp.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
     assert(SymbolicEvaluator.isDeterministic(g) == false)
