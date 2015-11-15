@@ -387,21 +387,48 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
+  /*
+    def predEarlyAbort(assertion: Expr, st1: ST, st2: ST): ST = {
+    val isOK2 = exprAsPred(st2, assertion)
+    smt.pushPop {
+      val isOK1 = exprAsPred(st1, assertion)
+      eval(Assert(Not(Equals(isOK1, isOK2))))
+      if (smt.checkSat()) {
+         throw AbortEarlyError
+      }
+    }
+    ST(st2.isErr || Not(isOK2), st2.paths)
+  }
+
+   */
+
+  def earlyAbort(assertion: Expr, st1: ST, st2: ST): (Term, ST) = {
+    val isErr1 = exprAsPred(st1, assertion)
+    val isErr2 = exprAsPred(st2, assertion)
+    (Not(Equals(isErr1, isErr2)), ST(st2.isErr || Not(isErr1), st2.paths))
+  }
+
   def isGraphDeterministic[K](st: ST, g: FSGraph[K]): (Term, ST) = {
-    val fringe = g.deps.nodes.filter(_.inDegree == 0).toSet.map[K, Set[K]](_.value).toList
+    val fringe_ = g.deps.nodes.filter(_.inDegree == 0).toSet.map[K, Set[K]](_.value).toList
+    val (assertions, fringe) = fringe_.partition(node => g.exprs(node).isEffectFree)
+    val aExpr = Block(assertions.map(n => g.exprs(n)): _*)
     if (fringe.length == 0) {
-      (False(), st)
+      (False(), evalExpr(st, aExpr))
     }
     else {
       val fringe1 = commutingGroups(g.exprs, fringe)
       if (fringe1.length == 1) {
-        val expr = evalExpr(st, Block(fringe1.head.map(n => g.exprs(n)) : _*))
-        isGraphDeterministic(expr, g.copy(deps = g.deps -- fringe1.head))
+        val (isNonDet1, expr) = earlyAbort(aExpr, st, evalExpr(st, Block(fringe1.head.map(n => g.exprs(n)) : _*)))
+        val (isNonDet2, st_) = isGraphDeterministic(expr, g.copy(deps = g.deps -- fringe1.head -- assertions))
+        (isNonDet1 || isNonDet2, st_)
       }
       else {
         logger.info(s"Choices: ${fringe1.length}")
-        val lst = fringe1.map(nodes => isGraphDeterministic(evalExpr(st, Block(nodes.map(node => g.exprs(node)): _*)),
-                                                            g.copy(deps = g.deps -- nodes)))
+        val lst = fringe1.map(nodes => {
+          val (isNonDet1, expr) = earlyAbort(aExpr, st, evalExpr(st, Block(nodes.map(node => g.exprs(node)): _*)))
+          val (isNonDet2, st_) = isGraphDeterministic(expr, g.copy(deps = g.deps -- nodes -- assertions))
+          (isNonDet1 || isNonDet2, st_)
+        })
         lst.reduce((x: (Term, ST), y: (Term, ST)) => {
           val (pred1, st1) = x
           val (pred2, st2) = y
