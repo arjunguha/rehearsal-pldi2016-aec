@@ -5,6 +5,7 @@ import smtlib._
 import parser._
 import Commands._
 import Terms._
+import smtlib.theories.Ints.IntSort
 import theories.Core.{And => _, Or => _, _}
 import scala.util.{Try, Success, Failure}
 import CommandsResponses._
@@ -162,6 +163,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
+  // TODO(arjun): What is the point of returning these commands?
   def freshST(): (ST, List[Command]) = {
 
     val ids = writablePaths.map(p => {
@@ -205,6 +207,11 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     else {
       ITE(cond, tru, fls)
     }
+  }
+
+  def ifST(b: Term, st1: ST, st2: ST): ST = {
+    ST(ite(b, st1.isErr, st2.isErr),
+      writablePaths.map(p => (p, ite(b, st1.paths(p), st2.paths(p)))).toMap ++ readOnlyMap)
   }
 
   def evalExpr(st: ST, expr: F.Expr): ST = expr match {
@@ -341,7 +348,54 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     groupBy2(f, lst)
   }
 
-  def evalGraph[K](st: ST, g: FSGraph[K]): ST = evalGraphAbort(st, g)((_, _) => false)
+  def stSeq(init: ST)(rest: List[(ST, ST)]): (Term, ST) = {
+    def loop(curr: ST, lst: List[(ST, ST)]): (Term, ST) = lst match {
+      case Nil => (True(), curr)
+      case (inST, outST) :: tail => {
+        val term1 = stEquals(curr, inST)
+        val (term2, st) = loop(outST, tail)
+        (term1 && term2, st)
+      }
+    }
+    loop(init, rest)
+  }
+
+  def evalGraph[K](st: ST, g: FSGraph[K]): ST = {
+    val fringe = g.deps.nodes.filter(_.inDegree == 0).toList.map(_.value)
+    if (fringe.isEmpty) {
+      return st
+    }
+
+    val rels = commutingGroups(g.exprs, fringe)
+      .map(nodes => Block(nodes.map(n => g.exprs(n)): _*))
+      .map(expr => {
+        val (inST, _) = freshST()
+        (inST, evalExpr(inST, expr))
+      })
+      .permutations
+      .map(stSeq(st))
+      .toList
+      .reverse
+
+    if (rels.length == 1) {
+      val (term, st) = rels.head
+      eval(Assert(term))
+      return evalGraph(st, g.copy(deps = g.deps -- fringe))
+    }
+    logger.info(s"${rels.length} commuting groups")
+
+    val (term, outST) = rels.reduce {
+      (lhs: (Term, ST), rhs: (Term, ST)) => {
+        val (term1, st1) = lhs
+        val (term2, st2) = rhs
+        val c = freshName("choice")
+        eval(DeclareConst(c, BoolSort()))
+        (ITE(c, term1, term2), ifST(c, st1, st2))
+      }
+    }
+    eval(Assert(term))
+    evalGraph(outST, g.copy(deps = g.deps -- fringe))
+  }
 
   case object AbortEarlyError extends RuntimeException("evalGraph aborted early")
 
@@ -407,6 +461,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     val isErr2 = exprAsPred(st2, assertion)
     (Not(Equals(isErr1, isErr2)), ST(st2.isErr || Not(isErr1), st2.paths))
   }
+
 
   def isGraphDeterministic[K](st: ST, g: FSGraph[K]): (Term, ST) = {
     val fringe_ = g.deps.nodes.filter(_.inDegree == 0).toSet.map[K, Set[K]](_.value).toList
@@ -513,6 +568,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     isIdempotent(exprs.foldRight(FSSyntax.Skip: Expr)((e, expr) => e >> expr))
   }
 
+
+  /*
   def isDeterministic[K](g: FSGraph[K]): Boolean = smt.pushPop {
     val inST = initState
     logger.info(s"Generating constraints for a graph with ${g.exprs.size} nodes")
@@ -528,6 +585,40 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 //      case Success(st) => true
 //    }
   }
+*/
+
+  def isDeterministic[K](g: FSGraph[K]): Boolean = smt.pushPop {
+    val inST = initState
+    assertPathConsistency(inST)
+    logger.info(s"Generating constraints for a graph with ${g.exprs.size} nodes")
+    val outST1 = evalGraph(inST, g)
+    val outST2 = evalGraph(inST, g)
+    eval(Assert(Not(stEquals(outST1, outST2))))
+    val nondet = smt.checkSat()
+    if (nondet) {
+      eval(GetModel())
+      (stateFromTerm(inST), stateFromTerm(outST1), stateFromTerm(outST2)) match {
+        case (None, _, _) => throw Unexpected("bad model: initial state should not be error")
+        case (Some(in), None, Some(out)) => {
+          logger.info(s"On input\n$in\nthe program produces error or output\n$out")
+          logDiff(in, out)
+        }
+        case (Some(in), Some(out), None) => {
+          logger.info(s"On input\n$in\nthe program produces error or output\n$out")
+          logDiff(in, out)
+        }
+        case (Some(in), Some(out1), Some(out2)) => {
+          logger.info(s"On input\n$in\nthe program produces two possible outputs!")
+          logger.info(out1.toString)
+          logger.info(out2.toString)
+
+        }
+        case (Some(_), None, None) => throw Unexpected("bad model: both outputs are identical errors")
+      }
+    }
+    !nondet
+  }
+
 
   def isDeterministicError[K](g: FSGraph[K]): Boolean = smt.pushPop {
     val inST = initState

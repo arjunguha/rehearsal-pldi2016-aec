@@ -151,11 +151,6 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
                   """
     val g = PuppetParser.parse(program).eval().resourceGraph().fsGraph("ubuntu-trusty")
     val exprs = g.exprs.values.toArray
-    println(s"${exprs(0)}")
-    println(s"${exprs(1)}")
-    println(s"${exprs(2)}")
-    println(exprs(0).fileSets)
-    println(exprs(2).fileSets)
     assert(false == isDeterministic(g))
   }
 
