@@ -117,6 +117,7 @@ object FSSyntax {
     lazy val hashes = Helpers.exprHashes(this)
 
     lazy val fileSets = Commutativity.exprFileSets(this)
+    lazy val isEffectFree = Helpers.isEffectFree(this)
 
     override def toString(): String = this.pretty()
 

@@ -48,5 +48,12 @@ private[rehearsal] object Helpers {
     case Cp(src, dst) => Set()
   }
 
+  def isEffectFree(expr: Expr): Boolean = expr match {
+    case Error => true
+    case Skip => true
+    case If(_, e1, e2) => e1.isEffectFree && e2.isEffectFree
+    case Seq(e1, e2) => e1.isEffectFree && e2.isEffectFree
+    case _ => false
+  }
 
 }

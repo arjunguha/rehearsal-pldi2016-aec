@@ -339,18 +339,21 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   def evalGraphAbort[K](st: ST, g: FSGraph[K])(shouldAbort: (ST, ST) => Boolean): ST = {
     val fringe = g.deps.nodes.filter(_.inDegree == 0).toSet.map[K, Set[K]](_.value).toList
-    if (fringe.length == 0) {
-      st
+    val (assertions, nonAssertions) = fringe.partition(node => g.exprs(node).isEffectFree)
+    val aExpr = Block(assertions.map(n => g.exprs(n)): _*)
+    if (nonAssertions.length == 0) {
+      evalExpr(st, aExpr)
     }
     else {
-      val fringe1 = commutingGroups(g.exprs, fringe)
+      val fringe1 = commutingGroups(g.exprs, nonAssertions)
       if (fringe1.length == 1) {
-        evalGraphAbort(evalExpr(st, Block(fringe1.head.map(n => g.exprs(n)) : _*)), g.copy(deps = g.deps -- fringe1.head))(shouldAbort)
+        val expr =  aExpr >> Block(fringe1.head.map(n => g.exprs(n)) : _*) >> aExpr
+        evalGraphAbort(evalExpr(st, expr), g.copy(deps = g.deps -- assertions -- fringe1.head))(shouldAbort)
       }
       else {
         logger.info(s"Choices: ${fringe1.length}")
-        fringe1.toStream.map(p => evalGraphAbort(evalExpr(st, Block(p.map(n => g.exprs(n)) : _*)),
-                                   g.copy(deps = g.deps -- p))(shouldAbort)).reduce({ (st1: ST, st2: ST) =>
+        fringe1.toStream.map(p => evalGraphAbort(evalExpr(st, aExpr >> Block(p.map(n => g.exprs(n)) : _*) >> aExpr),
+                                   g.copy(deps = g.deps -- assertions -- p))(shouldAbort)).reduce({ (st1: ST, st2: ST) =>
           if (shouldAbort(st1, st2)) {
             throw AbortEarlyError
           }
