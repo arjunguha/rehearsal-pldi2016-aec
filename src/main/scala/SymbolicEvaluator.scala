@@ -387,6 +387,34 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
+  def isGraphDeterministic[K](st: ST, g: FSGraph[K]): (Term, ST) = {
+    val fringe = g.deps.nodes.filter(_.inDegree == 0).toSet.map[K, Set[K]](_.value).toList
+    if (fringe.length == 0) {
+      (False(), st)
+    }
+    else {
+      val fringe1 = commutingGroups(g.exprs, fringe)
+      if (fringe1.length == 1) {
+        val expr = evalExpr(st, Block(fringe1.head.map(n => g.exprs(n)) : _*))
+        isGraphDeterministic(expr, g.copy(deps = g.deps -- fringe1.head))
+      }
+      else {
+        logger.info(s"Choices: ${fringe1.length}")
+        val lst = fringe1.map(nodes => isGraphDeterministic(evalExpr(st, Block(nodes.map(node => g.exprs(node)): _*)),
+                                                            g.copy(deps = g.deps -- nodes)))
+        lst.reduce((x: (Term, ST), y: (Term, ST)) => {
+          val (pred1, st1) = x
+          val (pred2, st2) = y
+          val c = freshName("choice")
+          val b = eval(DeclareConst(c, BoolSort()))
+          (pred1 || pred2 || stNEq(st1, st2),
+           ST(ite(c, st1.isErr, st2.isErr),
+              writablePaths.map(p => p -> ite(c, st1.paths(p),st2.paths(p))).toMap ++ readOnlyMap))
+        })
+      }
+    }
+  }
+
   def stNEq(st1: ST, st2: ST): Term = {
     (st1.isErr && Not(st2.isErr)) ||
       (st2.isErr && Not(st1.isErr)) ||
@@ -461,14 +489,17 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   def isDeterministic[K](g: FSGraph[K]): Boolean = smt.pushPop {
     val inST = initState
     logger.info(s"Generating constraints for a graph with ${g.exprs.size} nodes")
-    Try(evalGraphAbort(inST, g)(diverged(inST))) match {
-      case Failure(AbortEarlyError) => {
-        logger.info("Program is non-deterministic according to early error check.")
-        return false
-      }
-      case Failure(e) => throw e
-      case Success(st) => true
-    }
+    val (pred, st) = isGraphDeterministic(inST, g)
+    eval(Assert(pred))
+    !smt.checkSat()
+//    Try(evalGraphAbort(inST, g)(diverged(inST))) match {
+//      case Failure(AbortEarlyError) => {
+//        logger.info("Program is non-deterministic according to early error check.")
+//        return false
+//      }
+//      case Failure(e) => throw e
+//      case Success(st) => true
+//    }
   }
 
   def isDeterministicError[K](g: FSGraph[K]): Boolean = smt.pushPop {

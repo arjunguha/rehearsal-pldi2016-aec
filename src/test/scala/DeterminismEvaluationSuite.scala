@@ -35,7 +35,6 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite
 
   test("thias-bind-buggy.pp") {
     val g = parseFile(s"$root/thias-bind-buggy.pp").eval.resourceGraph.fsGraph("centos-6")
-    assert(SymbolicEvaluator.isDeterministicError(g.pruneWrites()) == false)
     assert(SymbolicEvaluator.isDeterministic(g.pruneWrites()) == false)
   }
 

@@ -354,7 +354,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
   }
 
   test("FOO") {
-    val g = PuppetParser.parseFile(s"parser-tests/good/nfisher-SpikyIRC.pp").eval.resourceGraph.fsGraph("centos-6").pruneWrites().pruneWrites()
+    val g = PuppetParser.parseFile(s"parser-tests/good/spiky-reduced.pp").eval.resourceGraph.fsGraph("centos-6").pruneWrites().pruneWrites()
     val m = g.exprs.values.map(e => e.paths.toList.map(p => p -> 1).toMap).foldLeft(Map[java.nio.file.Path, Int]())((x, y) =>
       x.combine(y) {
         case (None, None) => None
