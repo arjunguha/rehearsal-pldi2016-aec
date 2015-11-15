@@ -260,6 +260,14 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
+  def exprAsPred(st: ST, expr: F.Expr): Term = expr match {
+    case F.Skip => True()
+    case F.Error => False()
+    case F.Seq(p, q) => exprAsPred(st, p) && exprAsPred(st, q)
+    case F.If(a, e1, e2) => ite(evalPred(st, a), exprAsPred(st, e1), exprAsPred(st, e2))
+    case _ => throw Unexpected(s"exprAsPred got $expr")
+  }
+
   def fstateFromTerm(term: Term): Option[FSEvaluator.FState] = term match {
     case QualifiedIdentifier(Identifier(SSymbol("IsDir"), _), _) => Some(FSEvaluator.FDir)
     case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("IsFile"), _), _), Seq(h)) =>
@@ -337,6 +345,18 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   case object AbortEarlyError extends RuntimeException("evalGraph aborted early")
 
+  def predEarlyAbort(assertion: Expr, st1: ST, st2: ST): ST = {
+    val isOK2 = exprAsPred(st2, assertion)
+    smt.pushPop {
+      val isOK1 = exprAsPred(st1, assertion)
+      eval(Assert(Not(Equals(isOK1, isOK2))))
+      if (smt.checkSat()) {
+         throw AbortEarlyError
+      }
+    }
+    ST(st2.isErr || Not(isOK2), st2.paths)
+  }
+
   def evalGraphAbort[K](st: ST, g: FSGraph[K])(shouldAbort: (ST, ST) => Boolean): ST = {
     val fringe = g.deps.nodes.filter(_.inDegree == 0).toSet.map[K, Set[K]](_.value).toList
     val (assertions, nonAssertions) = fringe.partition(node => g.exprs(node).isEffectFree)
@@ -347,13 +367,14 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     else {
       val fringe1 = commutingGroups(g.exprs, nonAssertions)
       if (fringe1.length == 1) {
-        val expr =  aExpr >> Block(fringe1.head.map(n => g.exprs(n)) : _*) >> aExpr
-        evalGraphAbort(evalExpr(st, expr), g.copy(deps = g.deps -- assertions -- fringe1.head))(shouldAbort)
+        val expr =  predEarlyAbort(aExpr, st, evalExpr(st, Block(fringe1.head.map(n => g.exprs(n)) : _*)))
+        evalGraphAbort(expr, g.copy(deps = g.deps -- assertions -- fringe1.head))(shouldAbort)
       }
       else {
         logger.info(s"Choices: ${fringe1.length}")
-        fringe1.toStream.map(p => evalGraphAbort(evalExpr(st, aExpr >> Block(p.map(n => g.exprs(n)) : _*) >> aExpr),
-                                   g.copy(deps = g.deps -- assertions -- p))(shouldAbort)).reduce({ (st1: ST, st2: ST) =>
+        fringe1.toStream.map(p =>
+            evalGraphAbort(predEarlyAbort(aExpr, st, evalExpr(st, Block(p.map(n => g.exprs(n)) : _*))),
+                           g.copy(deps = g.deps -- assertions -- p))(shouldAbort)).reduce({ (st1: ST, st2: ST) =>
           if (shouldAbort(st1, st2)) {
             throw AbortEarlyError
           }

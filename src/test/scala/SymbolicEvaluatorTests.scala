@@ -354,7 +354,7 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
   }
 
   test("FOO") {
-    val g = PuppetParser.parseFile(s"parser-tests/good/spiky-reduced.pp").eval.resourceGraph.fsGraph("centos-6").pruneWrites()
+    val g = PuppetParser.parseFile(s"parser-tests/good/nfisher-SpikyIRC.pp").eval.resourceGraph.fsGraph("centos-6").pruneWrites().pruneWrites()
     val m = g.exprs.values.map(e => e.paths.toList.map(p => p -> 1).toMap).foldLeft(Map[java.nio.file.Path, Int]())((x, y) =>
       x.combine(y) {
         case (None, None) => None
@@ -393,6 +393,31 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     val r = g.exprs.values.map(e => eval(e)).reduce((x, y) => symDiff(x, y))
 
     info(s"Candidates: ${r.size}")
+
+    def eFree(expr: Expr): Boolean = expr match {
+      case Mkdir(p) => false
+      case CreateFile(p, _) => false
+      case Rm(p) => false
+      case Cp(src, dst) => false
+      case Error => true
+      case Skip => true
+      case If(pred, e1, e2) => eFree(e1) && eFree(e2)
+      case Seq(e1, e2) => eFree(e1) && eFree(e2)
+
+    }
+
+    val ef = g.exprs.values.toList.filter(e => eFree(e)).toList
+
+    for (lst <- ef.tails.filter(_.length >= 2)) {
+      val x = lst.head
+      for (y <- lst.tail) {
+        if (!x.commutesWith(y)) {
+          info("BAD")
+        }
+      }
+    }
+
+    info(s"Effect-free nodes: ${ef.size}, total nodes: ${g.exprs.size}")
 
   }
 
