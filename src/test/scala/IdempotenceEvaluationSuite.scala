@@ -73,7 +73,8 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite
 
   test("pdurbin-java-jpa-tutorial.pp") {
     val g = parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph.fsGraph("centos-6")
-    assert(SymbolicEvaluator.isIdempotent(g) == true)
+    assert(SymbolicEvaluator.isDeterministic(g.pruneWrites))
+    assert(g.expr.pruneIdem.isIdempotent == true)
   }
 
   test("BenoitCattie-puppet-nginx.pp") {
