@@ -63,21 +63,9 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     assert(SymbolicEvaluator.isDeterministic(g.pruneWrites()) == false)
   }
 
-  val spikyGraph = FSGraph(Map(
-      Node("package","rrdtool") -> If(TestFileState("/x", IsDir), Skip, Mkdir("/x")),
-      Node("file","swap") ->
-        Seq(If(TestFileState("/x/swap.conf", IsFile), Rm("/x/swap.conf"), Skip),
-            CreateFile("/x/swap.conf", "")
-        )
-    ), Graph(Node("package","rrdtool"), Node("file","swap")))
-
-  test("spiky-reduced.pp Pruned") {
-    val sliced = spikyGraph.pruneWrites()
-    assert(SymbolicEvaluator.isDeterministic(sliced) == false)
-  }
-
-  test("spiky-reduced.pp Not pruned") {
-    assert(SymbolicEvaluator.isDeterministic(spikyGraph) == false)
+  ignore("spiky-reduced.pp pruned") {
+    val g = parseFile(s"$root/spiky-reduced.pp").eval.resourceGraph.fsGraph("centos-6").pruneWrites()
+    assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
   test("ghoneycutt-xinetd.pp") {
@@ -114,12 +102,7 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     val g = parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph.fsGraph("centos-6")
     assert(SymbolicEvaluator.isDeterministic(g.pruneWrites()) == true)
   }
-
-  test("pdurbin-java-jpa-tutorial.pp (without pruning)") {
-    val g = parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph.fsGraph("centos-6")
-    assert(SymbolicEvaluator.isDeterministic(g) == true)
-  }
-
+  
   test("thias-ntp.pp") {
     val g = parseFile(s"$root/thias-ntp.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
     assert(SymbolicEvaluator.isDeterministic(g) == false)

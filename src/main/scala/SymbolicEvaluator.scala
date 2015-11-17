@@ -67,6 +67,23 @@ object SymbolicEvaluator {
     result
   }
 
+  def isDeterministicWithTimeout[K](g: FSGraph[K], timeout: Int,  logFile: Option[String] = None): Option[Boolean] = {
+    if (g.deps.nodes.size < 2) {
+      return Some(true)
+    }
+    val impl = mkImpl(g, logFile)
+    new Thread(new Runnable {
+      def run() {
+        Thread.sleep(timeout * 1000)
+        impl.free()
+      }
+    }).run
+    Try(impl.isDeterministic(g)) match {
+      case Success(res) => impl.free(); Some(res)
+      case Failure(e) => None
+    }
+  }
+
   def isDeterministicError[K](g: FSGraph[K]): Boolean = {
     val impl = mkImpl(g, None)
     val result = impl.isDeterministicError(g)
@@ -141,22 +158,27 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   val reverseMap = initState.paths.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
   val reverseHash = hashToZ3.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
 
-
-  // Ensures that all paths in st form a proper directory tree. If we assert this for the input state
-  // and all operations preserve directory-tree-ness, then there is no need to assert it for all states.
+  // Ensures that all paths in st form a proper directory tree. If we assert
+  // this for the input state and all operations preserve directory-tree-ness,
+  // then there is no need to assert it for all states.
   def assertPathConsistency(st: ST): Unit = {
+    val root = Paths.get("/")
     for (p <- allPaths) {
-      if (p == Paths.get("/")) {
+      if (p == root) {
         eval(Assert(FunctionApplication("is-IsDir", Seq(st.paths(p)))))
       }
-      else {
-        eval(Assert(Implies(FunctionApplication("is-IsFile", Seq(st.paths(p))) ||
-          FunctionApplication("is-IsDir", Seq(st.paths(p))),
-          FunctionApplication("is-IsDir", Seq(st.paths(p.getParent))))))
+      // If the parent of p is "/", there is no need to assert when "/" may
+      // be a directory, due to the assertion above. In addition, if the
+      // parent of p is not represented, there is no need for the assertion
+      // either.
+      else if (p.getParent != root && st.paths.contains(p.getParent)) {
+        val pre = FunctionApplication("is-IsFile", Seq(st.paths(p))) ||
+          FunctionApplication("is-IsDir", Seq(st.paths(p)))
+        val post = FunctionApplication("is-IsDir", Seq(st.paths(p.getParent)))
+        eval(Assert(Implies(pre, post)))
       }
     }
   }
-
 
   def freshST(): (ST, List[Command]) = {
 
@@ -455,4 +477,5 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   def free(): Unit = smt.free()
 
 }
+
 
