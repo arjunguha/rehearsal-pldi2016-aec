@@ -12,7 +12,7 @@ object DeterminismBenchmarks {
     def checkAndOutput(res: (Option[Boolean], Long), pruning: String, size: Int) = res match {
       case (Some(out), t) => {
         assert(out == expected, s"unexpected result from $label with $pruning")
-        println(s"$label,no-pruning,$size,$t")
+        println(s"$label,$pruning,$size,$t")
       }
       case (None, _) => println(s"$label,$pruning,$size,timedout")
     }
