@@ -53,6 +53,11 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
+  test("antonlindstrom-powerdns_deter.pp") {
+    val g = parseFile(s"$root/antonlindstrom-powerdns_deter.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(SymbolicEvaluator.isDeterministic(g) == true)
+  }
+
   ignore("nfisher-SpikyIRC.pp") {
     val g = parseFile(s"$root/nfisher-SpikyIRC.pp").eval.resourceGraph.fsGraph("centos-6")
     assert(SymbolicEvaluator.isDeterministic(g.pruneWrites()) == false)
@@ -80,6 +85,11 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
+  test("ghoneycutt-xinetd_deter.pp") {
+    val g = parseFile(s"$root/ghoneycutt-xinetd_deter.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(SymbolicEvaluator.isDeterministic(g) == true)
+  }
+
   test("mjhas-amavis.pp") {
     val g = parseFile(s"$root/mjhas-amavis.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
     assert(SymbolicEvaluator.isDeterministic(g))
@@ -93,6 +103,11 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
   test("Nelmo-logstash.pp") {
     val g = parseFile(s"$root/Nelmo-logstash.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
     assert(SymbolicEvaluator.isDeterministic(g) == false)
+  }
+
+ test("Nelmo-logstash_deter.pp") {
+    val g = parseFile(s"$root/Nelmo-logstash_deter.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(SymbolicEvaluator.isDeterministic(g) == true)
   }
 
   test("pdurbin-java-jpa-tutorial.pp (with pruning)") {
@@ -110,9 +125,19 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
+  test("thias-ntp_deter.pp") {
+    val g = parseFile(s"$root/thias-ntp_deter.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(SymbolicEvaluator.isDeterministic(g) == true)
+  }
+
   test("xdrum-rsyslog.pp") {
     val g = parseFile(s"$root/xdrum-rsyslog.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
     assert(SymbolicEvaluator.isDeterministic(g) == false)
+  }
+
+  test("xdrum-rsyslog_deter.pp") {
+    val g = parseFile(s"$root/xdrum-rsyslog_deter.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(SymbolicEvaluator.isDeterministic(g) == true)
   }
 
   test("BenoitCattie-puppet-nginx.pp") {

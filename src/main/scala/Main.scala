@@ -39,6 +39,8 @@ package repl {
       case List("detersuite") => DeterminismBenchmarks.run()
       case List("detersizes") => DeterminismSizeTables.run()
       case List("deterstress") => DeterStressBenchmark.run()
+      case List("idemsuite") => IdempotenceBenchmarks.run()
+      case List("idemsizes") => IdempotenceSizeTables.run()
       case args => {
         sys.error(s"Invalid command-line arguments: $args")
       }

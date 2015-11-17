@@ -43,6 +43,106 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite {
       .fsGraph("ubuntu-trusty").expr().pruneIdem().isIdempotent() == true)
   }
 
+  test("antonlindstrom-powerdns_deter.pp") {
+    assert(parseFile(s"$root/antonlindstrom-powerdns_deter.pp").eval.resourceGraph
+            .fsGraph("ubuntu-trusty").expr().isIdempotent() == true)
+  }
+
+  test("antonlindstrom-powerdns_deter.pp pruned") {
+    assert(parseFile(s"$root/antonlindstrom-powerdns_deter.pp").eval.resourceGraph
+      .fsGraph("ubuntu-trusty").expr().pruneIdem().isIdempotent() == true)
+  }
+
+  test("spiky-reduced-deterministic.pp") {
+    assert(parseFile(s"$root/spiky-reduced-deterministic.pp").eval.resourceGraph
+            .fsGraph("ubuntu-trusty").expr().isIdempotent() == true)
+  }
+
+  test("spiky-reduced-deterministic.pp pruned") {
+    assert(parseFile(s"$root/spiky-reduced-deterministic.pp").eval.resourceGraph
+      .fsGraph("ubuntu-trusty").expr().pruneIdem().isIdempotent() == true)
+  }
+
+  test("ghoneycutt-xinetd_deter.pp") {
+    assert(parseFile(s"$root/ghoneycutt-xinetd_deter.pp").eval.resourceGraph
+            .fsGraph("ubuntu-trusty").expr().isIdempotent() == true)
+  }
+
+  test("ghoneycutt-xinetd_deter.pp pruned") {
+    assert(parseFile(s"$root/ghoneycutt-xinetd_deter.pp").eval.resourceGraph
+      .fsGraph("ubuntu-trusty").expr().pruneIdem().isIdempotent() == true)
+  }
+
+  test("mjhas-amavis.pp") {
+    assert(parseFile(s"$root/mjhas-amavis.pp").eval.resourceGraph
+            .fsGraph("ubuntu-trusty").expr().isIdempotent() == true)
+  }
+
+  test("mjhas-amavis.pp pruned") {
+    assert(parseFile(s"$root/mjhas-amavis.pp").eval.resourceGraph
+      .fsGraph("ubuntu-trusty").expr().pruneIdem().isIdempotent() == true)
+  }
+
+  test("mjhas-clamav.pp") {
+    assert(parseFile(s"$root/mjhas-clamav.pp").eval.resourceGraph
+            .fsGraph("ubuntu-trusty").expr().isIdempotent() == true)
+  }
+
+  test("mjhas-clamav.pp pruned") {
+    assert(parseFile(s"$root/mjhas-clamav.pp").eval.resourceGraph
+      .fsGraph("ubuntu-trusty").expr().pruneIdem().isIdempotent() == true)
+  }
+
+  test("Nelmo-logstash_deter.pp") {
+    assert(parseFile(s"$root/Nelmo-logstash_deter.pp").eval.resourceGraph
+            .fsGraph("ubuntu-trusty").expr().isIdempotent() == true)
+  }
+
+  test("Nelmo-logstash_deter.pp pruned") {
+    assert(parseFile(s"$root/Nelmo-logstash_deter.pp").eval.resourceGraph
+      .fsGraph("ubuntu-trusty").expr().pruneIdem().isIdempotent() == true)
+  }
+
+  test("pdurbin-java-jpa-tutorial.pp") {
+    assert(parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph
+            .fsGraph("centos-6").expr().isIdempotent() == true)
+  }
+
+  test("pdurbin-java-jpa-tutorial.pp pruned") {
+    assert(parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph
+            .fsGraph("centos-6").expr().pruneIdem.isIdempotent() == true)
+  }
+
+  test("thias-ntp_deter.pp") {
+    assert(parseFile(s"$root/thias-ntp_deter.pp").eval.resourceGraph
+            .fsGraph("ubuntu-trusty").expr().isIdempotent() == true)
+  }
+
+  test("thias-ntp_deter.pp pruned") {
+    assert(parseFile(s"$root/thias-ntp_deter.pp").eval.resourceGraph
+            .fsGraph("ubuntu-trusty").expr().pruneIdem.isIdempotent() == true)
+  }
+
+  test("xdrum-rsyslog_deter.pp") {
+    assert(parseFile(s"$root/xdrum-rsyslog_deter.pp").eval.resourceGraph
+            .fsGraph("ubuntu-trusty").expr().isIdempotent() == true)
+  }
+
+  test("xdrum-rsyslog_deter.pp pruned") {
+    assert(parseFile(s"$root/xdrum-rsyslog_deter.pp").eval.resourceGraph
+            .fsGraph("ubuntu-trusty").expr().pruneIdem.isIdempotent() == true)
+  }
+
+  test("BenoitCattie-puppet-nginx.pp") {
+    assert(parseFile(s"$root/BenoitCattie-puppet-nginx.pp").eval.resourceGraph
+            .fsGraph("ubuntu-trusty").expr().isIdempotent() == true)
+  }
+
+  test("BenoitCattie-puppet-nginx.pp pruned") {
+    assert(parseFile(s"$root/BenoitCattie-puppet-nginx.pp").eval.resourceGraph
+            .fsGraph("ubuntu-trusty").expr().pruneIdem.isIdempotent() == true)
+  }
+
   test("ssh_authorized_keys should be idempotent (regression)") {
     val manifest =
       """
@@ -63,16 +163,6 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite {
 
     assert(SymbolicEvaluator.isDeterministic(g.pruneWrites()), "not deterministic")
     assert(e.pruneIdem().isIdempotent() == true, "not idempotent")
-  }
-
-  test("pdurbin-java-jpa-tutorial.pp") {
-    val g = parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph.fsGraph("centos-6")
-    assert(SymbolicEvaluator.isIdempotent(g) == true)
-  }
-
-  test("BenoitCattie-puppet-nginx.pp") {
-    val g = parseFile(s"$root/BenoitCattie-puppet-nginx.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isIdempotent(g) == true)
   }
 
   test("small non-idempotent example (in FS)") {
