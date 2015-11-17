@@ -9,7 +9,8 @@ object IdempotenceSizeTables {
     val g = rg.fsGraph(os)
     val rSize = rg.deps.nodes.size
     val fSize =  g.size
-    println(s"$label & $rSize & $fSize \\\\")
+    val fPrunedSize = g.expr.pruneIdem.size
+    println(s"$label & $rSize & $fSize & $fPrunedSize \\\\")
   }
 
 
