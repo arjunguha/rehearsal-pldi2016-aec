@@ -27,7 +27,7 @@ object IdempotenceBenchmarks {
   val root = "parser-tests/good"
 
   def run(): Unit = {
-    println("Name,Pruning,Size,Time")
+    println("IName,IdemPruning,ISize,ITime")
     for (i <- 0.until(trials)) {
       bench("monit", s"$root/dhoppe-monit.pp", true)
       bench("bind", s"$root/thias-bind.pp", true)
