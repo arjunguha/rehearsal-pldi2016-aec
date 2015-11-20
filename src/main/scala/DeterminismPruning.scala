@@ -192,4 +192,6 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
     FSGraph(graph.exprs.mapValues(e => prune(toPrune, e)), graph.deps)
   }
 
+  def pruneablePathCount[A](graph: FSGraph[A]): Int = pruneablePaths(graph).size
+
 }

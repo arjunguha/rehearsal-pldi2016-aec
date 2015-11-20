@@ -8,9 +8,9 @@ object DeterminismSizeTables {
     val rg = PuppetParser.parseFile(path).eval().resourceGraph()
     val g = rg.fsGraph(os)
     val rSize = rg.deps.nodes.size
-    val fSize =  g.size
-    val fPrunedSize = g.pruneWrites.size
-    println(s"$label & $rSize & $fSize & $fPrunedSize \\\\")
+    val paths = g.expr.paths.size
+    val prunablePaths =  DeterminismPruning.pruneablePathCount(g)
+    println(s"$label & $rSize & $paths & $prunablePaths \\\\")
   }
 
 
@@ -21,7 +21,7 @@ object DeterminismSizeTables {
     bench("bind", s"$root/thias-bind.pp")
     bench("hosting", s"$root/puppet-hosting_deter.pp")
     bench("dns", s"$root/antonlindstrom-powerdns.pp")
-    // bench("irc", s"$root/spiky-reduced.pp", onlySliced = true, os = "centos-6")
+    bench("irc", s"$root/spiky-reduced.pp", os = "centos-6")
     bench("xinetd", s"$root/ghoneycutt-xinetd.pp")
     bench("jpa", s"$root/pdurbin-java-jpa-tutorial.pp", os = "centos-6")
     bench("ntp", s"$root/thias-ntp.pp")
