@@ -8,19 +8,12 @@ object DeterminismBenchmarks {
 
   def bench(label: String, path: String, check: FileScriptGraph => Boolean, onlySliced: Boolean = false, os: String = "ubuntu-trusty"): Unit = {
     val g = PuppetParser.parseFile(path).eval.resourceGraph.fsGraph(os)
+    import scala.sys.process._
 
-    if (!onlySliced) {
-      val (r, t) = time(check(g))
-      assert(r == true, s"unexpected result from $label without pruning")
-      val size = g.size
-      println(s"$label,no-pruning,$size,$t")
+    Seq("./run.sh", "deterbench", label, path, os, "prune").!
+    if (onlySliced != true) {
+      Seq("./run.sh", "deterbench", label, path, os, "noprune").!
     }
-
-    val gPruned = g.pruneWrites()
-    val (r, t) = time(check(gPruned))
-    assert(r == true, s"unexpected result from $label with pruning")
-    val size = gPruned.size
-    println(s"$label,pruning,$size,$t")
   }
 
 
@@ -37,6 +30,7 @@ object DeterminismBenchmarks {
    val (_, t) = time(SymbolicEvaluator.isDeterministic(g))
    println(s"$label, $p, $size, $t")
   }
+
 
   def run(): Unit = {
     println("Name,Pruning,Size,Time")
