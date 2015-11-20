@@ -27,6 +27,17 @@ object DeterminismBenchmarks {
   val trials = 1
   val root = "parser-tests/good"
 
+  def single(label: String, filename: String, os: String, prune: Boolean): Unit = {
+   val g = {
+     val g_ = PuppetParser.parseFile(filename).eval.resourceGraph.fsGraph(os)
+     if (prune) g_.pruneWrites else g_
+   }
+   val size = g.size
+   val p = if (prune) "pruning" else "no-pruning"
+   val (_, t) = time(SymbolicEvaluator.isDeterministic(g))
+   println(s"$label, $p, $size, $t")
+  }
+
   def run(): Unit = {
     println("Name,Pruning,Size,Time")
     for (i <- 0.until(trials)) {

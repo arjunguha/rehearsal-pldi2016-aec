@@ -39,6 +39,12 @@ package repl {
       case List("detersuite") => DeterminismBenchmarks.run()
       case List("detersizes") => DeterminismSizeTables.run()
       case List("deterstress") => DeterStressBenchmark.run()
+      case List("deterbench", label, filename, os, pruning) => {
+        DeterminismBenchmarks.single(label, filename, os, pruning match {
+          case "prune" => true
+          case "noprune" => false
+        })
+      }
       case args => {
         sys.error(s"Invalid command-line arguments: $args")
       }
