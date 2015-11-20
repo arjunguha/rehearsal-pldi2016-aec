@@ -497,7 +497,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-
   def stNEq(st1: ST, st2: ST): Term = {
     (st1.isErr && Not(st2.isErr)) ||
       (st2.isErr && Not(st1.isErr)) ||

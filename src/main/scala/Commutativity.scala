@@ -17,7 +17,7 @@ object Commutativity {
       FileSets(Set.empty, Set.empty, Set(d1))
     }
     case If(a, p, q) => exprFileSets(p).combine(exprFileSets(q)).withReads(a.readSet)
-    case Seq(p, q) => exprFileSets(p) >> exprFileSets(q)
+    case Seq(p, q) => exprFileSets(p).combine(exprFileSets(q))
     case Mkdir(path) => {
       if (path.getParent == null) {
         FileSets(Set.empty, Set(path), Set.empty)

@@ -40,13 +40,6 @@ object FSSyntax {
       FileSets(reads ++ notDirs, writes ++ notDirs, dirs -- notDirs)
     }
 
-    def >>(other: FileSets): FileSets = {
-      val reads = this.reads ++ (other.reads -- this.dirs)
-      val writes = this.writes ++ other.writes
-      val dirs = this.dirs ++ other.dirs
-      val notDirs = dirs intersect (reads ++ writes)
-      FileSets(reads ++ notDirs, writes ++ notDirs, dirs -- notDirs)
-    }
     def withReads(newReads: Set[Path]): FileSets = {
       this.combine(FileSets(newReads, Set(), Set()))
     }
