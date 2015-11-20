@@ -37,6 +37,17 @@ private[rehearsal] object Helpers {
     case Cp(src, dst) => src.ancestors() union dst.ancestors() union Set(src, dst)
   }
 
+  def exprWritePaths(expr: Expr): Set[Path] = expr match {
+    case Error => Set()
+    case Skip => Set()
+    case If(a, p, q) => exprWritePaths(p) union exprWritePaths(q)
+    case Seq(p, q) => exprWritePaths(p) union exprWritePaths(q)
+    case Mkdir(f) => Set(f)
+    case CreateFile(f, _) => Set(f)
+    case Rm(f) => Set(f)
+    case Cp(src, dst) => Set(src, dst)
+  }
+
   def exprHashes(expr: Expr): Set[String] = expr match{
     case Error => Set()
     case Skip => Set()

@@ -111,6 +111,7 @@ object FSSyntax {
 
     val size = Helpers.size(this)
     val paths = Helpers.exprPaths(this)
+    val writePaths = Helpers.exprWritePaths(this)
     val hashes = Helpers.exprHashes(this)
 
     val fileSets = Commutativity.exprFileSets(this)

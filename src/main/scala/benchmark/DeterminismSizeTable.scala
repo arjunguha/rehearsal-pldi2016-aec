@@ -8,9 +8,9 @@ object DeterminismSizeTables {
     val rg = PuppetParser.parseFile(path).eval().resourceGraph()
     val g = rg.fsGraph(os)
     val rSize = rg.deps.nodes.size
-    val paths = g.expr.paths.size
-    val prunablePaths =  DeterminismPruning.pruneablePathCount(g)
-    println(s"$label & $rSize & $paths & $prunablePaths \\\\")
+    val paths = g.expr.writePaths.size
+    val postPruningPaths =  g.pruneWrites.expr.writePaths.size
+    println(s"$label & $rSize & $paths & $postPruningPaths \\\\")
   }
 
 
