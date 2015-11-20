@@ -60,7 +60,7 @@ object DeterminismBenchmarks {
     for (i <- 0.until(trials)) {
       bench("monit", s"$root/dhoppe-monit.pp")
       bench("bind", s"$root/thias-bind.pp")
-      bench("hosting", s"$root/puppet-hosting_fixed.pp")
+      bench("hosting", s"$root/puppet-hosting_deter.pp")
       bench("dns", s"$root/antonlindstrom-powerdns.pp")
       bench("irc", s"$root/spiky-reduced.pp",  os = "centos-6")
       bench("xinetd", s"$root/ghoneycutt-xinetd.pp")
