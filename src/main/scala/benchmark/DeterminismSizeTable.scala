@@ -4,15 +4,29 @@ object DeterminismSizeTables {
 
   import SymbolicEvaluator._
 
-  def bench(label: String, path: String, os: String = "ubuntu-trusty"): Unit = {
+  var data: Set[(String, Int, Int, Int)] = Set()
+
+  def bench(label: String, path: String, os: String = "ubuntu-trusty") {
     val rg = PuppetParser.parseFile(path).eval().resourceGraph()
     val g = rg.fsGraph(os)
     val rSize = rg.deps.nodes.size
     val paths = g.expr.writePaths.size
     val postPruningPaths =  g.pruneWrites.expr.writePaths.size
-    println(s"$label & $rSize & $paths & $postPruningPaths \\\\")
+    data = data + ((label, rSize, paths, postPruningPaths))
   }
 
+  def printCSV() {
+    for ((label, size, paths, postPruningPaths) <- data) {
+      println(s"$label, $size, $paths, $postPruningPaths")
+    }
+  }
+
+  def printTable() {
+    for ((label, size, paths, postPruningPaths) <- data) {
+      println(s"$label & $size & $paths & $postPruningPaths \\\\")
+    }
+
+  }
 
   val root = "parser-tests/good"
 
@@ -30,6 +44,8 @@ object DeterminismSizeTables {
     bench("amavis", s"$root/mjhas-amavis.pp")
     bench("clamav", s"$root/mjhas-clamav.pp")
     bench("logstash", s"$root/Nelmo-logstash.pp")
+    printTable()
+    printCSV()
   }
 
 }
