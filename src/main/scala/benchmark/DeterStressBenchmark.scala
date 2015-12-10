@@ -27,7 +27,7 @@ object DeterStressBenchmark {
 //  }
 
   def run(): Unit = {
-    throw NotImplemented("")
+    ???
 //    println("Resources, Overlapping Paths, Time")
 //
 //    for (nodes <- List(10, 20, 30)) { // n resources

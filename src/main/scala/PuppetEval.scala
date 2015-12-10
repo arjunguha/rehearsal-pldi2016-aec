@@ -317,7 +317,7 @@ private object PuppetEval {
       case EStr(str) => throw EvalError(s"user-defined failure: $str")
       case v => throw EvalError(s"expected string argument, got $v ${manifest.pos}")
     }
-    case MApp(f, _) => throw NotImplemented(s"unsupported function: $f ${manifest.pos}")
+    case MApp(f, _) => ???
     case MCase(e, cases) => {
       val v = evalExpr(st, st.env, e)
       cases.find(c => matchCase(st, st.env, v, c)) match {
@@ -379,7 +379,7 @@ private object PuppetEval {
       case EResourceRef(typ, EStr(title)) => EBool(st.resources.contains(Node(typ, title)))
       case v => throw EvalError(s"expected resource reference as argument to defined")
     }
-    case EApp(f, args) => throw NotImplemented(s"function $f (${expr.pos})")
+    case EApp(f, args) => ???
     case ECond(e1, e2, e3) => evalBool(st, env, e1) match {
       case true => evalExpr(st, env, e2)
       case false => evalExpr(st, env, e3)
@@ -394,7 +394,7 @@ private object PuppetEval {
       }
       case _ => throw EvalError(s"expected match to find a string on the LHS and a regex on the RHS")
     }
-    case _ => throw NotImplemented(expr.toString)
+    case _ => ???
   }
 
   //Filters will not remove all unnecessary edges that are contained in inner graph

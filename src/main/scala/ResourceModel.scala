@@ -161,7 +161,7 @@ object ResourceModel {
     }
     case self@Service(name) => ite(testFileState(self.path, IsFile), Skip, Error)
     case Notify => Skip
-    case _ => throw NotImplemented(r.toString)
+    case _ => ???
   }
 
 }

@@ -90,7 +90,7 @@ class FSTable {
     case Mkdir(p) => Leaf(Some(Map(p -> IsDir)))
     case CreateFile(p, s) => Leaf(Some(Map(p -> IsFile)))
     case Rm(p) => Leaf(Some(Map(p -> DoesNotExist)))
-    case Cp(_, _) => throw NotImplemented("CP")
+    case Cp(_, _) => ???
   }
 
 

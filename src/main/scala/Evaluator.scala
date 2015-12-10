@@ -55,7 +55,7 @@ object FSEvaluator {
         None
       }
     }
-    case Cp(src, dst) => throw NotImplemented("not implemented")
+    case Cp(src, dst) => ???
     case Rm(p) => {
       if (isFile(st, p) || isEmptyDir(st, p)) {
         Some(st - p)
