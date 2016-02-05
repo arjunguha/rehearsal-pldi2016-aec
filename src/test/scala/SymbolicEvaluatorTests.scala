@@ -1,6 +1,6 @@
 import rehearsal.PuppetSyntax.Node
 
-class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
+class SymbolicEvaluator2Tests extends FunSuitePlus {
 
   import rehearsal._
   import FSSyntax._
@@ -119,9 +119,13 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     assert(true == isDeterministic(Graph[Expr, DiEdge](n, n)))
   }
 
-  test("file removal and creation should be non-deterministic") {
+  test("independent rm and createFile") {
     val p = Paths.get("/usr/foo")
-    assert(false == isDeterministic(Graph[Expr, DiEdge](rm(p), createFile(p, ""))))
+    val e1 = rm(p)
+    val e2 = createFile(p, "")
+    val g = Graph[Expr, DiEdge](e1, e2)
+    assert(e1.commutesWith(e2) == false, "commutativity check is buggy")
+    assert(false == isDeterministic(g))
   }
 
   test("package with config file non-deterministic graph") {
@@ -230,6 +234,18 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     assert(isDeterministic(m.pruneWrites()) == false, "slicing changed the result of determinism")
   }
 
+  test("openssh file-set checking") {
+    val g = PuppetParser.parse("""
+      package {'openssh':
+        ensure => latest,
+      }
+      """).eval.resourceGraph.fsGraph("centos-6")
+
+    val e = g.expr()
+    println(e)
+    println(e.fileSets)
+  }
+
   test("openssh class from SpikyIRC benchmark") {
     val m = PuppetParser.parse("""
       package {'openssh':
@@ -252,10 +268,20 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
       }
     """).eval().resourceGraph().fsGraph("centos-6")
 
-    val r1 = isDeterministic(m)
-    val r2 = isDeterministic(m.pruneWrites())
-    assert(r1 == r2)
-    assert(r2 == false)
+    val g2 = m.pruneWrites()
+
+    for (x <- m.exprs) {
+      println(x._2)
+
+      println("Reads: " + x._2.fileSets.reads)
+      println("Writes: " + x._2.fileSets.writes)
+      println("Dirs: " + x._2.fileSets.dirs)
+    }
+
+
+
+    assert(isDeterministic(g2) == false, "pruning changed result")
+    assert(isDeterministic(m) == false, "wrong result without pruning")
   }
 
   test("missing dependency between file and directory") {
@@ -310,6 +336,17 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     assert(SymbolicEvaluator.isDeterministic(g_))
   }
 
+  test("packges ircd-hybrid and httpd") {
+    // Both packages create files in /var.
+    val m = PuppetParser.parse("""
+      package{'ircd-hybrid': }
+      package{'httpd': }
+      """).eval.resourceGraph.fsGraph("centos-6").pruneWrites()
+
+    val List(e1, e2) = m.exprs.values.toList
+    assert (e1.commutesWith(e2))
+  }
+
   test("two independent packages") {
     val m = PuppetParser.parse(
       """
@@ -323,8 +360,18 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
           }
 
             """).eval.resourceGraph.fsGraph("centos-6")
+
     val pruned = m.pruneWrites()
-    assert(SymbolicEvaluator.isDeterministic(pruned) == true)
+    val List(e1, e2) = pruned.exprs.values.toList
+    println(e1)
+    println("---------")
+    println(e2)
+    println(Commutativity.commutesWith(e1, e2))
+    info(e1.fileSets.toString)
+    info(e2.fileSets.toString)
+    assert (e1.commutesWith(e2))
+    assert(SymbolicEvaluator.isDeterministic(pruned) == true,
+      ".commutesWith passed, but not deterministic! Very bad.")
   }
 
   test("java-reduced-less") {
@@ -348,8 +395,10 @@ class SymbolicEvaluator2Tests extends org.scalatest.FunSuite {
     assert(SymbolicEvaluator.isDeterministic(pruned) == true)
   }
 
+
   test("FOO") {
-    val g = PuppetParser.parseFile(s"parser-tests/good/spiky-reduced.pp").eval.resourceGraph.fsGraph("centos-6").pruneWrites().pruneWrites()
+    val g = PuppetParser.parseFile(s"parser-tests/good/spiky-reduced.pp").eval.resourceGraph.fsGraph("centos-6").pruneWrites()
+    println(g.deps)
     val m = g.exprs.values.map(e => e.paths.toList.map(p => p -> 1).toMap).foldLeft(Map[java.nio.file.Path, Int]())((x, y) =>
       x.combine(y) {
         case (None, None) => None

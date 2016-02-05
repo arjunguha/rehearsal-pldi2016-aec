@@ -1,4 +1,4 @@
-class DeterminismEvaluationSuite extends org.scalatest.FunSuite
+class DeterminismEvaluationSuite extends FunSuitePlus
   with org.scalatest.BeforeAndAfterEach {
 
   import rehearsal._
@@ -65,6 +65,11 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite
   test("spiky-reduced.pp pruned") {
     val g = parseFile(s"$root/spiky-reduced.pp").eval.resourceGraph.fsGraph("centos-6").pruneWrites()
     assert(SymbolicEvaluator.isDeterministic(g) == false)
+  }
+
+  test("spiky-reduced-deterministic.pp pruned") {
+    val g = parseFile(s"$root/spiky-reduced-deterministic.pp").eval.resourceGraph.fsGraph("centos-6").pruneWrites()
+    assert(SymbolicEvaluator.isDeterministic(g) == true)
   }
 
   test("ghoneycutt-xinetd.pp") {

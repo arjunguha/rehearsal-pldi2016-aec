@@ -6,8 +6,6 @@ object FSSyntax {
   import scalax.collection.Graph
   import scalax.collection.GraphEdge.DiEdge
 
-
-
   case class FileSets(reads: Set[Path], writes: Set[Path], dirs: Set[Path]) {
     require((reads intersect dirs).isEmpty, "read-set overlaps with dir-set")
     require((writes intersect dirs).isEmpty, "write-set overlaps with dir-set")
@@ -110,13 +108,13 @@ object FSSyntax {
 
   sealed abstract trait Expr {
     def pretty(): String = Pretty.pretty(this)
-    def commutesWith(other: Expr) = this.fileSets.commutes(other.fileSets)
+    def commutesWith(other: Expr) = this.fileSets.commutesWith(other.fileSets)
 
     lazy val size = Helpers.size(this)
     lazy val paths = Helpers.exprPaths(this)
     lazy val hashes = Helpers.exprHashes(this)
 
-    lazy val fileSets = Commutativity.exprFileSets(this)
+    lazy val fileSets = Commutativity.absState(this)
     lazy val isEffectFree = Helpers.isEffectFree(this)
 
     override def toString(): String = this.pretty()

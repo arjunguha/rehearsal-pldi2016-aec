@@ -242,7 +242,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         st.paths + (p -> FunctionApplication("IsFile", Seq(hashToZ3(h)))))
     }
     case F.Mkdir(p) => {
-      assert(readOnlyPaths.contains(p) == false)
+      assert(readOnlyPaths.contains(p) == false,
+        s"Mkdir($p) found, but path is read-only")
       val pre = Equals(st.paths(p), "DoesNotExist") && Equals(st.paths(p.getParent), "IsDir")
       ST(st.isErr || Not(pre),
         st.paths + (p -> "IsDir"))
@@ -344,7 +345,13 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   // Greedily breaks a list of expressions into groups that commute with each other
   def commutingGroups[K](exprs: Map[K, Expr], lst: List[K]): List[List[K]] = {
-    def f(m: K, n: K): Boolean = exprs(m).commutesWith(exprs(n))
+    def f(m: K, n: K): Boolean = {
+      val b = exprs(m).commutesWith(exprs(n))
+      if (!b) {
+        logger.info(s"$m.commutesWith($n) was false")
+      }
+      b
+    }
     groupBy2(f, lst)
   }
 
@@ -361,13 +368,18 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   }
 
   def evalGraph[K](st: ST, g: FSGraph[K]): ST = {
+    logger.info(s"evalGraph applied to a graph with ${g.deps.nodes.size} nodes")
+
     val fringe = g.deps.nodes.filter(_.inDegree == 0).toList.map(_.value)
     if (fringe.isEmpty) {
       return st
     }
 
     val rels = commutingGroups(g.exprs, fringe)
-      .map(nodes => Block(nodes.map(n => g.exprs(n)): _*))
+      .map(nodes => {
+        logger.info(s"Group $nodes")
+        Block(nodes.map(n => g.exprs(n)): _*)
+      })
       .map(expr => {
         val (inST, _) = freshST()
         (inST, evalExpr(inST, expr))
@@ -383,6 +395,9 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       return evalGraph(st, g.copy(deps = g.deps -- fringe))
     }
     logger.info(s"${rels.length} commuting groups")
+
+    // TODO(arjun): Need to print the groups (node names) to understand
+    // why things don't commute
 
     val (term, outST) = rels.reduce {
       (lhs: (Term, ST), rhs: (Term, ST)) => {
