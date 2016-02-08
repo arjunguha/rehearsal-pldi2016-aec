@@ -336,8 +336,18 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     assert(SymbolicEvaluator.isDeterministic(g_))
   }
 
-  test("packges ircd-hybrid and httpd") {
-    // Both packages create files in /var.
+  test("single user") {
+    val m = PuppetParser.parse(
+      """
+        user{"alice": managehome => true}
+      """).eval.resourceGraph.fsGraph("ubuntu").pruneWrites()
+
+    println(m.expr())
+  }
+
+  test("packages ircd-hybrid and httpd") {
+    // Both packages create files in /var. When we don't force /var to be
+    // a directory, this test checks that we do force / to be a directory.
     val m = PuppetParser.parse("""
       package{'ircd-hybrid': }
       package{'httpd': }
@@ -363,12 +373,6 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
 
     val pruned = m.pruneWrites()
     val List(e1, e2) = pruned.exprs.values.toList
-    println(e1)
-    println("---------")
-    println(e2)
-    println(Commutativity.commutesWith(e1, e2))
-    info(e1.fileSets.toString)
-    info(e2.fileSets.toString)
     assert (e1.commutesWith(e2))
     assert(SymbolicEvaluator.isDeterministic(pruned) == true,
       ".commutesWith passed, but not deterministic! Very bad.")

@@ -634,7 +634,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     !nondet
   }
 
-
   def isDeterministicError[K](g: FSGraph[K]): Boolean = smt.pushPop {
     val inST = initState
     assertPathConsistency(inST)
