@@ -168,41 +168,6 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     assert(false == isDeterministic(g))
   }
 
-  // TODO(arjun): not a test case
-  ignore("createFile should check that parent is a directory") {
-    val p1 = ite(testFileState("/packages/monit", DoesNotExist),
-      ite(testFileState("/etc", DoesNotExist),
-        mkdir("/etc"), Skip) >> ite(testFileState("/etc/monit", DoesNotExist),
-        mkdir("/etc/monit"), Skip) >> createFile("/etc/monit/monitrc", "") >> createFile("/packages/monit", ""), Skip)
-
-    val p2 = ite(testFileState("/etc/monit/conf.d", IsFile),
-              rm("/etc/monit/conf.d") >> createFile("/etc/monit/conf.d", ""),
-              ite(testFileState("/etc/monit/conf.d", DoesNotExist),
-                createFile("/etc/monit/conf.d", ""), Error))
-
-    val p3 = ite(testFileState("/etc/monit/conf.d/myservice", IsFile),
-             rm("/etc/monit/conf.d/myservice") >> createFile("/etc/monit/conf.d/myservice", ""),
-             ite(testFileState("/etc/monit/conf.d/myservice", DoesNotExist), createFile("/etc/monit/conf.d/myservice", ""), Error))
-
-
-    val p = p1 >> p2 >> p3
-    val s = new SymbolicEvaluatorImpl(p.paths.toList, p.hashes, Set(), None)
-    println(s.exprEquals(p, Error))
-
-  }
-
-//    val example1 = {
-//    import rehearsal.fsmodel._
-//    (And(testFileState(Paths.get("/usr"), IsFile),
-//      testFileState(Paths.get("/lib"), IsDir)))
-//  }
-//
-//  val example2 = {
-//    import rehearsal.fsmodel._
-//    testFileState(Paths.get("/usr"), IsFile)
-//
-//  }
-
   test("slicing regression: thias-bind-buggy") {
     val m = PuppetParser.parse(
       """
@@ -399,23 +364,6 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     assert(SymbolicEvaluator.isDeterministic(pruned) == true)
   }
 
-  test("linear pruning") {
-
-    val g = PuppetParser.parse(
-      """
-        file{"/mydir/myfile":
-          ensure => present
-        }
-
-        file{"/mydir":
-          ensure => directory,
-          before => File["/mydir/myfile"]
-        }
-      """).eval.resourceGraph.fsGraph("ubuntu").pruneWrites().pruneWrites()
-
-    println(g)
-  }
-
   test("pruning writes") {
 
 
@@ -440,76 +388,8 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     for (p <- g1.expr.fileSets.writes) {
       println(p)
     }
-  }
 
-
-  test("FOO") {
-    val g = PuppetParser.parseFile(s"parser-tests/good/spiky-reduced.pp").eval.resourceGraph.fsGraph("centos-6").pruneWrites()
-    println(g.deps)
-    val m = g.exprs.values.map(e => e.paths.toList.map(p => p -> 1).toMap).foldLeft(Map[java.nio.file.Path, Int]())((x, y) =>
-      x.combine(y) {
-        case (None, None) => None
-        case (None, y) => y
-        case (x, None) => x
-        case (Some(x), Some(y)) => Some(x+y)
-      }
-    )
-    val singleFiles = m.filter({ case (_, n) => n == 1}).keySet
-
-    def symDiff[A](x: Set[A], y: Set[A]): Set[A] = {
-      val i = x intersect y
-      (x diff i) union (y diff i)
-    }
-
-    def evalPred(pred: Pred): Set[java.nio.file.Path] = pred match {
-      case True => Set()
-      case False => Set()
-      case And(a, b) => symDiff(evalPred(a), evalPred(b))
-      case Or(a, b) => symDiff(evalPred(a), evalPred(b))
-      case Not(a) => evalPred(a)
-      case TestFileState(p, _) => Set(p)
-    }
-
-    def eval(expr: Expr): Set[java.nio.file.Path] = expr match {
-      case Mkdir(p) => Set(p)
-      case CreateFile(p, _) => Set(p)
-      case Rm(p) => Set(p)
-      case Cp(src, dst) => Set(src, dst)
-      case Error => Set()
-      case Skip => Set()
-      case If(pred, e1, e2) => symDiff(evalPred(pred), symDiff(eval(e1), eval(e2)))
-      case Seq(e1, e2) => symDiff(eval(e1), eval(e2))
-    }
-
-    val r = g.exprs.values.map(e => eval(e)).reduce((x, y) => symDiff(x, y))
-
-    info(s"Candidates: ${r.size}")
-
-    def eFree(expr: Expr): Boolean = expr match {
-      case Mkdir(p) => false
-      case CreateFile(p, _) => false
-      case Rm(p) => false
-      case Cp(src, dst) => false
-      case Error => true
-      case Skip => true
-      case If(pred, e1, e2) => eFree(e1) && eFree(e2)
-      case Seq(e1, e2) => eFree(e1) && eFree(e2)
-
-    }
-
-    val ef = g.exprs.values.toList.filter(e => eFree(e)).toList
-
-    for (lst <- ef.tails.filter(_.length >= 2)) {
-      val x = lst.head
-      for (y <- lst.tail) {
-        if (!x.commutesWith(y)) {
-          info("BAD")
-        }
-      }
-    }
-
-    info(s"Effect-free nodes: ${ef.size}, total nodes: ${g.exprs.size}")
-
+    assert(SymbolicEvaluator.isDeterministic(g1) == false)
   }
 
 }
