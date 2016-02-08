@@ -59,6 +59,7 @@ class DeterminismEvaluationSuite extends FunSuitePlus
 
   test("nfisher-SpikyIRC.pp") {
     val g = parseFile(s"$root/nfisher-SpikyIRC.pp").eval.resourceGraph.fsGraph("centos-6")
+
     assert(SymbolicEvaluator.isDeterministic(g.pruneWrites()) == false)
   }
 

@@ -36,7 +36,8 @@ object SymbolicEvaluator {
     result
   }
 
-   def mkImpl[K](g: FSGraph[K], logFile: Option[String]) = {
+
+  def mkImpl[K](g: FSGraph[K], logFile: Option[String]) = {
      val sets = Block(g.exprs.values.toSeq: _*).fileSets
      val ro = sets.reads -- sets.writes -- sets.dirs
     new SymbolicEvaluatorImpl(g.allPaths.toList,
@@ -94,6 +95,17 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   logger.info(s"Started with ${allPaths.size} paths, ${hashes.size} hashes, and ${readOnlyPaths.size} read-only paths")
 
   val writablePaths = allPaths.filterNot(p => readOnlyPaths.contains(p))
+
+  if (writablePaths.size < readOnlyPaths.size) {
+    for (p <- writablePaths) {
+      logger.info(s"$p is write-only")
+    }
+  }
+  else {
+    for (p <- readOnlyPaths) {
+      logger.info(s"$p is read-only")
+    }
+  }
 
   val smt = new SMT(logFile)
   import smt.eval
@@ -297,6 +309,19 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
       case _ => throw Unexpected("unexpected value for isErr")
     }
+  }
+
+  /**
+    * Checks if there is any input state that leads the expression to
+    * a non-error output state.
+    */
+  def everSucceeds(e: F.Expr): Boolean = smt.pushPop {
+   val initSt = initState
+    eval(Assert(Not(initSt.isErr)))
+    assertPathConsistency(initSt)
+    val finalSt = evalExpr(initSt, e)
+    eval(Assert(Not(finalSt.isErr)))
+    smt.checkSat()
   }
 
   def exprEquals(e1: F.Expr, e2: F.Expr): Option[State] = smt.pushPop {

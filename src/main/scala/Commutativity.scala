@@ -33,8 +33,6 @@ object Commutativity {
   case object W extends V
   case object D extends V
 
-  // type St = Map[Path, V]
-
   case class St(map: Map[Path, V]) {
 
     def apply(p: Path): V = map.get(p) match {

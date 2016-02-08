@@ -399,6 +399,49 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     assert(SymbolicEvaluator.isDeterministic(pruned) == true)
   }
 
+  test("linear pruning") {
+
+    val g = PuppetParser.parse(
+      """
+        file{"/mydir/myfile":
+          ensure => present
+        }
+
+        file{"/mydir":
+          ensure => directory,
+          before => File["/mydir/myfile"]
+        }
+      """).eval.resourceGraph.fsGraph("ubuntu").pruneWrites().pruneWrites()
+
+    println(g)
+  }
+
+  test("pruning writes") {
+
+
+    val e = mkdir("/foo") >> mkdir("/foo/bar")
+    println(DeterminismPruning.absEval(e))
+
+  }
+
+  test("contract edges") {
+    val g = PuppetParser.parseFile(s"parser-tests/good/nfisher-SpikyIRC.pp")
+      .eval.resourceGraph.fsGraph("centos-6").addRoot(Node("root", "")).contractEdges.pruneWrites
+
+    val e = g.exprs(Node("user", "gga"))
+    logger.info("Candidates for pruning:")
+    logger.info(DeterminismPruning2.pruningCandidates(g.exprs).toString)
+    logger.info("Definitive write: " + DeterminismPruning2.isDefinitiveWrite("/home/gga/.ssh".toPath, e))
+
+    val g1 = DeterminismPruning2.pruneWrites(g)
+
+    println(g.expr.fileSets.writes.size)
+    println(g1.expr.fileSets.writes.size)
+    for (p <- g1.expr.fileSets.writes) {
+      println(p)
+    }
+  }
+
 
   test("FOO") {
     val g = PuppetParser.parseFile(s"parser-tests/good/spiky-reduced.pp").eval.resourceGraph.fsGraph("centos-6").pruneWrites()

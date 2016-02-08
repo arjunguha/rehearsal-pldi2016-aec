@@ -186,6 +186,7 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
   def pruneGraph[A](graph: FSGraph[A]): FSGraph[A] = {
     val toPrune = pruneablePaths(graph)
     logger.info(s"May prune ${toPrune.size} paths")
+    logger.info(s"Is it prunable: ${toPrune.contains("/home/gga/.irssi".toPath)}")
     FSGraph(graph.exprs.mapValues(e => prune(toPrune, e)), graph.deps)
   }
 
