@@ -174,6 +174,8 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
       r
     }
 
+    def pruneWrites2(): FSGraph[K] = DeterminismPruning2.pruneWrites(this)
+
     /** Checks if two <b>deterministic</b> FS graphs are equivalent.
       *
       * @param other the other FS graph
