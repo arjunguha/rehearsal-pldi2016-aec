@@ -8,6 +8,7 @@ object DeterminismBenchmarks {
 
   def bench(label: String, path: String, check: FileScriptGraph => Option[Boolean], expected: Boolean, onlySliced: Boolean = false, os: String = "ubuntu-trusty"): Unit = {
     val g = PuppetParser.parseFile(path).eval.resourceGraph.fsGraph(os)
+    import scala.sys.process._
 
     def checkAndOutput(res: (Option[Boolean], Long), pruning: String, size: Int) = res match {
       case (Some(out), t) => {

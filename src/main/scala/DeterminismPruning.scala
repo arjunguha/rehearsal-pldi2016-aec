@@ -94,9 +94,8 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
 
   def pruneablePaths[A](graph: FSGraph[A]): Set[Path] = {
 
-    //val absStates = graph.exprs.mapValues(absEval)
-    val absStates2 = graph.exprs.values.map(absEval)
-    val maybeFiles = absStates2.foldLeft[Option[Set[Path]]](Some(Set())) {
+    val absStates = graph.exprs.values.map(absEval)
+    val maybeFiles = absStates.foldLeft[Option[Set[Path]]](Some(Set())) {
       case (None, _) => None
       case (_ ,None) => None
       case (Some(files), Some(st)) => {
@@ -106,12 +105,12 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
           case Some(st) => st == Set(AUntouched)
         })
 
-
         val newFiles = st.keySet
           .filter({ case p =>
             st(p).contains(AFile) &&
             (st(p).subsetOf(Set(AFile, AUntouched))) &&
             !files.contains(p) })
+        // TODO(arjun): This is just disjoint union, right?
         Some(preserved union newFiles)
       }
     }
@@ -119,14 +118,10 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
     maybeFiles.get
   }
 
-  def assertDir(p: Path) = If(TestFileState(p, IsDir), Skip, Error)
+  def assertDir(p: Path) = ite(testFileState(p, IsDir), Skip, Error)
 
   def mayAssertParent(toPrune: Set[Path], p: Path) = {
     if (toPrune.contains(p.getParent)) Skip else assertDir(p.getParent)
-  }
-
-  def mkIf(a: Pred, e1: Expr, e2: Expr) = {
-    if (e1 == e2) e1 else If(a, e1, e2)
   }
 
   def specPred(pred: Pred, h: Map[Path, AStat]): Pred = pred match {
@@ -150,22 +145,22 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
         case Skip => (e, h)
         case Error => (e, h)
         case Mkdir(p) if canPrune.contains(p) =>
-          (If(TestFileState(p, DoesNotExist) && TestFileState(p.getParent, IsDir),
+          (ite(testFileState(p.getParent, IsDir),
               Skip, Error),
            h + (p -> ADir) + (p.getParent -> ADir))
         case Mkdir(p) => (e, h + (p -> ADir) + (p.getParent -> ADir))
         case CreateFile(p, _) if canPrune.contains(p) =>
-          (If(TestFileState(p, DoesNotExist) && TestFileState(p.getParent, IsDir),
+          (ite(testFileState(p.getParent, IsDir),
               Skip, Error),
            h + (p -> AFile) + (p.getParent -> ADir))
         case CreateFile(p, _) => (e, h + (p -> AFile) + (p.getParent -> ADir))
         /*TODO [Rian]: this only prunes RmFiles not RmDirs; need IsEmpty predicate*/
-        case Rm(p) if canPrune.contains(p) => (If(!TestFileState(p, IsFile), Skip, Error),
+        case Rm(p) if canPrune.contains(p) => (Skip,
                                         h + (p -> ADoesNotExist))
         case Rm(_) => (e, h)
         case Cp(p1, p2) if canPrune.contains(p2) =>
-          (If(TestFileState(p1, IsFile) && TestFileState(p2, DoesNotExist) &&
-                TestFileState(p2.getParent, IsDir),
+          (ite(testFileState(p1, IsFile) &&
+                testFileState(p2.getParent, IsDir),
               Skip, Error),
            h + (p1 -> AFile) + (p2 -> AFile) + (p2.getParent -> ADir))
         case Cp(p1, p2) => (e, h + (p1 -> AFile) + (p2 -> AFile) + (p2.getParent -> ADir))
@@ -177,18 +172,21 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
         case If(a, e1, e2) => {
           val e1Pruned = pruneRec(canPrune, e1, h)
           val e2Pruned = pruneRec(canPrune, e2, h)
-          (If(specPred(a, h), e1Pruned._1, e2Pruned._1), h)
+          (ite(specPred(a, h), e1Pruned._1, e2Pruned._1), h)
         }
       }
     }
 
-  def prune(canPrune: Set[Path], e: Expr): Expr = pruneRec(canPrune, e, Map())._1
+  def prune(canPrune: Set[Path], e: Expr): Expr = {
+    val result = pruneRec(canPrune, e, Map())._1
+    //assert (result.paths.intersect(canPrune).isEmpty, s"pruning did not remove path: $result")
+    result
+  }
 
   def pruneGraph[A](graph: FSGraph[A]): FSGraph[A] = {
     val toPrune = pruneablePaths(graph)
-    logger.info(s"Pruning: $toPrune")
-    //val toPrune = toPrune_.filterNot(p => toPrune_.exists(p_ => p_ != p && p_.startsWith(p)))
-    logger.info(s"Pruning removes ${toPrune.size} paths")
+    logger.info(s"May prune ${toPrune.size} paths")
+    logger.info(s"Is it prunable: ${toPrune.contains("/home/gga/.irssi".toPath)}")
     FSGraph(graph.exprs.mapValues(e => prune(toPrune, e)), graph.deps)
   }
 

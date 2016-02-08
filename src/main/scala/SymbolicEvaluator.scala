@@ -5,6 +5,7 @@ import smtlib._
 import parser._
 import Commands._
 import Terms._
+import smtlib.theories.Ints.IntSort
 import theories.Core.{And => _, Or => _, _}
 import scala.util.{Try, Success, Failure}
 import CommandsResponses._
@@ -35,11 +36,11 @@ object SymbolicEvaluator {
     result
   }
 
-   def mkImpl[K](g: FSGraph[K], logFile: Option[String]) = {
+
+  def mkImpl[K](g: FSGraph[K], logFile: Option[String]) = {
      val sets = Block(g.exprs.values.toSeq: _*).fileSets
      val ro = sets.reads -- sets.writes -- sets.dirs
-    new SymbolicEvaluatorImpl(
-      g.deps.nodes.map(n => g.exprs(n).paths).reduce(_ union _).toList,
+    new SymbolicEvaluatorImpl(g.allPaths.toList,
       g.deps.nodes.map(n => g.exprs(n).hashes).reduce(_ union _),
       ro,
       logFile)
@@ -112,6 +113,17 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   val writablePaths = allPaths.filterNot(p => readOnlyPaths.contains(p))
 
+  if (writablePaths.size < readOnlyPaths.size) {
+    for (p <- writablePaths) {
+      logger.info(s"$p is write-only")
+    }
+  }
+  else {
+    for (p <- readOnlyPaths) {
+      logger.info(s"$p is read-only")
+    }
+  }
+
   val smt = new SMT(logFile)
   import smt.eval
 
@@ -180,6 +192,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
+  // TODO(arjun): What is the point of returning these commands?
   def freshST(): (ST, List[Command]) = {
 
     val ids = writablePaths.map(p => {
@@ -225,6 +238,11 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
+  def ifST(b: Term, st1: ST, st2: ST): ST = {
+    ST(ite(b, st1.isErr, st2.isErr),
+      writablePaths.map(p => (p, ite(b, st1.paths(p), st2.paths(p)))).toMap ++ readOnlyMap)
+  }
+
   def evalExpr(st: ST, expr: F.Expr): ST = expr match {
     case F.Skip => st
     case F.Error => ST(True(), st.paths)
@@ -253,7 +271,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         st.paths + (p -> FunctionApplication("IsFile", Seq(hashToZ3(h)))))
     }
     case F.Mkdir(p) => {
-      assert(readOnlyPaths.contains(p) == false)
+      assert(readOnlyPaths.contains(p) == false,
+        s"Mkdir($p) found, but path is read-only")
       val pre = Equals(st.paths(p), "DoesNotExist") && Equals(st.paths(p.getParent), "IsDir")
       ST(st.isErr || Not(pre),
         st.paths + (p -> "IsDir"))
@@ -278,6 +297,14 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
+  def exprAsPred(st: ST, expr: F.Expr): Term = expr match {
+    case F.Skip => True()
+    case F.Error => False()
+    case F.Seq(p, q) => exprAsPred(st, p) && exprAsPred(st, q)
+    case F.If(a, e1, e2) => ite(evalPred(st, a), exprAsPred(st, e1), exprAsPred(st, e2))
+    case _ => throw Unexpected(s"exprAsPred got $expr")
+  }
+
   def fstateFromTerm(term: Term): Option[FSEvaluator.FState] = term match {
     case QualifiedIdentifier(Identifier(SSymbol("IsDir"), _), _) => Some(FSEvaluator.FDir)
     case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("IsFile"), _), _), Seq(h)) =>
@@ -299,6 +326,19 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
       case _ => throw Unexpected("unexpected value for isErr")
     }
+  }
+
+  /**
+    * Checks if there is any input state that leads the expression to
+    * a non-error output state.
+    */
+  def everSucceeds(e: F.Expr): Boolean = smt.pushPop {
+   val initSt = initState
+    eval(Assert(Not(initSt.isErr)))
+    assertPathConsistency(initSt)
+    val finalSt = evalExpr(initSt, e)
+    eval(Assert(Not(finalSt.isErr)))
+    smt.checkSat()
   }
 
   def exprEquals(e1: F.Expr, e2: F.Expr): Option[State] = smt.pushPop {
@@ -347,28 +387,105 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   // Greedily breaks a list of expressions into groups that commute with each other
   def commutingGroups[K](exprs: Map[K, Expr], lst: List[K]): List[List[K]] = {
-    def f(m: K, n: K): Boolean = exprs(m).commutesWith(exprs(n))
+    def f(m: K, n: K): Boolean = {
+      val b = exprs(m).commutesWith(exprs(n))
+      if (!b) {
+        logger.info(s"$m.commutesWith($n) was false")
+      }
+      b
+    }
     groupBy2(f, lst)
   }
 
-  def evalGraph[K](st: ST, g: FSGraph[K]): ST = evalGraphAbort(st, g)((_, _) => false)
+  def stSeq(init: ST)(rest: List[(ST, ST)]): (Term, ST) = {
+    def loop(curr: ST, lst: List[(ST, ST)]): (Term, ST) = lst match {
+      case Nil => (True(), curr)
+      case (inST, outST) :: tail => {
+        val term1 = stEquals(curr, inST)
+        val (term2, st) = loop(outST, tail)
+        (term1 && term2, st)
+      }
+    }
+    loop(init, rest)
+  }
+
+  def evalGraph[K](st: ST, g: FSGraph[K]): ST = {
+    logger.info(s"evalGraph applied to a graph with ${g.deps.nodes.size} nodes")
+
+    val fringe = g.deps.nodes.filter(_.inDegree == 0).toList.map(_.value)
+    if (fringe.isEmpty) {
+      return st
+    }
+
+    val rels = commutingGroups(g.exprs, fringe)
+      .map(nodes => {
+        logger.info(s"Group $nodes")
+        Block(nodes.map(n => g.exprs(n)): _*)
+      })
+      .map(expr => {
+        val (inST, _) = freshST()
+        (inST, evalExpr(inST, expr))
+      })
+      .permutations
+      .map(stSeq(st))
+      .toList
+      .reverse
+
+    if (rels.length == 1) {
+      val (term, st) = rels.head
+      eval(Assert(term))
+      return evalGraph(st, g.copy(deps = g.deps -- fringe))
+    }
+    logger.info(s"${rels.length} commuting groups")
+
+    // TODO(arjun): Need to print the groups (node names) to understand
+    // why things don't commute
+
+    val (term, outST) = rels.reduce {
+      (lhs: (Term, ST), rhs: (Term, ST)) => {
+        val (term1, st1) = lhs
+        val (term2, st2) = rhs
+        val c = freshName("choice")
+        eval(DeclareConst(c, BoolSort()))
+        (ITE(c, term1, term2), ifST(c, st1, st2))
+      }
+    }
+    eval(Assert(term))
+    evalGraph(outST, g.copy(deps = g.deps -- fringe))
+  }
 
   case object AbortEarlyError extends RuntimeException("evalGraph aborted early")
 
+  def predEarlyAbort(assertion: Expr, st1: ST, st2: ST): ST = {
+    val isOK2 = exprAsPred(st2, assertion)
+    smt.pushPop {
+      val isOK1 = exprAsPred(st1, assertion)
+      eval(Assert(Not(Equals(isOK1, isOK2))))
+      if (smt.checkSat()) {
+         throw AbortEarlyError
+      }
+    }
+    ST(st2.isErr || Not(isOK2), st2.paths)
+  }
+
   def evalGraphAbort[K](st: ST, g: FSGraph[K])(shouldAbort: (ST, ST) => Boolean): ST = {
     val fringe = g.deps.nodes.filter(_.inDegree == 0).toSet.map[K, Set[K]](_.value).toList
-    if (fringe.length == 0) {
-      st
+    val (assertions, nonAssertions) = fringe.partition(node => g.exprs(node).isEffectFree)
+    val aExpr = Block(assertions.map(n => g.exprs(n)): _*)
+    if (nonAssertions.length == 0) {
+      evalExpr(st, aExpr)
     }
     else {
-      val fringe1 = commutingGroups(g.exprs, fringe)
-      logger.info(s"${fringe1.length} commuting groups")
+      val fringe1 = commutingGroups(g.exprs, nonAssertions)
       if (fringe1.length == 1) {
-        evalGraphAbort(evalExpr(st, Block(fringe1.head.map(n => g.exprs(n)) : _*)), g.copy(deps = g.deps -- fringe1.head))(shouldAbort)
+        val expr =  predEarlyAbort(aExpr, st, evalExpr(st, Block(fringe1.head.map(n => g.exprs(n)) : _*)))
+        evalGraphAbort(expr, g.copy(deps = g.deps -- assertions -- fringe1.head))(shouldAbort)
       }
       else {
-        fringe1.toStream.map(p => evalGraphAbort(evalExpr(st, Block(p.map(n => g.exprs(n)) : _*)),
-                                   g.copy(deps = g.deps -- p))(shouldAbort)).reduce({ (st1: ST, st2: ST) =>
+        logger.info(s"Choices: ${fringe1.length}")
+        fringe1.toStream.map(p =>
+            evalGraphAbort(predEarlyAbort(aExpr, st, evalExpr(st, Block(p.map(n => g.exprs(n)) : _*))),
+                           g.copy(deps = g.deps -- assertions -- p))(shouldAbort)).reduce({ (st1: ST, st2: ST) =>
           if (shouldAbort(st1, st2)) {
             throw AbortEarlyError
           }
@@ -376,6 +493,62 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
           val b = eval(DeclareConst(c, BoolSort()))
           ST(ite(c, st1.isErr, st2.isErr),
             writablePaths.map(p => p -> ite(c, st1.paths(p),st2.paths(p))).toMap ++ readOnlyMap)
+        })
+      }
+    }
+  }
+
+  /*
+    def predEarlyAbort(assertion: Expr, st1: ST, st2: ST): ST = {
+    val isOK2 = exprAsPred(st2, assertion)
+    smt.pushPop {
+      val isOK1 = exprAsPred(st1, assertion)
+      eval(Assert(Not(Equals(isOK1, isOK2))))
+      if (smt.checkSat()) {
+         throw AbortEarlyError
+      }
+    }
+    ST(st2.isErr || Not(isOK2), st2.paths)
+  }
+
+   */
+
+  def earlyAbort(assertion: Expr, st1: ST, st2: ST): (Term, ST) = {
+    val isErr1 = exprAsPred(st1, assertion)
+    val isErr2 = exprAsPred(st2, assertion)
+    (Not(Equals(isErr1, isErr2)), ST(st2.isErr || Not(isErr1), st2.paths))
+  }
+
+
+  def isGraphDeterministic[K](st: ST, g: FSGraph[K]): (Term, ST) = {
+    val fringe_ = g.deps.nodes.filter(_.inDegree == 0).toSet.map[K, Set[K]](_.value).toList
+    val (assertions, fringe) = fringe_.partition(node => g.exprs(node).isEffectFree)
+    val aExpr = Block(assertions.map(n => g.exprs(n)): _*)
+    if (fringe.length == 0) {
+      (False(), evalExpr(st, aExpr))
+    }
+    else {
+      val fringe1 = commutingGroups(g.exprs, fringe)
+      if (fringe1.length == 1) {
+        val (isNonDet1, expr) = earlyAbort(aExpr, st, evalExpr(st, Block(fringe1.head.map(n => g.exprs(n)) : _*)))
+        val (isNonDet2, st_) = isGraphDeterministic(expr, g.copy(deps = g.deps -- fringe1.head -- assertions))
+        (isNonDet1 || isNonDet2, st_)
+      }
+      else {
+        logger.info(s"Choices: ${fringe1.length}")
+        val lst = fringe1.map(nodes => {
+          val (isNonDet1, expr) = earlyAbort(aExpr, st, evalExpr(st, Block(nodes.map(node => g.exprs(node)): _*)))
+          val (isNonDet2, st_) = isGraphDeterministic(expr, g.copy(deps = g.deps -- nodes -- assertions))
+          (isNonDet1 || isNonDet2, st_)
+        })
+        lst.reduce((x: (Term, ST), y: (Term, ST)) => {
+          val (pred1, st1) = x
+          val (pred2, st2) = y
+          val c = freshName("choice")
+          val b = eval(DeclareConst(c, BoolSort()))
+          (pred1 || pred2 || stNEq(st1, st2),
+           ST(ite(c, st1.isErr, st2.isErr),
+              writablePaths.map(p => p -> ite(c, st1.paths(p),st2.paths(p))).toMap ++ readOnlyMap))
         })
       }
     }
@@ -452,18 +625,55 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     isIdempotent(exprs.foldRight(FSSyntax.Skip: Expr)((e, expr) => e >> expr))
   }
 
-  def isDeterministic[K](g: FSGraph[K]): Boolean = smt.pushPop {
 
+  /*
+  def isDeterministic[K](g: FSGraph[K]): Boolean = smt.pushPop {
     val inST = initState
     logger.info(s"Generating constraints for a graph with ${g.exprs.size} nodes")
-    Try(evalGraphAbort(inST, g)(diverged(inST))) match {
-      case Failure(AbortEarlyError) => {
-        logger.info("Program is non-deterministic according to early error check.")
-        return false
+    val (pred, st) = isGraphDeterministic(inST, g)
+    eval(Assert(pred))
+    !smt.checkSat()
+//    Try(evalGraphAbort(inST, g)(diverged(inST))) match {
+//      case Failure(AbortEarlyError) => {
+//        logger.info("Program is non-deterministic according to early error check.")
+//        return false
+//      }
+//      case Failure(e) => throw e
+//      case Success(st) => true
+//    }
+  }
+*/
+
+  def isDeterministic[K](g: FSGraph[K]): Boolean = smt.pushPop {
+    val inST = initState
+    assertPathConsistency(inST)
+    logger.info(s"Generating constraints for a graph with ${g.exprs.size} nodes")
+    val outST1 = evalGraph(inST, g)
+    val outST2 = evalGraph(inST, g)
+    eval(Assert(Not(stEquals(outST1, outST2))))
+    val nondet = smt.checkSat()
+    if (nondet) {
+      eval(GetModel())
+      (stateFromTerm(inST), stateFromTerm(outST1), stateFromTerm(outST2)) match {
+        case (None, _, _) => throw Unexpected("bad model: initial state should not be error")
+        case (Some(in), None, Some(out)) => {
+          logger.info(s"On input\n$in\nthe program produces error or output\n$out")
+          logDiff(in, out)
+        }
+        case (Some(in), Some(out), None) => {
+          logger.info(s"On input\n$in\nthe program produces error or output\n$out")
+          logDiff(in, out)
+        }
+        case (Some(in), Some(out1), Some(out2)) => {
+          logger.info(s"On input\n$in\nthe program produces two possible outputs!")
+          logger.info(out1.toString)
+          logger.info(out2.toString)
+
+        }
+        case (Some(_), None, None) => throw Unexpected("bad model: both outputs are identical errors")
       }
-      case Failure(e) => throw e
-      case Success(st) => true
     }
+    !nondet
   }
 
   def isDeterministicError[K](g: FSGraph[K]): Boolean = smt.pushPop {

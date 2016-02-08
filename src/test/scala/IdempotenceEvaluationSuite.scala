@@ -1,4 +1,6 @@
-class IdempotenceEvaluationSuite extends org.scalatest.FunSuite {
+class IdempotenceEvaluationSuite extends org.scalatest.FunSuite
+  with org.scalatest.BeforeAndAfterEach {
+
 
   import rehearsal._
   import PuppetParser.parseFile
@@ -12,6 +14,10 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite {
   import PuppetSyntax._
 
   val root = "parser-tests/good"
+
+  override def beforeEach() = {
+    FSSyntax.clearCache()
+  }
 
   test("dhoppe-monit.pp") {
     val g = parseFile(s"$root/dhoppe-monit.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
@@ -165,16 +171,27 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite {
     assert(e.pruneIdem().isIdempotent() == true, "not idempotent")
   }
 
+  test("pdurbin-java-jpa-tutorial.pp") {
+    val g = parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph.fsGraph("centos-6")
+    assert(SymbolicEvaluator.isDeterministic(g.pruneWrites))
+    assert(g.expr.pruneIdem.isIdempotent == true)
+  }
+
+  test("BenoitCattie-puppet-nginx.pp") {
+    val g = parseFile(s"$root/BenoitCattie-puppet-nginx.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(SymbolicEvaluator.isIdempotent(g) == true)
+  }
+
   test("small non-idempotent example (in FS)") {
    import FSSyntax._
     val dst = "/dst.txt"
     val src = "/src.txt"
-    val e1 = If(TestFileState(dst, IsFile),
-      Rm(dst) >> Cp(src, dst),
-      If(TestFileState(dst, DoesNotExist),
-        Cp(src, dst),
+    val e1 = ite(testFileState(dst, IsFile),
+      rm(dst) >> cp(src, dst),
+      ite(testFileState(dst, DoesNotExist),
+        cp(src, dst),
         Error))
-    val e2 = If(TestFileState(src, IsFile), Rm(src), Skip)
+    val e2 = ite(testFileState(src, IsFile), rm(src), Skip)
     val e = e1 >> e2
 
     assert(e.isIdempotent() == false)

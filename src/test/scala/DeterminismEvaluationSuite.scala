@@ -1,4 +1,5 @@
-class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
+class DeterminismEvaluationSuite extends FunSuitePlus
+  with org.scalatest.BeforeAndAfterEach {
 
   import rehearsal._
   import PuppetParser.parseFile
@@ -12,6 +13,10 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
   import PuppetSyntax._
 
   val root = "parser-tests/good"
+
+  override def beforeEach() = {
+    FSSyntax.clearCache()
+  }
 
   test("dhoppe-monit.pp") {
     val g = parseFile(s"$root/dhoppe-monit.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
@@ -30,7 +35,6 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
 
   test("thias-bind-buggy.pp") {
     val g = parseFile(s"$root/thias-bind-buggy.pp").eval.resourceGraph.fsGraph("centos-6")
-    assert(SymbolicEvaluator.isDeterministicError(g.pruneWrites()) == false)
     assert(SymbolicEvaluator.isDeterministic(g.pruneWrites()) == false)
   }
 
@@ -58,14 +62,19 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     assert(SymbolicEvaluator.isDeterministic(g) == true)
   }
 
-  ignore("nfisher-SpikyIRC.pp") {
+  test("nfisher-SpikyIRC.pp") {
     val g = parseFile(s"$root/nfisher-SpikyIRC.pp").eval.resourceGraph.fsGraph("centos-6")
     assert(SymbolicEvaluator.isDeterministic(g.pruneWrites()) == false)
   }
 
-  ignore("spiky-reduced.pp pruned") {
+  test("spiky-reduced.pp pruned") {
     val g = parseFile(s"$root/spiky-reduced.pp").eval.resourceGraph.fsGraph("centos-6").pruneWrites()
     assert(SymbolicEvaluator.isDeterministic(g) == false)
+  }
+
+  test("spiky-reduced-deterministic.pp pruned") {
+    val g = parseFile(s"$root/spiky-reduced-deterministic.pp").eval.resourceGraph.fsGraph("centos-6").pruneWrites()
+    assert(SymbolicEvaluator.isDeterministic(g) == true)
   }
 
   test("ghoneycutt-xinetd.pp") {
@@ -102,7 +111,7 @@ class DeterminismEvaluationSuite extends org.scalatest.FunSuite {
     val g = parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph.fsGraph("centos-6")
     assert(SymbolicEvaluator.isDeterministic(g.pruneWrites()) == true)
   }
-  
+
   test("thias-ntp.pp") {
     val g = parseFile(s"$root/thias-ntp.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
     assert(SymbolicEvaluator.isDeterministic(g) == false)

@@ -131,7 +131,7 @@ object ResourceSemantics {
         attrs.consume("withpath", "")
         Notify
       }
-      case _ => throw NotImplemented(resource.toString)
+      case _ => ???
     }
     attrs.assertAllUsed()
     result
