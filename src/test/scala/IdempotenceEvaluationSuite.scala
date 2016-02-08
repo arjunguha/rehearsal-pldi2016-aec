@@ -109,11 +109,6 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite
       .fsGraph("ubuntu-trusty").expr().pruneIdem().isIdempotent() == true)
   }
 
-  test("pdurbin-java-jpa-tutorial.pp") {
-    assert(parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph
-            .fsGraph("centos-6").expr().isIdempotent() == true)
-  }
-
   test("pdurbin-java-jpa-tutorial.pp pruned") {
     assert(parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph
             .fsGraph("centos-6").expr().pruneIdem.isIdempotent() == true)
