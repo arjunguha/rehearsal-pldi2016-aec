@@ -134,9 +134,13 @@ object ResourceModel {
       val createfiles = files.toSeq.map((f) => createFile(f, somecontent))
       val exprs = mkdirs ++ createfiles
 
-      ite(testFileState(s"/packages/${name}", DoesNotExist),
-         createFile(s"/packages/${name}", "") >> Block(exprs: _*),
-         Skip)
+
+      ite(testFileState(s"/packages/${name}", IsFile),
+
+          // TODO(arjun): The issue is that the files and directories are not
+          // always created.
+          Skip,
+          createFile(s"/packages/${name}", "") >> Block(exprs: _*))
     }
     case Package(name, false) => {
       // TODO(arjun): Shouldn't this only remove files and newly created directories?

@@ -113,15 +113,11 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   val writablePaths = allPaths.filterNot(p => readOnlyPaths.contains(p))
 
-  if (writablePaths.size < readOnlyPaths.size) {
-    for (p <- writablePaths) {
-      logger.info(s"$p is write-only")
-    }
+  for (p <- writablePaths) {
+    logger.info(s"$p is writable")
   }
-  else {
-    for (p <- readOnlyPaths) {
-      logger.info(s"$p is read-only")
-    }
+  for (p <- readOnlyPaths) {
+    logger.info(s"$p is read-only")
   }
 
   val smt = new SMT(logFile)

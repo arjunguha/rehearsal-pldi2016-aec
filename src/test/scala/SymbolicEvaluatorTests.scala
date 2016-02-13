@@ -372,24 +372,15 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
 
   }
 
-  test("contract edges") {
-    val g = PuppetParser.parseFile(s"parser-tests/good/nfisher-SpikyIRC.pp")
-      .eval.resourceGraph.fsGraph("centos-6").addRoot(Node("root", "")).contractEdges.pruneWrites
+  test("In Spiky, irssi configuration files should be trivially files") {
+    import DeterminismPruning2._
+    val g = PuppetParser.parseFile(s"parser-tests/good/spiky-reduced.pp")
+      .eval.resourceGraph.fsGraph("centos-6")
 
-    val e = g.exprs(Node("user", "gga"))
-    logger.info("Candidates for pruning:")
-    logger.info(DeterminismPruning2.pruningCandidates(g.exprs).toString)
-    logger.info("Definitive write: " + DeterminismPruning2.isDefinitiveWrite("/home/gga/.ssh".toPath, e))
-
-    val g1 = DeterminismPruning2.pruneWrites(g)
-
-    println(g.expr.fileSets.writes.size)
-    println(g1.expr.fileSets.writes.size)
-    for (p <- g1.expr.fileSets.writes) {
-      println(p)
-    }
-
-    assert(SymbolicEvaluator.isDeterministic(g1) == false)
+    val candidates = pruningCandidates2(g.exprs)
+    val collectd = Node("package", "collectd")
+    println(branchingPaths(g.exprs(collectd)))
+    println(candidates(Node("package", "collectd")))
   }
 
 }
