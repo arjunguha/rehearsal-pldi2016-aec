@@ -2,7 +2,6 @@ package rehearsal
 
 object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
 
-  import rehearsal.PuppetSyntax.FSGraph
   import FSSyntax._
   import Implicits._
 
@@ -78,9 +77,6 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
     result
   }
 
-  import PuppetSyntax.FSGraph
-  import Implicits._
-  import FSSyntax._
 
   def pruneWrites[K](graph: FSGraph[K]): FSGraph[K] = {
     val candidates = pruningCandidates2(graph.exprs)

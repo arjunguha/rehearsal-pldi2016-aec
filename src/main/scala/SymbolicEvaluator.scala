@@ -9,7 +9,6 @@ import theories.Core.{And => _, Or => _, _}
 import scala.util.{Try, Success, Failure}
 import CommandsResponses._
 import java.nio.file.{Paths}
-import PuppetSyntax.{FSGraph}
 import FSSyntax.{ESeq, Expr}
 import rehearsal.{FSSyntax => F}
 import rehearsal.Implicits._
