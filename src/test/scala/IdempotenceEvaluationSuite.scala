@@ -172,11 +172,6 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite
     assert(g.expr.pruneIdem.isIdempotent == true)
   }
 
-  test("BenoitCattie-puppet-nginx.pp") {
-    val g = parseFile(s"$root/BenoitCattie-puppet-nginx.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isIdempotent(g) == true)
-  }
-
   test("small non-idempotent example (in FS)") {
    import FSSyntax._
     val dst = "/dst.txt"
