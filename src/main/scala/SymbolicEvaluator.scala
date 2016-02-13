@@ -5,7 +5,6 @@ import smtlib._
 import parser._
 import Commands._
 import Terms._
-import smtlib.theories.Ints.IntSort
 import theories.Core.{And => _, Or => _, _}
 import scala.util.{Try, Success, Failure}
 import CommandsResponses._
@@ -16,8 +15,6 @@ import rehearsal.{FSSyntax => F}
 import rehearsal.Implicits._
 import scalax.collection.Graph
 import scalax.collection.GraphEdge.DiEdge
-import scalax.collection.GraphPredef._
-import scala.reflect.runtime.universe.TypeTag
 
 object SymbolicEvaluator {
 
@@ -450,106 +447,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     evalGraph(outST, g.copy(deps = g.deps -- fringe))
   }
 
-  case object AbortEarlyError extends RuntimeException("evalGraph aborted early")
-
-  def predEarlyAbort(assertion: Expr, st1: ST, st2: ST): ST = {
-    val isOK2 = exprAsPred(st2, assertion)
-    smt.pushPop {
-      val isOK1 = exprAsPred(st1, assertion)
-      eval(Assert(Not(Equals(isOK1, isOK2))))
-      if (smt.checkSat()) {
-         throw AbortEarlyError
-      }
-    }
-    ST(st2.isErr || Not(isOK2), st2.paths)
-  }
-
-  def evalGraphAbort[K](st: ST, g: FSGraph[K])(shouldAbort: (ST, ST) => Boolean): ST = {
-    val fringe = g.deps.nodes.filter(_.inDegree == 0).toSet.map[K, Set[K]](_.value).toList
-    val (assertions, nonAssertions) = fringe.partition(node => g.exprs(node).isEffectFree)
-    val aExpr = Block(assertions.map(n => g.exprs(n)): _*)
-    if (nonAssertions.length == 0) {
-      evalExpr(st, aExpr)
-    }
-    else {
-      val fringe1 = commutingGroups(g.exprs, nonAssertions)
-      if (fringe1.length == 1) {
-        val expr =  predEarlyAbort(aExpr, st, evalExpr(st, Block(fringe1.head.map(n => g.exprs(n)) : _*)))
-        evalGraphAbort(expr, g.copy(deps = g.deps -- assertions -- fringe1.head))(shouldAbort)
-      }
-      else {
-        logger.info(s"Choices: ${fringe1.length}")
-        fringe1.toStream.map(p =>
-            evalGraphAbort(predEarlyAbort(aExpr, st, evalExpr(st, Block(p.map(n => g.exprs(n)) : _*))),
-                           g.copy(deps = g.deps -- assertions -- p))(shouldAbort)).reduce({ (st1: ST, st2: ST) =>
-          if (shouldAbort(st1, st2)) {
-            throw AbortEarlyError
-          }
-          val c = freshName("choice")
-          val b = eval(DeclareConst(c, BoolSort()))
-          ST(ite(c, st1.isErr, st2.isErr),
-            writablePaths.map(p => p -> ite(c, st1.paths(p),st2.paths(p))).toMap ++ readOnlyMap)
-        })
-      }
-    }
-  }
-
-  /*
-    def predEarlyAbort(assertion: Expr, st1: ST, st2: ST): ST = {
-    val isOK2 = exprAsPred(st2, assertion)
-    smt.pushPop {
-      val isOK1 = exprAsPred(st1, assertion)
-      eval(Assert(Not(Equals(isOK1, isOK2))))
-      if (smt.checkSat()) {
-         throw AbortEarlyError
-      }
-    }
-    ST(st2.isErr || Not(isOK2), st2.paths)
-  }
-
-   */
-
-  def earlyAbort(assertion: Expr, st1: ST, st2: ST): (Term, ST) = {
-    val isErr1 = exprAsPred(st1, assertion)
-    val isErr2 = exprAsPred(st2, assertion)
-    (Not(Equals(isErr1, isErr2)), ST(st2.isErr || Not(isErr1), st2.paths))
-  }
-
-
-  def isGraphDeterministic[K](st: ST, g: FSGraph[K]): (Term, ST) = {
-    val fringe_ = g.deps.nodes.filter(_.inDegree == 0).toSet.map[K, Set[K]](_.value).toList
-    val (assertions, fringe) = fringe_.partition(node => g.exprs(node).isEffectFree)
-    val aExpr = Block(assertions.map(n => g.exprs(n)): _*)
-    if (fringe.length == 0) {
-      (False(), evalExpr(st, aExpr))
-    }
-    else {
-      val fringe1 = commutingGroups(g.exprs, fringe)
-      if (fringe1.length == 1) {
-        val (isNonDet1, expr) = earlyAbort(aExpr, st, evalExpr(st, Block(fringe1.head.map(n => g.exprs(n)) : _*)))
-        val (isNonDet2, st_) = isGraphDeterministic(expr, g.copy(deps = g.deps -- fringe1.head -- assertions))
-        (isNonDet1 || isNonDet2, st_)
-      }
-      else {
-        logger.info(s"Choices: ${fringe1.length}")
-        val lst = fringe1.map(nodes => {
-          val (isNonDet1, expr) = earlyAbort(aExpr, st, evalExpr(st, Block(nodes.map(node => g.exprs(node)): _*)))
-          val (isNonDet2, st_) = isGraphDeterministic(expr, g.copy(deps = g.deps -- nodes -- assertions))
-          (isNonDet1 || isNonDet2, st_)
-        })
-        lst.reduce((x: (Term, ST), y: (Term, ST)) => {
-          val (pred1, st1) = x
-          val (pred2, st2) = y
-          val c = freshName("choice")
-          val b = eval(DeclareConst(c, BoolSort()))
-          (pred1 || pred2 || stNEq(st1, st2),
-           ST(ite(c, st1.isErr, st2.isErr),
-              writablePaths.map(p => p -> ite(c, st1.paths(p),st2.paths(p))).toMap ++ readOnlyMap))
-        })
-      }
-    }
-  }
-
   def stNEq(st1: ST, st2: ST): Term = {
     (st1.isErr && Not(st2.isErr)) ||
       (st2.isErr && Not(st1.isErr)) ||
@@ -620,25 +517,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     val exprs: List[Expr] = nodes.map(n => g.exprs.get(n).get)
     isIdempotent(exprs.foldRight(FSSyntax.Skip: Expr)((e, expr) => e >> expr))
   }
-
-
-  /*
-  def isDeterministic[K](g: FSGraph[K]): Boolean = smt.pushPop {
-    val inST = initState
-    logger.info(s"Generating constraints for a graph with ${g.exprs.size} nodes")
-    val (pred, st) = isGraphDeterministic(inST, g)
-    eval(Assert(pred))
-    !smt.checkSat()
-//    Try(evalGraphAbort(inST, g)(diverged(inST))) match {
-//      case Failure(AbortEarlyError) => {
-//        logger.info("Program is non-deterministic according to early error check.")
-//        return false
-//      }
-//      case Failure(e) => throw e
-//      case Success(st) => true
-//    }
-  }
-*/
 
   def isDeterministic[K](g: FSGraph[K]): Boolean = smt.pushPop {
     val inST = initState
