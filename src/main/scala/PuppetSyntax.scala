@@ -167,13 +167,11 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
     /** Prunes writes from this graph to make determinism-checking faster. */
     def pruneWrites(): FSGraph[K] = {
       val n = allPaths.size
-      val r = DeterminismPruning.pruneGraph(this)
+      val r = DeterminismPruning.pruneWrites(this)
       val m = r.allPaths.size
       logger.info(s"Pruning removed ${n - m} paths")
       r
     }
-
-    def pruneWrites2(): FSGraph[K] = DeterminismPruning2.pruneWrites(this)
 
     /** Checks if two <b>deterministic</b> FS graphs are equivalent.
       *

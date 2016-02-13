@@ -25,12 +25,12 @@ class DeterminismEvaluationSuite extends FunSuitePlus
 
   test("thias-bind.pp") {
     val g = parseFile(s"$root/thias-bind.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isDeterministic(g.addRoot(Node("root", "root")).pruneWrites2()) == true)
+    assert(SymbolicEvaluator.isDeterministic(g.addRoot(Node("root", "root")).pruneWrites()) == true)
   }
 
   test("thias-bind-buggy.pp") {
     val g = parseFile(s"$root/thias-bind-buggy.pp").eval.resourceGraph.fsGraph("centos-6")
-    assert(SymbolicEvaluator.isDeterministic(g.addRoot(Node("root", "root")).pruneWrites2()) == false)
+    assert(SymbolicEvaluator.isDeterministic(g.addRoot(Node("root", "root")).pruneWrites()) == false)
   }
 
   test("puppet-hosting.pp") {
@@ -59,16 +59,16 @@ class DeterminismEvaluationSuite extends FunSuitePlus
 
   test("nfisher-SpikyIRC.pp") {
     val g = parseFile(s"$root/nfisher-SpikyIRC.pp").eval.resourceGraph.fsGraph("centos-6")
-    assert(SymbolicEvaluator.isDeterministic(g.addRoot(Node("root", "root")).contractEdges.pruneWrites2()) == false)
+    assert(SymbolicEvaluator.isDeterministic(g.addRoot(Node("root", "root")).contractEdges.pruneWrites()) == false)
   }
 
   test("spiky-reduced.pp pruned") {
-    val g = parseFile(s"$root/spiky-reduced.pp").eval.resourceGraph.fsGraph("centos-6").addRoot(Node("root", "root")).pruneWrites2()
+    val g = parseFile(s"$root/spiky-reduced.pp").eval.resourceGraph.fsGraph("centos-6").addRoot(Node("root", "root")).pruneWrites()
     assert(SymbolicEvaluator.isDeterministic(g) == false)
   }
 
   test("spiky-reduced-deterministic.pp pruned") {
-    val g = parseFile(s"$root/spiky-reduced-deterministic.pp").eval.resourceGraph.fsGraph("centos-6").addRoot(Node("root", "root")).pruneWrites2()
+    val g = parseFile(s"$root/spiky-reduced-deterministic.pp").eval.resourceGraph.fsGraph("centos-6").addRoot(Node("root", "root")).pruneWrites()
     assert(SymbolicEvaluator.isDeterministic(g) == true)
   }
 
@@ -104,7 +104,7 @@ class DeterminismEvaluationSuite extends FunSuitePlus
 
   test("pdurbin-java-jpa-tutorial.pp (with pruning)") {
     val g = parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph.fsGraph("centos-6")
-    assert(SymbolicEvaluator.isDeterministic(g.addRoot(Node("root", "root")).pruneWrites2()) == true)
+    assert(SymbolicEvaluator.isDeterministic(g.addRoot(Node("root", "root")).pruneWrites()) == true)
   }
 
   test("thias-ntp.pp") {
