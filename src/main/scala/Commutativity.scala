@@ -94,18 +94,18 @@ object Commutativity {
   }
 
   def evalPred(st: St, pred: Pred): St = pred match {
-    case True => st
-    case False => st
-    case And(a, b) => evalPred(st, a) join evalPred(st, b)
-    case Or(a, b) =>  evalPred(st, a) join evalPred(st, b)
-    case Not(a) => evalPred(st, a)
-    case TestFileState(p, _) => st + (p -> R) // TOOD(arjun): confirm we don't need p.getParent here
+    case PTrue => st
+    case PFalse => st
+    case PAnd(a, b) => evalPred(st, a) join evalPred(st, b)
+    case POr(a, b) =>  evalPred(st, a) join evalPred(st, b)
+    case PNot(a) => evalPred(st, a)
+    case PTestFileState(p, _) => st + (p -> R) // TOOD(arjun): confirm we don't need p.getParent here
   }
 
   def evalExpr(st: St, expr: Expr): St = expr match {
-    case Error => st
-    case Skip => st
-    case If(TestFileState(dir, IsDir), Skip, Mkdir(d_)) if dir == d_ => {
+    case EError => st
+    case ESkip => st
+    case EIf(PTestFileState(dir, IsDir), ESkip, EMkdir(d_)) if dir == d_ => {
       if (st(dir) < D && st(dir.getParent) == D) {
         st + (dir -> D)
       }
@@ -113,13 +113,13 @@ object Commutativity {
         st + (dir -> W)
       }
     }
-    case If(pred, e1, e2) => {
+    case EIf(pred, e1, e2) => {
       val st_ = evalPred(st, pred)
       evalExpr(st_, e1) join evalExpr(st_, e2)
     }
-    case Seq(e1, e2) => evalExpr(evalExpr(st, e1), e2)
+    case ESeq(e1, e2) => evalExpr(evalExpr(st, e1), e2)
     // Assumes that p != "/"
-    case Mkdir(p) => {
+    case EMkdir(p) => {
       if (st(p.getParent) == D) {
         st + (p -> W)
       }
@@ -127,7 +127,7 @@ object Commutativity {
         st + (p -> W) + (p.getParent -> R)
       }
     }
-    case CreateFile(p, _) => {
+    case ECreateFile(p, _) => {
       if (st(p.getParent) == D) {
         st + (p -> W)
       }
@@ -135,7 +135,7 @@ object Commutativity {
         st + (p -> W) + (p.getParent -> R)
       }
     }
-    case Rm(p) => {
+    case ERm(p) => {
       if (st(p.getParent) == D) {
         st + (p -> W)
       }
@@ -144,7 +144,7 @@ object Commutativity {
       }
     }
 
-    case Cp(src, dst) => st + (src -> R) + (dst -> W) + (dst.getParent -> R)
+    case ECp(src, dst) => st + (src -> R) + (dst -> W) + (dst.getParent -> R)
   }
 
   def commutesWith(e1: Expr, e2: Expr): Boolean = {
@@ -156,11 +156,11 @@ object Commutativity {
   def absState(e: Expr) = evalExpr(St.empty, e)
 
   def predReadSet(pred: Pred): Set[Path] = pred match {
-    case True | False => Set()
-    case And(a, b) => a.readSet ++ b.readSet
-    case Or(a, b) => a.readSet ++ b.readSet
-    case Not(a) => a.readSet
-    case TestFileState(path, _) => Set(path)
+    case PTrue | PFalse => Set()
+    case PAnd(a, b) => a.readSet ++ b.readSet
+    case POr(a, b) => a.readSet ++ b.readSet
+    case PNot(a) => a.readSet
+    case PTestFileState(path, _) => Set(path)
   }
 
 }

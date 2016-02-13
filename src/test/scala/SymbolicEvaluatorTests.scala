@@ -79,7 +79,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
   }
 
   test("trivial program with non-deterministic output") {
-    val g = Graph[Expr, DiEdge](ite(testFileState(Paths.get("/foo"), IsDir), mkdir(Paths.get("/bar")), Skip),
+    val g = Graph[Expr, DiEdge](ite(testFileState(Paths.get("/foo"), IsDir), mkdir(Paths.get("/bar")), ESkip),
                                 mkdir(Paths.get("/foo")))
 
     assert(isDeterministic(g) == false)
@@ -91,7 +91,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
   }
 
   test("Is a singleton graph deterministic") {
-    val g = Graph[Expr, DiEdge](ite(testFileState(Paths.get("/foo"), IsDir), Skip,
+    val g = Graph[Expr, DiEdge](ite(testFileState(Paths.get("/foo"), IsDir), ESkip,
                                             mkdir(Paths.get("/foo"))))
     assert(true == isDeterministic(g))
     assert(false == isDeterministicError(g))
@@ -99,7 +99,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
 
   test("Two-node non-deterministic graph") {
     assert(false == isDeterministic(Graph[Expr, DiEdge](mkdir(Paths.get("/foo")),
-      ite(testFileState(Paths.get("/foo"), IsDir), Skip, mkdir(Paths.get("/bar"))))))
+      ite(testFileState(Paths.get("/foo"), IsDir), ESkip, mkdir(Paths.get("/bar"))))))
   }
 
   test("a bug") {
@@ -108,7 +108,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     val n1 = createFile(p, c)
     val n2 = ite(testFileState(p, IsFile),
       rm(p) >> createFile(p, c),
-      ite(testFileState(p, DoesNotExist), createFile(p, c), Skip))
+      ite(testFileState(p, DoesNotExist), createFile(p, c), ESkip))
     assert(false == isDeterministic(Graph[Expr, DiEdge](n1, n2)))
   }
 
@@ -286,7 +286,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
       """).eval().resourceGraph().fsGraph("ubuntu-trusty")
     val g_ = g.pruneWrites()
 
-    val sets = Block(g_.exprs.values.toSeq: _*).fileSets
+    val sets = ESeq(g_.exprs.values.toSeq: _*).fileSets
     val writes = sets.writes ++ sets.dirs
     val alpha = g.exprs(Node("file", "/alpha"))
     val beta = g.exprs(Node("file", "/beta"))

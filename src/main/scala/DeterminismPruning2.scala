@@ -35,14 +35,14 @@ object DeterminismPruning2 extends com.typesafe.scalalogging.LazyLogging {
   }
 
   def trivialStatus2(expr: Expr): Map[Path, (Set[Path], TrivialStatus)] = expr match {
-    case If(pred, e1, e2) => join2(pred.readSet, trivialStatus2(e1), trivialStatus2(e2))
-    case Seq(e1, e2) => join2(Set(), trivialStatus2(e1), trivialStatus2(e2))
-    case CreateFile(p, _) => Map(p -> (Set(p), OnlyFile))
-    case Mkdir(p) => Map(p -> (Set(p), OnlyDirectory))
-    case Cp(_, p) => Map(p -> (Set(p), OnlyFile))
-    case Rm(_) => Map()
-    case Skip => Map()
-    case Error => Map()
+    case EIf(pred, e1, e2) => join2(pred.readSet, trivialStatus2(e1), trivialStatus2(e2))
+    case ESeq(e1, e2) => join2(Set(), trivialStatus2(e1), trivialStatus2(e2))
+    case ECreateFile(p, _) => Map(p -> (Set(p), OnlyFile))
+    case EMkdir(p) => Map(p -> (Set(p), OnlyDirectory))
+    case ECp(_, p) => Map(p -> (Set(p), OnlyFile))
+    case ERm(_) => Map()
+    case ESkip => Map()
+    case EError => Map()
   }
 
   def definitiveWrites(exclude: Set[Path], expr: Expr): scala.Seq[Path] = {

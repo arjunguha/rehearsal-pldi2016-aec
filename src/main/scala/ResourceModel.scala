@@ -45,43 +45,43 @@ object ResourceModel {
 
   def compile(r: Res, distro: String): Expr = r match {
     case EnsureFile(p, CInline(c)) =>
-      ite(testFileState(p, IsFile), rm(p), Skip) >> createFile(p, c)
+      ite(testFileState(p, IsFile), rm(p), ESkip) >> createFile(p, c)
     case EnsureFile(p, CFile(s)) =>
-      ite(testFileState(p, IsFile), rm(p), Skip) >> cp(s, p)
+      ite(testFileState(p, IsFile), rm(p), ESkip) >> cp(s, p)
     case File(p, CInline(c), false) =>
       ite(testFileState(p, IsFile),
          rm(p) >> createFile(p, c),
          ite(testFileState(p, DoesNotExist),
             createFile(p, c),
-            Error))
+            EError))
     case File(p, CInline(c), true) =>
     // TODO(arjun): needs support for recursive directory removal and can simplify too
      ite(testFileState(p, IsDir) || testFileState(p, IsFile),
-         rm(p), Skip) >>
+         rm(p), ESkip) >>
       createFile(p, c)
     case File(p, CFile(s), false) =>
       ite(testFileState(p, IsFile),
         rm(p) >> cp(s, p),
         ite(testFileState(p, DoesNotExist),
           cp(s, p),
-          Error))
+          EError))
     case File(p, CFile(s), true) =>
       ite(testFileState(p, IsDir) || testFileState(p, IsFile),
-        rm(p), Skip) >>
+        rm(p), ESkip) >>
       cp(s, p)
     case AbsentPath(p, false) =>
       // TODO(arjun): why doesn't this work for directories too?
-      ite(testFileState(p, IsFile), rm(p), Skip)
+      ite(testFileState(p, IsFile), rm(p), ESkip)
     case AbsentPath(p, true) =>
       // TODO(arjun): Can simplify the program below
       ite(testFileState(p, IsDir),
           rm(p), // TODO(arjun): need to implement directory removal in fsmodel
           ite(testFileState(p, IsFile),
              rm(p),
-             Skip))
+             ESkip))
     case Directory(p) =>
       ite(testFileState(p, IsDir),
-         Skip,
+         ESkip,
          ite(testFileState(p, IsFile),
             rm(p) >> mkdir(p),
             mkdir(p)))
@@ -92,24 +92,24 @@ object ResourceModel {
       present match {
         case true => {
           val homeCmd = if (manageHome) {
-            ite(testFileState(h, DoesNotExist), mkdir(h), Skip)
+            ite(testFileState(h, DoesNotExist), mkdir(h), ESkip)
           }
           else {
-            Skip
+            ESkip
           }
-          ite(testFileState(u, DoesNotExist), mkdir(u), Skip) >>
-          ite(testFileState(g, DoesNotExist), mkdir(g), Skip) >>
+          ite(testFileState(u, DoesNotExist), mkdir(u), ESkip) >>
+          ite(testFileState(g, DoesNotExist), mkdir(g), ESkip) >>
           homeCmd
         }
         case false => {
           val homeCmd = if (manageHome) {
-            ite(testFileState(h, DoesNotExist), Skip, rm(h))
+            ite(testFileState(h, DoesNotExist), ESkip, rm(h))
           }
           else {
-            Skip
+            ESkip
           }
-          ite(testFileState(u, DoesNotExist), Skip, rm(u)) >>
-          ite(testFileState(g, DoesNotExist), Skip, rm(g)) >>
+          ite(testFileState(u, DoesNotExist), ESkip, rm(u)) >>
+          ite(testFileState(g, DoesNotExist), ESkip, rm(g)) >>
           homeCmd
         }
       }
@@ -117,8 +117,8 @@ object ResourceModel {
     case Group(name, present) => {
       val p = s"/etc/groups/$name"
       present match {
-        case true => ite(testFileState(p, DoesNotExist), mkdir(p), Skip)
-        case false => ite(!testFileState(p, DoesNotExist), rm(p), Skip)
+        case true => ite(testFileState(p, DoesNotExist), mkdir(p), ESkip)
+        case false => ite(!testFileState(p, DoesNotExist), rm(p), ESkip)
       }
     }
     case Package(name, true) => {
@@ -128,7 +128,7 @@ object ResourceModel {
       val files = paths -- dirs
 
       val mkdirs = dirs.toSeq.sortBy(_.getNameCount)
-        .map(d => ite(testFileState(d, IsDir), Skip, mkdir(d)))
+        .map(d => ite(testFileState(d, IsDir), ESkip, mkdir(d)))
 
       val somecontent = ""
       val createfiles = files.toSeq.map((f) => createFile(f, somecontent))
@@ -139,32 +139,32 @@ object ResourceModel {
 
           // TODO(arjun): The issue is that the files and directories are not
           // always created.
-          Skip,
-          createFile(s"/packages/${name}", "") >> Block(exprs: _*))
+          ESkip,
+          createFile(s"/packages/${name}", "") >> ESeq(exprs: _*))
     }
     case Package(name, false) => {
       // TODO(arjun): Shouldn't this only remove files and newly created directories?
       val files =  queryPackage(distro, name).getOrElse(throw PackageNotFound(distro, name)).toList
-      val exprs = files.map(f => ite(testFileState(f, DoesNotExist), Skip, rm(f)))
+      val exprs = files.map(f => ite(testFileState(f, DoesNotExist), ESkip, rm(f)))
       val pkgInstallInfoPath = s"/packages/$name"
       // Append at end
       ite(testFileState(pkgInstallInfoPath, DoesNotExist),
-          Skip,
-          Block((rm(pkgInstallInfoPath) :: exprs) :_*))
+          ESkip,
+          ESeq((rm(pkgInstallInfoPath) :: exprs) :_*))
     }
     case self@SshAuthorizedKey(_, present, _, key) => {
       val p = self.keyPath
       present match {
         case true => {
-          ite(testFileState(p, IsFile), rm(p), Skip) >> createFile(p, key)
+          ite(testFileState(p, IsFile), rm(p), ESkip) >> createFile(p, key)
         }
         case false => {
-          ite(testFileState(p, IsFile), rm(p), Skip)
+          ite(testFileState(p, IsFile), rm(p), ESkip)
         }
       }
     }
-    case self@Service(name) => ite(testFileState(self.path, IsFile), Skip, Error)
-    case Notify => Skip
+    case self@Service(name) => ite(testFileState(self.path, IsFile), ESkip, EError)
+    case Notify => ESkip
     case _ => ???
   }
 

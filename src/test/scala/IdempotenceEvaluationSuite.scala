@@ -180,8 +180,8 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite
       rm(dst) >> cp(src, dst),
       ite(testFileState(dst, DoesNotExist),
         cp(src, dst),
-        Error))
-    val e2 = ite(testFileState(src, IsFile), rm(src), Skip)
+        EError))
+    val e2 = ite(testFileState(src, IsFile), rm(src), ESkip)
     val e = e1 >> e2
 
     assert(e.isIdempotent() == false)

@@ -128,7 +128,7 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
       * @return an FS program
       */
     def expr(): FSSyntax.Expr = {
-      FSSyntax.Block(deps.topologicalSort().map(k => exprs(k)): _*)
+      FSSyntax.ESeq(deps.topologicalSort().map(k => exprs(k)): _*)
     }
 
     def addRoot(label: K): FSGraph[K] = {
@@ -136,7 +136,7 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
       assert(!exprs.contains(label))
       val init = deps.nodes.filter(_.inDegree == 0).toList.map(node => DiEdge(label, node.value))
       val deps_ = deps ++ init
-      FSGraph(exprs + (label -> FSSyntax.Skip), deps_)
+      FSGraph(exprs + (label -> FSSyntax.ESkip), deps_)
     }
 
     def contractEdges(): FSGraph[K] = {
@@ -155,7 +155,7 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
         case Some(node) => {
           // Must only be one of these
           val succs = node.diSuccessors.toList
-          val expr_ = exprs(node.value) >> FSSyntax.Block(succs.map(node => exprs(node)): _*)
+          val expr_ = exprs(node.value) >> FSSyntax.ESeq(succs.map(node => exprs(node)): _*)
           logger.info(s"Contracting ${succs.map(_.value)} into ${node.value}")
 
           new FSGraph(

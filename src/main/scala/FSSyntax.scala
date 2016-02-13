@@ -29,36 +29,36 @@ object FSSyntax {
     lazy val readSet = Commutativity.predReadSet(this)
 
     def &&(b: Pred): Pred = (this, b) match {
-      case (True, _) => b
-      case (_, True) => this
-      case _ => internPred(And(this, b))
+      case (PTrue, _) => b
+      case (_, PTrue) => this
+      case _ => internPred(PAnd(this, b))
     }
 
     def ||(b: Pred): Pred = (this, b) match {
-      case (True, _) => True
-      case (False, _) => b
-      case (_, True) => True
-      case (_, False) => this
-      case _ => internPred(Or(this, b))
+      case (PTrue, _) => PTrue
+      case (PFalse, _) => b
+      case (_, PTrue) => PTrue
+      case (_, PFalse) => this
+      case _ => internPred(POr(this, b))
     }
 
     def unary_!(): Pred = this match {
-      case Not(True) => False
-      case Not(False) => True
-      case Not(a) => a
-      case _ => internPred(Not(this))
+      case PNot(PTrue) => PFalse
+      case PNot(PFalse) => PTrue
+      case PNot(a) => a
+      case _ => internPred(PNot(this))
     }
 
   }
 
-  case object True extends Pred
-  case object False extends Pred
-  case class And private[FSSyntax](a: Pred, b: Pred) extends Pred
-  case class Or private[FSSyntax](a: Pred, b: Pred) extends Pred
-  case class Not private[FSSyntax](a: Pred) extends Pred
-  case class TestFileState private[FSSyntax](path: Path, s: FileState) extends Pred {
-    def <(tfs: TestFileState): Boolean = (this, tfs) match {
-      case (TestFileState(f, x), TestFileState(g, y)) => if (f.toString == g.toString) {
+  case object PTrue extends Pred
+  case object PFalse extends Pred
+  case class PAnd private[FSSyntax](a: Pred, b: Pred) extends Pred
+  case class POr private[FSSyntax](a: Pred, b: Pred) extends Pred
+  case class PNot private[FSSyntax](a: Pred) extends Pred
+  case class PTestFileState private[FSSyntax](path: Path, s: FileState) extends Pred {
+    def <(tfs: PTestFileState): Boolean = (this, tfs) match {
+      case (PTestFileState(f, x), PTestFileState(g, y)) => if (f.toString == g.toString) {
         x < y
       } else {
         f.toString < g.toString
@@ -79,11 +79,11 @@ object FSSyntax {
     override def toString(): String = this.pretty()
 
     def >>(e2: Expr) = (this, e2) match {
-      case (Skip, _) => e2
-      case (_, Skip) => this
-      case (Error, _) => Error
-      case (_, Error) => Error
-      case (If (a, Skip, Error), If (b, Skip, Error)) => ite(a && b, Skip, Error)
+      case (ESkip, _) => e2
+      case (_, ESkip) => this
+      case (EError, _) => EError
+      case (_, EError) => EError
+      case (EIf (a, ESkip, EError), EIf (b, ESkip, EError)) => ite(a && b, ESkip, EError)
       case _ => seq(this, e2)
     }
 
@@ -100,14 +100,14 @@ object FSSyntax {
 
   }
 
-  case object Error extends Expr
-  case object Skip extends Expr
-  case class If private[FSSyntax] (a: Pred, p: Expr, q: Expr) extends Expr
-  case class Seq private[FSSyntax] (p: Expr, q: Expr) extends Expr
-  case class Mkdir private[FSSyntax] (path: Path) extends Expr
-  case class CreateFile private[FSSyntax] (path: Path, contents: String) extends Expr
-  case class Rm private[FSSyntax] (path: Path) extends Expr
-  case class Cp private[FSSyntax] (src: Path, dst: Path) extends Expr
+  case object EError extends Expr
+  case object ESkip extends Expr
+  case class EIf private[FSSyntax](a: Pred, p: Expr, q: Expr) extends Expr
+  case class ESeq private[FSSyntax](p: Expr, q: Expr) extends Expr
+  case class EMkdir private[FSSyntax](path: Path) extends Expr
+  case class ECreateFile private[FSSyntax](path: Path, contents: String) extends Expr
+  case class ERm private[FSSyntax](path: Path) extends Expr
+  case class ECp private[FSSyntax](src: Path, dst: Path) extends Expr
 
   private val exprCache = scala.collection.mutable.HashMap[Expr, Expr]()
 
@@ -118,32 +118,32 @@ object FSSyntax {
   private def intern(e: Expr): Expr = exprCache.getOrElseUpdate(e, e)
 
   def ite(a: Pred, p: Expr, q: Expr): Expr = {
-    if (p eq q) p else intern(If(a, p, q))
+    if (p eq q) p else intern(EIf(a, p, q))
   }
 
-  def seq(p: Expr, q: Expr) = intern(Seq(p, q))
+  def seq(p: Expr, q: Expr) = intern(ESeq(p, q))
 
-  def mkdir(p: Path) = intern(Mkdir(p))
+  def mkdir(p: Path) = intern(EMkdir(p))
 
-  def createFile(p: Path, c: String) = intern(CreateFile(p, c))
+  def createFile(p: Path, c: String) = intern(ECreateFile(p, c))
 
-  def rm(p: Path) = intern(Rm(p))
+  def rm(p: Path) = intern(ERm(p))
 
-  def cp(src: Path, dst: Path) = intern(Cp(src, dst))
+  def cp(src: Path, dst: Path) = intern(ECp(src, dst))
 
-  def testFileState(p: Path, s: FileState): TestFileState = internPred(TestFileState(p, s)).asInstanceOf[TestFileState]
+  def testFileState(p: Path, s: FileState): PTestFileState = internPred(PTestFileState(p, s)).asInstanceOf[PTestFileState]
 
   def clearCache(): Unit = {
     exprCache.clear()
   }
 
-  object Block {
+  object ESeq {
     import Implicits._
-    def apply(es: Expr*): Expr = es.foldRight(Skip: Expr)((e, expr) => e >> expr)
+    def apply(es: Expr*): Expr = es.foldRight(ESkip: Expr)((e, expr) => e >> expr)
   }
 
-  object And {
-    def apply(preds: Pred*): Pred = preds.foldRight[Pred](True) { (x, y) => And(x, y) }
+  object PAnd {
+    def apply(preds: Pred*): Pred = preds.foldRight[Pred](PTrue) { (x, y) => PAnd(x, y) }
   }
 
 }

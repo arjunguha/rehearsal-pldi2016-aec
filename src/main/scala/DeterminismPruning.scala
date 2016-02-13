@@ -21,51 +21,51 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
   case object AUntouched extends AStat
 
   def specPred(pred: Pred, h: Map[Path, AStat]): Pred = pred match {
-    case TestFileState(p, s) => {
+    case PTestFileState(p, s) => {
       if (!h.contains(p)) {
         pred
       }
       else {
-        if (h(p) == s) True else False
+        if (h(p) == s) PTrue else PFalse
       }
     }
-    case True | False => pred
-    case Or(e1, e2) => specPred(e1, h) || specPred(e2, h)
-    case And(e1, e2) => specPred(e1, h) && specPred(e2, h)
-    case Not(e) => !specPred(e, h)
+    case PTrue | PFalse => pred
+    case POr(e1, e2) => specPred(e1, h) || specPred(e2, h)
+    case PAnd(e1, e2) => specPred(e1, h) && specPred(e2, h)
+    case PNot(e) => !specPred(e, h)
   }
 
   def pruneRec(canPrune: Set[Path], e: Expr, h: Map[Path, AStat]):
     (Expr, Map[Path, AStat]) = {
       e match {
-        case Skip => (e, h)
-        case Error => (e, h)
-        case Mkdir(p) if canPrune.contains(p) =>
+        case ESkip => (e, h)
+        case EError => (e, h)
+        case EMkdir(p) if canPrune.contains(p) =>
           (ite(testFileState(p.getParent, IsDir),
-              Skip, Error),
+              ESkip, EError),
            h + (p -> ADir) + (p.getParent -> ADir))
-        case Mkdir(p) => (e, h + (p -> ADir) + (p.getParent -> ADir))
-        case CreateFile(p, _) if canPrune.contains(p) =>
+        case EMkdir(p) => (e, h + (p -> ADir) + (p.getParent -> ADir))
+        case ECreateFile(p, _) if canPrune.contains(p) =>
           (ite(testFileState(p.getParent, IsDir),
-              Skip, Error),
+              ESkip, EError),
            h + (p -> AFile) + (p.getParent -> ADir))
-        case CreateFile(p, _) => (e, h + (p -> AFile) + (p.getParent -> ADir))
+        case ECreateFile(p, _) => (e, h + (p -> AFile) + (p.getParent -> ADir))
         /*TODO [Rian]: this only prunes RmFiles not RmDirs; need IsEmpty predicate*/
-        case Rm(p) if canPrune.contains(p) => (Skip,
+        case ERm(p) if canPrune.contains(p) => (ESkip,
                                         h + (p -> ADoesNotExist))
-        case Rm(_) => (e, h)
-        case Cp(p1, p2) if canPrune.contains(p2) =>
+        case ERm(_) => (e, h)
+        case ECp(p1, p2) if canPrune.contains(p2) =>
           (ite(testFileState(p1, IsFile) &&
                 testFileState(p2.getParent, IsDir),
-              Skip, Error),
+              ESkip, EError),
            h + (p1 -> AFile) + (p2 -> AFile) + (p2.getParent -> ADir))
-        case Cp(p1, p2) => (e, h + (p1 -> AFile) + (p2 -> AFile) + (p2.getParent -> ADir))
-        case Seq(e1, e2) => {
+        case ECp(p1, p2) => (e, h + (p1 -> AFile) + (p2 -> AFile) + (p2.getParent -> ADir))
+        case ESeq(e1, e2) => {
           val e1Pruned = pruneRec(canPrune, e1, h)
           val e2Pruned = pruneRec(canPrune, e2, h ++ e1Pruned._2)
           (e1Pruned._1 >> e2Pruned._1, e2Pruned._2)
         }
-        case If(a, e1, e2) => {
+        case EIf(a, e1, e2) => {
           val e1Pruned = pruneRec(canPrune, e1, h)
           val e2Pruned = pruneRec(canPrune, e2, h)
           (ite(specPred(a, h), e1Pruned._1, e2Pruned._1), h)

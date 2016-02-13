@@ -10,7 +10,7 @@ import scala.util.{Try, Success, Failure}
 import CommandsResponses._
 import java.nio.file.{Path, Paths}
 import PuppetSyntax.{FSGraph}
-import FSSyntax.{Block, Expr}
+import FSSyntax.{ESeq, Expr}
 import rehearsal.{FSSyntax => F}
 import rehearsal.Implicits._
 import scalax.collection.Graph
@@ -35,7 +35,7 @@ object SymbolicEvaluator {
 
 
   def mkImpl[K](g: FSGraph[K], logFile: Option[String]) = {
-     val sets = Block(g.exprs.values.toSeq: _*).fileSets
+     val sets = ESeq(g.exprs.values.toSeq: _*).fileSets
      val ro = sets.reads -- sets.writes -- sets.dirs
     new SymbolicEvaluatorImpl(g.allPaths.toList,
       g.deps.nodes.map(n => g.exprs(n).hashes).reduce(_ union _),
@@ -205,14 +205,14 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   }
 
   def evalPred(st: ST, pred: F.Pred): Term = pred match {
-    case F.True => True()
-    case F.False => False()
-    case F.Not(a) => Not(evalPred(st, a))
-    case F.And(a, b) => evalPred(st, a) && evalPred(st, b)
-    case F.Or(a, b) => evalPred(st, a) || evalPred(st, b)
-    case F.TestFileState(p, F.IsDir) => Equals(st.paths(p), "IsDir")
-    case F.TestFileState(p, F.DoesNotExist) => Equals(st.paths(p), "DoesNotExist")
-    case F.TestFileState(p, F.IsFile) =>
+    case F.PTrue => True()
+    case F.PFalse => False()
+    case F.PNot(a) => Not(evalPred(st, a))
+    case F.PAnd(a, b) => evalPred(st, a) && evalPred(st, b)
+    case F.POr(a, b) => evalPred(st, a) || evalPred(st, b)
+    case F.PTestFileState(p, F.IsDir) => Equals(st.paths(p), "IsDir")
+    case F.PTestFileState(p, F.DoesNotExist) => Equals(st.paths(p), "DoesNotExist")
+    case F.PTestFileState(p, F.IsFile) =>
       FunctionApplication("is-IsFile", Seq(st.paths(p)))
   }
 
@@ -237,9 +237,9 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   }
 
   def evalExpr(st: ST, expr: F.Expr): ST = expr match {
-    case F.Skip => st
-    case F.Error => ST(True(), st.paths)
-    case F.Seq(p, q) => {
+    case F.ESkip => st
+    case F.EError => ST(True(), st.paths)
+    case F.ESeq(p, q) => {
       val stInter = evalExpr(st, p)
       val (stInter1, _) = freshST()
       eval(Assert(Equals(stInter.isErr, stInter1.isErr)))
@@ -248,7 +248,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
       evalExpr(stInter1, q)
     }
-    case F.If(a, e1, e2) => {
+    case F.EIf(a, e1, e2) => {
       val st1 = evalExpr(st, e1)
       val st2 = evalExpr(st, e2)
       val b = freshName("b")
@@ -257,20 +257,20 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       ST(ite(b, st1.isErr, st2.isErr),
         writablePaths.map(p => (p, ite(b, st1.paths(p), st2.paths(p)))).toMap ++ readOnlyMap)
     }
-    case F.CreateFile(p, h) => {
+    case F.ECreateFile(p, h) => {
       assert(readOnlyPaths.contains(p) == false)
       val pre = Equals(st.paths(p), "DoesNotExist") && Equals(st.paths(p.getParent), "IsDir")
       ST(st.isErr || Not(pre),
         st.paths + (p -> FunctionApplication("IsFile", Seq(hashToZ3(h)))))
     }
-    case F.Mkdir(p) => {
+    case F.EMkdir(p) => {
       assert(readOnlyPaths.contains(p) == false,
         s"Mkdir($p) found, but path is read-only")
       val pre = Equals(st.paths(p), "DoesNotExist") && Equals(st.paths(p.getParent), "IsDir")
       ST(st.isErr || Not(pre),
         st.paths + (p -> "IsDir"))
     }
-    case F.Rm(p) => {
+    case F.ERm(p) => {
       assert(readOnlyPaths.contains(p) == false)
       val descendants = st.paths.filter(p1 => p1._1 != p && p1._1.startsWith(p)).map(_._2).toSeq
       val pre = FunctionApplication("is-IsFile", Seq(st.paths(p))) ||
@@ -279,7 +279,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       ST(st.isErr || Not(pre),
         st.paths + (p -> "DoesNotExist"))
     }
-    case F.Cp(src, dst) => {
+    case F.ECp(src, dst) => {
       assert(readOnlyPaths.contains(dst) == false)
       val pre = FunctionApplication("is-IsFile", Seq(st.paths(src))) &&
         Equals(st.paths(dst.getParent), "IsDir") &&
@@ -291,10 +291,10 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   }
 
   def exprAsPred(st: ST, expr: F.Expr): Term = expr match {
-    case F.Skip => True()
-    case F.Error => False()
-    case F.Seq(p, q) => exprAsPred(st, p) && exprAsPred(st, q)
-    case F.If(a, e1, e2) => ite(evalPred(st, a), exprAsPred(st, e1), exprAsPred(st, e2))
+    case F.ESkip => True()
+    case F.EError => False()
+    case F.ESeq(p, q) => exprAsPred(st, p) && exprAsPred(st, q)
+    case F.EIf(a, e1, e2) => ite(evalPred(st, a), exprAsPred(st, e1), exprAsPred(st, e2))
     case _ => throw Unexpected(s"exprAsPred got $expr")
   }
 
@@ -413,7 +413,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     val rels = commutingGroups(g.exprs, fringe)
       .map(nodes => {
         logger.info(s"Group $nodes")
-        Block(nodes.map(n => g.exprs(n)): _*)
+        ESeq(nodes.map(n => g.exprs(n)): _*)
       })
       .map(expr => {
         val (inST, _) = freshST()
@@ -515,7 +515,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     assert(isDeterministic(g), "g is not deterministic; cannot determine idempotence")
     val nodes: List[K] = g.deps.topologicalSort()
     val exprs: List[Expr] = nodes.map(n => g.exprs.get(n).get)
-    isIdempotent(exprs.foldRight(FSSyntax.Skip: Expr)((e, expr) => e >> expr))
+    isIdempotent(exprs.foldRight(FSSyntax.ESkip: Expr)((e, expr) => e >> expr))
   }
 
   def isDeterministic[K](g: FSGraph[K]): Boolean = smt.pushPop {

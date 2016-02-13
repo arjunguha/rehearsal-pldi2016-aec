@@ -15,26 +15,26 @@ object IdempotenceOptimizer {
 
   def countPathsPred(pred: Pred, paths: Map[Path, Int]): Map[Path, Int] = {
     pred match {
-      case Not(a) => countPathsPred(pred, paths)
-      case And(a, b) => countPathsPred(a, countPathsPred(b, paths))
-      case Or(a, b) => countPathsPred(a, countPathsPred(b, paths))
-      case TestFileState(p, _) => addPath(p, paths)
-      case True => paths
-      case False => paths
+      case PNot(a) => countPathsPred(pred, paths)
+      case PAnd(a, b) => countPathsPred(a, countPathsPred(b, paths))
+      case POr(a, b) => countPathsPred(a, countPathsPred(b, paths))
+      case PTestFileState(p, _) => addPath(p, paths)
+      case PTrue => paths
+      case PFalse => paths
     }
   }
 
   def countPathsExpr(expr: Expr, paths: Map[Path, Int]): Map[Path, Int] = {
     expr match {
-      case Error => paths
-      case Skip => paths
-      case If(a, e1, e2) =>
+      case EError => paths
+      case ESkip => paths
+      case EIf(a, e1, e2) =>
         countPathsExpr(e2, countPathsExpr(e1, countPathsPred(a, paths)))
-      case Seq(e1, e2) => countPathsExpr(e2, countPathsExpr(e1, paths))
-      case Mkdir(p) => addPath(p, paths)
-      case CreateFile(p, _) => addPath(p, paths)
-      case Rm(p) => addPath(p, paths)
-      case Cp(src, dst) => addPath(dst, addPath(src, paths))
+      case ESeq(e1, e2) => countPathsExpr(e2, countPathsExpr(e1, paths))
+      case EMkdir(p) => addPath(p, paths)
+      case ECreateFile(p, _) => addPath(p, paths)
+      case ERm(p) => addPath(p, paths)
+      case ECp(src, dst) => addPath(dst, addPath(src, paths))
     }
   }
 
@@ -43,25 +43,25 @@ object IdempotenceOptimizer {
   object CannotPrune extends RuntimeException("cannot prune")
 
   def findPackageLike(paths: Map[Path, Int], expr: Expr): Expr = expr match {
-    case If(TestFileState(p, DoesNotExist), Seq(CreateFile(p_, ""), body), Skip)
+    case EIf(PTestFileState(p, DoesNotExist), ESeq(ECreateFile(p_, ""), body), ESkip)
       if p == p_ && paths(p) == 2 => {
       try {
         ite(testFileState(p, DoesNotExist),
           createFile(p_, "") >> pruneFiles(paths, body),
-          Skip)
+          ESkip)
       }
       catch {
         case CannotPrune => expr
       }
     }
-    case Seq(e1, e2) => findPackageLike(paths, e1) >> findPackageLike(paths, e2)
+    case ESeq(e1, e2) => findPackageLike(paths, e1) >> findPackageLike(paths, e2)
     case _ => expr
   }
 
   def pruneFiles(paths: Map[Path, Int], expr: Expr): Expr = expr match {
-    case CreateFile(p, _) => if (paths(p) == 1) Skip else expr
-    case If(TestFileState(p, IsDir), Skip, Mkdir(p_)) if (p == p_) => if (paths(p) == 2) Skip else expr
-    case Seq(e1, e2) => pruneFiles(paths, e1) >> pruneFiles(paths, e2)
+    case ECreateFile(p, _) => if (paths(p) == 1) ESkip else expr
+    case EIf(PTestFileState(p, IsDir), ESkip, EMkdir(p_)) if (p == p_) => if (paths(p) == 2) ESkip else expr
+    case ESeq(e1, e2) => pruneFiles(paths, e1) >> pruneFiles(paths, e2)
     case _ => throw CannotPrune
   }
 

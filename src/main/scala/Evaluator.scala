@@ -26,20 +26,20 @@ object FSEvaluator {
   }
 
   def evalPred(st: State, pred: Pred): Boolean = pred match {
-    case True => true
-    case False => false
-    case And(a, b) => evalPred(st, a) && evalPred(st, b)
-    case Or(a, b) =>  evalPred(st, a) || evalPred(st, b)
-    case Not(a) => !evalPred(st ,a)
-    case TestFileState(p, IsFile) => isFile(st, p)
-    case TestFileState(p, IsDir) => isDir(st, p)
-    case TestFileState(p, DoesNotExist) => doesNotExist(st, p)
+    case PTrue => true
+    case PFalse => false
+    case PAnd(a, b) => evalPred(st, a) && evalPred(st, b)
+    case POr(a, b) =>  evalPred(st, a) || evalPred(st, b)
+    case PNot(a) => !evalPred(st ,a)
+    case PTestFileState(p, IsFile) => isFile(st, p)
+    case PTestFileState(p, IsDir) => isDir(st, p)
+    case PTestFileState(p, DoesNotExist) => doesNotExist(st, p)
   }
 
   def eval(st: State, expr: Expr): S = expr match {
-    case Error => None
-    case Skip => Some(st)
-    case Mkdir(p) => {
+    case EError => None
+    case ESkip => Some(st)
+    case EMkdir(p) => {
       if (doesNotExist(st, p) && isDir(st, p.getParent)) {
         Some(st + (p -> FDir))
       }
@@ -47,7 +47,7 @@ object FSEvaluator {
         None
       }
     }
-    case CreateFile(p, h) => {
+    case ECreateFile(p, h) => {
       if (isDir(st, p.getParent) && doesNotExist(st, p)) {
         Some(st + (p -> FFile(h)))
       }
@@ -55,8 +55,8 @@ object FSEvaluator {
         None
       }
     }
-    case Cp(src, dst) => ???
-    case Rm(p) => {
+    case ECp(src, dst) => ???
+    case ERm(p) => {
       if (isFile(st, p) || isEmptyDir(st, p)) {
         Some(st - p)
       }
@@ -64,8 +64,8 @@ object FSEvaluator {
         None
       }
     }
-    case Seq(e1, e2) => eval(st, e1).flatMap(st_ => eval(st_, e2))
-    case If(pred, e1, e2) => {
+    case ESeq(e1, e2) => eval(st, e1).flatMap(st_ => eval(st_, e2))
+    case EIf(pred, e1, e2) => {
       if (evalPred(st, pred)) {
         eval(st, e1)
       }

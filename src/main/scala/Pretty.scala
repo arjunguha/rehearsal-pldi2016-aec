@@ -10,14 +10,14 @@ private[rehearsal] object Pretty {
   case object NotCxt extends PredCxt
 
   def prettyPred(cxt: PredCxt, pred: Pred): String = pred match {
-    case True => "true"
-    case False => "false"
-    case TestFileState(p, s) => s"$s($p)"
-    case Not(True) => "!true"
-    case Not(False) => "!false"
-    case Not(TestFileState(p, s)) => s"!$s($p)"
-    case Not(a) => s"!(${prettyPred(NotCxt, a)})"
-    case And(p, q) => {
+    case PTrue => "true"
+    case PFalse => "false"
+    case PTestFileState(p, s) => s"$s($p)"
+    case PNot(PTrue) => "!true"
+    case PNot(PFalse) => "!false"
+    case PNot(PTestFileState(p, s)) => s"!$s($p)"
+    case PNot(a) => s"!(${prettyPred(NotCxt, a)})"
+    case PAnd(p, q) => {
       val pStr = prettyPred(AndCxt, p)
       val qStr = prettyPred(AndCxt, q)
       cxt match {
@@ -25,7 +25,7 @@ private[rehearsal] object Pretty {
         case OrCxt => s"($pStr && $qStr)"
       }
     }
-    case Or(p, q) => {
+    case POr(p, q) => {
       val pStr = prettyPred(OrCxt, p)
       val qStr = prettyPred(OrCxt, q)
       cxt match {
@@ -36,14 +36,14 @@ private[rehearsal] object Pretty {
   }
 
   def pretty(expr: Expr): String = expr match {
-    case Error => "error"
-    case Skip => "skip"
-    case If(a, p, q) => s"If(${prettyPred(NotCxt, a)}, ${pretty(p)}, ${pretty(q)})"
-    case Seq(p, q) => pretty(p) + " >> " + pretty(q)
-    case CreateFile(path, hash) => s"createFile($path)"
-    case Rm(path) => s"rm($path)"
-    case Mkdir(path) => s"mkdir($path)"
-    case Cp(src, dst) => s"cp($src, $dst)"
+    case EError => "error"
+    case ESkip => "skip"
+    case EIf(a, p, q) => s"If(${prettyPred(NotCxt, a)}, ${pretty(p)}, ${pretty(q)})"
+    case ESeq(p, q) => pretty(p) + " >> " + pretty(q)
+    case ECreateFile(path, hash) => s"createFile($path)"
+    case ERm(path) => s"rm($path)"
+    case EMkdir(path) => s"mkdir($path)"
+    case ECp(src, dst) => s"cp($src, $dst)"
   }
 
 }
