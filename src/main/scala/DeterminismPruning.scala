@@ -23,106 +23,6 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
 
   type H = Map[Path, Set[AStat]]
 
-  val allStats = Set[AStat](AFile, ADir, ADoesNotExist)
-
-  def hUnion(h1: Option[H], h2: Option[H]) = (h1, h2) match {
-    case (None, _) => h2
-    case (_, None) => h1
-    case (Some(h1), Some(h2)) => Some(h1.combine(h2) {
-      case (None, None) => throw Unexpected("bug in combineMaps")
-      case (Some(s1), None) => Some(s1 + AUntouched)
-      case (None, Some(s2)) => Some(s2 + AUntouched)
-      case (Some(s1), Some(s2)) => Some(s1 union s2)
-    })
-  }
-
-  case class Abs(f: H => Option[H]) extends StateLike[Abs] {
-
-    def >>(other: Abs) = Abs(st => f(st) match {
-      case None => None
-      case Some(h) => other.f(h)
-    })
-
-    def +(other: Abs) = Abs(st => hUnion(this.f(st), other.f(st)))
-
-    def unary_!(): Abs = Abs(st => f(st) match {
-      case None => Some(st.mapValues(_ => allStats))
-      case Some(map) => {
-        if (map.values.exists(_.size == allStats.size)) {
-          None
-        }
-        else {
-          Some(map.mapValues(set => allStats diff set))
-        }
-      }
-    })
-
-  }
-
-  def toAStat(stat: Stat) = stat match {
-    case AbstractEval.Dir => ADir
-    case AbstractEval.File => AFile
-    case AbstractEval.DoesNotExist => ADoesNotExist
-  }
-
-  object AEval extends EvalLike {
-    type State = Abs
-
-    def test(p: Path, stat: Stat): Abs = {
-      val aStat = toAStat(stat)
-      Abs(st => st.get(p) match {
-        case None => Some(st + (p -> Set(aStat)))
-        case Some(set) => {
-          if (set.contains(aStat)) {
-            Some(st + (p -> Set(aStat)))
-          }
-          else {
-            None
-          }
-        }
-      })
-    }
-
-    def set(p: Path, stat: Stat): Abs = Abs(st => Some(st + (p -> Set(toAStat(stat)))))
-
-    val error = Abs(_ => None)
-
-    val skip =  Abs(st => Some(st))
-  }
-
-  def absEval(expr: FSSyntax.Expr) = AEval.eval(expr).f(Map())
-
-  def pruneablePaths[A](graph: FSGraph[A]): Set[Path] = {
-
-    val absStates = graph.exprs.values.map(absEval)
-    val maybeFiles = absStates.foldLeft[Option[Set[Path]]](Some(Set())) {
-      case (None, _) => None
-      case (_ ,None) => None
-      case (Some(files), Some(st)) => {
-        // files that st does not touch
-        val preserved = files.filter(p => st.get(p) match {
-          case None => true // st does not touch p
-          case Some(st) => st == Set(AUntouched)
-        })
-
-        val newFiles = st.keySet
-          .filter({ case p =>
-            st(p).contains(AFile) &&
-            (st(p).subsetOf(Set(AFile, AUntouched))) &&
-            !files.contains(p) })
-        // TODO(arjun): This is just disjoint union, right?
-        Some(preserved union newFiles)
-      }
-    }
-    assert(maybeFiles.isDefined, "wow-- a static error here")
-    maybeFiles.get
-  }
-
-  def assertDir(p: Path) = ite(testFileState(p, IsDir), Skip, Error)
-
-  def mayAssertParent(toPrune: Set[Path], p: Path) = {
-    if (toPrune.contains(p.getParent)) Skip else assertDir(p.getParent)
-  }
 
   def specPred(pred: Pred, h: Map[Path, AStat]): Pred = pred match {
     case TestFileState(p, s) => {
@@ -183,13 +83,6 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
     result
   }
 
-  def pruneGraph[A](graph: FSGraph[A]): FSGraph[A] = {
-    val toPrune = pruneablePaths(graph)
-    logger.info(s"May prune ${toPrune.size} paths")
-    logger.info(s"Is it prunable: ${toPrune.contains("/home/gga/.irssi".toPath)}")
-    FSGraph(graph.exprs.mapValues(e => prune(toPrune, e)), graph.deps)
-  }
-
-  def pruneablePathCount[A](graph: FSGraph[A]): Int = pruneablePaths(graph).size
+  def pruneGraph[A](graph: FSGraph[A]): FSGraph[A] = DeterminismPruning2.pruneWrites(graph)
 
 }

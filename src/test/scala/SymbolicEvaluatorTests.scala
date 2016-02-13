@@ -364,14 +364,6 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     assert(SymbolicEvaluator.isDeterministic(pruned) == true)
   }
 
-  test("pruning writes") {
-
-
-    val e = mkdir("/foo") >> mkdir("/foo/bar")
-    println(DeterminismPruning.absEval(e))
-
-  }
-
   test("In Spiky, irssi configuration files should be trivially files") {
     import DeterminismPruning2._
     val g = PuppetParser.parseFile(s"parser-tests/good/spiky-reduced.pp")
