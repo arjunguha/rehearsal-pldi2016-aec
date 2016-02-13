@@ -6,7 +6,6 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
   import java.nio.file.Path
   import FSSyntax._
   import Implicits._
-  import AbstractEval.{EvalLike, StateLike, Stat}
 
   sealed trait AStat {
     def ==(other: FileState): Boolean = (this, other) match {
