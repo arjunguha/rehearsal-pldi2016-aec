@@ -4,7 +4,6 @@ class DeterminismEvaluationSuite extends FunSuitePlus
   import rehearsal._
   import PuppetParser.parseFile
   import rehearsal.Implicits._
-  import java.nio.file.Paths
   import SymbolicEvaluator.{predEquals, exprEquals, isDeterministic, isDeterministicError}
   import PuppetSyntax._
 

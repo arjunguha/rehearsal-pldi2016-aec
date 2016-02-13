@@ -6,7 +6,6 @@ object DeterminismPruning2 extends com.typesafe.scalalogging.LazyLogging {
 
   import PuppetSyntax.FSGraph
   import Implicits._
-  import java.nio.file.Path
   import FSSyntax._
 
   def pruneWrites[K](graph: FSGraph[K]): FSGraph[K] = {

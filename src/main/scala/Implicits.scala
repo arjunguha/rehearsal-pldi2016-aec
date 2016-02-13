@@ -9,7 +9,7 @@ object Implicits {
   import scala.language.implicitConversions
   import scalax.collection.Graph
   import scalax.collection.GraphEdge.DiEdge
-  import java.nio.file.{Path, Paths, Files}
+  import java.nio.file.{Paths, Files}
 
   implicit def stringToPath(str: String): Path = Paths.get(str)
 

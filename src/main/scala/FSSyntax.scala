@@ -2,8 +2,6 @@ package rehearsal
 
 object FSSyntax {
 
-  import java.nio.file.Path
-
   sealed trait FileState extends Ordered[FileState] {
 
     def compare(that: FileState): Int = {

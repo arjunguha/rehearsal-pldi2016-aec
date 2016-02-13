@@ -2,8 +2,7 @@ class SimpleParserTests extends org.scalatest.FunSuite {
 
   import rehearsal._
   import PuppetParser._
-  //import Syntax._
-  import java.nio.file._
+  import java.nio.file.{Files, Paths}
   import scala.collection.JavaConversions._
 
   for (path <- Files.newDirectoryStream(Paths.get("parser-tests/good"))) {

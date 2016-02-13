@@ -3,7 +3,6 @@ package rehearsal
 object IdempotenceOptimizer {
 
   import FSSyntax._
-  import java.nio.file.Path
   import Implicits._
 
   def addPath(p: Path, paths: Map[Path, Int]): Map[Path, Int] = {

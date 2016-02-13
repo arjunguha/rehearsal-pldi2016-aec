@@ -3,7 +3,6 @@ package rehearsal
 import FSSyntax._
 import scala.util.Random
 import java.nio.file.Paths
-import java.nio.file.Path
 import scalax.collection.Graph
 import scalax.collection.GraphEdge.DiEdge
 

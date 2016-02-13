@@ -1,8 +1,6 @@
 package rehearsal
 
 private[rehearsal] object Helpers {
-
-  import java.nio.file.Path
   import Implicits._
   import FSSyntax._
 

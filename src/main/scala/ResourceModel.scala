@@ -2,7 +2,7 @@ package rehearsal
 
 object ResourceModel {
 
-  import java.nio.file.{Path, Paths}
+  import java.nio.file.{Paths}
   import scala.collection.immutable.Set
   import FSSyntax._
   import rehearsal.Implicits._

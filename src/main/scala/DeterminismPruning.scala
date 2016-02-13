@@ -3,7 +3,6 @@ package rehearsal
 object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
 
   import rehearsal.PuppetSyntax.FSGraph
-  import java.nio.file.Path
   import FSSyntax._
   import Implicits._
 

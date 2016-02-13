@@ -1,7 +1,6 @@
 class CommutativityTests extends org.scalatest.FunSuite {
 
   import rehearsal._
-  import java.nio.file.Path
   import FSSyntax._
   import Implicits._
 

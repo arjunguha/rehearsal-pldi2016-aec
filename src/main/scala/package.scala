@@ -1,7 +1,9 @@
 package object rehearsal {
 
-  import java.nio.file.{Paths, Path, Files}
+  import java.nio.file.{Paths, Files}
   import rehearsal.Implicits._
+
+  type Path = java.nio.file.Path
 
   val root = Paths.get("/")
 

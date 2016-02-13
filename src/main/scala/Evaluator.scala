@@ -3,7 +3,6 @@ package rehearsal
 object FSEvaluator {
 
   import FSSyntax._
-  import java.nio.file.Path
 
   type S = Option[State]
 

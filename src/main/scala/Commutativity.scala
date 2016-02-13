@@ -2,7 +2,6 @@ package rehearsal
 
 object Commutativity {
 
-  import java.nio.file.Path
   import Implicits._
   import FSSyntax._
 

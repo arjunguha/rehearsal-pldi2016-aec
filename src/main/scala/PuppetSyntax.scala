@@ -2,7 +2,6 @@ package rehearsal
 
 object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
 
-  import java.nio.file.Path
   import scala.util.parsing.input.Positional
   import scalax.collection.Graph
   import scalax.collection.GraphEdge.DiEdge

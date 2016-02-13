@@ -2,8 +2,6 @@ package rehearsal
 
 package repl {
 
-  import java.nio.file.Paths
-
   private object Main extends App {
     def runOnAll[A](path: String, noun: String, pastVerb: String)(action: String => A) {
       import java.io.File
