@@ -20,9 +20,6 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
   case object ADoesNotExist extends AStat
   case object AUntouched extends AStat
 
-  type H = Map[Path, Set[AStat]]
-
-
   def specPred(pred: Pred, h: Map[Path, AStat]): Pred = pred match {
     case TestFileState(p, s) => {
       if (!h.contains(p)) {
