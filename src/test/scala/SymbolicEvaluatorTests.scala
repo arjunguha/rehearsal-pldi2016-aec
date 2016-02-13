@@ -379,7 +379,6 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
 
     val candidates = pruningCandidates2(g.exprs)
     val collectd = Node("package", "collectd")
-    println(branchingPaths(g.exprs(collectd)))
     println(candidates(Node("package", "collectd")))
   }
 

@@ -28,6 +28,7 @@ package repl {
     }
 
     def uncurry[A, B, C](f: (A, B) => C)(t: (A, B)): C = f(t._1, t._2)
+
     args.toList match {
 
       case List("parseall", path) => runOnAll(path, "parser", "parsed") {
