@@ -321,19 +321,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  /**
-    * Checks if there is any input state that leads the expression to
-    * a non-error output state.
-    */
-  def everSucceeds(e: F.Expr): Boolean = smt.pushPop {
-   val initSt = initState
-    eval(Assert(Not(initSt.isErr)))
-    assertPathConsistency(initSt)
-    val finalSt = evalExpr(initSt, e)
-    eval(Assert(Not(finalSt.isErr)))
-    smt.checkSat()
-  }
-
   def exprEquals(e1: F.Expr, e2: F.Expr): Option[State] = smt.pushPop {
     // TODO(arjun): Must rule out error as the initial state
     val st = initState
@@ -469,34 +456,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  def diverged(inSt: ST)(st1: ST, st2: ST): Boolean = smt.pushPop {
-    logger.info("Running divergence check.")
-    eval(Assert(stNEq(st1, st2)))
-    if (smt.checkSat()) {
-      eval(GetModel())
-      (stateFromTerm(inSt), stateFromTerm(st1), stateFromTerm(st2)) match {
-        case (None, _, _) => throw Unexpected("bad model: initial state should not be error")
-        case (Some(in), None, Some(out)) => {
-          logger.info(s"On input\n$in\nthe program produces error or output\n$out")
-          logDiff(in, out)
-        }
-        case (Some(in), Some(out), None) => {
-          logger.info(s"On input\n$in\nthe program produces error or output\n$out")
-          logDiff(in, out)
-        }
-        case (Some(in), Some(out1), Some(out2)) => {
-          logger.info(s"On input\n$in\nthe program produces two possible outputs!")
-        }
-        case (Some(_), None, None) => throw Unexpected("bad model: both outputs are identical errors")
-      }
-      logger.info("Divergence check showed true.")
-      true
-    }
-    else {
-      logger.info("Divergence check showed false.")
-      false
-    }
-  }
+
   def isIdempotent[K](e: Expr): Boolean = {
     val inST = initState
     val once = evalExpr(inST, e)
