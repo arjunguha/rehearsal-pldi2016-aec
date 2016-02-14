@@ -25,15 +25,12 @@ ssh_authorized_key{ 'mykey': key => 'SMUBukLpUpCQgZ' }
 The following four programs are equivalent.
 
 -  Using explicit edges:
-
     ```puppet
     file{ '/mydir': ensure => 'directory' }
     file{ '/mydir/myfile': ensure => 'present' }
     File{'/mydir'} -> File{'/mydir/myfile'}
     ```
-
      or
-
     ```puppet
     file{ '/mydir': ensure => 'directory' }
     file{ '/mydir/myfile': ensure => 'present' }
