@@ -184,7 +184,7 @@ The following four programs are equivalent.
     file{ '/mydir/myfile': ensure => 'present' }
   ```
 
-- Using the *after* attribute:
+- Using the *require* attribute:
 
   ```puppet
     file{ '/mydir': ensure => 'directory' }
