@@ -15,6 +15,7 @@ resolvers ++= Seq(
 )
 
 libraryDependencies ++= Seq(
+  "edu.umass.cs" %% "config" % "1.0.1",
   "org.scalatest" %% "scalatest" % "2.2.1" % "test",
   "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4",

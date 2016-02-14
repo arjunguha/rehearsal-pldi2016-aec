@@ -34,7 +34,7 @@ object ResourceModel {
   case object Notify extends Res
 
   def queryPackage(distro: String, pkg: String): Option[Set[Path]] = {
-    val resp = Http(s"http://104.197.140.244:8080/query/$distro/$pkg").timeout(2 * 1000, 60 * 1000).asString
+    val resp = Http(s"http://${Settings.packageHost}/query/$distro/$pkg").timeout(2 * 1000, 60 * 1000).asString
     if (resp.isError) {
       None
     }
@@ -124,7 +124,7 @@ object ResourceModel {
     case Package(name, true) => {
 
       val paths = queryPackage(distro, name).getOrElse(throw PackageNotFound(distro, name))
-      val dirs = paths.map(_.ancestors()).reduce(_ union _) - root -- Set[Path]("/bin", "/usr", "/etc")
+      val dirs = paths.map(_.ancestors()).reduce(_ union _) - root -- Settings.assumedDirs.toSet
       val files = paths -- dirs
 
       val mkdirs = dirs.toSeq.sortBy(_.getNameCount)

@@ -85,11 +85,7 @@ object Commutativity {
   }
 
   object St {
-
-    // TODO(arjun): This is assumed by resourceModel too. should centralize
-    // this configuration
-    val empty = new St(Map("/".toPath -> D, "/etc".toPath -> D, "/bin".toPath -> D, "/usr".toPath -> D))
-
+    val empty = new St(Settings.assumedDirs.map(p => p -> D).toMap)
   }
 
   def evalPred(st: St, pred: Pred): St = pred match {
