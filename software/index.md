@@ -16,7 +16,6 @@ The Rehearsal software is available in two forms:
   The source code includes a `Vagrantfile` that was used to create virtual
   machine above. [download here]
 
-
 ## Differences from the paper
 
 We are actively working on Rehearsal and there are three differences
@@ -64,3 +63,16 @@ We'll be documenting these differences in the camera ready version.
 
    We will revise this claim in the camera-ready.
 
+## Package Web Service
+
+As documented in the paper, Rehearsal uses a web service, hosted on Google
+Compute Engine, to get package file listings. In principle,
+we can use it to de-anonymous reviewers, we promise we won't! The
+server has been running for months without any maintenance and we will not
+need to update it during the review process.
+
+If you really want to run your own package-server, the
+source code is in the `package-server`. You'll have to edit
+`rehearsal.conf` to point to your own instance of the package server.
+The package server is quite tiresome to configure, and we strongly recommend
+using the one that we have running.
