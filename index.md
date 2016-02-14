@@ -34,11 +34,11 @@ The following four programs are equivalent.
 
 - Using explicit edges (alternative):
 
-   ```puppet
-    file{ '/mydir': ensure => 'directory' }
-    file{ '/mydir/myfile': ensure => 'present' }
-    File{'/mydir/myfile'} <- File{'/mydir'}
-   ```
+  ```puppet
+  file{ '/mydir': ensure => 'directory' }
+  file{ '/mydir/myfile': ensure => 'present' }
+  File{'/mydir/myfile'} <- File{'/mydir'}
+  ```
 
 - Using the *before* attribute:
 
