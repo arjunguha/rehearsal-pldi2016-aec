@@ -57,6 +57,14 @@ The following four programs are equivalent.
     file{ '/mydir/myfile': ensure => 'present', require => File['mydir'] }
   ```
 
+## Arrays
+  
+- Basic syntax:
+  
+  ```puppet
+    $x = [ "a", "b", ]
+  ```
+
 ## Defining new Resource Types (defined types)
 
 The folowing programs are equivalent.
@@ -77,4 +85,112 @@ The folowing programs are equivalent.
       file{'/myfile': content => $str }
     }
     mytype{'myinstance': str => "hello" }
+  ```
+## Updating Resources
+
+A user can change the attributes for all resources of a certain type:
+
+  ```puppet
+    file{"/bin": ensure => directory }
+    file{"/usr": ensure => directory }
+
+    File {
+      owner => "root"
+    }
+    File {
+      group => "root"
+    }
+  ```
+
+## Classes
+
+- Include-like behavior using ```puppet include ```:
+
+  ```puppet
+    class myclass {
+      notify{"baz": message => "/a"}
+    }
+    include myclass
+  ```
+
+- Include-like behavior using ```puppet require ```:
+
+  ```puppet
+    class myclass {
+      notify{"baz": message => "/a"}
+    }
+    require myclass
+  ```
+
+- Resource-like behavior (without parameters):
+
+  ```puppet
+    class myclass {
+      notify{"baz": message => "/a"}
+    }
+    class{"myclass": }
+  ```
+
+- Resource-like behavior (with parameters):
+
+  ```puppet
+    class myclass($x) {
+      notify{"baz": message => $x}
+    }
+    class{"myclass":
+      x => "/a"
+    }
+  ```
+  
+## Conditionals
+
+- If as an expression assigned to a variable:
+
+  ```puppet $x = if (true) { 1 } else { 2 } ```
+
+- If as a statement:
+
+  ```puppet
+      if "localhost.localdomain" != $::fqdn {
+        include postfix
+      }
+  ```
+
+- Else-if:
+
+  ```puppet
+      $y = if($a == 1) {
+        "one"
+      } else if ($a == 2) {
+        "two"
+      }
+  ```
+
+- Ternary Expressions
+
+  ```puppet
+    $a = true
+    $b = 900
+
+    $x = $a ? $b : $b ? $y : $z
+  ```
+
+## Case statements
+
+- Without defalut:
+
+  ```puppet
+      case "foo" {
+        "bar": { file{"/foo": } }
+        "baz": { file{"/foo": } }
+      }
+  ```
+
+- With default:
+
+  ```puppet
+      case "foo" {
+        "bar": { file{"/fooz": } }
+        default: { file{"/fooz": } }
+      }
   ```
