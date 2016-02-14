@@ -1,8 +1,10 @@
 ---
 layout: default
-title: Arjun Guha
 ---
 
+# Accepted Version of the Paper
+
+The accepted version of the paper is [available here (PDF)](rehearsal-accepted-version.pdf).
 
 # Examples Rehearsal can handle
 
