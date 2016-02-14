@@ -8,7 +8,7 @@ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
 apt-get update -q
 
 echo debconf shared/accepted-oracle-license-v1-1 select true | debconf-set-selections
-apt-get install -yq oracle-java8-installer sbt
+apt-get install -yq oracle-java8-installer sbt unzip
 
 wget -q http://www.scala-lang.org/files/archive/scala-2.11.7.deb
 dpkg -i scala-2.11.7.deb

@@ -1,27 +1,49 @@
 [![Build Status](https://magnum.travis-ci.com/plasma-umass/rehearsal.svg?token=qLSQpCbsY9CMXsHZVJDd)](https://magnum.travis-ci.com/plasma-umass/rehearsal)
 
-rehearsal
-=========
+# Rehearsal: A Configuration Verification Tool for Puppet
 
-## License
+## Vagrantfile
 
-You do not have a license to use this software.
+We've provided a [Vagrantfile](https://www.vagrantup.com) that creates a
+VirtualBox VM with everything needed to run Rehearsal and its benchmarks.
+After installing Vagrant, from the root directory of this repository, run:
 
-## Installing Z3 (for z3analysis)
+    vagrant up --provider virtualbox
 
-- Checkout Z3 from [https://github.com/Z3Prover/z3]
-- Build as follows:
+## Building from source
 
-  ```
-  python scripts/mk_make.py --java
-  cd build
-  make
-  sudo make install
-  ```
+### Prerequisites
 
-- On MacOS X
-  + Move `/Library/lib/com.microsoft.z3.jar` to `z3analysis/lib`
-  + Move `/Library/lib/libz3java.dylib` to `/usr/lib/java`
-  + Move `/Library/lib/libz3.dylib` to `/usr/lib`
+1. Oracle JDK 8
 
+2. [Microsoft Z3 Theorem Prover 4.4.1](https://github.com/Z3Prover/z3/releases/tag/z3-4.4.1)
 
+   After installation, place the `z3` executable in your `PATH`.
+
+3. [sbt](http://www.scala-sbt.org) version 0.13.9 or higher
+
+4. [scala-smtlib](https://github.com/regb/scala-smtlib)
+
+   This project is not published to Maven Central or any other repository.
+   To install:
+
+   ```
+   git clone https://github.com/regb/scala-smtlib.git
+   cd scala-smtlib
+   git checkout 711e9a1ef994935482bc83ff3795a94f637f0a04
+   sbt publish-local
+   ```
+
+### Building
+
+From the root directory of the repository:
+
+```
+sbt compile
+```
+
+### Testing
+
+```
+sbt test
+```
