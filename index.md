@@ -31,7 +31,9 @@ The following four programs are equivalent.
     file{ '/mydir/myfile': ensure => 'present' }
     File{'/mydir'} -> File{'/mydir/myfile'}
    ```
-     or
+
+- Using explicit edges (alternative):
+
    ```puppet
     file{ '/mydir': ensure => 'directory' }
     file{ '/mydir/myfile': ensure => 'present' }
