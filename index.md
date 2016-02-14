@@ -4,7 +4,7 @@ layout: default
 
 This website is for members of the PLDI 2016 Artifact Evaluation Committee.
 
-# Accepted Paper
+# The Paper
 
 The accepted version of the paper is [available here (PDF)](rehearsal-accepted-version.pdf).
 
@@ -21,17 +21,17 @@ determinism. There are several articles and blog posts on the Web
 that discuss Puppet and determinism, though some are quite confused. Here
 is a sample:
 
-1. https://puppetlabs.com/blog/inside-puppet-about-determinism
+1. [https://puppetlabs.com/blog/inside-puppet-about-determinism]
 
    This official blog post asserts that determinism is desirable, but stops
    short of saying "all Puppet manifests are deterministic" (since they are
    not).
 
-2. https://bugzilla.mozilla.org/show_bug.cgi?id=691654
+2. [https://bugzilla.mozilla.org/show_bug.cgi?id=691654]
 
   This is an Mozilla infrastructure bug that reports a non-determinism error.
 
-3. http://kartar.net/2010/01/puppet-chef-deterministic-ordering-and-the-much-maligned-dsl/
+3. [http://kartar.net/2010/01/puppet-chef-deterministic-ordering-and-the-much-maligned-dsl/]
 
    This personal blog post by a Puppet employee asserts that Puppet is
    deterministic when the user correctly specifies all dependencies.
@@ -44,7 +44,7 @@ discuss determinism. ,They can be found by Googling "Puppet determinism".
 
 The official Puppet documentation asserts that Puppet is idempotent:
 
-  https://docs.puppetlabs.com/guides/introduction.html#idempotency
+  [https://docs.puppetlabs.com/guides/introduction.html#idempotency]
 
 However, the examples in our paper show that this is not true. Individual
 resources may be idempotent, but it is easy to create compound manifests
@@ -134,7 +134,14 @@ describes how we approximate SSH keys as a collection of files. We use a similar
 trick to model CRON jobs. We are exploring using lenses to model more
 sophisticated updates to files.
 
-# Examples Rehearsal can handle
+# Puppet Crash-Course
+
+We do not expect all readers to be familiar with the Puppet language.
+The paper attempts to be self-contained and has several examples of Puppet,
+but limits itself to a tiny fragment of Puppet. Rehearsal handles a much
+larger subset of Puppet, which we illustrate below. We conclude with
+examples of Puppet that Rehearsal cannot handle.
+
 
 ## Creating Resources
 
