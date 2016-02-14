@@ -1,42 +1,15 @@
-<!DOCTYPE html>
-<html>
+---
+layout: default
+title: Arjun Guha
+---
 
-  <head>
-    <meta charset='utf-8'>
-    <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <meta name="description" content="Rehearsal : A configuration verification tool for Puppet">
 
-    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
-
-    <title>Rehearsal</title>
-  </head>
-
-  <body>
-
-    <!-- HEADER -->
-    <div id="header_wrap" class="outer">
-        <header class="inner">
-          <a id="forkme_banner" href="https://github.com/plasma-umass/rehearsal">View on GitHub</a>
-
-          <h1 id="project_title">Rehearsal</h1>
-          <h2 id="project_tagline">A configuration verification tool for Puppet</h2>
-
-            <section id="downloads">
-              <a class="zip_download_link" href="https://github.com/plasma-umass/rehearsal/zipball/master">Download this project as a .zip file</a>
-              <a class="tar_download_link" href="https://github.com/plasma-umass/rehearsal/tarball/master">Download this project as a tar.gz file</a>
-            </section>
-        </header>
-    </div>
-
-    <!-- MAIN CONTENT -->
-    <div id="main_content_wrap" class="outer">
-      <section id="main_content" class="inner">
         <h3>
 <a id="positive-examples" class="anchor" href="#positive-examples" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Examples Rehearsal can handle</h3>
 
 <h4>Creating Resources</h4>
 
-<p><code>  
+<p><code>
   file{ '/myfile': content => 'hello' } </br>
   file{ '/mydirectory': ensure => 'directory' } </br>
   file{ '/deletedfile': ensure => 'absent' } </br>
@@ -65,7 +38,7 @@
   <li>Using <code>before</code> attribute: </br>
     <code>
       file{ '/mydir': ensure => 'directory', before => File['mydir/myfile'] } </br>
-      file{ '/mydir/myfile': ensure => 'present' } 
+      file{ '/mydir/myfile': ensure => 'present' }
     </code>
   </li>
   <li>Using <code>require</code> attribute: </br>
@@ -77,8 +50,8 @@
 </p>
 
 <h4>Defining new Resource Types (defined types)</h4>
-<p>The folowing programs are equivalent. 
-  <ul> 
+<p>The folowing programs are equivalent.
+  <ul>
   <li>Without parameters:</br>
     <code>
       define mytype { </br>
@@ -95,18 +68,3 @@
     </code>
   </ul>
 </p>
-      </section>
-    </div>
-
-    <!-- FOOTER  -->
-    <div id="footer_wrap" class="outer">
-      <footer class="inner">
-        <p class="copyright">Rehearsal maintained by <a href="https://github.com/plasma-umass">plasma-umass</a></p>
-        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
-      </footer>
-    </div>
-
-    
-
-  </body>
-</html>
