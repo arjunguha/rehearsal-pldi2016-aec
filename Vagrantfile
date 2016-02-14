@@ -43,7 +43,7 @@ R -e 'install.packages("dplyr", repos="http://cran.us.r-project.org")'
 R -e 'install.packages("grid", repos="http://cran.us.r-project.org")'
 R -e 'install.packages("fontcm", repos="http://cran.us.r-project.org")'
 R -e 'install.packages("extrafont", repos="http://cran.us.r-project.org")'
-R -e 'install.packages("fontcm", repos="http://cran.us.r-project.org")'
+R -e 'library(extrafont); font_install("fontcm")'
 EOF
 
 Vagrant.configure("2") do |config|
