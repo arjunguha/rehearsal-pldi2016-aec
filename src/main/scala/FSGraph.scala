@@ -40,7 +40,7 @@ case class FSGraph[K](exprs: Map[K, FSSyntax.Expr], deps: Graph[K, DiEdge])
     def isDangling(node: Graph[K, DiEdge]#NodeT): Boolean = {
       val succs = node.diSuccessors.toSeq
       succs.length > 0 &&
-        succs.forall(succ => succ.outDegree == 0) &&
+        succs.forall(succ => succ.outDegree == 0 && succ.inDegree == 1) &&
         succs.combinations(2).forall {
           case Seq(node1, node2) => exprs(node1.value).commutesWith(exprs(node2.value))
         }
