@@ -26,7 +26,7 @@ The following four programs are equivalent.
 
 -  Using explicit edges:
 
-   ```
+   ```puppet
     file{ '/mydir': ensure => 'directory' }
     file{ '/mydir/myfile': ensure => 'present' }
     File{'/mydir'} -> File{'/mydir/myfile'}
@@ -54,22 +54,24 @@ The following four programs are equivalent.
     file{ '/mydir/myfile': ensure => 'present', require => File['mydir'] }
   ```
 
-<h4>Defining new Resource Types (defined types)</h4>
-<p>The folowing programs are equivalent.
-  <ul>
-  <li>Without parameters:</br>
-    ```puppet
-      define mytype {
-        <tab1>file{'/myfile': content => "hello" }</br></tab1>
-      }</br>
-      mytype{'myinstance': }
-    ```
-  <li>With parameters</br>
-    ```puppet
-      define mytype($str) {
-        <tab1>file{'/myfile': content => $str }</br></tab1>
-      }</br>
-      mytype{'myinstance': str => "hello" }
-    ```
-  </ul>
-</p>
+## Defining new Resource Types (defined types)
+
+The folowing programs are equivalent.
+
+- Without parameters:
+
+  ```puppet
+    define mytype {
+      file{'/myfile': content => "hello" }
+    }
+    mytype{'myinstance': }
+  ```
+
+- With parameters:
+
+  ```puppet
+    define mytype($str) {
+      file{'/myfile': content => $str }
+    }
+    mytype{'myinstance': str => "hello" }
+  ```
