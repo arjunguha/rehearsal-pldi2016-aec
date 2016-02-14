@@ -5,9 +5,12 @@ object Main extends App {
   import scala.concurrent._
   import scala.concurrent.duration._
   import ExecutionContext.Implicits.global
+  import java.nio.file.Files
   import Implicits._
+  import scala.util.{Try, Success, Failure}
 
   sealed trait Command
+  case object Checker extends Command
   case object DeterminismBenchmark extends Command
   case object PruningSizeBenchmark extends Command
   case object IdempotenceBenchmark extends Command
@@ -40,6 +43,11 @@ object Main extends App {
 
     head("rehearsal", "0.1")
 
+    cmd("check")
+        .action((_, c) => c.copy(command = Some(Checker)))
+        .text("Check a Puppet manifest for errors.")
+        .children(filename, os)
+
     cmd("benchmark-pruning-size")
       .action((_, c) => c.copy(command = Some(PruningSizeBenchmark)))
       .text("Benchmark the effect of pruning on the number of writable paths")
@@ -65,6 +73,55 @@ object Main extends App {
     )
   }
 
+  def checker(filename: String, os: String): Unit = {
+    if (!Set("ubuntu-trusty", "centos-6").contains(os)) {
+      println("""Error: supported operating systems are 'ubuntu-trusty' and 'centos-6'""")
+      return
+    }
+
+    if (!Files.isRegularFile(filename) || !Files.isReadable(filename)) {
+      println("Error: not a readable file: $filename")
+      return
+    }
+
+    Try(PuppetParser.parseFile(filename.toString)
+          .eval.resourceGraph.fsGraph(os)
+          .addRoot(PuppetSyntax.Node("root", "root"))
+          .contractEdges()) match {
+      case Success(g) => {
+        print("Checking if manifest is deterministic ... ")
+        if (SymbolicEvaluator.isDeterministic(g.pruneWrites)) {
+          println("OK.")
+        }
+        else {
+          println("FAILED.")
+          return
+        }
+
+        print("Checking if manifest is idempotent ... ")
+        if (g.expr.pruneIdem.isIdempotent) {
+          println("OK.")
+        }
+        else {
+          println("FAILED.")
+          return
+        }
+      }
+      case Failure(ParseError(msg)) => {
+        println("Error parsing file.")
+        println(msg)
+      }
+      case Failure(EvalError(msg)) => {
+        println("Error evaluating file.")
+        println(msg)
+      }
+      case Failure(PackageNotFound(distro, pkg)) => {
+        println(s"Package not found: $pkg.")
+      }
+      case Failure(exn) => throw exn
+    }
+  }
+
   parser.parse(args, Config(None, None, None, None, None, None, None)) match {
     case None => {
       println(parser.usage)
@@ -75,6 +132,11 @@ object Main extends App {
         case None => {
           println(parser.usage)
           System.exit(1)
+        }
+        case Some(Checker) => {
+          val filename = config.filename.get
+          val os = config.os.get
+          checker(filename.toString, os)
         }
         case Some(IdempotenceBenchmark) => {
           val filename = config.filename.get
