@@ -34,6 +34,38 @@ After installing Vagrant, from the root directory of this repository, run:
    sbt publish-local
    ```
 
+5. To run the benchmarks and generate graphs:
+
+   1. The `make` command
+
+   2. [R 3.2.2](https://www.rstudio.com) or higher
+
+   3. [Scala 2.11.7](http://www.scala-lang.org) or higher
+
+      When building and running Rehearsal, SBT downloads its own copy of Scala.
+      The benchmarks use Scala in a shell script, so Scala needs to be installed
+      independently.
+
+   4. Several R packages: `ggplot2`, `sitools`, `scales`, `plyr`,
+      `dplyr`, `grid`, `fontcm`, and `extrafont`.
+
+      You can install these within the R REPL. For example:
+
+      ```
+      install.packages("ggplot2")
+      ```
+
+      NOTE: R packages require `g++` and `gcc` to be installed.
+
+   5. The *Computer Modern* font for R:
+
+      ```
+      R -e 'install.packages("fontcm", repos="http://cran.us.r-project.org")'
+      ```
+
+   6. The `ghostscript` package on Linux systems. (Unclear what is required
+      in lieu of ghostscript on Mac OS X.)
+
 ### Building
 
 From the root directory of the repository:
