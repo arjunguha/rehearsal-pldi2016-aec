@@ -311,6 +311,7 @@ A user can change the attributes for all resources of a certain type:
         default: { file{"/fooz": } }
       }
   ```
+  
 ## Ternary Expressions
 
   ```puppet
