@@ -184,7 +184,7 @@ The following four programs are equivalent.
     file{ '/mydir/myfile': ensure => 'present' }
   ```
 
-- Using the *after* attribute:
+- Using the *require* attribute:
 
   ```puppet
     file{ '/mydir': ensure => 'directory' }
@@ -216,6 +216,7 @@ The folowing programs are equivalent.
 ## Classes
 
 - Include-like behavior using ```puppet include ```:
+
   ```puppet
     class myclass {
       notify{"baz": message => "/a"}
@@ -224,6 +225,7 @@ The folowing programs are equivalent.
   ```
 
 - Include-like behavior using ```puppet require ```:
+
   ```puppet
     class myclass {
       notify{"baz": message => "/a"}
@@ -232,6 +234,7 @@ The folowing programs are equivalent.
   ```
 
 - Resource-like behavior (without parameters):
+
   ```puppet
     class myclass {
       notify{"baz": message => "/a"}
@@ -240,6 +243,7 @@ The folowing programs are equivalent.
   ```
 
 - Resource-like behavior (with parameters):
+
   ```puppet
     class myclass($x) {
       notify{"baz": message => $x}
@@ -251,9 +255,11 @@ The folowing programs are equivalent.
 ## Conditionals
 
 - If as an expression assigned to a variable:
+
   ```puppet $x = if (true) { 1 } else { 2 } ```
 
 - If as a statement:
+
   ```puppet 
       if "localhost.localdomain" != $::fqdn {
         include postfix
@@ -261,6 +267,7 @@ The folowing programs are equivalent.
   ```
 
 - Else-if: 
+
   ```puppet 
       $y = if($a == 1) {
         "one"
@@ -272,6 +279,7 @@ The folowing programs are equivalent.
 ## Case statements
 
 - Without defalut:
+
   ```puppet
       case "foo" {
         "bar": { file{"/foo": } }
@@ -280,10 +288,10 @@ The folowing programs are equivalent.
   ```
 
 - With default: 
+
   ```puppet
       case "foo" {
         "bar": { file{"/fooz": } }
         default: { file{"/fooz": } }
       }
   ```
-  
