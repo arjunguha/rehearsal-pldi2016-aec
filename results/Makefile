@@ -2,7 +2,7 @@ TRIALS=1
 .PHONY = all clean
 
 all: idempotence.pdf determinism.pdf sizes.pdf
-  @echo "Complete.\nSee idempotence.pdf, determinism.pdf, and sizes.pdf."
+	@echo "Complete.\nSee idempotence.pdf, determinism.pdf, and sizes.pdf."
 
 clean:
 	rm -f sizes.csv idempotence.csv determinism.csv sizes.pdf idempotence.pdf determinism.pdf

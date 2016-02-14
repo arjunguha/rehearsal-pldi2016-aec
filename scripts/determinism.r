@@ -16,7 +16,6 @@ plot <- ggplot(df, aes(x=Name,y=Mean,fill=Pruning)) +
   theme(legend.title = element_text(size = 8),
         legend.position = c(0.85, 0.8),
         axis.text.x=element_text(angle=50, vjust=0.5)) +
-  scale_fill_manual(values=c("#f1a340", "#998ec3")) +
   geom_bar(stat="identity",position="dodge") +
   labs(x = "Benchmark", y = "Time (s)")
 mysave("../results/determinism.pdf", plot)
