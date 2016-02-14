@@ -78,7 +78,7 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
   }
 
 
-  def pruneWrites[K](graph: FSGraph[K]): FSGraph[K] = {
+  def pruneWrites[K <: GraphKey[K]](graph: FSGraph[K]): FSGraph[K] = {
     val candidates = pruningCandidates2(graph.exprs)
     val exprs_ = graph.exprs.map {
       case (k, e) => (k, DeterminismPruning.pruneRec(candidates(k), e, Map())._1)

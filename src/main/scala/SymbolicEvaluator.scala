@@ -33,7 +33,7 @@ object SymbolicEvaluator {
   }
 
 
-  def mkImpl[K](g: FSGraph[K], logFile: Option[String]) = {
+  def mkImpl[K <: GraphKey[K]](g: FSGraph[K], logFile: Option[String]) = {
      val sets = ESeq(g.exprs.values.toSeq: _*).fileSets
      val ro = sets.reads -- sets.writes -- sets.dirs
     new SymbolicEvaluatorImpl(g.allPaths.toList,
@@ -42,19 +42,19 @@ object SymbolicEvaluator {
       logFile)
   }
 
-  def isDeterministic(g: Graph[Expr, DiEdge]): Boolean = {
-    isDeterministic(FSGraph(g.nodes.toList.map(x => x.value -> x.value).toMap, g))
-  }
+//  def isDeterministic(g: Graph[Expr, DiEdge]): Boolean = {
+//    isDeterministic(FSGraph(g.nodes.toList.map(x => x.value -> x.value).toMap, g))
+//  }
+//
+//  def isDeterministicError(g: Graph[Expr, DiEdge]): Boolean = {
+//    isDeterministicError(FSGraph(g.nodes.toList.map(x => x.value -> x.value).toMap, g))
+//  }
+//
+//  def isIdempotent(g: Graph[Expr, DiEdge]): Boolean = {
+//    isIdempotent(FSGraph(g.nodes.toList.map(x => x.value -> x.value).toMap, g))
+//  }
 
-  def isDeterministicError(g: Graph[Expr, DiEdge]): Boolean = {
-    isDeterministicError(FSGraph(g.nodes.toList.map(x => x.value -> x.value).toMap, g))
-  }
-
-  def isIdempotent(g: Graph[Expr, DiEdge]): Boolean = {
-    isIdempotent(FSGraph(g.nodes.toList.map(x => x.value -> x.value).toMap, g))
-  }
-
-  def isDeterministic[K](g: FSGraph[K],  logFile: Option[String] = None): Boolean = {
+  def isDeterministic[K <: GraphKey[K]](g: FSGraph[K],  logFile: Option[String] = None): Boolean = {
     if (g.deps.nodes.size < 2) {
       return true
     }
@@ -64,30 +64,25 @@ object SymbolicEvaluator {
     result
   }
 
-  def isDeterministicWithTimeout[K](g: FSGraph[K], timeout: Int,  logFile: Option[String] = None): Option[Boolean] = {
+  def isDeterministicFriendly[K <: GraphKey[K]](g: FSGraph[K],  logFile: Option[String] = None) = {
     if (g.deps.nodes.size < 2) {
-      return Some(true)
+      None
     }
-    val impl = mkImpl(g, logFile)
-    new Thread(new Runnable {
-      def run() {
-        Thread.sleep(timeout * 1000)
-        impl.free()
-      }
-    }).run
-    Try(impl.isDeterministic(g)) match {
-      case Success(res) => impl.free(); Some(res)
-      case Failure(e) => None
+    else {
+      val impl = mkImpl(g, logFile)
+      val result = impl.isDeterministicFriendly(g)
+      impl.free()
+      result
     }
   }
 
-  def isDeterministicError[K](g: FSGraph[K]): Boolean = {
+  def isDeterministicError[K <: GraphKey[K]](g: FSGraph[K]): Boolean = {
     val impl = mkImpl(g, None)
     val result = impl.isDeterministicError(g)
     impl.free()
     result
   }
-  def isIdempotent[K](g: FSGraph[K]): Boolean = {
+  def isIdempotent[K <: GraphKey[K]](g: FSGraph[K]): Boolean = {
     val impl = mkImpl(g, None)
     val result = impl.isIdempotent(g)
     impl.free()
@@ -95,7 +90,12 @@ object SymbolicEvaluator {
   }
 }
 
-case class ST(isErr: Term, paths: Map[Path, Term])
+sealed trait Provenance
+case class ProvResources(seq: Seq[Any]) extends Provenance
+case class ProvSeq(p1: Provenance, p2: Provenance) extends Provenance
+case class ProvChoice(choice: Term, ifTrue: Provenance, ifFalse: Provenance) extends Provenance
+
+case class ST(isErr: Term, paths: Map[Path, Term], provenance: Provenance = ProvResources(Seq()))
 
 class SymbolicEvaluatorImpl(allPaths: List[Path],
                             hashes: Set[String],
@@ -381,14 +381,14 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       case Nil => (True(), curr)
       case (inST, outST) :: tail => {
         val term1 = stEquals(curr, inST)
-        val (term2, st) = loop(outST, tail)
+        val (term2, st) = loop(outST.copy(provenance = ProvSeq(curr.provenance, outST.provenance)), tail)
         (term1 && term2, st)
       }
     }
     loop(init, rest)
   }
 
-  def evalGraph[K](st: ST, g: FSGraph[K]): ST = {
+  def evalGraph[K <: GraphKey[K]](st: ST, g: FSGraph[K]): ST = {
     logger.info(s"evalGraph applied to a graph with ${g.deps.nodes.size} nodes")
 
     val fringe = g.deps.nodes.filter(_.inDegree == 0).toList.map(_.value)
@@ -399,11 +399,14 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     val rels = commutingGroups(g.exprs, fringe)
       .map(nodes => {
         logger.info(s"Group $nodes")
-        ESeq(nodes.map(n => g.exprs(n)): _*)
+
+        (nodes, ESeq(nodes.map(n => g.exprs(n)): _*))
       })
-      .map(expr => {
+      .map(arg => {
+        val (nodes, expr) = arg
         val (inST, _) = freshST()
-        (inST, evalExpr(inST, expr))
+        val outST = evalExpr(inST, expr)
+        (inST, outST.copy(provenance = ProvSeq(inST.provenance, ProvResources(nodes.toSeq))))
       })
       .permutations
       .map(stSeq(st))
@@ -426,7 +429,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         val (term2, st2) = rhs
         val c = freshName("choice")
         eval(DeclareConst(c, BoolSort()))
-        (ITE(c, term1, term2), ifST(c, st1, st2))
+        val outST = ifST(c, st1, st2)
+        (ITE(c, term1, term2), outST.copy(provenance = ProvChoice(c, st1.provenance, st2.provenance)))
       }
     }
     eval(Assert(term))
@@ -470,14 +474,46 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  def isIdempotent[K](g: FSGraph[K]): Boolean = smt.pushPop {
+  def isIdempotent[K <: GraphKey[K]](g: FSGraph[K]): Boolean = smt.pushPop {
     assert(isDeterministic(g), "g is not deterministic; cannot determine idempotence")
     val nodes: List[K] = g.deps.topologicalSort()
     val exprs: List[Expr] = nodes.map(n => g.exprs.get(n).get)
     isIdempotent(exprs.foldRight(FSSyntax.ESkip: Expr)((e, expr) => e >> expr))
   }
 
-  def isDeterministic[K](g: FSGraph[K]): Boolean = smt.pushPop {
+  // GetModel must be called
+  def evalProvenance(prov: Provenance): Seq[Any] = prov match {
+    case ProvResources(seq) => seq // seq.flatMap(x => x.asInstanceOf[PuppetSyntax.Node].nodes)
+    case ProvSeq(p1, p2) => evalProvenance(p1) ++ evalProvenance(p2)
+    case ProvChoice(choice, p1, p2) =>
+      smt.getValue(Seq(choice)) match {
+        case Seq((_, QualifiedIdentifier(Identifier(SSymbol("true"), Seq()), _))) => evalProvenance(p1)
+        case Seq((_, QualifiedIdentifier(Identifier(SSymbol("false"), Seq()), _))) => evalProvenance(p2)
+        case other => throw Unexpected(s"Result from evaluating choice variable: $other ")
+      }
+  }
+
+  def isDeterministicFriendly[K <: GraphKey[K]](g: FSGraph[K]): Option[Option[(Boolean, Seq[K], Seq[K])]] = smt.pushPop {
+
+    def untilDifferent(st: FSEvaluator.S, keys1: List[K], keys2: List[K]): Option[(Boolean, Seq[K], Seq[K])] = (keys1, keys2) match {
+      case (Nil, Nil) => None
+      case (hd1 :: tl1, hd2 :: tl2) => {
+        (FSEvaluator.evalErr(st, g.exprs(hd1)), FSEvaluator.evalErr(st, g.exprs(hd2))) match {
+          case (None, None) => None
+          case (None, _) => Some((false, hd1.nodes, hd2.nodes))
+          case (_, None) => Some((true, hd1.nodes, hd2.nodes))
+          case (Some(st1), Some(st2)) => {
+            untilDifferent(Some(st1), tl1, tl2) match {
+              case None => None
+              case Some((side, diverged1, diverged2)) =>  {
+                Some((side, hd1.nodes ++ diverged1, hd2.nodes ++ diverged2))
+              }
+            }
+          }
+        }
+      }
+      case _ => None
+    }
     val inST = initState
     assertPathConsistency(inST)
     logger.info(s"Generating constraints for a graph with ${g.exprs.size} nodes")
@@ -487,6 +523,30 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     val nondet = smt.checkSat()
     if (nondet) {
       eval(GetModel())
+
+      val p1 = evalProvenance(outST1.provenance)
+      val p2 = evalProvenance(outST2.provenance)
+      Some(untilDifferent(stateFromTerm(inST), p1.toList.map(_.asInstanceOf[K]), p2.toList.map(_.asInstanceOf[K])))
+    }
+    else {
+      None
+    }
+  }
+
+  def isDeterministic[K <: GraphKey[K]](g: FSGraph[K]): Boolean = smt.pushPop {
+    val inST = initState
+    assertPathConsistency(inST)
+    logger.info(s"Generating constraints for a graph with ${g.exprs.size} nodes")
+    val outST1 = evalGraph(inST, g)
+    val outST2 = evalGraph(inST, g)
+    eval(Assert(Not(stEquals(outST1, outST2))))
+    val nondet = smt.checkSat()
+    if (nondet) {
+      eval(GetModel())
+      val p1 = evalProvenance(outST1.provenance)
+      val p2 = evalProvenance(outST2.provenance)
+      println(p1)
+      println(p2)
       (stateFromTerm(inST), stateFromTerm(outST1), stateFromTerm(outST2)) match {
         case (None, _, _) => throw Unexpected("bad model: initial state should not be error")
         case (Some(in), None, Some(out)) => {
@@ -509,7 +569,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     !nondet
   }
 
-  def isDeterministicError[K](g: FSGraph[K]): Boolean = smt.pushPop {
+
+  def isDeterministicError[K <: GraphKey[K]](g: FSGraph[K]): Boolean = smt.pushPop {
     val inST = initState
     assertPathConsistency(inST)
     val outST = evalGraph(inST, g)

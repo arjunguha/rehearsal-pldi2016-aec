@@ -90,12 +90,9 @@ object Main extends App {
           .contractEdges()) match {
       case Success(g) => {
         print("Checking if manifest is deterministic ... ")
-        if (SymbolicEvaluator.isDeterministic(g.pruneWrites)) {
-          println("OK.")
-        }
-        else {
-          println("FAILED.")
-          return
+        SymbolicEvaluator.isDeterministic(g.pruneWrites) match {
+          case false => { println("FAILED"); return }
+          case true => println("OK")
         }
 
         print("Checking if manifest is idempotent ... ")
