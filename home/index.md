@@ -292,6 +292,15 @@ A user can change the attributes for all resources of a certain type:
       }
   ```
 
+- Ternary Expressions
+
+  ```puppet
+    $a = true
+    $b = 900
+
+    $x = $a ? $b : $b ? $y : $z
+  ```
+
 ## Case statements
 
 - Without defalut:
@@ -310,13 +319,4 @@ A user can change the attributes for all resources of a certain type:
         "bar": { file{"/fooz": } }
         default: { file{"/fooz": } }
       }
-  ```
-  
-## Ternary Expressions
-
-  ```puppet
-    $a = true
-    $b = 900
-
-    $x = $a ? $b : $b ? $y : $z
   ```
