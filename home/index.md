@@ -213,6 +213,22 @@ The folowing programs are equivalent.
     mytype{'myinstance': str => "hello" }
   ```
 
+## Updating Resources
+
+A user can change the attributes for all resources of a certain type: 
+
+  ```puppet
+    file{"/bin": ensure => directory }
+    file{"/usr": ensure => directory }
+
+    File {
+      owner => "root"
+    }
+    File {
+      group => "root"
+    }
+  ```
+
 ## Classes
 
 - Include-like behavior using ```puppet include ```:
