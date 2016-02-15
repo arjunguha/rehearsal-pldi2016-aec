@@ -61,6 +61,20 @@ The following four programs are equivalent.
     file{ '/mydir/myfile': ensure => 'present', require => File['mydir'] }
   ```
 
+## Arrays
+  
+- Basic syntax:
+  
+  ```puppet
+    $x = [ "a", "b", ]
+  ```
+
+- Arrays can be used to define multiple dependency relations. For example:
+
+  ```puppet
+    [File['dir'], Package['pkg']] -> [File['file1'], File['file2']]
+  ```
+
 ## Defining new Resource Types (defined types)
 
 The folowing programs are equivalent.
@@ -88,14 +102,11 @@ The folowing programs are equivalent.
 A user can change the attributes for all resources of a certain type:
 
   ```puppet
-    file{"/bin": ensure => directory }
-    file{"/usr": ensure => directory }
+    file{"/bin": ensure => present }
+    file{"/usr": ensure => present }
 
     File {
-      owner => "root"
-    }
-    File {
-      group => "root"
+      content => "hello"
     }
   ```
 
@@ -189,4 +200,31 @@ A user can change the attributes for all resources of a certain type:
         "bar": { file{"/fooz": } }
         default: { file{"/fooz": } }
       }
+  ```
+
+## Stages
+
+- Stages can be used to group resources and/or classes and create dependencies between them.
+  *main* is the default stage.
+
+  ```puppet
+    stage { 'files': before => Stage['packages'] }
+    stage { 'packages': before => Stage['main'] }
+
+    file { 'myfile': stage => 'files' }
+    package { 'mypackage': stage => 'packages' }
+}
+  ```
+
+## What Rehearsal Cannot handle:
+
+- Resource types other than: file, package, service, user, notify, and ssh-authorized-key
+
+- Shell scripts: 
+
+  ```puppet
+    exec { 'refresh_cache':
+      command => 'refresh_cache 8600',
+      path    => '/usr/local/bin/:/bin/',
+    }
   ```
