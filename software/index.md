@@ -9,7 +9,7 @@ not run (or run very slowly).
 The Rehearsal software is available in two forms:
 
 - A VirtualBox appliance that should run on platform supported by VirtualBox.
-  [download here]
+  [download here](https://storage.googleapis.com/arjun-umass-disks/rehearsal-aec.ova)
 
 - Source code, which should work on Linux and Mac OS X. See the `README.md`
   file in the source code bundle for installation instructions.
@@ -22,7 +22,7 @@ We are actively working on Rehearsal and there are three differences
 between this version and the version documented in the accepted paper.
 We'll be documenting these differences in the camera ready version.
 
--  We've replaced the algorithm in Figure 9 with a a simpler version that is much
+- We've replaced the algorithm in Figure 9 with a a simpler version that is much
   more effective. The code in `src/main/scala/DeterminismPruning.scala`
   implements the new algorithm and the pruning algorithm in Figure 10 (which is
   unchanged).
