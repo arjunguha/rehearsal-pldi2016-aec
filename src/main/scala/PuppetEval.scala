@@ -427,6 +427,7 @@ private object PuppetEval {
       throw EvalError(s"unexpected arguments: ${unexpected}")
     }
     formals.toList.map {
+      case ("title", None) => ("title", env.getOrError("title"))
       case (x, None) => actuals.get(x) match {
         case Some(v) => (x, v)
         case None => throw EvalError(s"expected argument $x")

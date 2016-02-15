@@ -10,6 +10,133 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
   import java.nio.file.Paths
   import SymbolicEvaluator.{predEquals, exprEquals, isDeterministic, isDeterministicError, isIdempotent}
 
+  def comprehensiveIsDet(original: FSGraph[Node]): Boolean = {
+    val contracted = original.addRoot(Node("root", "root")).contractEdges()
+    val pruned = original.pruneWrites()
+    val contractedAndPruned = contracted.pruneWrites()
+    val expected = SymbolicEvaluator.isDeterministic(original)
+    assert (SymbolicEvaluator.isDeterministic(contracted) == expected, "contracting changed result of determinism")
+    assert (SymbolicEvaluator.isDeterministic(pruned) == expected, "pruning changed result of determinism")
+    assert (SymbolicEvaluator.isDeterministic(contractedAndPruned) == expected, "contract; prune changed result of determinism")
+    expected
+  }
+
+  test("Manifest that creates a user account and file in her home directory (non-deterministic)") {
+    val m =
+      """
+        package{'vim':
+          ensure => present
+        }
+
+        file{'/home/carol/.vimrc':
+          content => "syntax on"
+        }
+
+        user{'carol':
+          ensure => present,
+          managehome => true
+        }
+        """
+
+    val g = PuppetParser.parse(m).eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(comprehensiveIsDet(g) == false)
+  }
+
+  test("Manifest that creates a user account and file in her home directory (deterministic)") {
+    val m =
+      """
+        package{'vim':
+          ensure => present
+        }
+
+        file{'/home/carol/.vimrc':
+          content => "syntax on"
+        }
+
+        user{'carol':
+          ensure => present,
+          managehome => true
+        }
+
+        User['carol'] -> File['/home/carol/.vimrc']
+      """
+
+    val g = PuppetParser.parse(m).eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(comprehensiveIsDet(g) == true)
+  }
+
+  test("Manifest that configures Apache web server (non-deterministic)") {
+    val m =
+      """
+        file {"/etc/apache2/sites-available/000-default.conf":
+          content => "dummy config",
+        }
+        package{"apache2": ensure => present }
+      """
+
+    val g = PuppetParser.parse(m).eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(comprehensiveIsDet(g) == false)
+  }
+
+  test("Manifest that configures Apache web server (deterministic)") {
+    val m =
+      """
+        file {"/etc/apache2/sites-available/000-default.conf":
+          content => "dummy config",
+          require => Package["apache2"]
+        }
+        package{"apache2": ensure => present }
+      """
+
+    val g = PuppetParser.parse(m).eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(comprehensiveIsDet(g) == true)
+  }
+
+  test("Manifest with a user-account abstraction (non-deterministic)") {
+    // Since we already test the body of myuser, this test only shows
+    // that defined-types work correctly.
+    val m =
+      """
+        define myuser($title) {
+          user {"$title":
+            ensure => present,
+            managehome => true
+          }
+          file {"/home/${title}/.vimrc":
+            content => "syntax on"
+          }
+        }
+        myuser {"alice": }
+        myuser {"carol": }
+      """
+
+    val g = PuppetParser.parse(m).eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert (comprehensiveIsDet(g) == false)
+  }
+
+  test("Manifest with a user-account abstraction (deterministic)") {
+    // Since we already test the body of myuser, this test only shows
+    // that defined-types work correctly.
+    val m =
+      """
+        define myuser($title) {
+          user {"$title":
+            ensure => present,
+            managehome => true
+          }
+          file {"/home/${title}/.vimrc":
+            content => "syntax on"
+          }
+          User["$title"] -> File["/home/${title}/.vimrc"]
+        }
+        myuser {"alice": }
+        myuser {"carol": }
+      """
+
+    val g = PuppetParser.parse(m).eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert (comprehensiveIsDet(g) == true)
+  }
+
   test("simple equality") {
     val x = testFileState(Paths.get("/usr"), IsFile)
     assert(predEquals(x, x))
