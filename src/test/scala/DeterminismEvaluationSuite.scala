@@ -68,7 +68,7 @@ class DeterminismEvaluationSuite extends FunSuitePlus
   }
 
   test("spiky-reduced-deterministic.pp pruned") {
-    val g = parseFile(s"$root/spiky-reduced-deterministic.pp").eval.resourceGraph.fsGraph("centos-6").addRoot(Node("root", "root")).pruneWrites()
+    val g = parseFile(s"$root/spiky-reduced-deterministic.pp").eval.resourceGraph.fsGraph("centos-6").addRoot(Node("root", "root")).contractEdges.pruneWrites()
     assert(SymbolicEvaluator.isDeterministic(g) == true)
   }
 
@@ -89,6 +89,12 @@ class DeterminismEvaluationSuite extends FunSuitePlus
 
   test("mjhas-clamav.pp") {
     val g = parseFile(s"$root/mjhas-clamav.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(SymbolicEvaluator.isDeterministic(g))
+  }
+
+  test("clamav-reduced") {
+    val g = parseFile(s"$root/clamav-reduced.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
+      .addRoot(Node("root", "root")).contractEdges
     assert(SymbolicEvaluator.isDeterministic(g))
   }
 

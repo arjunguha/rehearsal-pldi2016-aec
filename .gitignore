@@ -1,6 +1,5 @@
 # Vagrant specific
 .vagrant
-Vagrantfile
 
 # scala specific
 project/
@@ -25,3 +24,10 @@ benchmarks
 *.iws
 .idea
 *.iml
+
+/results/determinism.csv
+/results/idempotence.csv
+/results/sizes.csv
+/results/determinism.pdf
+/results/idempotence.pdf
+/results/sizes.pdf

@@ -98,8 +98,18 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
     val node = Node(typ, title)
   }
 
-  case class Node(typ: String, title: String) {
+  case class Node(typ: String, title: String) extends GraphKey[Node] {
     lazy val isPrimitiveType = PuppetEval.primTypes.contains(typ)
+
+    private var tracking = List[Node]()
+
+    def track(node: Node): Unit = {
+      tracking = node :: tracking
+    }
+
+    def nodes(): Seq[Node] = Seq(this) ++ tracking.flatMap(_.nodes)
+
+    override def toString(): String = s"$typ[\'$title\']"
   }
 
   case class ResourceGraph(ress: Map[Node, ResourceModel.Res], deps: Graph[Node, DiEdge]) {
