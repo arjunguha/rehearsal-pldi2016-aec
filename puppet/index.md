@@ -50,7 +50,7 @@ The following four programs are equivalent.
     file{ '/mydir/myfile': ensure => 'present' }
   ```
 
-- Using the *after* attribute:
+- Using the *require* attribute:
 
   ```puppet
     file{ '/mydir': ensure => 'directory' }
@@ -63,6 +63,12 @@ The following four programs are equivalent.
   
   ```puppet
     $x = [ "a", "b", ]
+  ```
+
+- Arrays can be used to define multiple dependency relations. For example:
+
+  ```puppet
+    [File['dir'], Package['pkg']] -> [File['file1'], File['file2']]
   ```
 
 ## Defining new Resource Types (defined types)
@@ -194,3 +200,31 @@ A user can change the attributes for all resources of a certain type:
         default: { file{"/fooz": } }
       }
   ```
+
+## Stages
+
+- Stages can be used to group resources and/or classes and create dependencies between them.
+  *main* is the default stage.
+
+  ```puppet
+    stage { 'files': before => Stage['packages'] }
+    stage { 'packages': before => Stage['main'] }
+
+    file { 'myfile': stage => 'files' }
+    package { 'mypackage': stage => 'packages' }
+}
+  ```
+
+## What Rehearsal Cannot handle:
+
+- Resource types other than: file, package, service, user, notify, and ssh-authorized-key
+
+- Shell scripts: 
+
+  ```puppet
+    exec { 'refresh_cache':
+      command => 'refresh_cache 8600',
+      path    => '/usr/local/bin/:/bin/',
+    }
+  ```
+
