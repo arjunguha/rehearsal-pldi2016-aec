@@ -13,8 +13,8 @@ The Rehearsal software is available in two forms:
 
 - Source code, which should work on Linux and Mac OS X. See the `README.md`
   file in the source code bundle for installation instructions.
-  The source code includes a `Vagrantfile` that was used to create virtual
-  machine above. [download here]
+  The source code includes a `Vagrantfile` that was used to create th virtual
+  machine above. [download here](rehearsal-master.zip)
 
 ## Differences from the paper
 
@@ -22,7 +22,7 @@ We are actively working on Rehearsal and there are three differences
 between this version and the version documented in the accepted paper.
 We'll be documenting these differences in the camera ready version.
 
-- We've replaced the algorithm in Figure 9 with a a simpler version that is much
+-  We've replaced the algorithm in Figure 9 with a a simpler version that is much
   more effective. The code in `src/main/scala/DeterminismPruning.scala`
   implements the new algorithm and the pruning algorithm in Figure 10 (which is
   unchanged).
@@ -40,7 +40,7 @@ We'll be documenting these differences in the camera ready version.
 
   <img src="sizes.png">
 
-  However, note with the change to Rehearsal documented above, the tool is
+  However, note with the change to Figure 9 documented above, the tool is
   actually faster on the larger benchmark.
 
 - **Bugfix**: In Section 5, in the paragraph on Idempotence Checking, the paper

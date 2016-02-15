@@ -2,12 +2,55 @@
 layout: default
 ---
 
-We do not expect all readers to be familiar with the Puppet language.
-The paper attempts to be self-contained and has several examples of Puppet,
-but limits itself to a tiny fragment of Puppet. Rehearsal handles a much
-larger subset of Puppet, which we illustrate below. We conclude with
-examples of Puppet that Rehearsal cannot handle.
+## Benchmarks
 
+To generate the graphs in the paper (Figure 12), run the following commands
+from the source code root (`~/rehearsal` on the virtual machine and
+`/vagrant` using Vagrant):
+
+    cd results && make
+
+This will generate three PDF files in the `results` directory.
+
+*NOTE*: For ease of evaluation, the script is modifed from what we used
+for the paper:
+
+- The script just runs 1 trial. This can be changed by editing
+  `TRIALS` in `results/Makefile`.
+
+- Each test has a 5 minute timeout. This can be changed by editing
+  the `5.minutes` in `src/main/scala/Main.scala`.
+
+- The IRC benchmark, which times out after ten minutes, is not run.
+  To run it, remove `onlyPruning = true` from `scripts/Benchmarks.scala`.
+
+## Command-line Tool
+
+It is straightforward to add new benchmarks, but we've created a rough
+command-line tool that checks determinism and idempotence (if determinism-checking
+succeeds). From the source code root, run:
+
+    ./rehearsal check --filename <FILENAME> --os <OS>
+
+The supported values for *<OS>* are `ubuntu-trusty` and `centos-6`.
+
+## Examples
+
+- There are several small examples in the `examples` directory, all of
+  which can be run with `--os ubuntu-trusty`. For example:
+
+  ```
+  $ ./rehearsal check --filename examples/carol-nondet.pp --os ubuntu-trusty
+  Checking if manifest is deterministic ... FAILED.
+  ```
+
+  Error reporting is quite rudimentary, but the `rehearsal.log` file describes
+  the scenario that triggers the bug.
+
+- There are larger examples in `parser-tests/good`, including the benchmarks
+  used in the paper. Some of these require `--os centos-6` instead of
+  ``--os ubuntu-trusty`. The file `scripts/Benchmarks.scala` uses the right
+  `--os` flag when analyzing these files.
 
 ## Creating Resources
 
@@ -58,9 +101,9 @@ The following four programs are equivalent.
   ```
 
 ## Arrays
-  
+
 - Basic syntax:
-  
+
   ```puppet
     $x = [ "a", "b", ]
   ```
@@ -147,7 +190,7 @@ A user can change the attributes for all resources of a certain type:
       x => "/a"
     }
   ```
-  
+
 ## Conditionals
 
 - If as an expression assigned to a variable:
@@ -213,18 +256,5 @@ A user can change the attributes for all resources of a certain type:
     file { 'myfile': stage => 'files' }
     package { 'mypackage': stage => 'packages' }
 }
-  ```
-
-## What Rehearsal Cannot handle:
-
-- Resource types other than: file, package, service, user, notify, and ssh-authorized-key
-
-- Shell scripts: 
-
-  ```puppet
-    exec { 'refresh_cache':
-      command => 'refresh_cache 8600',
-      path    => '/usr/local/bin/:/bin/',
-    }
   ```
 
