@@ -5,14 +5,6 @@ import scalax.collection.GraphEdge.DiEdge
 import com.typesafe.scalalogging.LazyLogging
 import Implicits._
 
-trait GraphKey[K] {
-
-  def track(key: K): Unit
-
-  def nodes(): Seq[K]
-
-}
-
 // A potential issue with graphs of FS programs is that several resources may
 // compile to the same FS expression. Slicing makes this problem more likely.
 // To avoid this problem, we keep a map from unique keys to expressions and
@@ -20,7 +12,7 @@ trait GraphKey[K] {
 // long as they're unique. PuppetSyntax.Node is unique for every resource, so
 // we use that when we load a Puppet file. For testing, the keys can be
 // anything.
-case class FSGraph[K <: GraphKey[K]](exprs: Map[K, FSSyntax.Expr], deps: Graph[K, DiEdge])
+case class FSGraph[K](exprs: Map[K, FSSyntax.Expr], deps: Graph[K, DiEdge])
   extends LazyLogging {
 
   lazy val size: Int = {
@@ -61,10 +53,6 @@ case class FSGraph[K <: GraphKey[K]](exprs: Map[K, FSSyntax.Expr], deps: Graph[K
         val succs = node.diSuccessors.toList
         val expr_ = exprs(node.value) >> FSSyntax.ESeq(succs.map(node => exprs(node)): _*)
         logger.info(s"Contracting ${succs.map(_.value)} into ${node.value}")
-
-        for (succ <- succs) {
-          node.track(succ)
-        }
 
         new FSGraph(
           exprs + (node.value -> expr_) -- succs.map(_.value),
