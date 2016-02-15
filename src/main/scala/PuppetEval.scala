@@ -559,6 +559,9 @@ private object PuppetEval {
 
   def eval(manifest: Manifest): EvaluatedManifest = {
     val st = eliminateAnchors(eliminateAliases(stageExpansion(evalLoop(evalManifest(emptyState, manifest)))))
+    if (st.deps.isCyclic) {
+      throw EvalError("Cycle in the resource graph")
+    }
     EvaluatedManifest(st.resources, st.deps)
   }
 }

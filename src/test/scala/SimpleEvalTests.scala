@@ -176,6 +176,23 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
     assert(g == Graph(Node("hello", "foo")))
   }
 
+  test("Simple cron job") {
+    val m =
+      """
+        cron{"task": command => "/usr/bin/backup", hour => 2 }
+      """
+    val g = PuppetParser.parse(m).eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(g.deps.nodes.size == 1)
+  }
+
+  test("Simple group job") {
+    val m =
+      """
+        cron{"task": command => "/usr/bin/backup", hour => 2 }
+      """
+    val g = PuppetParser.parse(m).eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(g.deps.nodes.size == 1)
+  }
   test("edges with singleton arrays") {
     val prog = """
 			file { "/usr/rian/foo": }
@@ -200,12 +217,12 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
       file{ "file1": }
   	"""
 	  val res = """
-			file{ "file1": 
+			file{ "file1":
 				content => "default",
 				ensure => present
 			}
 		"""
-		assert(parse(prog).eval() == parse(res).eval())	
+		assert(parse(prog).eval() == parse(res).eval())
   }
 
 }

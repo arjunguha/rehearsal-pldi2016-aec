@@ -21,6 +21,13 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     expected
   }
 
+  def comprehensiveIdem(original: FSGraph[Node]): Boolean = {
+    val expr = original.expr()
+    val expected =  expr.isIdempotent()
+    assert(expr.pruneIdem().isIdempotent() == expected, "pruning changed the result of idempotence")
+    expected
+  }
+
   test("Manifest that creates a user account and file in her home directory (non-deterministic)") {
     val m =
       """
@@ -132,9 +139,65 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
         myuser {"alice": }
         myuser {"carol": }
       """
-
     val g = PuppetParser.parse(m).eval.resourceGraph.fsGraph("ubuntu-trusty")
     assert (comprehensiveIsDet(g) == true)
+  }
+
+  test("Manifest with two modules that cannot be composed together") {
+    val m =
+      """
+      define cpp() {
+        if !defined(Package['m4']) {
+          package {'m4': ensure => present }
+        }
+        if !defined(Package['make']) {
+          package {'make': ensure => present }
+        }
+        package {'gcc': ensure => present }
+        Package['m4'] -> Package['make']
+        Package['make'] -> Package['gcc']
+      }
+
+      define ocaml() {
+        if !defined(Package['m4']) {
+          package {'m4': ensure => present }
+        }
+        if !defined(Package['make']) {
+          package {'make': ensure => present }
+        }
+        package {'ocaml': ensure => present }
+        Package['make'] -> Package['m4']
+        Package['m4'] -> Package['ocaml']
+      }
+
+      cpp{"mycpp": }
+      ocaml{"myocaml": }
+      """
+    intercept[EvalError] {
+      PuppetParser.parse(m).eval.resourceGraph.fsGraph("ubuntu-trusty")
+    }
+  }
+
+  test("Non-idempotence with just two files") {
+    val m =
+      """
+        file {"/dst": source => "/src" }
+        file {"/src": ensure => absent }
+        File["/dst"] -> File["/src"]
+      """
+    val g = PuppetParser.parse(m).eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(comprehensiveIsDet(g) == true)
+    assert(comprehensiveIdem(g) == false)
+  }
+
+  test("User manages /etc/hosts manually and with Puppet (non-deterministic)") {
+    val m =
+      """
+        host {"umass.edu": ip => "localhost"}
+        file{"/etc/hosts": content => "my hosts"}
+      """
+    val g = PuppetParser.parse(m).eval.resourceGraph.fsGraph("ubuntu-trusty")
+    assert(comprehensiveIsDet(g) == false)
   }
 
   test("simple equality") {

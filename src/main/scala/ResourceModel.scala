@@ -26,6 +26,9 @@ object ResourceModel {
   case class Service(name: String) extends Res {
     val path = s"/etc/init.d/$name"
   }
+  case class Cron(present: Boolean, command: String, user: String, hour: String,
+                  minute: String, month: String, monthday: String) extends Res
+  case class Host(ensure: Boolean, name: String, ip: String, target: String) extends Res
 
   case class SshAuthorizedKey(user: String, present: Boolean, name: String, key: String) extends Res {
     val keyPath = s"/home/$user/.ssh/$name"
@@ -164,6 +167,24 @@ object ResourceModel {
       }
     }
     case self@Service(name) => ite(testFileState(self.path, IsFile), ESkip, EError)
+    case Cron(present, command, user, hour, minute, month, monthday) => {
+      val name = command.hashCode.toString + "-" + command.toLowerCase.filter(ch => ch >= 'a' && ch <= 'z')
+      val path = s"${Settings.modelRoot}/crontab-$name"
+      present match {
+        case false => ite(testFileState(path, DoesNotExist), ESkip, rm(path))
+        case true => ite(testFileState(path, DoesNotExist), createFile(path, ""), ESkip)
+      }
+    }
+    case Host(ensure, name, ip, target) => {
+      val path = s"${Settings.modelRoot}/host-${name}"
+      val e2 = ensure match {
+        case false => ite(testFileState(path, DoesNotExist), ESkip, rm(path))
+        case true => ite(testFileState(path, DoesNotExist), createFile(path, ip), ESkip)
+      }
+      val e1 = ite(testFileState(target, DoesNotExist), ESkip, rm(target)) >>
+        createFile(target, "managed by Rehearsal")
+      e1 >> e2
+    }
     case Notify => ESkip
     case _ => ???
   }

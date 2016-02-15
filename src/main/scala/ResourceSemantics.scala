@@ -131,6 +131,36 @@ object ResourceSemantics {
         attrs.consume("withpath", "")
         Notify
       }
+      case "cron" => {
+        val present = attrs.consume[String]("ensure", "present") match {
+          case "present" => true
+          case "absent" => false
+          case x => throw FSCompileError(s"unexpected ensure value: $x")
+        }
+        val command = attrs.consume[String]("command")
+        val user = attrs.consume[String]("user", "root")
+        val hour = attrs.consume[String]("hour", "*")
+        val minute = attrs.consume[String]("minute", "*")
+        val month = attrs.consume[String]("month", "*")
+        val monthday = attrs.consume[String]("monthday", "*")
+        Cron(present, command, user, hour, minute, month, monthday)
+      }
+      case "host" => {
+        val ensure = attrs.consume[String]("ensure", "present") match {
+          case "present" => true
+          case "absent" => false
+          case x => throw FSCompileError(s"unexpected ensure value: $x")
+        }
+        attrs.consume[String]("comment", "")
+        attrs.consume[String]("host_aliases", "")
+        attrs.consume[String]("provider", "parsed")
+        // TODO(arjun): Probably shouldn't be hardcoded, if we want to support
+        // Windows, etc.
+        val target = attrs.consume[String]("target", "/etc/hosts")
+        val name = attrs.consume("name", resource.title)
+        val ip = attrs.consume[String]("ip")
+        Host(ensure, name, ip, target)
+      }
       case _ => ???
     }
     attrs.assertAllUsed()

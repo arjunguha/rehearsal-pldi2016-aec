@@ -179,7 +179,7 @@ object Main extends App {
           try {
             val (isDeterministic, t) =
               Await.result(Future(time(SymbolicEvaluator.isDeterministic(g))),
-                           120.seconds)
+                           5.minutes)
               assert (shouldBeDeterministic == isDeterministic)
               println(s"$label, $pruningStr, $t")
           }
