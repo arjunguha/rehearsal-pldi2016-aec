@@ -133,7 +133,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     val hashes = hashToZ3.values.toSeq
     eval(Assert(FunctionApplication("distinct", hashes)))
     val x = freshName("h")
-    eval(Assert(ForAll(SortedVar(x, hashSort), Seq(),
+    eval(Assert(Forall(SortedVar(x, hashSort), Seq(),
       Or(hashes.map(h => Equals(x, h)): _*))))
   }
 

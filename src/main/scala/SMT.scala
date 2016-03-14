@@ -1,5 +1,7 @@
 package rehearsal
 
+import smtlib.parser.CommandsResponses
+
 case class SMTError(resp: smtlib.parser.CommandsResponses.FailureResponse)
   extends RuntimeException(resp.toString)
 
@@ -108,13 +110,14 @@ object SMT {
 
 }
 
-class SMT(outputFile: Option[String]) extends smtlib.Interpreter with com.typesafe.scalalogging.LazyLogging {
+class SMT(outputFile: Option[String]) extends com.typesafe.scalalogging.LazyLogging {
 
   import java.nio.file._
   import smtlib.parser.Commands._
   import smtlib.parser.CommandsResponses._
   import smtlib.parser.Terms._
   import smtlib.interpreters.Z3Interpreter
+
 
   private val interpreter = Z3Interpreter.buildDefault
 
@@ -159,7 +162,7 @@ class SMT(outputFile: Option[String]) extends smtlib.Interpreter with com.typesa
     case _ => eval(GetValue(terms.head, terms.tail)).asInstanceOf[GetValueResponseSuccess].valuationPairs
   }
 
-  def eval(command: Command) : CommandResponse = {
+  def eval(command: Command) :  CommandResponse = {
     logger.debug(command.toString)
 
     outputPath match {
@@ -171,6 +174,7 @@ class SMT(outputFile: Option[String]) extends smtlib.Interpreter with com.typesa
       }
     }
 
+
     val resp = interpreter.eval(command)
     resp match {
       case Error(msg) => {
@@ -181,10 +185,11 @@ class SMT(outputFile: Option[String]) extends smtlib.Interpreter with com.typesa
         logger.error("Unsupported from SMT solver")
         throw SMTError(Unsupported)
       }
-      case _ => {
+      case (resp: CommandResponse) => {
         logger.debug(resp.toString)
         resp
       }
+      case _ => throw Unexpected("not a CommandResponse")
     }
   }
 

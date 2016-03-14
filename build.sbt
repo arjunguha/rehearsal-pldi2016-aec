@@ -15,13 +15,14 @@ resolvers ++= Seq(
 )
 
 libraryDependencies ++= Seq(
+  "com.regblanc" %% "scala-smtlib" % "0.2",
   "edu.umass.cs" %% "config" % "1.0.1",
+  "edu.umass.cs" %% "extras" % "1.0.0",
   "org.scalatest" %% "scalatest" % "2.2.1" % "test",
   "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4",
   "com.assembla.scala-incubator" %% "graph-core" % "1.9.0",
   "com.assembla.scala-incubator" %% "graph-dot" % "1.9.0",
-  "scala-smt-lib" %% "scala-smt-lib" % "0.1",
   "io.spray" %%  "spray-json" % "1.3.2",
   "com.github.scopt" %% "scopt" % "3.3.0",
   "org.scalaj" %% "scalaj-http" % "1.1.6")
