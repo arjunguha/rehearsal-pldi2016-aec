@@ -34,6 +34,7 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
   sealed trait Resource extends Positional
   case class ResourceDecl(typ: String, resources: Seq[(Expr, Seq[Attribute])]) extends Resource
   case class ResourceRef(typ: String, title: Expr, attrs: Seq[Attribute]) extends Resource
+  case class RCollector(typ: String, expr: RExpr) extends Resource
 
   sealed trait Case extends Positional
   case class CaseDefault(m: Manifest) extends Case
@@ -65,10 +66,8 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
 
    // Manifests must not appear in Expr, either directly or indirectly
   sealed trait Expr extends Positional {
-
      def value[T](implicit extractor: Extractor[Expr, T]) = extractor(this)
-
-   }
+  }
 
   case object EUndef extends Expr
   case class EStr(s: String) extends Expr
@@ -88,6 +87,12 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
   case class ECond(test: Expr, truePart: Expr, falsePart: Expr) extends Expr
   case class EResourceRef(typ: String, title: Expr) extends Expr
 
+  sealed trait RExpr extends Positional
+  case class REAttrEqual(attr: String, value: Expr) extends RExpr
+  case class REAnd(e1: RExpr, e2: RExpr) extends RExpr
+  case class REOr(e1: RExpr, e2: RExpr) extends RExpr
+  case class RENot(e: RExpr) extends RExpr
+
   // Our representation of fully evaluataed manifests, where nodes are primitive resources.
   case class EvaluatedManifest(ress: Map[Node, ResourceVal], deps: Graph[Node, DiEdge]) {
     def resourceGraph(): ResourceGraph = ResourceGraph(ress.mapValues(x => ResourceSemantics.compile(x)), deps)
@@ -97,7 +102,7 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
   case class ResourceVal(typ: String, title: String, attrs: Map[String, Expr]) {
     val node = Node(typ, title)
   }
-
+  
   case class Node(typ: String, title: String) {
     lazy val isPrimitiveType = PuppetEval.primTypes.contains(typ)
   }
