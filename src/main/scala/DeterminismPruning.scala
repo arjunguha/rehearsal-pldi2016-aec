@@ -77,23 +77,13 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
     result
   }
 
-
-  def pruneWrites[K](graph: FSGraph[K]): FSGraph[K] = {
-    val candidates = pruningCandidates2(graph.exprs)
-    val exprs_ = graph.exprs.map {
-      case (k, e) => (k, DeterminismPruning.pruneRec(candidates(k), e, Map())._1)
-    }.toMap
-
-    graph.copy(exprs = exprs_)
-  }
-
   sealed trait TrivialStatus
   case object OnlyFile extends TrivialStatus
   case object OnlyDirectory extends TrivialStatus
   case object Unknown extends TrivialStatus
 
-  def join2(branching: Set[Path], s1: Map[Path,(Set[Path], TrivialStatus)],
-            s2: Map[Path,(Set[Path], TrivialStatus)]): Map[Path,(Set[Path], TrivialStatus)] = {
+  def join(branching: Set[Path], s1: Map[Path,(Set[Path], TrivialStatus)],
+           s2: Map[Path,(Set[Path], TrivialStatus)]): Map[Path,(Set[Path], TrivialStatus)] = {
     s1.combine(s2) {
       case (None, None) => throw Unexpected("Should never happen")
       case (Some((set, x)), None) => Some((branching union set, x))
@@ -103,9 +93,9 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
     }
   }
 
-  def trivialStatus2(expr: Expr): Map[Path, (Set[Path], TrivialStatus)] = expr match {
-    case EIf(pred, e1, e2) => join2(pred.readSet, trivialStatus2(e1), trivialStatus2(e2))
-    case ESeq(e1, e2) => join2(Set(), trivialStatus2(e1), trivialStatus2(e2))
+  def trivialStatus(expr: Expr): Map[Path, (Set[Path], TrivialStatus)] = expr match {
+    case EIf(pred, e1, e2) => join(pred.readSet, trivialStatus(e1), trivialStatus(e2))
+    case ESeq(e1, e2) => join(Set(), trivialStatus(e1), trivialStatus(e2))
     case ECreateFile(p, _) => Map(p -> (Set(p), OnlyFile))
     case EMkdir(p) => Map(p -> (Set(p), OnlyDirectory))
     case ECp(_, p) => Map(p -> (Set(p), OnlyFile))
@@ -115,31 +105,31 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
   }
 
   def definitiveWrites(exclude: Set[Path], expr: Expr): scala.Seq[Path] = {
-    trivialStatus2(expr).toSeq.filter({ case (_, (reads, status)) => status != Unknown && reads.intersect(exclude).isEmpty } ).map(_._1)
+    trivialStatus(expr).toSeq.filter({ case (_, (reads, status)) => status != Unknown && reads.intersect(exclude).isEmpty } ).map(_._1)
   }
 
-  def candidates[K](exprs: Map[K, Expr]): Map[K, Set[Path]] = {
-    // Maps each path to the number of resources that contain it
-    val counts = exprs.values.toSeq.flatMap(_.paths.toSeq)
-      .groupBy(identity).mapValues(_.length)
-    // All the paths that exist in more than one resource.
-    val exclude = counts.filter({ case (_, n) => n > 1 }).keySet
-    exprs.mapValues(e => e.paths diff exclude)
-  }
-
-  def pruningCandidates2[K](exprs: Map[K, Expr]): Map[K, Set[Path]] = {
+  def pruningCandidates[K](exprs: Map[K, Expr]): Map[K, Set[Path]] = {
     val counts = exprs.values.toSeq.flatMap(_.paths.toSeq)
       .groupBy(identity).mapValues(_.length)
     // All the paths that exist in more than one resource.
     val exclude = counts.filter({ case (_, n) => n > 1 }).keySet
 
-    val candidateMap = candidates(exprs)
+    val candidateMap = exprs.mapValues(e => e.paths diff exclude)
     val gen = for ((res, expr) <- exprs) yield {
       val definitive = definitiveWrites(exclude, expr)
       val noninterfering = definitive.toSet intersect candidateMap(res)
       (res, noninterfering)
     }
     gen.toMap
+  }
+
+  def pruneWrites[K](graph: FSGraph[K]): FSGraph[K] = {
+    val candidates = pruningCandidates(graph.exprs)
+    val exprs_ = graph.exprs.map {
+      case (k, e) => (k, DeterminismPruning.pruneRec(candidates(k), e, Map())._1)
+    }.toMap
+
+    graph.copy(exprs = exprs_)
   }
 
 }
