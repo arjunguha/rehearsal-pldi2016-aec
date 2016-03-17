@@ -82,14 +82,15 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
   case object OnlyDirectory extends TrivialStatus
   case object Unknown extends TrivialStatus
 
-  def join(branching: Set[Path], s1: Map[Path,(Set[Path], TrivialStatus)],
+  def join(branching: Set[Path],
+           s1: Map[Path,(Set[Path], TrivialStatus)],
            s2: Map[Path,(Set[Path], TrivialStatus)]): Map[Path,(Set[Path], TrivialStatus)] = {
     s1.combine(s2) {
       case (None, None) => throw Unexpected("Should never happen")
       case (Some((set, x)), None) => Some((branching union set, x))
       case (None, Some((set, x))) => Some((branching union set, x))
 
-      case (Some((set1, x)), Some((set2, y))) => if (x == y) Some((set1 union set2, x)) else Some((Set(), Unknown))
+      case (Some((set1, x)), Some((set2, y))) => if (x == y) Some((branching union set1 union set2, x)) else Some((Set(), Unknown))
     }
   }
 
