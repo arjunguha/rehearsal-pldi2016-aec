@@ -11,11 +11,11 @@ class ScalabilityTest extends org.scalatest.FunSuite {
   import scala.concurrent.duration._
   import ExecutionContext.Implicits.global
 
-  test("scale"){
+  ignore("scale"){
     var ress: Map[Node, ResourceModel.Res] = Map()
     var deps: Graph[Node, DiEdge] = Graph()
     for(i <- 0.until(10)){
-      val p = "/f" 
+      val p = "/f"
       val n = Node("file", p + i)
       ress = ress + (n -> File(Paths.get(p), CInline("content" + i), true))
       deps = deps + n
