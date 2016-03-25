@@ -14,6 +14,7 @@ object Main extends App {
   case object DeterminismBenchmark extends Command
   case object PruningSizeBenchmark extends Command
   case object IdempotenceBenchmark extends Command
+  case object ScalabilityBenchmark extends Command
 
   case class Config(
     command: Option[Command],
@@ -22,9 +23,10 @@ object Main extends App {
     label: Option[String],
     pruning: Option[Boolean],
     deterministic: Option[Boolean],
-    idempotent: Option[Boolean])
+    idempotent: Option[Boolean],
+    size: Option[Int])
 
-  val parser = new scopt.OptionParser[Config]("scopt") {
+  val parser = new scopt.OptionParser[Config]("rehearsal") {
 
     def filename() = {
       opt[String]("filename").required
@@ -39,6 +41,10 @@ object Main extends App {
     def os() = {
       opt[String]("os").required
         .action((x, c) => c.copy(os = Some(x)))
+    }
+
+    def size() = {
+      opt[Int]("size").required.action((x, c) => c.copy(size = Some(x)))
     }
 
     head("rehearsal", "0.1")
@@ -71,6 +77,12 @@ object Main extends App {
       opt[Boolean]("deterministic").required
           .action((x, c) => c.copy(deterministic = Some(x)))
     )
+
+    cmd("scalability-benchmark")
+      .action((_, c) => c.copy(command = Some(ScalabilityBenchmark)))
+      .text("Benchmark determinism-checking scaling")
+     .children(size)
+
   }
 
   def checker(filename: String, os: String): Unit = {
@@ -122,7 +134,7 @@ object Main extends App {
     }
   }
 
-  parser.parse(args, Config(None, None, None, None, None, None, None)) match {
+  parser.parse(args, Config(None, None, None, None, None, None, None, None)) match {
     case None => {
       println(parser.usage)
       System.exit(1)
@@ -188,6 +200,17 @@ object Main extends App {
               println(s"$label, $pruningStr, timedout")
             }
           }
+        }
+        case Some(ScalabilityBenchmark) => {
+          val n = config.size.get
+          import ResourceModel.{File, CInline}
+          import scalax.collection.Graph
+          import scalax.collection.GraphEdge.DiEdge
+          val e = ResourceModel.File(path = "/a".toPath, content = CInline("content"), force = false)
+            .compile("ubuntu-trusty")
+          val graph = FSGraph(0.until(n).map(n => n -> e).toMap, Graph(0.until(n): _*))
+          val (_, t) = time(SymbolicEvaluator.isDeterministic(graph.contractEdges.pruneWrites))
+          println(s"$n, $t")
         }
       }
     }

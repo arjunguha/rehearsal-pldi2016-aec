@@ -138,9 +138,34 @@ def doIdempotence(trials: Int, output: String): Unit = {
   Files.write(Paths.get(output), idempotence.output.toString.getBytes)
 }
 
+def doScalability(trials: Int, output: String): Unit = {
+  val benchmark = new Benchmark {
+
+    class Command(size: Int) {
+      override def toString(): String = {
+        s"run scalability-benchmark --size $size"
+      }
+    }
+
+    def bench(size: Int) = {
+      run(new Command(size))
+    }
+
+    output ++= "Size, Time\n"
+    for (i <- 0.until(trials)) {
+      for (j <- 1.to(7)) {
+        bench(j)
+      }
+    }
+  }
+
+  Files.write(Paths.get(output), benchmark.output.toString.getBytes)
+}
+
 args match {
   case Array("sizes", output) => doSizes(output)
   case Array("determinism", n, output) => doDeterminism(n.toInt, output)
   case Array("idempotence", n, output) => doIdempotence(n.toInt, output)
+  case Array("scalability", n, output) => doScalability(n.toInt, output)
 }
 

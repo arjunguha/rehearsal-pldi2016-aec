@@ -7,6 +7,12 @@ all: idempotence.pdf determinism.pdf sizes.pdf
 clean:
 	rm -f sizes.csv idempotence.csv determinism.csv sizes.pdf idempotence.pdf determinism.pdf
 
+scalability.csv:
+	(cd ..; scala scripts/Benchmarks.scala scalability $(TRIALS) results/scalability.csv)
+
+scalability.pdf: scalability.csv
+	(cd ../scripts; R --file=scalability.r)
+
 sizes.csv:
 	(cd ..; scala scripts/Benchmarks.scala sizes results/sizes.csv)
 
