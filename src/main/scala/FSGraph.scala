@@ -32,6 +32,19 @@ sealed trait ExecTree {
     }
   }
 
+  def isDeterError(): Boolean = {
+    val e = this.exprs()
+    val sets = e.fileSets
+    val ro = sets.reads
+    val symb = new SymbolicEvaluatorImpl(e.paths.toList, e.hashes, ro, None)
+    try {
+      symb.isDeterError(this)
+    }
+    finally {
+      symb.free()
+    }
+  }
+
 }
 
 case object ETLeaf extends ExecTree

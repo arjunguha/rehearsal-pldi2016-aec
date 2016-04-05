@@ -56,21 +56,12 @@ object SymbolicEvaluator {
 
   def isDeterministic[K](g: FSGraph[K],  logFile: Option[String] = None): Boolean = {
     g.toExecTree().isDeterministic()
-//    if (g.deps.nodes.size < 2) {
-//      return true
-//    }
-//    val impl = mkImpl(g, logFile)
-//    val result = impl.isDeterministic(g)
-//    impl.free()
-//    result
   }
 
   def isDeterministicError[K](g: FSGraph[K]): Boolean = {
-    val impl = mkImpl(g, None)
-    val result = impl.isDeterministicError(g)
-    impl.free()
-    result
+    g.toExecTree().isDeterError()
   }
+
   def isIdempotent[K](g: FSGraph[K]): Boolean = {
     val impl = mkImpl(g, None)
     val result = impl.isIdempotent(g)
@@ -309,81 +300,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  // Greedily breaks a list of expressions into groups that commute with each other
-  def commutingGroups[K](exprs: Map[K, Expr], lst: List[K]): List[List[K]] = {
-    def f(m: K, n: K): Boolean = {
-      val b = exprs(m).commutesWith(exprs(n))
-      if (!b) {
-        logger.info(s"$m.commutesWith($n) was false")
-      }
-      b
-    }
-    groupBy2(f, lst)
-  }
-
-  def stSeq(init: ST)(rest: List[(ST, ST)]): (Term, ST) = {
-    def loop(curr: ST, lst: List[(ST, ST)]): (Term, ST) = lst match {
-      case Nil => (True(), curr)
-      case (inST, outST) :: tail => {
-        val term1 = stEquals(curr, inST)
-        val (term2, st) = loop(outST, tail)
-        (term1 && term2, st)
-      }
-    }
-    loop(init, rest)
-  }
-
-  def evalGraph[K](st: ST, g: FSGraph[K]): ST = {
-    logger.info(s"evalGraph applied to a graph with ${g.deps.nodes.size} nodes")
-
-    val fringe = g.deps.nodes.filter(_.inDegree == 0).toList.map(_.value)
-    if (fringe.isEmpty) {
-      return st
-    }
-
-    val rels = commutingGroups(g.exprs, fringe)
-      .map(nodes => {
-        logger.info(s"Group $nodes")
-        ESeq(nodes.map(n => g.exprs(n)): _*)
-      })
-      .map(expr => {
-        val inST = freshST()
-        (inST, evalExpr(inST, expr))
-      })
-      .permutations
-      .map(stSeq(st))
-      .toList
-      .reverse
-
-    if (rels.length == 1) {
-      val (term, st) = rels.head
-      eval(Assert(term))
-      return evalGraph(st, g.copy(deps = g.deps -- fringe))
-    }
-    logger.info(s"${rels.length} commuting groups")
-
-    // TODO(arjun): Need to print the groups (node names) to understand
-    // why things don't commute
-
-    val (term, outST) = rels.reduce {
-      (lhs: (Term, ST), rhs: (Term, ST)) => {
-        val (term1, st1) = lhs
-        val (term2, st2) = rhs
-        val c = freshName("choice")
-        eval(DeclareConst(c, BoolSort()))
-        (ite(c, term1, term2), ifST(c, st1, st2))
-      }
-    }
-    eval(Assert(term))
-    evalGraph(outST, g.copy(deps = g.deps -- fringe))
-  }
-
-  def stNEq(st1: ST, st2: ST): Term = {
-    (st1.isErr && Not(st2.isErr)) ||
-      (st2.isErr && Not(st1.isErr)) ||
-      (Not(st1.isErr) && Not(st2.isErr) && Or(writablePaths.map(p => Not(Equals(st1.paths(p), st2.paths(p)))): _*))
-  }
-
   def logDiff[A,B](m1: Map[A,B], m2: Map[A,B]): Unit = {
     val keys = m1.keySet ++ m2.keySet
     for (key <- keys) {
@@ -399,13 +315,12 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
     }
   }
-
-
+  
   def isIdempotent[K](e: Expr): Boolean = {
     val inST = initState
     val once = evalExpr(inST, e)
     val twice = evalExpr(once, e)
-    eval(Assert(stNEq(once, twice)))
+    eval(Assert(Not(stEquals(once, twice))))
     if (smt.checkSat) {
       eval(GetModel())
       false
@@ -416,42 +331,9 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   }
 
   def isIdempotent[K](g: FSGraph[K]): Boolean = smt.pushPop {
-    assert(isDeterministic(g), "g is not deterministic; cannot determine idempotence")
     val nodes: List[K] = g.deps.topologicalSort()
     val exprs: List[Expr] = nodes.map(n => g.exprs.get(n).get)
     isIdempotent(exprs.foldRight(FSSyntax.ESkip: Expr)((e, expr) => e >> expr))
-  }
-
-  def isDeterministic[K](g: FSGraph[K]): Boolean = smt.pushPop {
-    val inST = initState
-    assertPathConsistency(inST)
-    logger.info(s"Generating constraints for a graph with ${g.exprs.size} nodes")
-    val outST1 = evalGraph(inST, g)
-    val outST2 = evalGraph(inST, g)
-    eval(Assert(Not(stEquals(outST1, outST2))))
-    val nondet = smt.checkSat()
-    if (nondet) {
-      eval(GetModel())
-      (stateFromTerm(inST), stateFromTerm(outST1), stateFromTerm(outST2)) match {
-        case (None, _, _) => throw Unexpected("bad model: initial state should not be error")
-        case (Some(in), None, Some(out)) => {
-          logger.info(s"On input\n$in\nthe program produces error or output\n$out")
-          logDiff(in, out)
-        }
-        case (Some(in), Some(out), None) => {
-          logger.info(s"On input\n$in\nthe program produces error or output\n$out")
-          logDiff(in, out)
-        }
-        case (Some(in), Some(out1), Some(out2)) => {
-          logger.info(s"On input\n$in\nthe program produces two possible outputs!")
-          logger.info(out1.toString)
-          logger.info(out2.toString)
-
-        }
-        case (Some(_), None, None) => throw Unexpected("bad model: both outputs are identical errors")
-      }
-    }
-    !nondet
   }
 
   def isDeter(execTree: ExecTree): Boolean = smt.pushPop {
@@ -477,12 +359,18 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  def isDeterministicError[K](g: FSGraph[K]): Boolean = smt.pushPop {
-    val inST = initState
-    assertPathConsistency(inST)
-    val outST = evalGraph(inST, g)
-    eval(Assert(Not(outST.isErr)))
+  def alwaysError(expr: Expr) = smt.pushPop {
+    val in = initState
+    assertPathConsistency(in)
+    val out = evalExpr(in, expr)
+    eval(Assert(Not(out.isErr)))
+    // Does there exist an input (in) that produces an output (out) that
+    // is not the error state?
     !smt.checkSat()
+  }
+
+  def isDeterError(execTree: ExecTree): Boolean = smt.pushPop {
+    isDeter(execTree) && !alwaysError(execTree.exprs())
   }
 
   def free(): Unit = smt.free()
