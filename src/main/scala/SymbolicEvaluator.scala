@@ -5,7 +5,6 @@ import smtlib._
 import parser._
 import Commands._
 import Terms._
-import theories.Core.{And => _, Or => _, _}
 import scala.util.{Try, Success, Failure}
 import CommandsResponses._
 import java.nio.file.{Paths}
@@ -219,15 +218,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     !smt.checkSat()
   }
 
-  def ite(cond: Term, tru: Term, fls: Term): Term = {
-    if (tru == fls) {
-      tru
-    }
-    else {
-      ITE(cond, tru, fls)
-    }
-  }
-
   def ifST(b: Term, st1: ST, st2: ST): ST = {
     ST(ite(b, st1.isErr, st2.isErr),
       writablePaths.map(p => (p, ite(b, st1.paths(p), st2.paths(p)))).toMap ++ readOnlyMap)
@@ -424,7 +414,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         val (term2, st2) = rhs
         val c = freshName("choice")
         eval(DeclareConst(c, BoolSort()))
-        (ITE(c, term1, term2), ifST(c, st1, st2))
+        (ite(c, term1, term2), ifST(c, st1, st2))
       }
     }
     eval(Assert(term))

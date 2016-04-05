@@ -8,9 +8,15 @@ case class SMTError(resp: smtlib.parser.CommandsResponses.FailureResponse)
 object SMT {
 
   import smtlib.parser.Terms._
-  import smtlib.theories.Core.{True, False}
+  import smtlib.theories.Core
 
   private val names = collection.mutable.Map[String,Int]()
+
+  val True = Core.True
+  val False = Core.False
+  val BoolSort = Core.BoolSort
+
+  def Equals(x: Term, y: Term): Term = Core.Equals(x, y)
 
   def freshName(base: String = "x"): SSymbol = {
     names.get(base) match {
@@ -25,6 +31,28 @@ object SMT {
     }
   }
 
+  object Not {
+
+    def apply(arg: Term): Term = arg match {
+      case Core.Not(x) => x
+      case _ => Core.Not(arg)
+    }
+  }
+
+  object Implies {
+    def apply(pred: Term, cons: Term) = Core.Implies(pred, cons)
+  }
+
+
+  def ite(cond: Term, tru: Term, fls: Term): Term = {
+    if (tru == fls) {
+      tru
+    }
+    else {
+      Core.ITE(cond, tru, fls)
+    }
+  }
+
   private case object FoundAnnihilator extends RuntimeException("")
 
   object Or {
@@ -32,8 +60,8 @@ object SMT {
     // flatten(terms) == None means that terms is equivalent to true
     private def flatten(term: Term): Seq[Term] = term match {
       case Or(terms) =>  terms.flatMap(t => flatten(t))
-      case True() => throw FoundAnnihilator
-      case False() => Seq()
+      case Core.True() => throw FoundAnnihilator
+      case Core.False() => Seq()
       case _ => Seq(term)
     }
 
