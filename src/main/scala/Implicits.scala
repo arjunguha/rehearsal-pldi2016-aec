@@ -52,6 +52,18 @@ object Implicits {
       }
     }
 
+    def descendants(node: Graph[V, DiEdge]#NodeT): Set[Graph[V, DiEdge]#NodeT] = {
+      def loop(fringe: List[Graph[V, DiEdge]#NodeT],
+               result: Set[Graph[V, DiEdge]#NodeT]): Set[Graph[V, DiEdge]#NodeT] = fringe match {
+        case Nil => result
+        case head :: tail => {
+          if (result.contains(head)) loop(tail, result)
+          else loop(tail ++ head.diSuccessors, result + head)
+        }
+      }
+      loop(List(node), Set()) - node
+    }
+
     def dotString(): String = {
       import scalax.collection.io.dot._
 
@@ -92,6 +104,11 @@ object Implicits {
           case Some(v) => map + (k -> v)
         }
       })
+    }
+
+    def mapIf(pred: A => Boolean, f: B => B): Map[A, B] = {
+      def folder(acc: Map[A, B], k: A) = acc + (k -> f(acc(k)))
+      self.keys.filter(pred).foldLeft(self)(folder)
     }
 
   }
