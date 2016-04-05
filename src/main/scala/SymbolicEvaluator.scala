@@ -156,8 +156,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     for (c <- cmds) { eval(c) }
     paths.toMap
   }
-  val (initState, _) = freshST()
-
+  val initState = freshST()
 
   val reverseMap = initState.paths.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
   val reverseHash = hashToZ3.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
@@ -184,8 +183,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  // TODO(arjun): What is the point of returning these commands?
-  def freshST(): (ST, List[Command]) = {
+  def freshST(): ST = {
 
     val ids = writablePaths.map(p => {
       val z = freshName("path")
@@ -195,7 +193,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     val isErr = freshName("isErr")
     val commands = DeclareConst(isErr, BoolSort()) +: cmds
     commands.map(eval(_))
-    (ST(QualifiedIdentifier(Identifier(isErr)), paths.toMap ++ readOnlyMap), commands)
+    ST(QualifiedIdentifier(Identifier(isErr)), paths.toMap ++ readOnlyMap)
   }
 
   def stEquals(st1: ST, st2: ST): Term = {
@@ -240,7 +238,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     case F.EError => ST(True(), st.paths)
     case F.ESeq(p, q) => {
       val stInter = evalExpr(st, p)
-      val (stInter1, _) = freshST()
+      val stInter1 = freshST()
       eval(Assert(Equals(stInter.isErr, stInter1.isErr)))
       for (p <- writablePaths) {
         eval(Assert(Equals(stInter.paths(p), stInter1.paths(p))))
@@ -402,7 +400,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         ESeq(nodes.map(n => g.exprs(n)): _*)
       })
       .map(expr => {
-        val (inST, _) = freshST()
+        val inST = freshST()
         (inST, evalExpr(inST, expr))
       })
       .permutations
