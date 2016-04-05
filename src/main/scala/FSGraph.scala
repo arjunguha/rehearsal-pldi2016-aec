@@ -5,6 +5,38 @@ import scalax.collection.GraphEdge.DiEdge
 import com.typesafe.scalalogging.LazyLogging
 import Implicits._
 
+sealed trait ExecTree {
+
+  import FSSyntax._
+
+  def exprs(): Expr = this match {
+    case ETLeaf => ESkip
+    case ETNode(exprs, children) => ESeq(exprs: _*) >> ESeq(children.map(_.exprs()): _*)
+  }
+
+  def size(): Int = this match {
+    case ETNode(_, children) =>  1 + children.map(_.size).sum
+    case ETLeaf => 0
+  }
+
+  def isDeterministic(): Boolean = {
+    val e = this.exprs()
+    val sets = e.fileSets
+    val ro = sets.reads
+    val symb = new SymbolicEvaluatorImpl(e.paths.toList, e.hashes, ro, None)
+    try {
+      symb.isDeter(this)
+    }
+    finally {
+      symb.free()
+    }
+  }
+
+}
+
+case object ETLeaf extends ExecTree
+case class ETNode(commutingGroup: List[FSSyntax.Expr], branches: List[ExecTree]) extends ExecTree
+
 // A potential issue with graphs of FS programs is that several resources may
 // compile to the same FS expression. Slicing makes this problem more likely.
 // To avoid this problem, we keep a map from unique keys to expressions and
@@ -33,6 +65,25 @@ case class FSGraph[K](exprs: Map[K, FSSyntax.Expr], deps: Graph[K, DiEdge])
     val init = deps.nodes.filter(_.inDegree == 0).toList.map(node => DiEdge(label, node.value))
     val deps_ = deps ++ init
     FSGraph(exprs + (label -> FSSyntax.ESkip), deps_)
+  }
+
+  def toExecTree(): ExecTree = {
+
+    def loop(g: Graph[K, DiEdge]): List[ExecTree] = {
+      val fringe = g.nodes.filter(_.inDegree == 0).toList.map(_.value)
+      if (fringe.isEmpty) {
+        Nil
+      } else {
+        def f(m: K, n: K): Boolean = exprs(m).commutesWith(exprs(n))
+        val groups = groupBy2(f, fringe)
+        groups.map(group => ETNode(group.map(k => exprs(k)), loop(g -- group)))
+      }
+    }
+
+    loop(deps) match {
+      case List(node) => node
+      case alist => ETNode(Nil, alist)
+    }
   }
 
   def contractEdges(): FSGraph[K] = {

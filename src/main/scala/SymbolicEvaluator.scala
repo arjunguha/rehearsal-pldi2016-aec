@@ -41,6 +41,7 @@ object SymbolicEvaluator {
       logFile)
   }
 
+
   def isDeterministic(g: Graph[Expr, DiEdge]): Boolean = {
     isDeterministic(FSGraph(g.nodes.toList.map(x => x.value -> x.value).toMap, g))
   }
@@ -54,30 +55,14 @@ object SymbolicEvaluator {
   }
 
   def isDeterministic[K](g: FSGraph[K],  logFile: Option[String] = None): Boolean = {
-    if (g.deps.nodes.size < 2) {
-      return true
-    }
-    val impl = mkImpl(g, logFile)
-    val result = impl.isDeterministic(g)
-    impl.free()
-    result
-  }
-
-  def isDeterministicWithTimeout[K](g: FSGraph[K], timeout: Int,  logFile: Option[String] = None): Option[Boolean] = {
-    if (g.deps.nodes.size < 2) {
-      return Some(true)
-    }
-    val impl = mkImpl(g, logFile)
-    new Thread(new Runnable {
-      def run() {
-        Thread.sleep(timeout * 1000)
-        impl.free()
-      }
-    }).run
-    Try(impl.isDeterministic(g)) match {
-      case Success(res) => impl.free(); Some(res)
-      case Failure(e) => None
-    }
+    g.toExecTree().isDeterministic()
+//    if (g.deps.nodes.size < 2) {
+//      return true
+//    }
+//    val impl = mkImpl(g, logFile)
+//    val result = impl.isDeterministic(g)
+//    impl.free()
+//    result
   }
 
   def isDeterministicError[K](g: FSGraph[K]): Boolean = {
@@ -324,34 +309,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  // partition2(f, lst) = (lst1, lst2), such that f(x, y) holds for all distinct x and y in lst1.
-  // Furthermore, lst1 ++ lst2 == lst without preserving ordering.
-  // We assume that f is a commutative function.
-  def partition2[A](f: (A, A) => Boolean, lst: List[A]): (List[A], List[A]) = {
-    lst match {
-      case Nil => (Nil, Nil)
-      case rep :: others => {
-        // Greedy: rep will be in the list
-        val init = (List(rep), List[A]())
-        others.foldLeft(init) {
-          case ((lst1, lst2), y) => {
-            if (lst1.forall(x => f(x, y))) {
-              (y :: lst1, lst2)
-            }
-            else {
-              (lst1, y :: lst2)
-            }
-          }
-        }
-      }
-    }
-  }
-
-  def groupBy2[A](f: (A, A) => Boolean, lst: List[A]): List[List[A]] = partition2(f, lst) match {
-    case (Nil, Nil) => Nil
-    case (group, rest) => group :: groupBy2(f, rest)
-  }
-
   // Greedily breaks a list of expressions into groups that commute with each other
   def commutingGroups[K](exprs: Map[K, Expr], lst: List[K]): List[List[K]] = {
     def f(m: K, n: K): Boolean = {
@@ -495,6 +452,29 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
     }
     !nondet
+  }
+
+  def isDeter(execTree: ExecTree): Boolean = smt.pushPop {
+    def evalTree(in: ST, t: ExecTree): Seq[ST] = t match {
+      case ETLeaf => Seq(in)
+      case ETNode(es, Nil) => Seq(evalExpr(in, FSSyntax.ESeq(es: _*)))
+      case ETNode(es, children) => {
+        val out = evalExpr(in, FSSyntax.ESeq(es: _*))
+        children.flatMap(t_ => evalTree(out, t_))
+      }
+    }
+    val in = initState
+    assertPathConsistency(in)
+    val outs = evalTree(in, execTree)
+    outs match {
+      case Nil => throw Unexpected("no possible final state: should never happen")
+      case _ :: Nil => true
+      case out1 :: rest => {
+        eval(Assert(Or(rest.map(out2 => Not(stEquals(out1, out2))): _*)))
+        val nondet = smt.checkSat()
+        !nondet
+      }
+    }
   }
 
   def isDeterministicError[K](g: FSGraph[K]): Boolean = smt.pushPop {
