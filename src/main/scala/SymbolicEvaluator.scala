@@ -315,7 +315,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
     }
   }
-  
+
   def isIdempotent[K](e: Expr): Boolean = {
     val inST = initState
     val once = evalExpr(inST, e)
@@ -370,7 +370,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   }
 
   def isDeterError(execTree: ExecTree): Boolean = smt.pushPop {
-    isDeter(execTree) && !alwaysError(execTree.exprs())
+    isDeter(execTree) && alwaysError(execTree.exprs())
   }
 
   def free(): Unit = smt.free()
