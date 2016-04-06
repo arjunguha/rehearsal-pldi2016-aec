@@ -5,19 +5,15 @@ import scalax.collection.GraphEdge.DiEdge
 import com.typesafe.scalalogging.LazyLogging
 import Implicits._
 
-sealed trait ExecTree {
+case class ExecTree(commutingGroup: List[FSSyntax.Expr], branches: List[ExecTree]) {
 
   import FSSyntax._
 
-  def exprs(): Expr = this match {
-    case ETLeaf => ESkip
-    case ETNode(exprs, children) => ESeq(exprs: _*) >> ESeq(children.map(_.exprs()): _*)
-  }
+  val fringeSize: Int = if (branches.isEmpty) 1 else branches.map(_.fringeSize).sum
 
-  def size(): Int = this match {
-    case ETNode(_, children) =>  1 + children.map(_.size).sum
-    case ETLeaf => 0
-  }
+  def exprs(): Expr =  ESeq(commutingGroup: _*) >> ESeq(branches.map(_.exprs()): _*)
+
+  def size(): Int = 1 + branches.map(_.size).sum
 
   def isDeterministic(): Boolean = {
     val e = this.exprs()
@@ -46,9 +42,6 @@ sealed trait ExecTree {
   }
 
 }
-
-case object ETLeaf extends ExecTree
-case class ETNode(commutingGroup: List[FSSyntax.Expr], branches: List[ExecTree]) extends ExecTree
 
 // A potential issue with graphs of FS programs is that several resources may
 // compile to the same FS expression. Slicing makes this problem more likely.
@@ -89,13 +82,13 @@ case class FSGraph[K](exprs: Map[K, FSSyntax.Expr], deps: Graph[K, DiEdge])
       } else {
         def f(m: K, n: K): Boolean = exprs(m).commutesWith(exprs(n))
         val groups = groupBy2(f, fringe)
-        groups.map(group => ETNode(group.map(k => exprs(k)), loop(g -- group)))
+        groups.map(group => ExecTree(group.map(k => exprs(k)), loop(g -- group)))
       }
     }
 
     loop(deps) match {
       case List(node) => node
-      case alist => ETNode(Nil, alist)
+      case alist => ExecTree(Nil, alist)
     }
   }
 

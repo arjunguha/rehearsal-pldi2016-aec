@@ -338,9 +338,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   def isDeter(execTree: ExecTree): Boolean = smt.pushPop {
     def evalTree(in: ST, t: ExecTree): Seq[ST] = t match {
-      case ETLeaf => Seq(in)
-      case ETNode(es, Nil) => Seq(evalExpr(in, FSSyntax.ESeq(es: _*)))
-      case ETNode(es, children) => {
+      case ExecTree(es, Nil) => Seq(evalExpr(in, FSSyntax.ESeq(es: _*)))
+      case ExecTree(es, children) => {
         val out = evalExpr(in, FSSyntax.ESeq(es: _*))
         children.flatMap(t_ => evalTree(out, t_))
       }
