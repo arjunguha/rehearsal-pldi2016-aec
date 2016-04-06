@@ -139,9 +139,6 @@ object ResourceModel {
 
 
       ite(testFileState(s"/packages/${name}", IsFile),
-
-          // TODO(arjun): The issue is that the files and directories are not
-          // always created.
           ESkip,
           createFile(s"/packages/${name}", "") >> ESeq(exprs: _*))
     }
