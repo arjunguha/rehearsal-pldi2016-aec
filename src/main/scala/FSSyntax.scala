@@ -96,6 +96,13 @@ object FSSyntax {
       r
     }
 
+    /** Flattens a nested sequence. */
+    def flatten(): Seq[Expr] = this match {
+      case ESeq(head, tail) => head.flatten() ++ tail.flatten()
+      case other => Seq(other)
+    }
+
+
   }
 
   case object EError extends Expr
