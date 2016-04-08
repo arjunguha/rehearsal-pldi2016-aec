@@ -138,7 +138,7 @@ object SMT {
 
 }
 
-class SMT(outputFile: Option[String]) extends com.typesafe.scalalogging.LazyLogging {
+class SMT() extends com.typesafe.scalalogging.LazyLogging {
 
   import java.nio.file._
   import smtlib.parser.Commands._
@@ -148,8 +148,6 @@ class SMT(outputFile: Option[String]) extends com.typesafe.scalalogging.LazyLogg
 
 
   private val interpreter = Z3Interpreter.buildDefault
-
-  private val outputPath = outputFile.map(p => Paths.get(p))
 
   def free(): Unit = {
     interpreter.free()
@@ -172,6 +170,7 @@ class SMT(outputFile: Option[String]) extends com.typesafe.scalalogging.LazyLogg
   def getModel(): List[SExpr] = eval(GetModel()).asInstanceOf[GetModelResponseSuccess].model
 
   def checkSat(): Boolean = {
+    logger.info("Starting a (check-sat) query")
     time(eval(CheckSat()).asInstanceOf[CheckSatStatus].status) match {
       case (SatStatus, t) => {
         logger.info(s"Solver produced sat in $t ms")
@@ -191,18 +190,6 @@ class SMT(outputFile: Option[String]) extends com.typesafe.scalalogging.LazyLogg
   }
 
   def eval(command: Command) :  CommandResponse = {
-    logger.debug(command.toString)
-
-    outputPath match {
-      case None => ()
-      case Some(p) => {
-        Files.write(p, command.toString.getBytes, StandardOpenOption.APPEND,
-                    StandardOpenOption.CREATE)
-        Files.write(p, "\n".getBytes, StandardOpenOption.APPEND)
-      }
-    }
-
-
     val resp = interpreter.eval(command)
     resp match {
       case Error(msg) => {

@@ -5,7 +5,7 @@ object DeterminismPruning2 extends com.typesafe.scalalogging.LazyLogging {
   import FSSyntax._
   import Implicits._
 
-  def pruneWrites[K](graph: FSGraph[K]): FSGraph[K] = {
+  def pruneWrites(graph: FSGraph): FSGraph = {
     val rws = graph.exprs.mapValues(e => (e.fileSets.reads, e.fileSets.writes union e.fileSets.dirs))
     /* If a resource definitively writes to a location that its successors only read
        then those reads can be specialized to account for the effect of this definitive write.
@@ -44,7 +44,7 @@ object DeterminismPruning2 extends com.typesafe.scalalogging.LazyLogging {
 
     val stats = graph.exprs.keys.map(k => k -> DeterminismPruning.trivialStatus(graph.exprs(k))).toMap
 
-    def propagateWrites(exprs: Map[K, Expr], label: K): Map[K, Expr] = {
+    def propagateWrites(exprs: Map[FSGraph.Key, Expr], label: FSGraph.Key): Map[FSGraph.Key, Expr] = {
       val stat = stats(label)
       val succs = graph.deps.descendants(graph.deps.get(label)).map(_.value)
       val definiteWrites = stat.filter({ case (_, (_, status)) => status != DeterminismPruning.Unknown })
@@ -65,6 +65,33 @@ object DeterminismPruning2 extends com.typesafe.scalalogging.LazyLogging {
     }
 
     graph.copy(exprs = graph.exprs.keySet.foldLeft(graph.exprs)(propagateWrites))
+  }
+
+}
+
+object DeterminismPruning3 extends com.typesafe.scalalogging.LazyLogging {
+
+  import FSSyntax._
+  import Implicits._
+
+  def pruneWrites(fsgraph: FSGraph): FSGraph = {
+    val nodes = fsgraph.deps.topologicalSort.reverse
+    nodes.foldLeft(fsgraph) {
+      case (FSGraph(exprs, graph), nodeValue) => {
+        val node = graph.get(nodeValue)
+        val succs = graph.nodes.toSet -- graph.ancestors(node) - node
+        val commutesAll = succs.forall { succ =>
+
+           val r = fsgraph.exprs(node.value).commutesWith(fsgraph.exprs(succ.value))
+//          if (!r) {
+//            println(s"${node.value} does not commute with ${succ.value}")
+//          }
+          r
+        }
+        if (commutesAll) FSGraph(exprs - node, graph.shrink(node))
+        else FSGraph(exprs, graph)
+      }
+    }
   }
 
 }
@@ -182,7 +209,7 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
     trivialStatus(expr).toSeq.filter({ case (_, (reads, status)) => reads.intersect(exclude).isEmpty } ).map(_._1)
   }
 
-  def pruningCandidates[K](exprs: Map[K, Expr]): Map[K, Set[Path]] = {
+  def pruningCandidates(exprs: Map[FSGraph.Key, Expr]): Map[FSGraph.Key, Set[Path]] = {
     val counts = exprs.values.toSeq.flatMap(_.paths.toSeq)
       .groupBy(identity).mapValues(_.length)
     // All the paths that exist in more than one resource.
@@ -197,7 +224,7 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
     gen.toMap
   }
 
-  def removeUnobservableWrites[K](graph: FSGraph[K]): FSGraph[K] = {
+  def removeUnobservableWrites(graph: FSGraph): FSGraph = {
     val candidates = pruningCandidates(graph.exprs)
     val exprs_ = graph.exprs.map {
       case (k, e) => (k, DeterminismPruning.pruneRec(candidates(k), e, Map())._1)
@@ -206,8 +233,9 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
     graph.copy(exprs = exprs_)
   }
 
-  def pruneWrites[K](graph: FSGraph[K]): FSGraph[K] = {
-    removeUnobservableWrites(graph)
+  def pruneWrites(graph: FSGraph): FSGraph = {
+    DeterminismPruning3.pruneWrites(graph.exposePackageFiles)
+    // removeUnobservableWrites(graph)
   }
 
 }

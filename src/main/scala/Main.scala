@@ -98,7 +98,7 @@ object Main extends App {
 
     Try(PuppetParser.parseFile(filename.toString)
           .eval.resourceGraph.fsGraph(os)
-          .addRoot(PuppetSyntax.Node("root", "root"))
+          .addRoot(FSGraph.key())
           .contractEdges()) match {
       case Success(g) => {
         print("Checking if manifest is deterministic ... ")
@@ -169,7 +169,7 @@ object Main extends App {
           val os = config.os.get
           val g1 = PuppetParser.parseFile(filename.toString)
             .eval.resourceGraph.fsGraph(os)
-            .addRoot(PuppetSyntax.Node("root", "root"))
+            .addRoot(FSGraph.key())
             .contractEdges()
           val g2 = g1.pruneWrites()
           val paths = g1.expr.fileSets.writes.size
@@ -184,7 +184,7 @@ object Main extends App {
 
           val g_ = PuppetParser.parseFile(config.filename.get.toString)
             .eval.resourceGraph.fsGraph(config.os.get)
-            .addRoot(PuppetSyntax.Node("root", "root"))
+            .addRoot(FSGraph.key())
             .contractEdges()
 
           val g = if (config.pruning.get) g_.pruneWrites() else g_
@@ -208,7 +208,8 @@ object Main extends App {
           import scalax.collection.GraphEdge.DiEdge
           val e = ResourceModel.File(path = "/a".toPath, content = CInline("content"), force = false)
             .compile("ubuntu-trusty")
-          val graph = FSGraph(0.until(n).map(n => n -> e).toMap, Graph(0.until(n): _*))
+          val nodes = 0.until(n).map(n => FSGraph.key())
+          val graph = FSGraph(nodes.map(n => n -> e).toMap, Graph(nodes: _*))
           val (_, t) = time(SymbolicEvaluator.isDeterministic(graph.contractEdges.pruneWrites))
           println(s"$n, $t")
         }

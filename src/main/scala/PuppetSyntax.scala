@@ -94,27 +94,27 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
   case class RENot(e: RExpr) extends RExpr
 
   // Our representation of fully evaluataed manifests, where nodes are primitive resources.
-  case class EvaluatedManifest(ress: Map[Node, ResourceVal], deps: Graph[Node, DiEdge]) {
+  case class EvaluatedManifest(ress: Map[FSGraph.Key, ResourceVal], deps: Graph[FSGraph.Key, DiEdge]) {
     def resourceGraph(): ResourceGraph = ResourceGraph(ress.mapValues(x => ResourceSemantics.compile(x)), deps)
 
   }
 
   case class ResourceVal(typ: String, title: String, attrs: Map[String, Expr]) {
-    val node = Node(typ, title)
+    val node: FSGraph.Key = Node(typ, title)
   }
-  
-  case class Node(typ: String, title: String) {
+
+  case class Node(typ: String, title: String) extends FSGraph.Key {
     lazy val isPrimitiveType = PuppetEval.primTypes.contains(typ)
   }
 
-  case class ResourceGraph(ress: Map[Node, ResourceModel.Res], deps: Graph[Node, DiEdge]) {
+  case class ResourceGraph(ress: Map[FSGraph.Key, ResourceModel.Res], deps: Graph[FSGraph.Key, DiEdge]) {
 
-    def fsGraph(distro: String): FileScriptGraph = FSGraph(ress.mapValues(_.compile(distro)), deps)
-
-
+    def fsGraph(distro: String): FSGraph = {
+      FSGraph(ress.mapValues(_.compile(distro)), deps)
+    }
   }
 
-  type FileScriptGraph = FSGraph[Node]
+  type FileScriptGraph = FSGraph
 
 
 }

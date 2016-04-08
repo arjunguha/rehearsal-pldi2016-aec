@@ -18,52 +18,59 @@ object SymbolicEvaluator {
 
   def exprEquals(e1: F.Expr, e2: F.Expr): Option[State] = {
     val impl = new SymbolicEvaluatorImpl((e1.paths union e2.paths).toList,
-      e1.hashes union e2.hashes, Set(), None)
+      e1.hashes union e2.hashes, Set())
     val result = impl.exprEquals(e1, e2)
     impl.free()
     result
   }
 
   def predEquals(a: F.Pred, b: F.Pred): Boolean = {
-    val impl = new SymbolicEvaluatorImpl((a.readSet union b.readSet).toList, Set(), Set(), None)
+    val impl = new SymbolicEvaluatorImpl((a.readSet union b.readSet).toList, Set(), Set())
     val result = impl.predEquals(a, b)
     impl.free()
     result
   }
 
 
-  def mkImpl[K](g: FSGraph[K], logFile: Option[String]) = {
+  def mkImpl(g: FSGraph) = {
      val sets = ESeq(g.exprs.values.toSeq: _*).fileSets
      val ro = sets.reads -- sets.writes -- sets.dirs
     new SymbolicEvaluatorImpl(g.allPaths.toList,
       g.deps.nodes.map(n => g.exprs(n).hashes).reduce(_ union _),
-      ro,
-      logFile)
+      ro)
   }
 
 
+  def foo(g: Graph[Expr, DiEdge]): FSGraph = {
+    val alist = g.nodes.map(n => n.value -> FSGraph.key())
+    val m = alist.toMap
+
+    FSGraph(alist.map({ case (k,v) => (v, k) }).toMap,
+      Graph(g.edges.toList.map(edge => DiEdge(m(edge._1.value), m(edge._2.value))): _*))
+
+  }
   def isDeterministic(g: Graph[Expr, DiEdge]): Boolean = {
-    isDeterministic(FSGraph(g.nodes.toList.map(x => x.value -> x.value).toMap, g))
+    isDeterministic(foo(g))
   }
 
   def isDeterministicError(g: Graph[Expr, DiEdge]): Boolean = {
-    isDeterministicError(FSGraph(g.nodes.toList.map(x => x.value -> x.value).toMap, g))
+    isDeterministicError(foo(g))
   }
 
   def isIdempotent(g: Graph[Expr, DiEdge]): Boolean = {
-    isIdempotent(FSGraph(g.nodes.toList.map(x => x.value -> x.value).toMap, g))
+    isIdempotent(foo(g))
   }
 
-  def isDeterministic[K](g: FSGraph[K],  logFile: Option[String] = None): Boolean = {
+  def isDeterministic(g: FSGraph): Boolean = {
     g.toExecTree().isDeterministic()
   }
 
-  def isDeterministicError[K](g: FSGraph[K]): Boolean = {
+  def isDeterministicError(g: FSGraph): Boolean = {
     g.toExecTree().isDeterError()
   }
 
-  def isIdempotent[K](g: FSGraph[K]): Boolean = {
-    val impl = mkImpl(g, None)
+  def isIdempotent(g: FSGraph): Boolean = {
+    val impl = mkImpl(g)
     val result = impl.isIdempotent(g)
     impl.free()
     result
@@ -74,8 +81,7 @@ case class ST(isErr: Term, paths: Map[Path, Term])
 
 class SymbolicEvaluatorImpl(allPaths: List[Path],
                             hashes: Set[String],
-                            readOnlyPaths: Set[Path],
-                            logFile: Option[String]
+                            readOnlyPaths: Set[Path]
                             ) extends com.typesafe.scalalogging.LazyLogging {
   import SMT._
   import SMT.Implicits._
@@ -85,13 +91,13 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   val writablePaths = allPaths.filterNot(p => readOnlyPaths.contains(p))
 
   for (p <- writablePaths) {
-    logger.info(s"$p is writable")
+    logger.debug(s"$p is writable")
   }
   for (p <- readOnlyPaths) {
-    logger.info(s"$p is read-only")
+    logger.debug(s"$p is read-only")
   }
 
-  val smt = new SMT(logFile)
+  val smt = new SMT()
   import smt.eval
 
   eval(DeclareSort(SSymbol("hash"), 0))
@@ -202,13 +208,13 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   def evalExpr(st: ST, expr: F.Expr): ST = expr match {
     case F.ESkip => st
     case F.EError => ST(True(), st.paths)
-    case F.ESeq(p, q) => {
+    case F.ESeq(p, q) => //evalExpr(evalExpr(st, p), q)
+    {
       val stInter = evalExpr(st, p)
-      val stInter1 = freshST()
+      val isErr = freshName("isErr")
+      eval(DeclareConst(isErr, BoolSort()))
+      val stInter1 = stInter.copy(isErr = isErr)
       eval(Assert(Equals(stInter.isErr, stInter1.isErr)))
-      for (p <- writablePaths) {
-        eval(Assert(Equals(stInter.paths(p), stInter1.paths(p))))
-      }
       evalExpr(stInter1, q)
     }
     case F.EIf(a, e1, e2) => {
@@ -217,13 +223,16 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       val b = freshName("b")
       eval(DeclareConst(b, BoolSort()))
       eval(Assert(Equals(b, evalPred(st, a))))
-      ST(ite(b, st1.isErr, st2.isErr),
+      val isErr = freshName("isErr")
+      eval(DeclareConst(isErr, BoolSort()))
+      eval(Assert(Equals(isErr, ite(b, st1.isErr, st2.isErr))))
+      ST(isErr,
         writablePaths.map(p => (p, ite(b, st1.paths(p), st2.paths(p)))).toMap ++ readOnlyMap)
     }
     case F.ECreateFile(p, h) => {
       assert(readOnlyPaths.contains(p) == false)
       val pre = Equals(st.paths(p), "DoesNotExist") && Equals(st.paths(p.getParent), "IsDir")
-      ST(st.isErr || Not(pre),
+      ST(st.isErr ||  Not(pre),
         st.paths + (p -> FunctionApplication("IsFile", Seq(hashToZ3(h)))))
     }
     case F.EMkdir(p) => {
@@ -316,7 +325,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  def isIdempotent[K](e: Expr): Boolean = {
+  def isIdempotent(e: Expr): Boolean = {
     val inST = initState
     val once = evalExpr(inST, e)
     val twice = evalExpr(once, e)
@@ -330,18 +339,22 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  def isIdempotent[K](g: FSGraph[K]): Boolean = smt.pushPop {
-    val nodes: List[K] = g.deps.topologicalSort()
+  def isIdempotent(g: FSGraph): Boolean = smt.pushPop {
+    val nodes = g.deps.topologicalSort()
     val exprs: List[Expr] = nodes.map(n => g.exprs.get(n).get)
     isIdempotent(exprs.foldRight(FSSyntax.ESkip: Expr)((e, expr) => e >> expr))
   }
 
   def isDeter(execTree: ExecTree): Boolean = smt.pushPop {
-    def evalTree(in: ST, t: ExecTree): Seq[ST] = t match {
-      case ExecTree(es, Nil) => Seq(evalExpr(in, FSSyntax.ESeq(es: _*)))
+    def evalTree(in: ST, t: ExecTree): Seq[(Expr, ST)] = t match {
+      case ExecTree(es, Nil) => {
+        val expr = FSSyntax.ESeq(es: _*)
+        Seq((expr, evalExpr(in, expr)))
+      }
       case ExecTree(es, children) => {
-        val out = evalExpr(in, FSSyntax.ESeq(es: _*))
-        children.flatMap(t_ => evalTree(out, t_))
+        val expr = FSSyntax.ESeq(es: _*)
+        val out = evalExpr(in, expr)
+        children.flatMap(t_ => evalTree(out, t_).map({ case (e, t) => (expr >> e, t) }))
       }
     }
     val in = initState
@@ -349,9 +362,12 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     val outs = evalTree(in, execTree)
     outs match {
       case Nil => throw Unexpected("no possible final state: should never happen")
-      case _ :: Nil => true
+      case _ :: Nil => {
+        logger.info("Trivially deterministic.")
+        true
+      }
       case out1 :: rest => {
-        eval(Assert(Or(rest.map(out2 => Not(stEquals(out1, out2))): _*)))
+        eval(Assert(Or(rest.map(out2 => Not(stEquals(out1._2, out2._2))): _*)))
         val nondet = smt.checkSat()
         !nondet
       }

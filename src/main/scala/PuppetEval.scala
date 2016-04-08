@@ -130,14 +130,14 @@ private object PuppetEval {
 
   }
 
-  case class State(resources: Map[Node, ResourceVal],
-                   deps: Graph[Node, DiEdge],
+  case class State(resources: Map[FSGraph.Key, ResourceVal],
+                   deps: Graph[FSGraph.Key, DiEdge],
                    env: Env,
                    definedTypes: Map[String, VDefinedType],
                    classes: Map[String, VClass],
-                   classGraph: Map[String, Graph[Node, DiEdge]],
-                   stages: Map[String, Set[Node]],
-                   aliases: Map[Node, Node])
+                   classGraph: Map[String, Graph[FSGraph.Key, DiEdge]],
+                   stages: Map[String, Set[FSGraph.Key]],
+                   aliases: Map[FSGraph.Key, FSGraph.Key])
 
   def evalAttrs(st: State, env: Env, attrs: Seq[Attribute]): Map[String, Expr] = {
     // TODO(arjun): duplicates are probably an error
@@ -170,8 +170,8 @@ private object PuppetEval {
     case _ => throw EvalError(s"expected resource reference, got $e ${e.pos}")
   }
 
-  def extractRelationships(s: Node,
-                           attrs: Map[String, Expr]): Graph[Node, DiEdge] = {
+  def extractRelationships(s: FSGraph.Key,
+                           attrs: Map[String, Expr]): Graph[FSGraph.Key, DiEdge] = {
 
     def get(key: String) = resourceRefs(attrs.getOrElse(key, EArray(Seq())))
     val before = get("before").map(r => DiEdge(s, r))
@@ -185,7 +185,7 @@ private object PuppetEval {
 
   // Produces a new state and a list of resource titles
   // TODO(arjun): Handle "require" and "before" dependencies.
-  def evalResource(st: State, resource: Resource): (State, List[Node]) = {
+  def evalResource(st: State, resource: Resource): (State, List[FSGraph.Key]) = {
     resource match {
       case ResourceRef(typ, titleExpr, Seq()) => {
         val node = Node(typ.toLowerCase, evalTitle(st, st.env, titleExpr))
@@ -195,28 +195,28 @@ private object PuppetEval {
         val (vals, relationships, aliases) = lst.map({ case (titleExpr, attrs) =>
           val attrVals = st.env.getDefaults(typ) ++ evalAttrs(st, st.env, attrs)
           val resources = evalTitles(st, st.env, titleExpr).map(title => ResourceVal(typ, title, attrVals -- metaparameters))
-          val relationships: Seq[Graph[Node, DiEdge]] = resources.map(r => extractRelationships(r.node, attrVals))
+          val relationships: Seq[Graph[FSGraph.Key, DiEdge]] = resources.map(r => extractRelationships(r.node, attrVals))
           val aliases = attrVals.get("alias") match {
             case Some(v) => {
               val alias = v.value[String].getOrElse(throw EvalError("alias must be a string"))
-              resources.map(r => Map(Node(typ, alias) -> r.node)).reduce(_ ++ _)
+              resources.map(r => Map[FSGraph.Key, FSGraph.Key](Node(typ, alias) -> r.node)).reduce(_ ++ _)
             }
-            case None => Map[Node, Node]()
+            case None => Map[FSGraph.Key, FSGraph.Key]()
           }
           (resources, relationships, aliases)
         }).unzip3
-        val aliasMap: Map[Node,Node] = aliases.reduce(_ ++ _)
-        val newNodes: Set[Node] = vals.map(_.map(_.node)).flatten.toSet
+        val aliasMap = aliases.reduce(_ ++ _)
+        val newNodes = vals.map(_.map(_.node)).flatten.toSet
         //println(s"Creating nodes $nodes")
         val redefinedResources = st.resources.keySet.intersect(newNodes)
         if (redefinedResources.isEmpty == false) {
           throw EvalError(s"${redefinedResources.head} is already defined")
         }
         else {
-          val newResources: Map[Node, ResourceVal] = vals.map(rs => rs.map(r => r.node -> r).toMap).reduce(_ ++ _)
+          val newResources: Map[FSGraph.Key, ResourceVal] = vals.map(rs => rs.map(r => r.node -> r).toMap).reduce(_ ++ _)
           (st.copy(resources = st.resources ++ newResources,
                    deps = st.deps ++
-                     Graph[Node, DiEdge](aliasMap.keys.toSeq: _*) ++
+                     Graph[FSGraph.Key, DiEdge](aliasMap.keys.toSeq: _*) ++
                      Graph.from(newNodes, edges = Set()) ++
                      relationships.flatten.reduce(_ union _),
                    stages = newResources.foldRight(st.stages)(updateStage),
@@ -235,14 +235,14 @@ private object PuppetEval {
 
     //TODO: (rolivia) This is not right
     st.copy(resources = (newResMap ++ st.resources).filter(_._2.title != ""),
-            deps = st.deps -- st.deps.nodes.filter(_.title == ""))
+            deps = st.deps -- st.deps.nodes.filter(_.value.asInstanceOf[Node].title == ""))
   }
 
   def evalResDefaults2(st: State): State = {
     // val defaultRess = st.resources.filter(_._1.title == "")
     // defaultRess.map(r => evalResDefault(r._2.attrs,
                             // st.resources.filter(_._1.typ == r._1.typ).map(_._2).toSeq))
-    val resources = st.resources.groupBy(_._1.typ)
+    val resources = st.resources.groupBy(_._1.asInstanceOf[Node].typ)
     resources.map(r => {
 
       })
@@ -263,7 +263,7 @@ private object PuppetEval {
     }
   }
 
-  def evalEdges(st: State, lst: Seq[Resource]): (State, List[Node]) = lst match {
+  def evalEdges(st: State, lst: Seq[Resource]): (State, List[FSGraph.Key]) = lst match {
     case Seq() => (st, Nil)
     case r :: rest => {
       val (st1, titlesHd) = evalResource(st, r)
@@ -441,7 +441,8 @@ private object PuppetEval {
     }.toMap
   }
 
-  def instantiateClass(st: State, node: Node): State = {
+  def instantiateClass(st: State, k: FSGraph.Key): State = {
+    val node = k.asInstanceOf[Node]
     require(node.typ == "class")
     val title = node.title
     st.classGraph.get(title) match {
@@ -466,7 +467,8 @@ private object PuppetEval {
     }
   }
 
-  def instantiateType(st: State, node: Node): State = {
+  def instantiateType(st: State, k: FSGraph.Key): State = {
+    val node = k.asInstanceOf[Node]
     val VDefinedType(_, env, formals, m) = st.definedTypes(node.typ)
     val ResourceVal(_, _, actuals) = st.resources(node)
     val unexpected = actuals.keySet -- actuals.keySet
@@ -484,11 +486,11 @@ private object PuppetEval {
   def evalLoop(st: State): State = {
     val st1 = st
     // Select newly instantiated classes and splice them into the graph
-    val instClasses = st1.deps.nodes.filter(_.typ == "class").map(_.value)
+    val instClasses = st1.deps.nodes.filter(_.value.asInstanceOf[Node].typ == "class").map(_.value)
     val st2 = instClasses.foldLeft(st1)(instantiateClass)
     // Select newly instantiated defined types and splice them into the graph
     val newInstances = st2.deps.nodes
-      .filter(node => st2.definedTypes.contains(node.typ))
+      .filter(node => st2.definedTypes.contains(node.value.asInstanceOf[Node].typ))
       .map(_.value)
     val st3 = newInstances.foldLeft(st2)(instantiateType)
     if (newInstances.isEmpty && instClasses.isEmpty) {
@@ -509,7 +511,7 @@ private object PuppetEval {
     stages = Map(),
     aliases = Map())
 
-  def updateStage(res: (Node, ResourceVal), stages: Map[String, Set[Node]]): Map[String, Set[Node]] = res match {
+  def updateStage(res: (FSGraph.Key, ResourceVal), stages: Map[String, Set[FSGraph.Key]]): Map[String, Set[FSGraph.Key]] = res match {
     case (node, ResourceVal(_, _, attrMap)) =>
       attrMap.get("stage") match {
         case Some(EStr(stage)) => addStage(stage, node, stages)
@@ -518,16 +520,17 @@ private object PuppetEval {
       }
   }
 
-  def addStage(stage: String, node: Node, stages: Map[String, Set[Node]]): Map[String, Set[Node]] =
+  def addStage(stage: String, node: FSGraph.Key, stages: Map[String, Set[FSGraph.Key]]): Map[String, Set[FSGraph.Key]] =
     stages.get(stage) match {
       case None => stages + (stage -> Set(node))
       case Some(set) => stages + (stage -> (set + node))
     }
 
-  def expandStage(stage: Node, st: State): State = {
+  def expandStage(k: FSGraph.Key, st: State): State = {
+    val stage = k.asInstanceOf[Node]
     require(stage.typ == "stage")
     val stageNodes = st.stages.getOrElse(stage.title, throw Unexpected(s"Stage should be in map. $stage")).filter(x => st.deps.contains(x))
-    val dependencies = st.deps.get(stage).incoming.map(x => st.stages.getOrElse(x.head.value.title, throw Unexpected(s"Stage should be in map. $stage"))).flatten.filter(x => st.deps.contains(x))
+    val dependencies = st.deps.get(stage).incoming.map(x => st.stages.getOrElse(x.head.value.asInstanceOf[Node].title, throw Unexpected(s"Stage should be in map. $stage"))).flatten.filter(x => st.deps.contains(x))
     val st2 =
       stageNodes.foldRight(st)((n, st1) =>
         st1.copy(
@@ -539,7 +542,7 @@ private object PuppetEval {
   }
 
   def stageExpansion(st: State): State = {
-    val instStages = st.deps.nodes.filter(_.typ == "stage").map(_.value)
+    val instStages = st.deps.nodes.filter(_.value.asInstanceOf[Node].typ == "stage").map(_.value)
     instStages.foldRight(st)(expandStage)
   }
 
@@ -549,11 +552,11 @@ private object PuppetEval {
   }
 
   def eliminateAnchors(st: State): State = {
-    val anchors: Set[st.deps.NodeT] = st.deps.nodes.toSet.filter(_.typ == "anchor")
-    val edges = anchors.map(anchor => anchor.diPredecessors.foldRight[Set[DiEdge[Node]]](Set()) {
+    val anchors: Set[st.deps.NodeT] = st.deps.nodes.toSet.filter(_.value.asInstanceOf[Node].typ == "anchor")
+    val edges = anchors.map(anchor => anchor.diPredecessors.foldRight[Set[DiEdge[FSGraph.Key]]](Set()) {
       case (pred, acc) => acc ++ anchor.diSuccessors.map(succ => DiEdge(pred.value, succ.value))
     }).flatten
-    val graph: Graph[Node, DiEdge]  = st.deps ++ edges
+    val graph: Graph[FSGraph.Key, DiEdge]  = st.deps ++ edges
     st.copy(resources = st.resources -- anchors.map(_.value), deps = graph -- anchors)
   }
 

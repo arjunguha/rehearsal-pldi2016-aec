@@ -90,7 +90,7 @@ object FSSyntax {
     def pruneIdem(): Expr = IdempotenceOptimizer.prune(this)
 
     def isIdempotent(): Boolean = {
-      val impl = new SymbolicEvaluatorImpl(this.paths.toList, this.hashes, Set(), None)
+      val impl = new SymbolicEvaluatorImpl(this.paths.toList, this.hashes, Set())
       val r = impl.isIdempotent(this)
       impl.smt.free()
       r

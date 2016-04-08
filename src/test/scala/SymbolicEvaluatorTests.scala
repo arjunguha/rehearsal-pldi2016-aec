@@ -10,8 +10,8 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
   import java.nio.file.Paths
   import SymbolicEvaluator.{predEquals, exprEquals, isDeterministic, isDeterministicError, isIdempotent}
 
-  def comprehensiveIsDet(original: FSGraph[Node]): Boolean = {
-    val contracted = original.addRoot(Node("root", "root")).contractEdges()
+  def comprehensiveIsDet(original: FSGraph): Boolean = {
+    val contracted = original.addRoot(FSGraph.key()).contractEdges()
     val pruned = original.pruneWrites()
     val contractedAndPruned = contracted.pruneWrites()
     val expected = SymbolicEvaluator.isDeterministic(original)
@@ -21,7 +21,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     expected
   }
 
-  def comprehensiveIdem(original: FSGraph[Node]): Boolean = {
+  def comprehensiveIdem(original: FSGraph): Boolean = {
     val expr = original.expr()
     val expected =  expr.isIdempotent()
     assert(expr.pruneIdem().isIdempotent() == expected, "pruning changed the result of idempotence")
@@ -283,8 +283,8 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
   test("Is a singleton graph deterministic") {
     val g = Graph[Expr, DiEdge](ite(testFileState(Paths.get("/foo"), IsDir), ESkip,
                                             mkdir(Paths.get("/foo"))))
-    assert(true == isDeterministic(g))
-    assert(false == isDeterministicError(g))
+    assert(isDeterministic(g) == true)
+    assert(isDeterministicError(g) == false)
   }
 
   test("Two-node non-deterministic graph") {
@@ -466,6 +466,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     assert(isDeterministic(m) == true)
   }
 
+  /*
   test("slicing limitation") {
     val g = PuppetParser.parse(
       """
@@ -490,6 +491,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     assert(writes.contains("/beta/delta") == false)
     assert(SymbolicEvaluator.isDeterministic(g_))
   }
+  */
 
   test("single user") {
     val m = PuppetParser.parse(
@@ -563,5 +565,67 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
 //    val collectd = Node("package", "collectd")
 //    println(candidates(Node("package", "collectd")))
 //  }
+
+  test("Does pruning work") {
+
+    val g = PuppetParser.parse(
+      """
+      file{"/a": ensure => directory }
+      file{"/a/b": require => File["/a"] }
+      """).eval.resourceGraph.fsGraph("centos-6")
+
+    val g1 = DeterminismPruning3.pruneWrites(g)
+    info(g1.deps.toString)
+  }
+
+  test("Exploding packages") {
+    val m =
+      """
+          file {"/etc/apache2/sites-available/000-default.conf":
+            content => "dummy config", require => Package["apache2"]
+          }
+          package{"apache2": ensure => present }
+      """
+
+    val g = PuppetParser.parse(m).eval.resourceGraph.fsGraph("ubuntu-trusty")
+
+    val g1 = g.exposePackageFiles
+    import java.nio.file._
+    Files.write(Paths.get("/Users/arjun//Desktop/foo.dot"), g1.deps.dotString.getBytes)
+    val g2 = DeterminismPruning3.pruneWrites(g1)
+    info (g2.deps.nodes.toList.map(_.value).toString)
+    info(g1.deps.nodes.size.toString)
+    info(g2.deps.nodes.size.toString)
+    info(g2.exprs.toString)
+  }
+
+  test("current") {
+    val m =
+      """
+          package{"collectd": }
+          package{"collectd-rrdtool": require => Package["collectd"]}
+          file { 'collectd_swap':
+            ensure  => file,
+            path    => '/etc/collectd.d/swap.conf',
+            content => "LoadPlugin swap\n",
+            owner   => 'root',
+            group   => 'root',
+            mode    => '0644',
+            require => Package['collectd']
+          }
+
+
+      """
+
+    val g = PuppetParser.parse(m).eval.resourceGraph.fsGraph("centos-6")
+
+    val g1 = g.exposePackageFiles
+    val g2 = DeterminismPruning3.pruneWrites(g1)
+    g2.deps.saveDotFile("/Users/arjun//Desktop/reduced.dot".toPath)
+    info (g2.deps.nodes.toList.map(_.value).toString)
+    info(g1.deps.nodes.size.toString)
+    info(g2.deps.nodes.size.toString)
+    info(g2.exprs.toString)
+  }
 
 }

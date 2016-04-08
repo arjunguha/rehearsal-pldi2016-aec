@@ -13,25 +13,42 @@ class DeterminismEvaluationSuite extends FunSuitePlus
     FSSyntax.clearCache()
   }
 
-  test("dhoppe-monit.pp") {
-    val g = parseFile(s"$root/dhoppe-monit.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isDeterministic(g) == true)
+  def mytest(filename: String,
+             isDeterministic: Boolean,
+             os: String = "ubuntu-trusty",
+             onlyPrune: Boolean = true): Unit = {
+    test(filename) {
+      val g = parseFile(s"$root/$filename").eval.resourceGraph.fsGraph(os)
+
+      if (onlyPrune == false) {
+        val (r, t) = time(g.toExecTree.isDeterministic)
+        info(s"Took ${t}ms without pruning")
+        assert(r == isDeterministic,
+          s"without pruning, expected $filename to be " +
+            (if (isDeterministic) "deterministic" else "non-deterministic"))
+
+      }
+
+      val (r, t) = time(g.pruneWrites.toExecTree.isDeterministic)
+      info(s"Took ${t}ms with pruning")
+      assert(r ==
+        isDeterministic,
+        s"with pruning, expected $filename to be " +
+          (if (isDeterministic) "deterministic" else "non-deterministic"))
+    }
   }
+
+  mytest("dhoppe-monit.pp", true)
+  mytest("thias-bind.pp", true, os = "centos-6")
 
   test("dhoppe-monit_BUG.pp") {
     val g = parseFile(s"$root/dhoppe-monit_BUG.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
     assert(SymbolicEvaluator.isDeterministicError(g) == true)
   }
 
-  test("thias-bind.pp") {
-    val g = parseFile(s"$root/thias-bind.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isDeterministic(g.addRoot(Node("root", "root")).pruneWrites()) == true)
-  }
 
-  test("thias-bind-buggy.pp") {
-    val g = parseFile(s"$root/thias-bind-buggy.pp").eval.resourceGraph.fsGraph("centos-6")
-    assert(SymbolicEvaluator.isDeterministic(g.addRoot(Node("root", "root")).pruneWrites()) == false)
-  }
+
+  mytest("thias-bind-buggy.pp", false, os = "centos-6")
 
   test("puppet-hosting.pp") {
     intercept[PackageNotFound] {
@@ -47,95 +64,23 @@ class DeterminismEvaluationSuite extends FunSuitePlus
     assert(SymbolicEvaluator.isDeterministic(g) == true)
   }
 
-  test("antonlindstrom-powerdns.pp") {
-    val g = parseFile(s"$root/antonlindstrom-powerdns.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isDeterministic(g) == false)
-  }
-
-  test("antonlindstrom-powerdns_deter.pp") {
-    val g = parseFile(s"$root/antonlindstrom-powerdns_deter.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isDeterministic(g) == true)
-  }
-
-  test("nfisher-SpikyIRC.pp") {
-    val g = parseFile(s"$root/nfisher-SpikyIRC.pp").eval.resourceGraph.fsGraph("centos-6")
-    assert(SymbolicEvaluator.isDeterministic(g.addRoot(Node("root", "root")).contractEdges.pruneWrites()) == false)
-  }
-
-  test("spiky-reduced.pp pruned") {
-    val g = parseFile(s"$root/spiky-reduced.pp").eval.resourceGraph.fsGraph("centos-6").addRoot(Node("root", "root")).pruneWrites()
-    assert(SymbolicEvaluator.isDeterministic(g) == false)
-  }
-
-  test("spiky-reduced-deterministic.pp pruned") {
-    val g = parseFile(s"$root/spiky-reduced-deterministic.pp").eval.resourceGraph.fsGraph("centos-6").addRoot(Node("root", "root")).contractEdges.pruneWrites()
-    assert(SymbolicEvaluator.isDeterministic(g) == true)
-  }
-
-  test("ghoneycutt-xinetd.pp") {
-    val g = parseFile(s"$root/ghoneycutt-xinetd.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isDeterministic(g) == false)
-  }
-
-  test("ghoneycutt-xinetd_deter.pp") {
-    val g = parseFile(s"$root/ghoneycutt-xinetd_deter.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isDeterministic(g) == true)
-  }
-
-  test("mjhas-amavis.pp") {
-    val g = parseFile(s"$root/mjhas-amavis.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isDeterministic(g))
-  }
-
-  test("mjhas-clamav.pp") {
-    val g = parseFile(s"$root/mjhas-clamav.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isDeterministic(g))
-  }
-
-  test("clamav-reduced") {
-    val g = parseFile(s"$root/clamav-reduced.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-      .addRoot(Node("root", "root")).contractEdges
-    assert(SymbolicEvaluator.isDeterministic(g))
-  }
-
-  test("Nelmo-logstash.pp") {
-    val g = parseFile(s"$root/Nelmo-logstash.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isDeterministic(g) == false)
-  }
-
- test("Nelmo-logstash_deter.pp") {
-    val g = parseFile(s"$root/Nelmo-logstash_deter.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isDeterministic(g) == true)
-  }
-
-  test("pdurbin-java-jpa-tutorial.pp (with pruning)") {
-    val g = parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph.fsGraph("centos-6")
-    assert(SymbolicEvaluator.isDeterministic(g.addRoot(Node("root", "root")).pruneWrites()) == true)
-  }
-
-  test("thias-ntp.pp") {
-    val g = parseFile(s"$root/thias-ntp.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isDeterministic(g) == false)
-  }
-
-  test("thias-ntp_deter.pp") {
-    val g = parseFile(s"$root/thias-ntp_deter.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isDeterministic(g) == true)
-  }
-
-  test("xdrum-rsyslog.pp") {
-    val g = parseFile(s"$root/xdrum-rsyslog.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isDeterministic(g) == false)
-  }
-
-  test("xdrum-rsyslog_deter.pp") {
-    val g = parseFile(s"$root/xdrum-rsyslog_deter.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isDeterministic(g) == true)
-  }
-
-  test("BenoitCattie-puppet-nginx.pp") {
-    val g = parseFile(s"$root/BenoitCattie-puppet-nginx.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isDeterministic(g))
-  }
+  mytest("antonlindstrom-powerdns.pp", false)
+  mytest("antonlindstrom-powerdns_deter.pp", true)
+  mytest("nfisher-SpikyIRC.pp", false, os = "centos-6", onlyPrune = false)
+  mytest("spiky-reduced.pp", false, os = "centos-6")
+  mytest("spiky-reduced-deterministic.pp", true, os = "centos-6")
+  mytest("ghoneycutt-xinetd.pp", false)
+  mytest("ghoneycutt-xinetd_deter.pp", true)
+  mytest("mjhas-amavis.pp", true)
+  mytest("mjhas-clamav.pp", true)
+  mytest("clamav-reduced.pp", true)
+  mytest("Nelmo-logstash.pp", false)
+  mytest("Nelmo-logstash_deter.pp", true)
+  mytest("pdurbin-java-jpa-tutorial.pp", true, os = "centos-6")
+  mytest("thias-ntp.pp", false)
+  mytest("thias-ntp_deter.pp", true)
+  mytest("xdrum-rsyslog.pp", false)
+  mytest("xdrum-rsyslog_deter.pp", true)
+  mytest("BenoitCattie-puppet-nginx.pp", true)
 
 }
