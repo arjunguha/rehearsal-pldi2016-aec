@@ -97,12 +97,10 @@ object Main extends App {
     }
 
     Try(PuppetParser.parseFile(filename.toString)
-          .eval.resourceGraph.fsGraph(os)
-          .addRoot(FSGraph.key())
-          .contractEdges()) match {
+          .eval.resourceGraph.fsGraph(os)) match {
       case Success(g) => {
         print("Checking if manifest is deterministic ... ")
-        if (SymbolicEvaluator.isDeterministic(g.pruneWrites)) {
+        if (g.pruneWrites().toExecTree().isDeterministic()) {
           println("OK.")
         }
         else {
@@ -169,8 +167,6 @@ object Main extends App {
           val os = config.os.get
           val g1 = PuppetParser.parseFile(filename.toString)
             .eval.resourceGraph.fsGraph(os)
-            .addRoot(FSGraph.key())
-            .contractEdges()
           val g2 = g1.pruneWrites()
           val paths = g1.expr.fileSets.writes.size
           val postPruningPaths =  g2.pruneWrites.expr.fileSets.writes.size
@@ -184,13 +180,11 @@ object Main extends App {
 
           val g_ = PuppetParser.parseFile(config.filename.get.toString)
             .eval.resourceGraph.fsGraph(config.os.get)
-            .addRoot(FSGraph.key())
-            .contractEdges()
 
           val g = if (config.pruning.get) g_.pruneWrites() else g_
           try {
             val (isDeterministic, t) =
-              Await.result(Future(time(SymbolicEvaluator.isDeterministic(g))),
+              Await.result(Future(time(g.toExecTree().isDeterministic())),
                            5.minutes)
               assert (shouldBeDeterministic == isDeterministic)
               println(s"$label, $pruningStr, $t")
@@ -210,7 +204,7 @@ object Main extends App {
             .compile("ubuntu-trusty")
           val nodes = 0.until(n).map(n => FSGraph.key())
           val graph = FSGraph(nodes.map(n => n -> e).toMap, Graph(nodes: _*))
-          val (_, t) = time(SymbolicEvaluator.isDeterministic(graph.contractEdges.pruneWrites))
+          val (_, t) = time(graph.pruneWrites().toExecTree().isDeterministic)
           println(s"$n, $t")
         }
       }

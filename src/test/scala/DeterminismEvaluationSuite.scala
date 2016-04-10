@@ -4,8 +4,6 @@ class DeterminismEvaluationSuite extends FunSuitePlus
   import rehearsal._
   import PuppetParser.parseFile
   import rehearsal.Implicits._
-  import SymbolicEvaluator.{predEquals, exprEquals, isDeterministic, isDeterministicError}
-  import PuppetSyntax._
 
   val root = "parser-tests/good"
 
@@ -45,7 +43,7 @@ class DeterminismEvaluationSuite extends FunSuitePlus
 
   test("dhoppe-monit_BUG.pp") {
     val g = parseFile(s"$root/dhoppe-monit_BUG.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isDeterministicError(g) == true)
+    assert(g.toExecTree.isDeterError() == true)
   }
 
 
@@ -56,21 +54,11 @@ class DeterminismEvaluationSuite extends FunSuitePlus
     intercept[PackageNotFound] {
       val g = parseFile(s"$root/puppet-hosting.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
       // TODO(arjun): This line shouldn't be necessary, but .fsGraph produces a lazy data structure!s
-      assert(SymbolicEvaluator.isDeterministic(g) == false)
+      assert(g.toExecTree.isDeterministic() == false)
     }
   }
 
-  test("puppet-hosting_deter.pp") {
-    val g = parseFile(s"$root/puppet-hosting_deter.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    // TODO(arjun): This line shouldn't be necessary, but .fsGraph produces a lazy data structure!s
-    assert(SymbolicEvaluator.isDeterministic(g) == true)
-  }
-
-  test("current") {
-     PuppetParser.parseFile(s"$root/antonlindstrom-powerdns_deter.pp").eval.resourceGraph.deps
-       .saveDotFile("/Users/arjun/Desktop/dns.dot")
-  }
-
+  mytest("puppet-hosting_deter.pp", true)
   mytest("antonlindstrom-powerdns.pp", false)
   mytest("antonlindstrom-powerdns_deter.pp", true)
   mytest("nfisher-SpikyIRC.pp", false, os = "centos-6", onlyPrune = false)

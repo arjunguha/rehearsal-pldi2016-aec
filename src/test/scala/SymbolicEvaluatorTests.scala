@@ -9,7 +9,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
   import scalax.collection.GraphEdge.DiEdge
   import rehearsal.Implicits._
   import java.nio.file.Paths
-  import SymbolicEvaluator.{predEquals, exprEquals, isDeterministic}
+  import SymbolicEvaluator.{predEquals, exprEquals}
 
   def comprehensiveIsDet(original: FSGraph): Boolean = {
     val pruned = original.pruneWrites().toExecTree().isDeterministic()
@@ -323,7 +323,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
       package {'sl': ensure => present }
                   """
     val g = PuppetParser.parse(program).eval().resourceGraph().fsGraph("ubuntu-trusty")
-    assert(false == isDeterministic(g))
+    assert(false == g.toExecTree.isDeterministic())
   }
 
   test("should be non-deterministic") {
@@ -344,7 +344,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
                   """
     val g = PuppetParser.parse(program).eval().resourceGraph().fsGraph("ubuntu-trusty")
     val exprs = g.exprs.values.toArray
-    assert(false == isDeterministic(g))
+    assert(false == g.toExecTree().isDeterministic())
   }
 
   test("blah") {
@@ -354,7 +354,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
       file {'/etc/foo': ensure => file}
                   """
     val g = PuppetParser.parse(program).eval().resourceGraph().fsGraph("ubuntu-trusty")
-    assert(false == isDeterministic(g))
+    assert(false == g.toExecTree().isDeterministic())
   }
 
   test("slicing regression: thias-bind-buggy") {
@@ -385,7 +385,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
           }
       """).eval().resourceGraph().fsGraph("centos-6")
 
-    assert(isDeterministic(m.pruneWrites()) == false, "slicing changed the result of determinism")
+    assert(m.pruneWrites().toExecTree().isDeterministic() == false, "slicing changed the result of determinism")
   }
 
   test("openssh class from SpikyIRC benchmark") {
@@ -420,9 +420,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
       file{"/dir/file": ensure => present}
       """).eval().resourceGraph().fsGraph("centos-6")
 
-    assert(isDeterministic(m) == false, "should be non-deterministic")
-    assert(isDeterministic(m.pruneWrites()) == false,
-           "slicing removed nondeterminism")
+    assert(comprehensiveIsDet(m) == false)
   }
 
   test("pdurbin-java-jpa reduced") {
@@ -437,7 +435,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
           }
         package{"vim-enhanced": }
       """).eval.resourceGraph.fsGraph("centos-6")
-    assert(isDeterministic(m) == true)
+    assert(comprehensiveIsDet(m))
   }
 
   /*
@@ -467,13 +465,12 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
   }
   */
 
-  test("single user") {
+  test("pruning a sinple node should produce the empty graph") {
     val m = PuppetParser.parse(
       """
         user{"alice": managehome => true}
       """).eval.resourceGraph.fsGraph("ubuntu").pruneWrites()
-
-    println(m.expr())
+    assert(m.deps.isEmpty)
   }
 
   test("packages ircd-hybrid and httpd") {
@@ -510,22 +507,20 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
   test("java-reduced-less") {
     val m = PuppetParser.parse(
       """
-  $packages_to_install = [
-    'unzip',
-    'ant',
-  ]
+        $packages_to_install = [
+          'unzip',
+          'ant',
+        ]
 
-  package { $packages_to_install:
-    ensure => installed,
-  }
+        package { $packages_to_install:
+          ensure => installed,
+        }
 
-  file { '/otherb':
-    content => "foobar"
-  }
-
-      """.stripMargin).eval.resourceGraph.fsGraph("centos-6")
-    val pruned = m.pruneWrites()
-    assert(SymbolicEvaluator.isDeterministic(pruned) == true)
+        file { '/otherb':
+          content => "foobar"
+        }
+      """).eval.resourceGraph.fsGraph("centos-6")
+    assert(comprehensiveIsDet(m) == true)
   }
 
 //  test("In Spiky, irssi configuration files should be trivially files") {
@@ -538,7 +533,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
 //    println(candidates(Node("package", "collectd")))
 //  }
 
-  ignore("Does pruning work") {
+  test("A totally ordered manifest should be completely pruned") {
 
     val g = PuppetParser.parse(
       """
@@ -546,32 +541,23 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
       file{"/a/b": require => File["/a"] }
       """).eval.resourceGraph.fsGraph("centos-6")
 
-    val g1 = DeterminismPruning3.pruneWrites(g)
-    info(g1.deps.toString)
+    assert(g.pruneWrites.deps.isEmpty)
   }
 
-  ignore("Exploding packages") {
-    val m =
+
+  test("Overwriting a file in a package and getting the dependency right") {
+    val g = PuppetParser.parse(
       """
           file {"/etc/apache2/sites-available/000-default.conf":
             content => "dummy config", require => Package["apache2"]
           }
           package{"apache2": ensure => present }
-      """
-
-    val g = PuppetParser.parse(m).eval.resourceGraph.fsGraph("ubuntu-trusty")
-
-    val g1 = g.exposePackageFiles
-    import java.nio.file._
-    val g2 = DeterminismPruning3.pruneWrites(g1)
-    info (g2.deps.nodes.toList.map(_.value).toString)
-    info(g1.deps.nodes.size.toString)
-    info(g2.deps.nodes.size.toString)
-    info(g2.exprs.toString)
+      """).eval.resourceGraph.fsGraph("ubuntu-trusty").pruneWrites()
+    assert(g.deps.isEmpty)
   }
 
-  ignore("current") {
-    val m =
+  test("Pruning is not effective in this case") {
+    val m = PuppetParser.parse(
       """
           package{"collectd": }
           package{"collectd-rrdtool": require => Package["collectd"]}
@@ -584,18 +570,9 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
             mode    => '0644',
             require => Package['collectd']
           }
+      """).eval.resourceGraph().fsGraph("centos-6").pruneWrites
 
-
-      """
-
-    val g = PuppetParser.parse(m).eval.resourceGraph.fsGraph("centos-6")
-
-    val g1 = g.exposePackageFiles
-    val g2 = DeterminismPruning3.pruneWrites(g1)
-    info (g2.deps.nodes.toList.map(_.value).toString)
-    info(g1.deps.nodes.size.toString)
-    info(g2.deps.nodes.size.toString)
-    info(g2.exprs.toString)
+    assert(m.deps.nodes.size >= 3)
   }
 
 }

@@ -32,7 +32,7 @@ object SymbolicEvaluator {
   }
 
 
-  def mkImpl(g: FSGraph) = {
+  private def mkImpl(g: FSGraph) = {
      val sets = ESeq(g.exprs.values.toSeq: _*).fileSets
      val ro = sets.reads -- sets.writes -- sets.dirs
     new SymbolicEvaluatorImpl(g.allPaths.toList,
@@ -40,8 +40,7 @@ object SymbolicEvaluator {
       ro)
   }
 
-
-  def foo(g: Graph[Expr, DiEdge]): FSGraph = {
+  private def foo(g: Graph[Expr, DiEdge]): FSGraph = {
     val alist = g.nodes.map(n => n.value -> FSGraph.key())
     val m = alist.toMap
 
@@ -50,20 +49,8 @@ object SymbolicEvaluator {
 
   }
 
-  def isDeterministicError(g: Graph[Expr, DiEdge]): Boolean = {
-    isDeterministicError(foo(g))
-  }
-
   def isIdempotent(g: Graph[Expr, DiEdge]): Boolean = {
     isIdempotent(foo(g))
-  }
-
-  def isDeterministic(g: FSGraph): Boolean = {
-    g.toExecTree().isDeterministic()
-  }
-
-  def isDeterministicError(g: FSGraph): Boolean = {
-    g.toExecTree().isDeterError()
   }
 
   def isIdempotent(g: FSGraph): Boolean = {

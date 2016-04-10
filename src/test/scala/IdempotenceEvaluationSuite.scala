@@ -162,13 +162,13 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite
     val g = PuppetParser.parse(manifest).eval.resourceGraph().fsGraph("centos-6")
     val e = g.expr()
 
-    assert(SymbolicEvaluator.isDeterministic(g.pruneWrites()), "not deterministic")
+    assert(g.pruneWrites.toExecTree.isDeterministic(), "not deterministic")
     assert(e.pruneIdem().isIdempotent() == true, "not idempotent")
   }
 
   test("pdurbin-java-jpa-tutorial.pp") {
     val g = parseFile(s"$root/pdurbin-java-jpa-tutorial.pp").eval.resourceGraph.fsGraph("centos-6")
-    assert(SymbolicEvaluator.isDeterministic(g.pruneWrites))
+    assert(g.pruneWrites.toExecTree.isDeterministic())
     assert(g.expr.pruneIdem.isIdempotent == true)
   }
 

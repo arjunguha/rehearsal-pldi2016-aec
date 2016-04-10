@@ -142,7 +142,7 @@ object ResourceModel {
 
       ite(testFileState(s"/packages/${name}", IsFile),
           ESkip,
-          ESeq(exprs: _*))
+          createFile(s"/packages/${name}", "") >> ESeq(exprs: _*))
     }
     case Package(name, false) => {
       // TODO(arjun): Shouldn't this only remove files and newly created directories?
