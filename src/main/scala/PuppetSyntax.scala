@@ -95,7 +95,7 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
 
   // Our representation of fully evaluataed manifests, where nodes are primitive resources.
   case class EvaluatedManifest(ress: Map[FSGraph.Key, ResourceVal], deps: Graph[FSGraph.Key, DiEdge]) {
-    def resourceGraph(): ResourceGraph = ResourceGraph(ress.mapValues(x => ResourceSemantics.compile(x)), deps)
+    def resourceGraph(): ResourceGraph = ResourceGraph(ress.mapValues(x => ResourceSemantics.compile(x)).view.force, deps)
 
   }
 
@@ -110,7 +110,7 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
   case class ResourceGraph(ress: Map[FSGraph.Key, ResourceModel.Res], deps: Graph[FSGraph.Key, DiEdge]) {
 
     def fsGraph(distro: String): FSGraph = {
-      FSGraph(ress.mapValues(_.compile(distro)), deps)
+      FSGraph(ress.mapValues(_.compile(distro)).view.force, deps)
     }
   }
 

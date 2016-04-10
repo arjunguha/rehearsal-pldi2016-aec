@@ -3,21 +3,18 @@ import rehearsal.PuppetSyntax.Node
 class SymbolicEvaluator2Tests extends FunSuitePlus {
 
   import rehearsal._
+  import TestImplicits._
   import FSSyntax._
   import scalax.collection.Graph
   import scalax.collection.GraphEdge.DiEdge
   import rehearsal.Implicits._
   import java.nio.file.Paths
-  import SymbolicEvaluator.{predEquals, exprEquals, isDeterministic, isDeterministicError, isIdempotent}
+  import SymbolicEvaluator.{predEquals, exprEquals, isDeterministic}
 
   def comprehensiveIsDet(original: FSGraph): Boolean = {
-    val contracted = original.addRoot(FSGraph.key()).contractEdges()
-    val pruned = original.pruneWrites()
-    val contractedAndPruned = contracted.pruneWrites()
-    val expected = SymbolicEvaluator.isDeterministic(original)
-    assert (SymbolicEvaluator.isDeterministic(contracted) == expected, "contracting changed result of determinism")
-    assert (SymbolicEvaluator.isDeterministic(pruned) == expected, "pruning changed result of determinism")
-    assert (SymbolicEvaluator.isDeterministic(contractedAndPruned) == expected, "contract; prune changed result of determinism")
+    val pruned = original.pruneWrites().toExecTree().isDeterministic()
+    val expected = original.toExecTree().isDeterministic()
+    assert(pruned == expected, "pruning changed result of determinism")
     expected
   }
 
@@ -269,27 +266,29 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
   }
 
   test("trivial program with non-deterministic output") {
-    val g = Graph[Expr, DiEdge](ite(testFileState(Paths.get("/foo"), IsDir), mkdir(Paths.get("/bar")), ESkip),
-                                mkdir(Paths.get("/foo")))
+    val g = Graph[Expr, DiEdge](
+      ite(testFileState(Paths.get("/foo"), IsDir), mkdir(Paths.get("/bar")), ESkip),
+      mkdir(Paths.get("/foo")))
 
-    assert(isDeterministic(g) == false)
+    assert(g.fsGraph.toExecTree.isDeterministic == false)
   }
 
   test("trivial program with non-deterministic error"){
     val g = Graph[Expr, DiEdge](mkdir("/foo"), mkdir("/foo/bar"))
-    assert(isDeterministic(g) == false)
+    assert(g.fsGraph.toExecTree.isDeterministic == false)
   }
 
   test("Is a singleton graph deterministic") {
-    val g = Graph[Expr, DiEdge](ite(testFileState(Paths.get("/foo"), IsDir), ESkip,
-                                            mkdir(Paths.get("/foo"))))
-    assert(isDeterministic(g) == true)
-    assert(isDeterministicError(g) == false)
+    val t = Graph[Expr, DiEdge](ite(testFileState(Paths.get("/foo"), IsDir), ESkip,
+                                            mkdir(Paths.get("/foo")))).fsGraph.toExecTree()
+    assert(t.isDeterministic() == true)
+    assert(t.isDeterError() == false)
   }
 
   test("Two-node non-deterministic graph") {
-    assert(false == isDeterministic(Graph[Expr, DiEdge](mkdir(Paths.get("/foo")),
-      ite(testFileState(Paths.get("/foo"), IsDir), ESkip, mkdir(Paths.get("/bar"))))))
+    val g = Graph[Expr, DiEdge](mkdir(Paths.get("/foo")),
+      ite(testFileState(Paths.get("/foo"), IsDir), ESkip, mkdir(Paths.get("/bar"))))
+    assert(false == g.fsGraph.toExecTree.isDeterministic())
   }
 
   test("a bug") {
@@ -299,14 +298,14 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     val n2 = ite(testFileState(p, IsFile),
       rm(p) >> createFile(p, c),
       ite(testFileState(p, DoesNotExist), createFile(p, c), ESkip))
-    assert(false == isDeterministic(Graph[Expr, DiEdge](n1, n2)))
+    assert(false == Graph[Expr, DiEdge](n1, n2).fsGraph.toExecTree.isDeterministic())
   }
 
   test("should be deterministic") {
     val p = Paths.get("/usr/foo")
     val c = "c"
     val n = createFile(p, c)
-    assert(true == isDeterministic(Graph[Expr, DiEdge](n, n)))
+    assert(true == Graph[Expr, DiEdge](n, n).fsGraph.toExecTree.isDeterministic())
   }
 
   test("independent rm and createFile") {
@@ -315,7 +314,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     val e2 = createFile(p, "")
     val g = Graph[Expr, DiEdge](e1, e2)
     assert(e1.commutesWith(e2) == false, "commutativity check is buggy")
-    assert(false == isDeterministic(g))
+    assert(false == g.fsGraph.toExecTree.isDeterministic())
   }
 
   test("package with config file non-deterministic graph") {
@@ -334,7 +333,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     val c2 = "contents 2"
     val stmt1 = ite(testFileState(p, DoesNotExist), createFile(p, c1), rm(p) >> createFile(p, c1))
     val stmt2 = ite(testFileState(p, DoesNotExist), createFile(p, c2), rm(p) >> createFile(p, c2))
-    assert(false == isDeterministic(Graph[Expr, DiEdge](stmt1, stmt2)))
+    assert(false == Graph[Expr, DiEdge](stmt1, stmt2).fsGraph.toExecTree.isDeterministic)
   }
 
   test("service") {
@@ -389,18 +388,6 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     assert(isDeterministic(m.pruneWrites()) == false, "slicing changed the result of determinism")
   }
 
-  test("openssh file-set checking") {
-    val g = PuppetParser.parse("""
-      package {'openssh':
-        ensure => latest,
-      }
-      """).eval.resourceGraph.fsGraph("centos-6")
-
-    val e = g.expr()
-    println(e)
-    println(e.fileSets)
-  }
-
   test("openssh class from SpikyIRC benchmark") {
     val m = PuppetParser.parse("""
       package {'openssh':
@@ -423,20 +410,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
       }
     """).eval().resourceGraph().fsGraph("centos-6")
 
-    val g2 = m.pruneWrites()
-
-    for (x <- m.exprs) {
-      println(x._2)
-
-      println("Reads: " + x._2.fileSets.reads)
-      println("Writes: " + x._2.fileSets.writes)
-      println("Dirs: " + x._2.fileSets.dirs)
-    }
-
-
-
-    assert(isDeterministic(g2) == false, "pruning changed result")
-    assert(isDeterministic(m) == false, "wrong result without pruning")
+    comprehensiveIsDet(m)
   }
 
   test("missing dependency between file and directory") {
@@ -503,15 +477,15 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
   }
 
   test("packages ircd-hybrid and httpd") {
+    // TODO(arjun): possibly stale comment
     // Both packages create files in /var. When we don't force /var to be
     // a directory, this test checks that we do force / to be a directory.
     val m = PuppetParser.parse("""
       package{'ircd-hybrid': }
       package{'httpd': }
-      """).eval.resourceGraph.fsGraph("centos-6").pruneWrites()
+      """).eval.resourceGraph.fsGraph("centos-6").pruneWrites.toExecTree
 
-    val List(e1, e2) = m.exprs.values.toList
-    assert (e1.commutesWith(e2))
+    assert (m.branches == Nil)
   }
 
   test("two independent packages") {
@@ -528,11 +502,9 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
 
             """).eval.resourceGraph.fsGraph("centos-6")
 
-    val pruned = m.pruneWrites()
-    val List(e1, e2) = pruned.exprs.values.toList
+    val List(e1, e2) = m.exprs.values.toList
     assert (e1.commutesWith(e2))
-    assert(SymbolicEvaluator.isDeterministic(pruned) == true,
-      ".commutesWith passed, but not deterministic! Very bad.")
+    comprehensiveIsDet(m)
   }
 
   test("java-reduced-less") {
@@ -566,7 +538,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
 //    println(candidates(Node("package", "collectd")))
 //  }
 
-  test("Does pruning work") {
+  ignore("Does pruning work") {
 
     val g = PuppetParser.parse(
       """
@@ -578,7 +550,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     info(g1.deps.toString)
   }
 
-  test("Exploding packages") {
+  ignore("Exploding packages") {
     val m =
       """
           file {"/etc/apache2/sites-available/000-default.conf":
@@ -591,7 +563,6 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
 
     val g1 = g.exposePackageFiles
     import java.nio.file._
-    Files.write(Paths.get("/Users/arjun//Desktop/foo.dot"), g1.deps.dotString.getBytes)
     val g2 = DeterminismPruning3.pruneWrites(g1)
     info (g2.deps.nodes.toList.map(_.value).toString)
     info(g1.deps.nodes.size.toString)
@@ -599,7 +570,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     info(g2.exprs.toString)
   }
 
-  test("current") {
+  ignore("current") {
     val m =
       """
           package{"collectd": }
@@ -621,7 +592,6 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
 
     val g1 = g.exposePackageFiles
     val g2 = DeterminismPruning3.pruneWrites(g1)
-    g2.deps.saveDotFile("/Users/arjun//Desktop/reduced.dot".toPath)
     info (g2.deps.nodes.toList.map(_.value).toString)
     info(g1.deps.nodes.size.toString)
     info(g2.deps.nodes.size.toString)

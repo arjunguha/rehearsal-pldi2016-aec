@@ -37,7 +37,9 @@ object ResourceModel {
   case object Notify extends Res
 
   def queryPackage(distro: String, pkg: String): Option[Set[Path]] = {
-    val resp = Http(s"http://${Settings.packageHost}/query/$distro/$pkg").timeout(2 * 1000, 60 * 1000).asString
+    val resp = logTime(s"Fetching package listing for $pkg ($distro)") {
+      Http(s"http://${Settings.packageHost}/query/$distro/$pkg").timeout(2 * 1000, 60 * 1000).asString
+    }
     if (resp.isError) {
       None
     }
@@ -140,7 +142,7 @@ object ResourceModel {
 
       ite(testFileState(s"/packages/${name}", IsFile),
           ESkip,
-          createFile(s"/packages/${name}", "") >> ESeq(exprs: _*))
+          ESeq(exprs: _*))
     }
     case Package(name, false) => {
       // TODO(arjun): Shouldn't this only remove files and newly created directories?

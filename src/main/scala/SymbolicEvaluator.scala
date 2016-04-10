@@ -49,9 +49,6 @@ object SymbolicEvaluator {
       Graph(g.edges.toList.map(edge => DiEdge(m(edge._1.value), m(edge._2.value))): _*))
 
   }
-  def isDeterministic(g: Graph[Expr, DiEdge]): Boolean = {
-    isDeterministic(foo(g))
-  }
 
   def isDeterministicError(g: Graph[Expr, DiEdge]): Boolean = {
     isDeterministicError(foo(g))
@@ -366,10 +363,31 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         logger.info("Trivially deterministic.")
         true
       }
-      case out1 :: rest => {
-        eval(Assert(Or(rest.map(out2 => Not(stEquals(out1._2, out2._2))): _*)))
-        val nondet = smt.checkSat()
-        !nondet
+      case (out1Expr, out1St) :: rest => {
+        val isDet = smt.pushPop {
+          eval(Assert(Or(rest.map(out2 => Not(stEquals(out1St, out2._2))): _*)))
+          val nondet = smt.checkSat()
+          !nondet
+        }
+        if (!isDet) {
+          rest.find {
+            case (out2Expr, out2St) => {
+              smt.pushPop {
+                eval(Assert(Not(stEquals(out1St, out2St))))
+                if (smt.checkSat()) {
+                  logger.info("Divergence:")
+                  logger.info(s"$out1Expr\nproduces ${stateFromTerm(out1St)}\nbut$out2Expr\nproduces ${stateFromTerm(out2St)}")
+
+                  true
+                }
+                else {
+                  false
+                }
+              }
+            }
+          }
+        }
+        isDet
       }
     }
   }

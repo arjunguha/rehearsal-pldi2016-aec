@@ -66,7 +66,14 @@ object FSSyntax {
 
   sealed abstract trait Expr {
     def pretty(): String = Pretty.pretty(this)
-    def commutesWith(other: Expr) = this.fileSets.commutesWith(other.fileSets)
+    def commutesWith(other: Expr) = commutativityCache.get((this, other)) match {
+      case Some(r) => r
+      case None => {
+        val r = this.fileSets.commutesWith(other.fileSets)
+        commutativityCache += (this, other) -> r
+        r
+      }
+    }
 
     lazy val size = Helpers.size(this)
     lazy val paths = Helpers.exprPaths(this)
@@ -115,8 +122,8 @@ object FSSyntax {
   case class ECp private[FSSyntax](src: Path, dst: Path) extends Expr
 
   private val exprCache = scala.collection.mutable.HashMap[Expr, Expr]()
-
   private val predCache = scala.collection.mutable.HashMap[Pred, Pred]()
+  private val commutativityCache = scala.collection.mutable.HashMap[(Expr, Expr), Boolean]()
 
   private def internPred(a: Pred) = predCache.getOrElseUpdate(a, a)
 
@@ -139,7 +146,9 @@ object FSSyntax {
   def testFileState(p: Path, s: FileState): PTestFileState = internPred(PTestFileState(p, s)).asInstanceOf[PTestFileState]
 
   def clearCache(): Unit = {
+    commutativityCache.clear()
     exprCache.clear()
+    predCache.clear()
   }
 
   object ESeq {

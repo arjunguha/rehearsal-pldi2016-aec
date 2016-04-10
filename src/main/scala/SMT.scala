@@ -149,7 +149,10 @@ class SMT() extends com.typesafe.scalalogging.LazyLogging {
 
   private val interpreter = Z3Interpreter.buildDefault
 
+  logger.info("Started Z3")
+
   def free(): Unit = {
+    logger.info("Stopped Z3")
     interpreter.free()
   }
 

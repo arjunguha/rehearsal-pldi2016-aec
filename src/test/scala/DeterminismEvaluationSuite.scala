@@ -16,25 +16,27 @@ class DeterminismEvaluationSuite extends FunSuitePlus
   def mytest(filename: String,
              isDeterministic: Boolean,
              os: String = "ubuntu-trusty",
-             onlyPrune: Boolean = true): Unit = {
+             onlyPrune: Boolean = false): Unit = {
     test(filename) {
-      val g = parseFile(s"$root/$filename").eval.resourceGraph.fsGraph(os)
+      val rg = parseFile(s"$root/$filename").eval.resourceGraph
+      val g = rg.fsGraph(os)
 
-      if (onlyPrune == false) {
-        val (r, t) = time(g.toExecTree.isDeterministic)
-        info(s"Took ${t}ms without pruning")
-        assert(r == isDeterministic,
-          s"without pruning, expected $filename to be " +
-            (if (isDeterministic) "deterministic" else "non-deterministic"))
-
+      val unprunedResult = if (onlyPrune == false) {
+          val (r, t) = time(g.toExecTree.isDeterministic)
+          info(s"Deterministic without pruning? $r (${t}ms)")
+          Some(r)
+        }
+        else {
+          None
       }
-
-      val (r, t) = time(g.pruneWrites.toExecTree.isDeterministic)
-      info(s"Took ${t}ms with pruning")
-      assert(r ==
-        isDeterministic,
-        s"with pruning, expected $filename to be " +
-          (if (isDeterministic) "deterministic" else "non-deterministic"))
+      val (prunedResult, t) = time(g.pruneWrites.toExecTree.isDeterministic)
+      info(s"Deterministic with pruning? $prunedResult (${t}ms)")
+      unprunedResult match {
+        case None => assert(prunedResult == isDeterministic)
+        case Some(unpruned) =>
+          assert (unpruned == isDeterministic &&
+                  prunedResult == unpruned)
+      }
     }
   }
 
@@ -62,6 +64,11 @@ class DeterminismEvaluationSuite extends FunSuitePlus
     val g = parseFile(s"$root/puppet-hosting_deter.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
     // TODO(arjun): This line shouldn't be necessary, but .fsGraph produces a lazy data structure!s
     assert(SymbolicEvaluator.isDeterministic(g) == true)
+  }
+
+  test("current") {
+     PuppetParser.parseFile(s"$root/antonlindstrom-powerdns_deter.pp").eval.resourceGraph.deps
+       .saveDotFile("/Users/arjun/Desktop/dns.dot")
   }
 
   mytest("antonlindstrom-powerdns.pp", false)

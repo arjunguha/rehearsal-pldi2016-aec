@@ -234,7 +234,8 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
   }
 
   def pruneWrites(graph: FSGraph): FSGraph = {
-    DeterminismPruning3.pruneWrites(graph.exposePackageFiles)
+    logTime("pruning writes") { DeterminismPruning3.pruneWrites(graph) }
+    // DeterminismPruning3.pruneWrites(graph.exposePackageFiles)
     // removeUnobservableWrites(graph)
   }
 

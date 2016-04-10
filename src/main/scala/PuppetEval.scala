@@ -207,7 +207,6 @@ private object PuppetEval {
         }).unzip3
         val aliasMap = aliases.reduce(_ ++ _)
         val newNodes = vals.map(_.map(_.node)).flatten.toSet
-        //println(s"Creating nodes $nodes")
         val redefinedResources = st.resources.keySet.intersect(newNodes)
         if (redefinedResources.isEmpty == false) {
           throw EvalError(s"${redefinedResources.head} is already defined")
@@ -483,8 +482,7 @@ private object PuppetEval {
   }
 
 
-  def evalLoop(st: State): State = {
-    val st1 = st
+  def evalLoop(st1: State): State = {
     // Select newly instantiated classes and splice them into the graph
     val instClasses = st1.deps.nodes.filter(_.value.asInstanceOf[Node].typ == "class").map(_.value)
     val st2 = instClasses.foldLeft(st1)(instantiateClass)

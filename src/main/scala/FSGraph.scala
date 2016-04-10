@@ -129,7 +129,7 @@ case class FSGraph(exprs: Map[FSGraph.Key, FSSyntax.Expr], deps: Graph[FSGraph.K
         matchPackageInstall(expr) match {
           case Some((dirs, files)) => {
             val m = files.map(e => FSGraph.derived(key, e.toString) -> e).toMap
-            // println("here: " + key)
+            println("here: " + key)
 
             val edges = for (x <- m.keys; y <- deps.get(key).diSuccessors) yield { DiEdge(x, y.value) }
             val edges2 = for (x <- m.keys) yield { DiEdge(key, x) }
@@ -146,19 +146,36 @@ case class FSGraph(exprs: Map[FSGraph.Key, FSSyntax.Expr], deps: Graph[FSGraph.K
   def toExecTree(): ExecTree = {
 
     def loop(g: Graph[Key, DiEdge]): List[ExecTree] = {
-      val fringe = g.nodes.filter(_.inDegree == 0).toList.map(_.value)
-      if (fringe.isEmpty) {
+      def commutesWithRest(key: Key): Boolean = {
+        val node = g.get(key)
+        val others = g.nodes.toSet -- g.descendants(node) - node
+        others.forall(node_ => exprs(node_.value).commutesWith(exprs(key)))
+      }
+
+      if (g.isEmpty) {
         Nil
-      } else {
-        def f(m: Key, n: Key): Boolean = exprs(m).commutesWith(exprs(n))
-        val groups = groupBy2(f, fringe)
-        groups.map(group => ExecTree(group.map(k => exprs(k)), loop(g -- group)))
+      }
+      else {
+        val fringe = g.nodes.filter(_.inDegree == 0).toList.map(_.value)
+
+
+        val fixed = fringe.filter(commutesWithRest)
+
+        if (fixed.isEmpty) {
+
+          fringe.map(key => ExecTree(List(exprs(key)), loop(g - key)))
+        }
+        else {
+          List(ExecTree(fixed.map(k => exprs(k)), loop(g -- fixed)))
+        }
       }
     }
 
-    loop(deps) match {
-      case List(node) => node
-      case alist => ExecTree(Nil, alist)
+    logTime("building execution tree") {
+      loop(deps) match {
+        case List(node) => node
+        case alist => ExecTree(Nil, alist)
+      }
     }
   }
 
