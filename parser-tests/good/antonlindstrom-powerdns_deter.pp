@@ -309,7 +309,8 @@ class powerdns::service(
     enable     => true,
     hasrestart => true,
     hasstatus  => true,
-    require    => Class['powerdns::package']
+    # TODO(arjun): New bug (due to type-casts?) Used to require class[powerdns::package], but that fails
+    require    => package["pdns-server"]
   }
 
 }
