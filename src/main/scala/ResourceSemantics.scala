@@ -32,7 +32,7 @@ object ResourceSemantics {
           default
         }
         case Some(v) => {
-          val r = v.value[T].getOrElse(throw FSCompileError(s"unexpected value for $key"))
+          val r = v.value[T].getOrElse(throw FSCompileError(s"unexpected value for $key, got $v"))
           state -= key
           r
         }

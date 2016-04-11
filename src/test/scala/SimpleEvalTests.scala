@@ -19,7 +19,7 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
 				info("No resources found -- a trivial test")
 			}
 			for (k <- deps.nodes) {
-        val node = k.asInstanceOf[Node]
+        val node = k.value.asInstanceOf[Node]
 				assert(node.isPrimitiveType, s"${node.value.typ} not elaborated")
 			}
 		}

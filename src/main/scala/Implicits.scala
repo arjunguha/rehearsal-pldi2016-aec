@@ -23,6 +23,7 @@ object Implicits {
 
     def apply(e: Expr) = e match {
       case EStr(s) => Some(s)
+      case ENum(n) => Some(n.toString)
       case _ => None
     }
   }
