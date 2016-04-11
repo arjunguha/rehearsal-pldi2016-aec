@@ -49,22 +49,25 @@ object Main extends App {
   def determinismBenchmark(config: Config): Unit = {
     val label = config.string("label")
     val pruningStr = if (config.bool("pruning")) "pruning" else "no-pruning"
+    val commutativity = config.bool("commutativity")
     val shouldBeDeterministic = config.bool("deterministic")
 
     val g_ = PuppetParser.parseFile(config.string("filename"))
       .eval.resourceGraph.fsGraph(config.string("os"))
 
-    val g = if (config.bool("pruning")) g_.pruneWrites() else g_
     try {
       val (isDeterministic, t) =
-        Await.result(Future(time(g.toExecTree().isDeterministic())),
+        Await.result(Future(time {
+          val g = if (config.bool("pruning")) g_.pruneWrites() else g_
+          g.toExecTree(commutativity).isDeterministic()
+        }),
           5.minutes)
       assert (shouldBeDeterministic == isDeterministic)
-      println(s"$label, $pruningStr, $t")
+      println(s"$label, $pruningStr, $commutativity, $t")
     }
     catch {
       case exn:TimeoutException => {
-        println(s"$label, $pruningStr, timedout")
+        println(s"$label, $pruningStr, $commutativity timedout")
       }
     }
   }
@@ -169,13 +172,12 @@ object Main extends App {
       .action((_, c) => c.copy(command = determinismBenchmark))
       .text("Benchmark determinism checking")
       .children(string("filename"), string("label"), string("os"),
-        bool("pruning"), bool("deterministic"))
+        bool("pruning"), bool("commutativity"), bool("deterministic"))
 
     cmd("scalability-benchmark")
       .action((_, c) => c.copy(command = scalabilityBenchmark))
       .text("Benchmark determinism-checking scaling")
       .children(int("size"))
-
   }
 
   parser.parse(args, Config(usage, Map(), Map(), Map())) match {

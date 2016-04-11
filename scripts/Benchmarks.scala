@@ -66,28 +66,27 @@ def doDeterminism(trials: Int, output: String): Unit = {
 
     class Command(label: String, filename: String, os: String,
                   pruning: Boolean,
+                  commutativity: Boolean,
                   deterministic: Boolean) {
       override def toString(): String = {
-        s"run benchmark-determinism --filename $filename --label $label --os $os --pruning $pruning --deterministic $deterministic"
+        s"run benchmark-determinism --filename $filename --label $label --os $os --pruning $pruning --commutativity $commutativity --deterministic $deterministic"
       }
     }
 
     def bench(label: String, filename: String, deterministic: Boolean,
-              onlyPruning: Boolean = false,
                os: String = "ubuntu-trusty") = {
-      run(new Command(label, filename, os, true, deterministic))
-      if (onlyPruning == false) {
-        run(new Command(label, filename, os, false, deterministic))
-      }
+      run(new Command(label, filename, os, false, false, deterministic))
+      run(new Command(label, filename, os, true, true, deterministic))
+      run(new Command(label, filename, os, false, true, deterministic))
     }
 
-    output ++= "Name, Pruning, Time\n"
+    output ++= "Name, Pruning, Commutativity, Time\n"
     for (i <- 0.until(trials)) {
       bench("monit", s"$root/dhoppe-monit.pp", true)
       bench("bind", s"$root/thias-bind.pp", true)
       bench("hosting", s"$root/puppet-hosting_deter.pp", true)
       bench("dns", s"$root/antonlindstrom-powerdns.pp", false)
-      bench("irc", s"$root/nfisher-SpikyIRC.pp", false, onlyPruning = true, os = "centos-6")
+      bench("irc", s"$root/nfisher-SpikyIRC.pp", false,  os = "centos-6")
       bench("xinetd", s"$root/ghoneycutt-xinetd.pp", false)
       bench("jpa", s"$root/pdurbin-java-jpa-tutorial.pp", true, os = "centos-6")
       bench("ntp", s"$root/thias-ntp.pp", false)

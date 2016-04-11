@@ -1,11 +1,11 @@
 TRIALS=1
 .PHONY = all clean
 
-all: idempotence.pdf determinism.pdf sizes.pdf
-	@echo "Complete.\nSee idempotence.pdf, determinism.pdf, and sizes.pdf."
+all: idempotence.pdf determinism.pdf sizes.pdf scalability.pdf
+	@echo "Complete.\nSee idempotence.pdf, determinism.pdf, sizes.pdf, and scalability.pdf"
 
 clean:
-	rm -f sizes.csv idempotence.csv determinism.csv sizes.pdf idempotence.pdf determinism.pdf
+	rm -f sizes.csv idempotence.csv determinism.csv scalability.csv sizes.pdf idempotence.pdf determinism.pdf scalability.pdf
 
 scalability.csv:
 	(cd ..; scala scripts/Benchmarks.scala scalability $(TRIALS) results/scalability.csv)

@@ -5,7 +5,7 @@ df$Time <- df$Time / 1000
 df <- transform(df, Pruning = gsub("no-pruning", "No", Pruning))
 df <- transform(df, Pruning = gsub("pruning", "Yes", Pruning))
 
-df <- ddply(df, c("Name", "Pruning"), summarise,
+df <- ddply(df, c("Name", "Pruning", "Commutativity"), summarise,
             Mean = mean(Time),
             Trials = length(Time),
             Sd = sd(Time),
