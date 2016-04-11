@@ -20,14 +20,14 @@ class DeterminismEvaluationSuite extends FunSuitePlus
       val g = rg.fsGraph(os)
 
       val unprunedResult = if (onlyPrune == false) {
-          val (r, t) = time(g.toExecTree.isDeterministic)
+          val (r, t) = time(g.toExecTree(true).isDeterministic)
           info(s"Deterministic without pruning? $r (${t}ms)")
           Some(r)
         }
         else {
           None
       }
-      val (prunedResult, t) = time(g.pruneWrites.toExecTree.isDeterministic)
+      val (prunedResult, t) = time(g.pruneWrites.toExecTree(true).isDeterministic)
       info(s"Deterministic with pruning? $prunedResult (${t}ms)")
       unprunedResult match {
         case None => assert(prunedResult == isDeterministic)
@@ -43,10 +43,8 @@ class DeterminismEvaluationSuite extends FunSuitePlus
 
   test("dhoppe-monit_BUG.pp") {
     val g = parseFile(s"$root/dhoppe-monit_BUG.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(g.toExecTree.isDeterError() == true)
+    assert(g.toExecTree(true).isDeterError() == true)
   }
-
-
 
   mytest("thias-bind-buggy.pp", false, os = "centos-6")
 
@@ -54,7 +52,7 @@ class DeterminismEvaluationSuite extends FunSuitePlus
     intercept[PackageNotFound] {
       val g = parseFile(s"$root/puppet-hosting.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
       // TODO(arjun): This line shouldn't be necessary, but .fsGraph produces a lazy data structure!s
-      assert(g.toExecTree.isDeterministic() == false)
+      assert(g.toExecTree(true).isDeterministic() == false)
     }
   }
 

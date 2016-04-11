@@ -21,7 +21,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
   def comprehensiveIdem(original: FSGraph): Boolean = {
     val expr = original.expr()
     val expected =  expr.isIdempotent()
-    assert(expr.pruneIdem().isIdempotent() == expected, "pruning changed the result of idempotence")
+    assert(expr.isIdempotent() == expected, "pruning changed the result of idempotence")
     expected
   }
 
@@ -270,12 +270,12 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
       ite(testFileState(Paths.get("/foo"), IsDir), mkdir(Paths.get("/bar")), ESkip),
       mkdir(Paths.get("/foo")))
 
-    assert(g.fsGraph.toExecTree.isDeterministic == false)
+    assert(g.fsGraph.toExecTree(true).isDeterministic == false)
   }
 
   test("trivial program with non-deterministic error"){
     val g = Graph[Expr, DiEdge](mkdir("/foo"), mkdir("/foo/bar"))
-    assert(g.fsGraph.toExecTree.isDeterministic == false)
+    assert(g.fsGraph.toExecTree(true).isDeterministic == false)
   }
 
   test("Is a singleton graph deterministic") {
@@ -288,7 +288,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
   test("Two-node non-deterministic graph") {
     val g = Graph[Expr, DiEdge](mkdir(Paths.get("/foo")),
       ite(testFileState(Paths.get("/foo"), IsDir), ESkip, mkdir(Paths.get("/bar"))))
-    assert(false == g.fsGraph.toExecTree.isDeterministic())
+    assert(false == g.fsGraph.toExecTree(true).isDeterministic())
   }
 
   test("a bug") {
@@ -298,14 +298,14 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     val n2 = ite(testFileState(p, IsFile),
       rm(p) >> createFile(p, c),
       ite(testFileState(p, DoesNotExist), createFile(p, c), ESkip))
-    assert(false == Graph[Expr, DiEdge](n1, n2).fsGraph.toExecTree.isDeterministic())
+    assert(false == Graph[Expr, DiEdge](n1, n2).fsGraph.toExecTree(true).isDeterministic())
   }
 
   test("should be deterministic") {
     val p = Paths.get("/usr/foo")
     val c = "c"
     val n = createFile(p, c)
-    assert(true == Graph[Expr, DiEdge](n, n).fsGraph.toExecTree.isDeterministic())
+    assert(true == Graph[Expr, DiEdge](n, n).fsGraph.toExecTree(true).isDeterministic())
   }
 
   test("independent rm and createFile") {
@@ -314,7 +314,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     val e2 = createFile(p, "")
     val g = Graph[Expr, DiEdge](e1, e2)
     assert(e1.commutesWith(e2) == false, "commutativity check is buggy")
-    assert(false == g.fsGraph.toExecTree.isDeterministic())
+    assert(false == g.fsGraph.toExecTree(true).isDeterministic())
   }
 
   test("package with config file non-deterministic graph") {
@@ -323,7 +323,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
       package {'sl': ensure => present }
                   """
     val g = PuppetParser.parse(program).eval().resourceGraph().fsGraph("ubuntu-trusty")
-    assert(false == g.toExecTree.isDeterministic())
+    assert(false == g.toExecTree(true).isDeterministic())
   }
 
   test("should be non-deterministic") {
@@ -333,7 +333,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     val c2 = "contents 2"
     val stmt1 = ite(testFileState(p, DoesNotExist), createFile(p, c1), rm(p) >> createFile(p, c1))
     val stmt2 = ite(testFileState(p, DoesNotExist), createFile(p, c2), rm(p) >> createFile(p, c2))
-    assert(false == Graph[Expr, DiEdge](stmt1, stmt2).fsGraph.toExecTree.isDeterministic)
+    assert(false == Graph[Expr, DiEdge](stmt1, stmt2).fsGraph.toExecTree(true).isDeterministic)
   }
 
   test("service") {
@@ -480,7 +480,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     val m = PuppetParser.parse("""
       package{'ircd-hybrid': }
       package{'httpd': }
-      """).eval.resourceGraph.fsGraph("centos-6").pruneWrites.toExecTree
+      """).eval.resourceGraph.fsGraph("centos-6").pruneWrites.toExecTree(true)
 
     assert (m.branches == Nil)
   }

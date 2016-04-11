@@ -89,7 +89,8 @@ case class FSGraph(exprs: Map[FSGraph.Key, FSSyntax.Expr], deps: Graph[FSGraph.K
     FSSyntax.ESeq(deps.topologicalSort().map(k => exprs(k)): _*)
   }
 
-  def toExecTree(): ExecTree = {
+
+  def toExecTree(commuteOpt: Boolean = true): ExecTree = {
 
     def loop(g: Graph[Key, DiEdge]): List[ExecTree] = {
       def commutesWithRest(key: Key): Boolean = {
@@ -105,10 +106,9 @@ case class FSGraph(exprs: Map[FSGraph.Key, FSSyntax.Expr], deps: Graph[FSGraph.K
         val fringe = g.nodes.filter(_.inDegree == 0).toList.map(_.value)
 
 
-        val fixed = fringe.filter(commutesWithRest)
+        val fixed = if (commuteOpt == false) Nil else fringe.filter(commutesWithRest)
 
         if (fixed.isEmpty) {
-
           fringe.map(key => ExecTree(List(exprs(key)), loop(g - key)))
         }
         else {

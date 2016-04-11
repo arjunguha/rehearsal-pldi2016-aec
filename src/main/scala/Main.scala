@@ -109,7 +109,7 @@ object Main extends App {
         }
 
         print("Checking if manifest is idempotent ... ")
-        if (g.expr.pruneIdem.isIdempotent) {
+        if (g.expr.isIdempotent) {
           println("OK.")
         }
         else {
@@ -156,7 +156,6 @@ object Main extends App {
           val g = PuppetParser.parseFile(filename.toString).eval.resourceGraph
             .fsGraph(os)
             .expr
-            .pruneIdem
           val (isIdempotent, t) = time(g.isIdempotent)
           assert (expected == isIdempotent)
           println(s"$label, $t")

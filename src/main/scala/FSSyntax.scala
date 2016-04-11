@@ -94,8 +94,6 @@ object FSSyntax {
 
     def eval(st: FSEvaluator.State): Option[FSEvaluator.State] = FSEvaluator.eval(st, this)
 
-    def pruneIdem(): Expr = IdempotenceOptimizer.prune(this)
-
     def isIdempotent(): Boolean = {
       val impl = new SymbolicEvaluatorImpl(this.paths.toList, this.hashes, Set())
       val r = impl.isIdempotent(this)
