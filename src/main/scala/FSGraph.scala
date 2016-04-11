@@ -46,18 +46,10 @@ case class ExecTree(commutingGroup: List[FSSyntax.Expr], branches: List[ExecTree
 object FSGraph {
 
   trait Key
-  case class Labelled private[FSGraph](node: PuppetSyntax.Node, index: Int)
-    extends Key
   case class Unlabelled private[FSGraph](index: Int) extends Key
   case class Derived private[FSGraph](src: Key, index: Int, label: String) extends Key
 
   private var i = 0
-
-  def key(node: PuppetSyntax.Node): Key = {
-    val n = i
-    i = i + 1
-    Labelled(node, n)
-  }
 
   def key(): Key = {
     val n = i
