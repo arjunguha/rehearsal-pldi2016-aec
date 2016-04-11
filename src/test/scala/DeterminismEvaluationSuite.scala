@@ -39,14 +39,14 @@ class DeterminismEvaluationSuite extends FunSuitePlus
   }
 
   mytest("dhoppe-monit.pp", true)
-  mytest("thias-bind.pp", true, os = "centos-6")
+  mytest("thias-bind.pp", true)
 
   test("dhoppe-monit_BUG.pp") {
     val g = parseFile(s"$root/dhoppe-monit_BUG.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
     assert(g.toExecTree(true).isDeterError() == true)
   }
 
-  mytest("thias-bind-buggy.pp", false, os = "centos-6")
+  mytest("thias-bind-buggy.pp", false)
 
   test("puppet-hosting.pp") {
     intercept[PackageNotFound] {
