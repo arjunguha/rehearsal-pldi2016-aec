@@ -59,7 +59,7 @@ class DeterminismEvaluationSuite extends FunSuitePlus
   mytest("puppet-hosting_deter.pp", true)
   mytest("antonlindstrom-powerdns.pp", false)
   mytest("antonlindstrom-powerdns_deter.pp", true)
-  mytest("nfisher-SpikyIRC.pp", false, os = "centos-6", onlyPrune = false)
+  mytest("nfisher-SpikyIRC.pp", false, os = "centos-6", onlyPrune = true)
   mytest("spiky-reduced.pp", false, os = "centos-6")
   mytest("spiky-reduced-deterministic.pp", true, os = "centos-6")
   mytest("ghoneycutt-xinetd.pp", false)

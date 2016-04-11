@@ -67,7 +67,7 @@ object Main extends App {
     }
     catch {
       case exn:TimeoutException => {
-        println(s"$label, $pruningStr, $commutativity timedout")
+        println(s"$label, $pruningStr, $commutativity, ${300 * 1000}")
       }
     }
   }

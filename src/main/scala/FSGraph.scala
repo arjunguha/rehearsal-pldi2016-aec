@@ -108,7 +108,7 @@ case class FSGraph(exprs: Map[FSGraph.Key, FSSyntax.Expr], deps: Graph[FSGraph.K
 
         val fixed = if (commuteOpt == false) Nil else fringe.filter(commutesWithRest)
 
-        if (fixed.isEmpty) {
+        if (fixed.isEmpty || fixed.length != fringe.length) {
           fringe.map(key => ExecTree(List(exprs(key)), loop(g - key)))
         }
         else {
