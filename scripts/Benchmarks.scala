@@ -75,7 +75,6 @@ def doDeterminism(trials: Int, output: String): Unit = {
 
     def bench(label: String, filename: String, deterministic: Boolean,
                os: String = "ubuntu-trusty") = {
-      run(new Command(label, filename, os, false, false, deterministic))
       run(new Command(label, filename, os, true, true, deterministic))
       run(new Command(label, filename, os, false, true, deterministic))
     }
