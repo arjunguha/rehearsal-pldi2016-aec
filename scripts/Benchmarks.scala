@@ -71,6 +71,7 @@ abstract class Benchmark {
 
     if (p.waitFor(2, TimeUnit.MINUTES)) {
       val code = p.exitValue()
+      p.destroyForcibly().waitFor()
       Some(code)
     }
     else {
