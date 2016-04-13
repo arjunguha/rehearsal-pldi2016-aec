@@ -71,8 +71,7 @@ abstract class Benchmark {
 
     if (p.waitFor(2, TimeUnit.MINUTES)) {
       val code = p.exitValue()
-      assert(code == 0, s"got exit value $code")
-      true
+      code == 0
     }
     else {
       p.destroyForcibly().waitFor()
