@@ -66,7 +66,7 @@ abstract class Benchmark {
 
   def run(commandVal: Command): Int = {
 
-    val p = Seq("sbt", "-J-Xmx4G",
+    val p = Seq("java", "-jar", "target/scala-2.11/rehearsal.jar", "-J-Xmx4G",
       "-Dorg.slf4j.simpleLogger.defaultLogLevel=info",
       "-Dorg.slf4j.simpleLogger.logFile=rehearsal.log",
       "--warn", "set showSuccess in ThisBuild := false",
@@ -179,7 +179,7 @@ def doIdempotence(trials: Int, output: String): Unit = {
     for (i <- 0.until(trials)) {
       bench("monit", s"$root/dhoppe-monit.pp", true)
       bench("bind", s"$root/thias-bind.pp", true)
-      bench("hosting", s"$root/puppet-hosting_deter.pp", true)
+      bench("hosting", s"$root/pup[pet-hosting_deter.pp", true)
       bench("dns", s"$root/antonlindstrom-powerdns_deter.pp", true)
       bench("irc", s"$root/spiky-reduced-deterministic.pp", true, os = "centos-6")
       bench("xinetd", s"$root/ghoneycutt-xinetd_deter.pp", true)

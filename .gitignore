@@ -2,8 +2,8 @@
 .vagrant
 
 # scala specific
-project/
-target/
+/project/target
+/target
 
 # Mac OS junk
 .DS_Store
