@@ -1,13 +1,52 @@
-import scala.sys.process._
 import java.nio.file._
+import java.util.concurrent.TimeUnit
 
 val root = "parser-tests/good"
 
+object Implicits {
+
+  implicit class RichProcess(process: java.lang.Process) {
+    import java.io.{BufferedReader, InputStreamReader}
+
+
+    def attachLogger(logger: scala.sys.process.ProcessLogger): Unit = {
+      def makeReader(src: BufferedReader, dst: String => Unit): Runnable = {
+        new Runnable {
+          override def run(): Unit = {
+            try {
+              var line = src.readLine()
+              while (line != null) {
+                dst(line)
+                line = src.readLine()
+              }
+            }
+            finally {
+              src.close()
+            }
+          }
+        }
+      }
+
+      val stdout = new BufferedReader(
+        new InputStreamReader(process.getInputStream))
+      val stderr = new BufferedReader(
+        new InputStreamReader(process.getErrorStream))
+
+      new Thread(makeReader(stdout, str => logger.out(str)))
+      new Thread(makeReader(stderr, str => logger.err(str)))
+    }
+
+  }
+
+}
+
 abstract class Benchmark {
+
+  import Implicits._
 
   val output = new collection.mutable.StringBuilder()
 
-  private val logger = ProcessLogger(
+  private val logger = scala.sys.process.ProcessLogger(
     line => {
       println(line)
       output ++= line
@@ -17,14 +56,27 @@ abstract class Benchmark {
 
   type Command
 
-  def run(commandVal: Command): Unit = {
-    val proc = Seq("sbt", "-J-Xmx4G",
+  def run(commandVal: Command): Boolean = {
+
+    val p = new ProcessBuilder("sbt", "-J-Xmx4G",
       "-Dorg.slf4j.simpleLogger.defaultLogLevel=info",
       "-Dorg.slf4j.simpleLogger.logFile=rehearsal.log",
       "--warn", "set showSuccess in ThisBuild := false",
       commandVal.toString)
-      .run(logger)
-    assert(proc.exitValue == 0)
+      .redirectError(ProcessBuilder.Redirect.PIPE)
+      .redirectOutput(ProcessBuilder.Redirect.PIPE)
+      .start()
+
+    p.attachLogger(logger)
+
+    if (p.waitFor(2, TimeUnit.MINUTES)) {
+      assert(p.exitValue == 0)
+      true
+    }
+    else {
+      p.destroyForcibly().waitFor()
+      false
+    }
   }
 
 }
@@ -39,7 +91,9 @@ def doSizes(output: String): Unit = {
     }
 
     def bench(label: String, filename: String, os: String = "ubuntu-trusty") = {
-      run(new Command(label, filename, os))
+      if (!run(new Command(label, filename, os))) {
+        assert(false, "Calculating sizes should have terminated")
+      }
     }
 
     output ++= "Name, Before, After\n"
@@ -64,20 +118,26 @@ def doSizes(output: String): Unit = {
 def doDeterminism(trials: Int, output: String): Unit = {
   val determinism = new Benchmark {
 
-    class Command(label: String, filename: String, os: String,
-                  pruning: Boolean,
-                  commutativity: Boolean,
+    class Command(val label: String, filename: String, os: String,
+                  val pruning: Boolean,
+                  val commutativity: Boolean,
                   deterministic: Boolean) {
       override def toString(): String = {
         s"run benchmark-determinism --filename $filename --label $label --os $os --pruning $pruning --commutativity $commutativity --deterministic $deterministic"
       }
     }
 
+    def mayTimeout(command: Command): Unit = {
+     if (run(command) == false) {
+       println(s"${command.label},${command.pruning},${command.commutativity},timeout")
+     }
+    }
+
     def bench(label: String, filename: String, deterministic: Boolean,
                os: String = "ubuntu-trusty") = {
-      run(new Command(label, filename, os, false, false, deterministic))
-      run(new Command(label, filename, os, false, true, deterministic))
-      run(new Command(label, filename, os, true, true, deterministic))
+      mayTimeout(new Command(label, filename, os, false, false, deterministic)))
+      mayTimeout(new Command(label, filename, os, false, true, deterministic)))
+      mayTimeout(new Command(label, filename, os, true, true, deterministic)))
     }
 
     output ++= "Name, Pruning, Commutativity, Time\n"

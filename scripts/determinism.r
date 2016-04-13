@@ -1,11 +1,15 @@
 source("common.r")
 
+# df %>% mutate(Type = paste(Pruning, Commutativity)) %>% select(-Pruning, -Commutativity)
+
 df <- read.csv("../results/determinism.csv")
 df$Time <- df$Time / 1000
-df <- transform(df, Pruning = gsub("no-pruning", "No", Pruning))
-df <- transform(df, Pruning = gsub("pruning", "Yes", Pruning))
-
-df <- ddply(df, c("Name", "Pruning", "Commutativity"), summarise,
+df <- df
+  %>% filter(Commutativity = " true")
+  %>% select(-Commutativity)
+  %>% transform(Pruning = gsub("no-pruning", "No", Pruning))
+  %>% transform(Pruning = gsub("pruning", "Yes", Pruning))
+df <- ddply(df, c("Name", "Pruning"), summarise,
             Mean = mean(Time),
             Trials = length(Time),
             Sd = sd(Time),
