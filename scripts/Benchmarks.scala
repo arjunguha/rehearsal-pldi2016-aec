@@ -70,7 +70,8 @@ abstract class Benchmark {
     p.attachLogger(logger)
 
     if (p.waitFor(2, TimeUnit.MINUTES)) {
-      assert(p.exitValue == 0)
+      val code = p.exitValue()
+      assert(code == 0, s"got exit value $code")
       true
     }
     else {
@@ -129,7 +130,10 @@ def doDeterminism(trials: Int, output: String): Unit = {
 
     def mayTimeout(command: Command): Unit = {
      if (run(command) == false) {
-       println(s"${command.label},${command.pruning},${command.commutativity},timeout")
+       val out = s"${command.label},${command.pruning},${command.commutativity},timeout"
+       println(out)
+       output ++= out
+       output += '\n'
      }
     }
 
@@ -142,19 +146,19 @@ def doDeterminism(trials: Int, output: String): Unit = {
 
     output ++= "Name, Pruning, Commutativity, Time\n"
     for (i <- 0.until(trials)) {
-      bench("irc", s"$root/nfisher-SpikyIRC.pp", false,  os = "centos-6")
+      bench("irc-nondet", s"$root/nfisher-SpikyIRC.pp", false,  os = "centos-6")
       bench("monit", s"$root/dhoppe-monit.pp", true)
       bench("bind", s"$root/thias-bind.pp", true)
       bench("hosting", s"$root/puppet-hosting_deter.pp", true)
-      bench("dns", s"$root/antonlindstrom-powerdns.pp", false)
-      bench("xinetd", s"$root/ghoneycutt-xinetd.pp", false)
+      bench("dns-nondet", s"$root/antonlindstrom-powerdns.pp", false)
+      bench("xinetd-nondet", s"$root/ghoneycutt-xinetd.pp", false)
       bench("jpa", s"$root/pdurbin-java-jpa-tutorial.pp", true, os = "centos-6")
-      bench("ntp", s"$root/thias-ntp.pp", false)
-      bench("rsyslog", s"$root/xdrum-rsyslog.pp", false)
+      bench("ntp-nondet", s"$root/thias-ntp.pp", false)
+      bench("rsyslog-nondet", s"$root/xdrum-rsyslog.pp", false)
       bench("nginx", s"$root/BenoitCattie-puppet-nginx.pp", true)
       bench("amavis", s"$root/mjhas-amavis.pp", true)
       bench("clamav", s"$root/mjhas-clamav.pp", true)
-      bench("logstash", s"$root/Nelmo-logstash.pp", false)
+      bench("logstash-nondet", s"$root/Nelmo-logstash.pp", false)
     }
   }
 
