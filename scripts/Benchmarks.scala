@@ -64,23 +64,14 @@ abstract class Benchmark {
 
   type Command
 
-  def run(commandVal: Command): Option[Int] = {
+  def run(commandVal: Command): Int = {
 
     val p = Seq("sbt", "-J-Xmx4G",
       "-Dorg.slf4j.simpleLogger.defaultLogLevel=info",
       "-Dorg.slf4j.simpleLogger.logFile=rehearsal.log",
       "--warn", "set showSuccess in ThisBuild := false",
       commandVal.toString).run(logger)
-
-    try {
-      Some(Await.result(Future { p.exitValue() }, 2.minutes))
-    }
-    catch {
-      case exn: TimeoutException => {
-        p.destroy()
-        None
-      }
-    }
+    p.exitValue()
   }
 
 }
@@ -95,9 +86,7 @@ def doSizes(output: String): Unit = {
     }
 
     def bench(label: String, filename: String, os: String = "ubuntu-trusty") = {
-      if (run(new Command(label, filename, os)) != None) {
-        assert(false, "Calculating sizes should have terminated")
-      }
+      assert(run(new Command(label, filename, os)) == 0)
     }
 
     outputln("Name, Before, After")
@@ -127,24 +116,21 @@ def doDeterminism(trials: Int, output: String): Unit = {
                   val commutativity: Boolean,
                   deterministic: Boolean) {
       override def toString(): String = {
-        s"run benchmark-determinism --filename $filename --label $label --os $os --pruning $pruning --commutativity $commutativity --deterministic $deterministic"
+        s"run benchmark-determinism --filename $filename --label $label --os $os --pruning $pruning --commutativity $commutativity --deterministic $deterministic --timeout 120"
       }
     }
 
     def mayTimeout(command: Command): Unit = {
      run(command) match {
-       case Some(0) => {
+       case 0 => {
          for (i <- 0.until(trials - 1)) {
-           assert(run(command) == None)
+           assert(run(command) == 0)
          }
        }
-       case Some(1) =>
+       case 1 =>
          outputln(s"${command.label},${command.pruning},${command.commutativity},memout")
-       case None =>
+       case 2 =>
          outputln(s"${command.label},${command.pruning},${command.commutativity},timeout")
-       case Some(n) => {
-         assert(false, s"unexpected exit code $n")
-       }
      }
     }
 
@@ -186,7 +172,7 @@ def doIdempotence(trials: Int, output: String): Unit = {
 
     def bench(label: String, filename: String, idempotent: Boolean,
                os: String = "ubuntu-trusty") = {
-      run(new Command(label, filename, os, idempotent))
+      assert(run(new Command(label, filename, os, idempotent)) == 0)
     }
 
     outputln("Name, Time")
@@ -220,7 +206,7 @@ def doScalability(trials: Int, output: String): Unit = {
     }
 
     def bench(size: Int) = {
-      run(new Command(size))
+      assert(run(new Command(size)) == 0)
     }
 
     outputln("Size, Time")

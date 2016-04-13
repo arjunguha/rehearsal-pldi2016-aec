@@ -55,12 +55,19 @@ object Main extends App {
     val g_ = PuppetParser.parseFile(config.string("filename"))
       .eval.resourceGraph.fsGraph(config.string("os"))
 
-    val (isDeterministic, t) = time {
-      val g = if (pruning) g_.pruneWrites() else g_
-      g.toExecTree(commutativity).isDeterministic()
+    val (isDeterministic, t) = try {
+        Await.result(Future(time {
+          val g = if (config.bool("pruning")) g_.pruneWrites() else g_
+          g.toExecTree(commutativity).isDeterministic()
+        }),
+          config.int("timeout").seconds)
+    }
+    catch {
+      case exn:TimeoutException => sys.exit(2)
     }
     assert (shouldBeDeterministic == isDeterministic)
     println(s"$label,$pruning,$commutativity,$t")
+
   }
 
   def scalabilityBenchmark(config: Config): Unit = {
@@ -163,7 +170,7 @@ object Main extends App {
       .action((_, c) => c.copy(command = determinismBenchmark))
       .text("Benchmark determinism checking")
       .children(string("filename"), string("label"), string("os"),
-        bool("pruning"), bool("commutativity"), bool("deterministic"))
+        bool("pruning"), bool("commutativity"), bool("deterministic"), int("timeout"))
 
     cmd("scalability-benchmark")
       .action((_, c) => c.copy(command = scalabilityBenchmark))
