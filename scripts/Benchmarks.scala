@@ -116,7 +116,7 @@ def doDeterminism(trials: Int, output: String): Unit = {
                   val commutativity: Boolean,
                   deterministic: Boolean) {
       override def toString(): String = {
-        s"run benchmark-determinism --filename $filename --label $label --os $os --pruning $pruning --commutativity $commutativity --deterministic $deterministic --timeout 120"
+        s"run benchmark-determinism --filename $filename --label $label --os $os --pruning $pruning --commutativity $commutativity --deterministic $deterministic --timeout 600"
       }
     }
 

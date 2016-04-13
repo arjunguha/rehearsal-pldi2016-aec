@@ -1,4 +1,4 @@
-TRIALS=1
+TRIALS=10
 .PHONY = all clean
 
 all: idempotence.pdf determinism.pdf sizes.pdf scalability.pdf commutativity.pdf
