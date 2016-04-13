@@ -66,9 +66,11 @@ abstract class Benchmark {
 
   def run(commandVal: Command): Int = {
 
-    val p = Seq("java", "-jar", "target/scala-2.11/rehearsal.jar", "-Xmx4G",
+
+    val p = Seq("java", "-Xmx4G",
       "-Dorg.slf4j.simpleLogger.defaultLogLevel=info",
       "-Dorg.slf4j.simpleLogger.logFile=rehearsal.log",
+      "-jar", "target/scala-2.11/rehearsal.jar",
       commandVal.toString).run(logger)
     p.exitValue()
   }
@@ -80,7 +82,7 @@ def doSizes(output: String): Unit = {
 
     class Command(label: String, filename: String, os: String) {
       override def toString(): String = {
-        s"run benchmark-pruning-size --filename $filename --label $label --os $os"
+        s"benchmark-pruning-size --filename $filename --label $label --os $os"
       }
     }
 
@@ -115,7 +117,7 @@ def doDeterminism(trials: Int, output: String): Unit = {
                   val commutativity: Boolean,
                   deterministic: Boolean) {
       override def toString(): String = {
-        s"run benchmark-determinism --filename $filename --label $label --os $os --pruning $pruning --commutativity $commutativity --deterministic $deterministic --timeout 600"
+        s"benchmark-determinism --filename $filename --label $label --os $os --pruning $pruning --commutativity $commutativity --deterministic $deterministic --timeout 600"
       }
     }
 
@@ -165,7 +167,7 @@ def doIdempotence(trials: Int, output: String): Unit = {
     class Command(label: String, filename: String, os: String,
                   idempotent: Boolean) {
       override def toString(): String = {
-        s"run benchmark-idempotence --filename $filename --label $label --os $os --idempotent $idempotent"
+        s"benchmark-idempotence --filename $filename --label $label --os $os --idempotent $idempotent"
       }
     }
 
@@ -200,7 +202,7 @@ def doScalability(trials: Int, output: String): Unit = {
 
     class Command(size: Int) {
       override def toString(): String = {
-        s"run scalability-benchmark --size $size"
+        s"scalability-benchmark --size $size"
       }
     }
 
