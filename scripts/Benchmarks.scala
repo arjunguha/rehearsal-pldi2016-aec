@@ -69,7 +69,6 @@ abstract class Benchmark {
     val p = Seq("java", "-jar", "target/scala-2.11/rehearsal.jar", "-Xmx4G",
       "-Dorg.slf4j.simpleLogger.defaultLogLevel=info",
       "-Dorg.slf4j.simpleLogger.logFile=rehearsal.log",
-      "--warn", "set showSuccess in ThisBuild := false",
       commandVal.toString).run(logger)
     p.exitValue()
   }
