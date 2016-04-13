@@ -56,7 +56,7 @@ abstract class Benchmark {
 
   type Command
 
-  def run(commandVal: Command): Boolean = {
+  def run(commandVal: Command): Option[Int] = {
 
     val p = new ProcessBuilder("sbt", "-J-Xmx4G",
       "-Dorg.slf4j.simpleLogger.defaultLogLevel=info",
@@ -71,11 +71,11 @@ abstract class Benchmark {
 
     if (p.waitFor(2, TimeUnit.MINUTES)) {
       val code = p.exitValue()
-      code == 0
+      Some(code)
     }
     else {
       p.destroyForcibly().waitFor()
-      false
+      None
     }
   }
 
@@ -91,7 +91,7 @@ def doSizes(output: String): Unit = {
     }
 
     def bench(label: String, filename: String, os: String = "ubuntu-trusty") = {
-      if (!run(new Command(label, filename, os))) {
+      if (run(new Command(label, filename, os)) != None) {
         assert(false, "Calculating sizes should have terminated")
       }
     }
@@ -128,11 +128,20 @@ def doDeterminism(trials: Int, output: String): Unit = {
     }
 
     def mayTimeout(command: Command): Unit = {
-     if (run(command) == false) {
-       val out = s"${command.label},${command.pruning},${command.commutativity},timeout"
-       println(out)
-       output ++= out
-       output += '\n'
+     run(command) match {
+       case Some(0) => ()
+       case Some(1) => {
+         val out = s"${command.label},${command.pruning},${command.commutativity},memout"
+         println(out)
+         output ++= out
+         output += '\n'
+       }
+       case None => {
+         val out = s"${command.label},${command.pruning},${command.commutativity},timeout"
+         println(out)
+         output ++= out
+         output += '\n'
+       }
      }
     }
 
