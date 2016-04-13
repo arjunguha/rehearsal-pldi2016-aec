@@ -40,13 +40,12 @@ object Implicits {
 
 }
 
+trait Command {
+  def args: Seq[String]
+}
+
 abstract class Benchmark {
-
   import scala.sys.process._
-  import scala.concurrent._
-  import scala.concurrent.duration._
-
-  import ExecutionContext.Implicits.global
 
   private val output = new collection.mutable.StringBuilder()
 
@@ -62,32 +61,31 @@ abstract class Benchmark {
     line => outputln(line),
     line => println(s"ERROR: $line"))
 
-  type Command
-
   def run(commandVal: Command): Int = {
-
-
-    val p = Seq("java", "-Xmx4G",
+    val prefix = Seq("java", "-Xmx4G",
       "-Dorg.slf4j.simpleLogger.defaultLogLevel=info",
       "-Dorg.slf4j.simpleLogger.logFile=rehearsal.log",
-      "-jar", "target/scala-2.11/rehearsal.jar",
-      commandVal.toString).run(logger)
-    p.exitValue()
+      "-jar", "target/scala-2.11/rehearsal.jar")
+    (prefix ++ commandVal.args).run(logger).exitValue()
   }
-
 }
 
 def doSizes(output: String): Unit = {
   val sizes = new Benchmark {
 
-    class Command(label: String, filename: String, os: String) {
-      override def toString(): String = {
-        s"benchmark-pruning-size --filename $filename --label $label --os $os"
-      }
+    class MyCommand(label: String, filename: String, os: String) extends Command {
+      val args = Seq(
+        "benchmark-pruning-size",
+        "--filename",
+        filename,
+        "--label",
+        label,
+        "--os",
+        os)
     }
 
     def bench(label: String, filename: String, os: String = "ubuntu-trusty") = {
-      assert(run(new Command(label, filename, os)) == 0)
+      assert(run(new MyCommand(label, filename, os)) == 0)
     }
 
     outputln("Name, Before, After")
@@ -112,16 +110,29 @@ def doSizes(output: String): Unit = {
 def doDeterminism(trials: Int, output: String): Unit = {
   val determinism = new Benchmark {
 
-    class Command(val label: String, filename: String, os: String,
+    class MyCommand(val label: String, filename: String, os: String,
                   val pruning: Boolean,
                   val commutativity: Boolean,
-                  deterministic: Boolean) {
-      override def toString(): String = {
-        s"benchmark-determinism --filename $filename --label $label --os $os --pruning $pruning --commutativity $commutativity --deterministic $deterministic --timeout 600"
-      }
+                  deterministic: Boolean) extends Command {
+      val args = Seq(
+        "benchmark-determinism",
+        "--filename",
+        filename,
+        "--label",
+        label,
+        "--os",
+        os,
+        "--pruning",
+        pruning.toString,
+        "--commutativity",
+        commutativity.toString,
+        "--deterministic",
+        deterministic.toString,
+        "--timeout",
+        600.toString)
     }
 
-    def mayTimeout(command: Command): Unit = {
+    def mayTimeout(command: MyCommand): Unit = {
      run(command) match {
        case 0 => {
          for (i <- 0.until(trials - 1)) {
@@ -137,9 +148,9 @@ def doDeterminism(trials: Int, output: String): Unit = {
 
     def bench(label: String, filename: String, deterministic: Boolean,
                os: String = "ubuntu-trusty") = {
-      mayTimeout(new Command(label, filename, os, false, false, deterministic))
-      mayTimeout(new Command(label, filename, os, false, true, deterministic))
-      mayTimeout(new Command(label, filename, os, true, true, deterministic))
+      mayTimeout(new MyCommand(label, filename, os, false, false, deterministic))
+      mayTimeout(new MyCommand(label, filename, os, false, true, deterministic))
+      mayTimeout(new MyCommand(label, filename, os, true, true, deterministic))
     }
 
     outputln("Name, Pruning, Commutativity, Time")
@@ -164,16 +175,17 @@ def doDeterminism(trials: Int, output: String): Unit = {
 def doIdempotence(trials: Int, output: String): Unit = {
   val idempotence = new Benchmark {
 
-    class Command(label: String, filename: String, os: String,
-                  idempotent: Boolean) {
-      override def toString(): String = {
-        s"benchmark-idempotence --filename $filename --label $label --os $os --idempotent $idempotent"
-      }
+    class MyCommand(label: String, filename: String, os: String,
+                  idempotent: Boolean) extends Command {
+      val args =
+        Seq("benchmark-idempotence", "--filename", filename, "--label", label,
+          "--os", os, "--idempotent", idempotent.toString)
+
     }
 
     def bench(label: String, filename: String, idempotent: Boolean,
                os: String = "ubuntu-trusty") = {
-      assert(run(new Command(label, filename, os, idempotent)) == 0)
+      assert(run(new MyCommand(label, filename, os, idempotent)) == 0)
     }
 
     outputln("Name, Time")
@@ -200,14 +212,12 @@ def doIdempotence(trials: Int, output: String): Unit = {
 def doScalability(trials: Int, output: String): Unit = {
   val benchmark = new Benchmark {
 
-    class Command(size: Int) {
-      override def toString(): String = {
-        s"scalability-benchmark --size $size"
-      }
+    class MyCommand(size: Int) extends Command {
+      val args = Seq("scalability-benchmark", "--size", size.toString)
     }
 
     def bench(size: Int) = {
-      assert(run(new Command(size)) == 0)
+      assert(run(new MyCommand(size)) == 0)
     }
 
     outputln("Size, Time")
