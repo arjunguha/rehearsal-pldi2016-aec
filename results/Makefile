@@ -1,8 +1,8 @@
 TRIALS=1
 .PHONY = all clean
 
-all: idempotence.pdf determinism.pdf sizes.pdf scalability.pdf
-	@echo "Complete.\nSee idempotence.pdf, determinism.pdf, sizes.pdf, and scalability.pdf"
+all: idempotence.pdf determinism.pdf sizes.pdf scalability.pdf commutativity.pdf
+	@echo "Complete.\nSee idempotence.pdf, determinism.pdf, sizes.pdf, commutativity.pdf, and scalability.pdf"
 
 clean:
 	rm -f sizes.csv idempotence.csv determinism.csv scalability.csv sizes.pdf idempotence.pdf determinism.pdf scalability.pdf
@@ -27,6 +27,9 @@ idempotence.pdf: idempotence.csv
 
 determinism.csv:
 	(cd ..; scala scripts/Benchmarks.scala determinism $(TRIALS) results/determinism.csv)
+
+commutativity.pdf: determinism.csv
+	(cd ../scripts; R --file=commutativity.r)
 
 determinism.pdf: determinism.csv
 	(cd ../scripts; R --file=determinism.r)

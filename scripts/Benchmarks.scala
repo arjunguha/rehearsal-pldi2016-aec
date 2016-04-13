@@ -43,11 +43,11 @@ def doSizes(output: String): Unit = {
     }
 
     output ++= "Name, Before, After\n"
+    bench("irc", s"$root/nfisher-SpikyIRC.pp", os = "centos-6")
     bench("monit", s"$root/dhoppe-monit.pp")
     bench("bind", s"$root/thias-bind.pp")
     bench("hosting", s"$root/puppet-hosting_deter.pp")
     bench("dns", s"$root/antonlindstrom-powerdns.pp")
-    bench("irc", s"$root/nfisher-SpikyIRC.pp", os = "centos-6")
     bench("xinetd", s"$root/ghoneycutt-xinetd.pp")
     bench("jpa", s"$root/pdurbin-java-jpa-tutorial.pp", os = "centos-6")
     bench("ntp", s"$root/thias-ntp.pp")
@@ -75,17 +75,18 @@ def doDeterminism(trials: Int, output: String): Unit = {
 
     def bench(label: String, filename: String, deterministic: Boolean,
                os: String = "ubuntu-trusty") = {
-      run(new Command(label, filename, os, true, true, deterministic))
+      run(new Command(label, filename, os, false, false, deterministic))
       run(new Command(label, filename, os, false, true, deterministic))
+      run(new Command(label, filename, os, true, true, deterministic))
     }
 
     output ++= "Name, Pruning, Commutativity, Time\n"
     for (i <- 0.until(trials)) {
+      bench("irc", s"$root/nfisher-SpikyIRC.pp", false,  os = "centos-6")
       bench("monit", s"$root/dhoppe-monit.pp", true)
       bench("bind", s"$root/thias-bind.pp", true)
       bench("hosting", s"$root/puppet-hosting_deter.pp", true)
       bench("dns", s"$root/antonlindstrom-powerdns.pp", false)
-      bench("irc", s"$root/nfisher-SpikyIRC.pp", false,  os = "centos-6")
       bench("xinetd", s"$root/ghoneycutt-xinetd.pp", false)
       bench("jpa", s"$root/pdurbin-java-jpa-tutorial.pp", true, os = "centos-6")
       bench("ntp", s"$root/thias-ntp.pp", false)
