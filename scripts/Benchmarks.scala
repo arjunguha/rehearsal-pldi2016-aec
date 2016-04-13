@@ -192,7 +192,7 @@ def doIdempotence(trials: Int, output: String): Unit = {
     for (i <- 0.until(trials)) {
       bench("monit", s"$root/dhoppe-monit.pp", true)
       bench("bind", s"$root/thias-bind.pp", true)
-      bench("hosting", s"$root/pup[pet-hosting_deter.pp", true)
+      bench("hosting", s"$root/puppet-hosting_deter.pp", true)
       bench("dns", s"$root/antonlindstrom-powerdns_deter.pp", true)
       bench("irc", s"$root/spiky-reduced-deterministic.pp", true, os = "centos-6")
       bench("xinetd", s"$root/ghoneycutt-xinetd_deter.pp", true)
