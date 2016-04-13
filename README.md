@@ -42,17 +42,6 @@ Windows, but we do not claim that it will.
 
 3. [sbt](http://www.scala-sbt.org) version 0.13.9 or higher
 
-4. [scala-smtlib](https://github.com/regb/scala-smtlib)
-
-   This project is not published to Maven Central or any other repository.
-   To install:
-
-   ```
-   git clone https://github.com/regb/scala-smtlib.git
-   cd scala-smtlib
-   git checkout 711e9a1ef994935482bc83ff3795a94f637f0a04
-   sbt publish-local
-   ```
 
 In addition, to run the benchmarks and generate graphs, you'll need to install:
 

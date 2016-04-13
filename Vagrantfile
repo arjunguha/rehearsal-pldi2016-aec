@@ -29,11 +29,6 @@ unzip $ZIPFILE
 mv z3-4.4.1-x64-ubuntu-14.04 z3
 echo 'PATH=/home/vagrant/z3/bin:$PATH' >> .profile
 
-git clone https://github.com/regb/scala-smtlib.git
-cd scala-smtlib
-git checkout 711e9a1ef994935482bc83ff3795a94f637f0a04
-sbt publish-local
-
 mkdir -p /home/vagrant/R/x86_64-pc-linux-gnu-library/3.2
 R -e 'install.packages("ggplot2", repos="http://cran.us.r-project.org")'
 R -e 'install.packages("sitools", repos="http://cran.us.r-project.org")'
