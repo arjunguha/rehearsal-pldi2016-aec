@@ -135,9 +135,9 @@ def doDeterminism(trials: Int, output: String): Unit = {
 
     def bench(label: String, filename: String, deterministic: Boolean,
                os: String = "ubuntu-trusty") = {
-      mayTimeout(new Command(label, filename, os, false, false, deterministic)))
-      mayTimeout(new Command(label, filename, os, false, true, deterministic)))
-      mayTimeout(new Command(label, filename, os, true, true, deterministic)))
+      mayTimeout(new Command(label, filename, os, false, false, deterministic))
+      mayTimeout(new Command(label, filename, os, false, true, deterministic))
+      mayTimeout(new Command(label, filename, os, true, true, deterministic))
     }
 
     output ++= "Name, Pruning, Commutativity, Time\n"
