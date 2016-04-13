@@ -46,6 +46,7 @@ abstract class Benchmark {
   import scala.concurrent._
   import scala.concurrent.duration._
 
+  import ExecutionContext.Implicits.global
 
   private val output = new collection.mutable.StringBuilder()
 
@@ -99,7 +100,7 @@ def doSizes(output: String): Unit = {
       }
     }
 
-    output ++= "Name, Before, After\n"
+    outputln("Name, Before, After")
     bench("irc", s"$root/nfisher-SpikyIRC.pp", os = "centos-6")
     bench("monit", s"$root/dhoppe-monit.pp")
     bench("bind", s"$root/thias-bind.pp")
