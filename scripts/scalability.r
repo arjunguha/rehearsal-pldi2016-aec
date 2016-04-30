@@ -12,6 +12,7 @@ df <- ddply(df, c("Size"), summarise,
 plot <- ggplot(df, aes(x=Size,y=Mean)) +
   mytheme() +
   theme(legend.position = "none") +
-  geom_bar(stat="identity",position="dodge") +
+  geom_line(color="blue") +
+  scale_y_log10() +
   labs(x = "Number of conflicting resources", y = "Time (s)")
 mysave("../results/scalability.pdf", plot)
