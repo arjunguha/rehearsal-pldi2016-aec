@@ -1,6 +1,9 @@
 package rehearsal
 
 import FSEvaluator._
+import smtlib.theories.Core.{BoolSort, Equals}
+
+import edu.umass.cs.smtlib._
 import smtlib._
 import parser._
 import Commands._
@@ -81,7 +84,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     logger.debug(s"$p is read-only")
   }
 
-  val smt = new SMT()
+  val smt = SMT()
   import smt.eval
 
   eval(DeclareSort(SSymbol("hash"), 0))
@@ -99,7 +102,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     eval(Assert(FunctionApplication("distinct", hashes)))
     val x = freshName("h")
     eval(Assert(Forall(SortedVar(x, hashSort), Seq(),
-      Or(hashes.map(h => Equals(x, h)): _*))))
+      hashes.map(h => Equals(x.id, h)).or())))
   }
 
   val termToHash: Map[Term, String] = hashToZ3.toList.map({ case (x,y) => (y, x) }).toMap
@@ -143,7 +146,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         val pre = FunctionApplication("is-IsFile", Seq(st.paths(p))) ||
           FunctionApplication("is-IsDir", Seq(st.paths(p)))
         val post = FunctionApplication("is-IsDir", Seq(st.paths(p.getParent)))
-        eval(Assert(Implies(pre, post)))
+        eval(Assert(pre ==> post))
       }
     }
   }
@@ -163,13 +166,13 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   def stEquals(st1: ST, st2: ST): Term = {
     (st1.isErr && st2.isErr) ||
-      (Not(st1.isErr) && Not(st2.isErr) && And(writablePaths.map(p => Equals(st1.paths(p), st2.paths(p))): _*))
+      (!st1.isErr && !st2.isErr && writablePaths.map(p => Equals(st1.paths(p), st2.paths(p))).and())
   }
 
   def evalPred(st: ST, pred: F.Pred): Term = pred match {
-    case F.PTrue => True()
-    case F.PFalse => False()
-    case F.PNot(a) => Not(evalPred(st, a))
+    case F.PTrue => true.term
+    case F.PFalse => false.term
+    case F.PNot(a) => !evalPred(st, a)
     case F.PAnd(a, b) => evalPred(st, a) && evalPred(st, b)
     case F.POr(a, b) => evalPred(st, a) || evalPred(st, b)
     case F.PTestFileState(p, F.IsDir) => Equals(st.paths(p), "IsDir")
@@ -180,7 +183,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   def predEquals(a: F.Pred, b: F.Pred): Boolean = smt.pushPop {
     val st = initState
-     eval(Assert(Not(Equals(evalPred(st, a), evalPred(st, b)))))
+     eval(Assert(!Equals(evalPred(st, a), evalPred(st, b))))
     !smt.checkSat()
   }
 
@@ -191,13 +194,13 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   def evalExpr(st: ST, expr: F.Expr): ST = expr match {
     case F.ESkip => st
-    case F.EError => ST(True(), st.paths)
+    case F.EError => ST(true.term, st.paths)
     case F.ESeq(p, q) => //evalExpr(evalExpr(st, p), q)
     {
       val stInter = evalExpr(st, p)
       val isErr = freshName("isErr")
       eval(DeclareConst(isErr, BoolSort()))
-      val stInter1 = stInter.copy(isErr = isErr)
+      val stInter1 = stInter.copy(isErr = isErr.id)
       eval(Assert(Equals(stInter.isErr, stInter1.isErr)))
       evalExpr(stInter1, q)
     }
@@ -206,24 +209,24 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       val st2 = evalExpr(st, e2)
       val b = freshName("b")
       eval(DeclareConst(b, BoolSort()))
-      eval(Assert(Equals(b, evalPred(st, a))))
+      eval(Assert(Equals(b.id, evalPred(st, a))))
       val isErr = freshName("isErr")
       eval(DeclareConst(isErr, BoolSort()))
-      eval(Assert(Equals(isErr, ite(b, st1.isErr, st2.isErr))))
-      ST(isErr,
-        writablePaths.map(p => (p, ite(b, st1.paths(p), st2.paths(p)))).toMap ++ readOnlyMap)
+      eval(Assert(Equals(isErr.id, ite(b.id, st1.isErr, st2.isErr))))
+      ST(isErr.id,
+        writablePaths.map(p => (p, ite(b.id, st1.paths(p), st2.paths(p)))).toMap ++ readOnlyMap)
     }
     case F.ECreateFile(p, h) => {
       assert(readOnlyPaths.contains(p) == false)
       val pre = Equals(st.paths(p), "DoesNotExist") && Equals(st.paths(p.getParent), "IsDir")
-      ST(st.isErr ||  Not(pre),
+      ST(st.isErr ||  !pre,
         st.paths + (p -> FunctionApplication("IsFile", Seq(hashToZ3(h)))))
     }
     case F.EMkdir(p) => {
       assert(readOnlyPaths.contains(p) == false,
         s"Mkdir($p) found, but path is read-only")
       val pre = Equals(st.paths(p), "DoesNotExist") && Equals(st.paths(p.getParent), "IsDir")
-      ST(st.isErr || Not(pre),
+      ST(st.isErr || !pre,
         st.paths + (p -> "IsDir"))
     }
     case F.ERm(p) => {
@@ -231,8 +234,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       val descendants = st.paths.filter(p1 => p1._1 != p && p1._1.startsWith(p)).map(_._2).toSeq
       val pre = FunctionApplication("is-IsFile", Seq(st.paths(p))) ||
         (FunctionApplication("is-IsDir", Seq(st.paths(p))) &&
-          And(descendants.map(p_ => Equals(p_, "DoesNotExist")) :_*))
-      ST(st.isErr || Not(pre),
+          descendants.map(p_ => Equals(p_, "DoesNotExist")).and())
+      ST(st.isErr || !pre,
         st.paths + (p -> "DoesNotExist"))
     }
     case F.ECp(src, dst) => {
@@ -240,15 +243,15 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       val pre = FunctionApplication("is-IsFile", Seq(st.paths(src))) &&
         Equals(st.paths(dst.getParent), "IsDir") &&
         Equals(st.paths(dst), "DoesNotExist")
-      ST(st.isErr || Not(pre),
+      ST(st.isErr || !pre,
         st.paths + (dst -> FunctionApplication("IsFile",
           Seq(FunctionApplication("hash", Seq(st.paths(src)))))))
     }
   }
 
   def exprAsPred(st: ST, expr: F.Expr): Term = expr match {
-    case F.ESkip => True()
-    case F.EError => False()
+    case F.ESkip => true.term
+    case F.EError => false.term
     case F.ESeq(p, q) => exprAsPred(st, p) && exprAsPred(st, q)
     case F.EIf(a, e1, e2) => ite(evalPred(st, a), exprAsPred(st, e1), exprAsPred(st, e2))
     case _ => throw Unexpected(s"exprAsPred got $expr")
@@ -283,7 +286,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     assertPathConsistency(st)
     val st1 = evalExpr(st, e1)
     val st2 = evalExpr(st, e2)
-    eval(Assert(Not(stEquals(st1, st2))))
+    eval(Assert(!stEquals(st1, st2)))
     if (smt.checkSat()) {
       val model: List[SExpr] = eval(GetModel()).asInstanceOf[GetModelResponseSuccess].model
       Some(stateFromTerm(st).getOrElse(throw Unexpected("error for initial state")))
@@ -313,7 +316,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     val inST = initState
     val once = evalExpr(inST, e)
     val twice = evalExpr(once, e)
-    eval(Assert(Not(stEquals(once, twice))))
+    eval(Assert(!stEquals(once, twice)))
     if (smt.checkSat) {
       eval(GetModel())
       false
@@ -352,7 +355,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
       case (out1Expr, out1St) :: rest => {
         val isDet = smt.pushPop {
-          eval(Assert(Or(rest.map(out2 => Not(stEquals(out1St, out2._2))): _*)))
+          eval(Assert(rest.map(out2 => !stEquals(out1St, out2._2)).or()))
           val nondet = smt.checkSat()
           !nondet
         }
@@ -360,7 +363,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
           rest.find {
             case (out2Expr, out2St) => {
               smt.pushPop {
-                eval(Assert(Not(stEquals(out1St, out2St))))
+                eval(Assert(!stEquals(out1St, out2St)))
                 if (smt.checkSat()) {
                   logger.info("Divergence:")
                   logger.info(s"$out1Expr\nproduces ${stateFromTerm(out1St)}\nbut$out2Expr\nproduces ${stateFromTerm(out2St)}")
@@ -383,7 +386,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     val in = initState
     assertPathConsistency(in)
     val out = evalExpr(in, expr)
-    eval(Assert(Not(out.isErr)))
+    eval(Assert(!out.isErr))
     // Does there exist an input (in) that produces an output (out) that
     // is not the error state?
     !smt.checkSat()
