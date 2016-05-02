@@ -46,7 +46,7 @@ class DeterminismEvaluationSuite extends FunSuitePlus
     assert(g.toExecTree(true).isDeterError() == true)
   }
 
-  mytest("thias-bind-buggy.pp", false)
+  mytest("thias-bind-buggy.pp", false, os = "centos-6")
 
   test("puppet-hosting.pp") {
     intercept[PackageNotFound] {
