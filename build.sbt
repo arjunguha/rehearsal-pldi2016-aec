@@ -18,7 +18,7 @@ libraryDependencies ++= Seq(
   "com.regblanc" %% "scala-smtlib" % "0.2",
   "edu.umass.cs" %% "config" % "1.0.1",
   "edu.umass.cs" %% "extras" % "1.0.0",
-  "edu.umass.cs" %% "smtlib" % "1.0.0",
+  "edu.umass.cs" %% "smtlib" % "1.0.1",
   "org.scalatest" %% "scalatest" % "2.2.1" % "test",
   "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4",

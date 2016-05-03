@@ -99,7 +99,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   if(hashToZ3.size != 0)  {
     val hashes = hashToZ3.values.toSeq
-    eval(Assert(FunctionApplication("distinct", hashes)))
+    eval(Assert(FunctionApplication("distinct".id, hashes)))
     val x = freshName("h")
     eval(Assert(Forall(SortedVar(x, hashSort), Seq(),
       hashes.map(h => Equals(x.id, h)).or())))
@@ -136,16 +136,16 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     val root = Paths.get("/")
     for (p <- allPaths) {
       if (p == root) {
-        eval(Assert(FunctionApplication("is-IsDir", Seq(st.paths(p)))))
+        eval(Assert(FunctionApplication("is-IsDir".id, Seq(st.paths(p)))))
       }
       // If the parent of p is "/", there is no need to assert when "/" may
       // be a directory, due to the assertion above. In addition, if the
       // parent of p is not represented, there is no need for the assertion
       // either.
       else if (p.getParent != root && st.paths.contains(p.getParent)) {
-        val pre = FunctionApplication("is-IsFile", Seq(st.paths(p))) ||
-          FunctionApplication("is-IsDir", Seq(st.paths(p)))
-        val post = FunctionApplication("is-IsDir", Seq(st.paths(p.getParent)))
+        val pre = FunctionApplication("is-IsFile".id, Seq(st.paths(p))) ||
+          FunctionApplication("is-IsDir".id, Seq(st.paths(p)))
+        val post = FunctionApplication("is-IsDir".id, Seq(st.paths(p.getParent)))
         eval(Assert(pre ==> post))
       }
     }
@@ -175,10 +175,10 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     case F.PNot(a) => !evalPred(st, a)
     case F.PAnd(a, b) => evalPred(st, a) && evalPred(st, b)
     case F.POr(a, b) => evalPred(st, a) || evalPred(st, b)
-    case F.PTestFileState(p, F.IsDir) => Equals(st.paths(p), "IsDir")
-    case F.PTestFileState(p, F.DoesNotExist) => Equals(st.paths(p), "DoesNotExist")
+    case F.PTestFileState(p, F.IsDir) => Equals(st.paths(p), "IsDir".id)
+    case F.PTestFileState(p, F.DoesNotExist) => Equals(st.paths(p), "DoesNotExist".id)
     case F.PTestFileState(p, F.IsFile) =>
-      FunctionApplication("is-IsFile", Seq(st.paths(p)))
+      FunctionApplication("is-IsFile".id, Seq(st.paths(p)))
   }
 
   def predEquals(a: F.Pred, b: F.Pred): Boolean = smt.pushPop {
@@ -218,34 +218,34 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
     case F.ECreateFile(p, h) => {
       assert(readOnlyPaths.contains(p) == false)
-      val pre = Equals(st.paths(p), "DoesNotExist") && Equals(st.paths(p.getParent), "IsDir")
+      val pre = Equals(st.paths(p), "DoesNotExist".id) && Equals(st.paths(p.getParent), "IsDir".id)
       ST(st.isErr ||  !pre,
-        st.paths + (p -> FunctionApplication("IsFile", Seq(hashToZ3(h)))))
+        st.paths + (p -> FunctionApplication("IsFile".id, Seq(hashToZ3(h)))))
     }
     case F.EMkdir(p) => {
       assert(readOnlyPaths.contains(p) == false,
         s"Mkdir($p) found, but path is read-only")
-      val pre = Equals(st.paths(p), "DoesNotExist") && Equals(st.paths(p.getParent), "IsDir")
+      val pre = Equals(st.paths(p), "DoesNotExist".id) && Equals(st.paths(p.getParent), "IsDir".id)
       ST(st.isErr || !pre,
-        st.paths + (p -> "IsDir"))
+        st.paths + (p -> "IsDir".id))
     }
     case F.ERm(p) => {
       assert(readOnlyPaths.contains(p) == false)
       val descendants = st.paths.filter(p1 => p1._1 != p && p1._1.startsWith(p)).map(_._2).toSeq
-      val pre = FunctionApplication("is-IsFile", Seq(st.paths(p))) ||
-        (FunctionApplication("is-IsDir", Seq(st.paths(p))) &&
-          descendants.map(p_ => Equals(p_, "DoesNotExist")).and())
+      val pre = FunctionApplication("is-IsFile".id, Seq(st.paths(p))) ||
+        (FunctionApplication("is-IsDir".id, Seq(st.paths(p))) &&
+          descendants.map(p_ => Equals(p_, "DoesNotExist".id)).and())
       ST(st.isErr || !pre,
-        st.paths + (p -> "DoesNotExist"))
+        st.paths + (p -> "DoesNotExist".id))
     }
     case F.ECp(src, dst) => {
       assert(readOnlyPaths.contains(dst) == false)
-      val pre = FunctionApplication("is-IsFile", Seq(st.paths(src))) &&
-        Equals(st.paths(dst.getParent), "IsDir") &&
-        Equals(st.paths(dst), "DoesNotExist")
+      val pre = FunctionApplication("is-IsFile".id, Seq(st.paths(src))) &&
+        Equals(st.paths(dst.getParent), "IsDir".id) &&
+        Equals(st.paths(dst), "DoesNotExist".id)
       ST(st.isErr || !pre,
-        st.paths + (dst -> FunctionApplication("IsFile",
-          Seq(FunctionApplication("hash", Seq(st.paths(src)))))))
+        st.paths + (dst -> FunctionApplication("IsFile".id,
+          Seq(FunctionApplication("hash".id, Seq(st.paths(src)))))))
     }
   }
 
