@@ -4,6 +4,10 @@
 # scala specific
 /project/target
 /target
+/project/project
+/package-server/project/target
+/package-server/project/project
+/package-server/target
 
 # Mac OS junk
 .DS_Store
@@ -28,6 +32,10 @@ benchmarks
 /results/determinism.csv
 /results/idempotence.csv
 /results/sizes.csv
+/results/scalability.csv
+/results/scalability.pdf
+/results/commutativity.pdf
 /results/determinism.pdf
 /results/idempotence.pdf
 /results/sizes.pdf
+/logs
