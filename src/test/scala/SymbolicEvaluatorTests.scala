@@ -1,6 +1,4 @@
-import rehearsal.PuppetSyntax.Node
-
-class SymbolicEvaluator2Tests extends FunSuitePlus {
+class SymbolicEvaluatorTests extends FunSuitePlus {
 
   import rehearsal._
   import TestImplicits._
@@ -353,7 +351,8 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
       file {'/foo/bar': ensure => file, before => File['/etc/foo'] }
       file {'/etc/foo': ensure => file}
                   """
-    val g = PuppetParser.parse(program).eval().resourceGraph().fsGraph("ubuntu-trusty")
+    val g = PuppetParser.parse(program).eval.resourceGraph
+      .fsGraph("ubuntu-trusty")
     assert(false == g.toExecTree().isDeterministic())
   }
 
@@ -385,7 +384,8 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
           }
       """).eval().resourceGraph().fsGraph("centos-6")
 
-    assert(m.pruneWrites().toExecTree().isDeterministic() == false, "slicing changed the result of determinism")
+    assert(m.pruneWrites().toExecTree().isDeterministic() == false,
+      "slicing changed the result of determinism")
   }
 
   test("openssh class from SpikyIRC benchmark") {
@@ -424,10 +424,14 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
   }
 
   test("pdurbin-java-jpa reduced") {
-    // This test illustrates a subtle issue with the way we model package vs. file resources. We have packages
-    // create their entire directory tree, but files do not (and should not). In this example, the vim-enhanced
-    // package creates a file in /etc. So, if it runs first, it creates the /etc directory. But, if the file
-    // /etc/inittab runs first, it will signal an error if /etc does not exist.
+
+    // This test illustrates a subtle issue with the way we model package vs.
+    // file resources. We have packages create their entire directory tree, but
+    // files do not (and should not). In this example, the vim-enhanced package
+    // creates a file in /etc. So, if it runs first, it creates the /etc
+    // directory. But, if the file /etc/inittab runs first, it will signal an
+    // error if /etc does not exist.
+
     val m = PuppetParser.parse(
       """
          file {"/etc/inittab":
@@ -438,33 +442,6 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
     assert(comprehensiveIsDet(m))
   }
 
-  /*
-  test("slicing limitation") {
-    val g = PuppetParser.parse(
-      """
-        file{"/alpha": ensure => directory}
-        file{"/alpha/gamma": content => "dummy", require => File["/alpha"]}
-        file{"/beta": ensure => directory}
-        file{"/beta/delta": content => "dummy", require => File["/beta"]}
-      """).eval().resourceGraph().fsGraph("ubuntu-trusty")
-    val g_ = g.pruneWrites()
-
-    val sets = ESeq(g_.exprs.values.toSeq: _*).fileSets
-    val writes = sets.writes ++ sets.dirs
-    val alpha = g.exprs(Node("file", "/alpha"))
-    val beta = g.exprs(Node("file", "/beta"))
-    val gamma = g.exprs(Node("file", "/alpha/gamma"))
-    val delta = g.exprs(Node("file", "/beta/delta"))
-
-    assert(alpha.commutesWith(beta))
-    assert(gamma.commutesWith(delta))
-
-    assert(writes.contains("/alpha/gamma") == false)
-    assert(writes.contains("/beta/delta") == false)
-    assert(SymbolicEvaluator.isDeterministic(g_))
-  }
-  */
-
   test("pruning a sinple node should produce the empty graph") {
     val m = PuppetParser.parse(
       """
@@ -474,7 +451,6 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
   }
 
   test("packages ircd-hybrid and httpd") {
-    // TODO(arjun): possibly stale comment
     // Both packages create files in /var. When we don't force /var to be
     // a directory, this test checks that we do force / to be a directory.
     val m = PuppetParser.parse("""
@@ -501,7 +477,7 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
 
     val List(e1, e2) = m.exprs.values.toList
     assert (e1.commutesWith(e2))
-    comprehensiveIsDet(m)
+    assert(comprehensiveIsDet(m) == true)
   }
 
   test("java-reduced-less") {
@@ -522,16 +498,6 @@ class SymbolicEvaluator2Tests extends FunSuitePlus {
       """).eval.resourceGraph.fsGraph("centos-6")
     assert(comprehensiveIsDet(m) == true)
   }
-
-//  test("In Spiky, irssi configuration files should be trivially files") {
-//    import DeterminismPruning2._
-//    val g = PuppetParser.parseFile(s"parser-tests/good/spiky-reduced.pp")
-//      .eval.resourceGraph.fsGraph("centos-6")
-//
-//    val candidates = pruningCandidates2(g.exprs)
-//    val collectd = Node("package", "collectd")
-//    println(candidates(Node("package", "collectd")))
-//  }
 
   test("A totally ordered manifest should be completely pruned") {
 

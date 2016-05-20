@@ -27,7 +27,8 @@ class DeterminismEvaluationSuite extends FunSuitePlus
         else {
           None
       }
-      val (prunedResult, t) = time(g.pruneWrites.toExecTree(true).isDeterministic)
+      val (prunedResult, t) = time(g.pruneWrites.toExecTree(true)
+                                    .isDeterministic)
       info(s"Deterministic with pruning? $prunedResult (${t}ms)")
       unprunedResult match {
         case None => assert(prunedResult == isDeterministic)
@@ -42,7 +43,8 @@ class DeterminismEvaluationSuite extends FunSuitePlus
   mytest("thias-bind.pp", true)
 
   test("dhoppe-monit_BUG.pp") {
-    val g = parseFile(s"$root/dhoppe-monit_BUG.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
+    val g = parseFile(s"$root/dhoppe-monit_BUG.pp").eval.resourceGraph
+      .fsGraph("ubuntu-trusty")
     assert(g.toExecTree(true).isDeterError() == true)
   }
 
@@ -50,8 +52,10 @@ class DeterminismEvaluationSuite extends FunSuitePlus
 
   test("puppet-hosting.pp") {
     intercept[PackageNotFound] {
-      val g = parseFile(s"$root/puppet-hosting.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-      // TODO(arjun): This line shouldn't be necessary, but .fsGraph produces a lazy data structure!s
+      val g = parseFile(s"$root/puppet-hosting.pp").eval.resourceGraph
+        .fsGraph("ubuntu-trusty")
+      // TODO(arjun): This line shouldn't be necessary, but .fsGraph produces
+      // a lazy data structure!
       assert(g.toExecTree(true).isDeterministic() == false)
     }
   }

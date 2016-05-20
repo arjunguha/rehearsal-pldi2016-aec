@@ -2,6 +2,9 @@ package rehearsal
 
 case class ConfigError(message: String) extends RuntimeException(message)
 
+/** Global settings for Rehearsal, that are read from either rehearsal.conf
+  * in the current directory, or from the rehearsal.conf system property.
+  */
 object Settings {
 
   import rehearsal.Implicits._
