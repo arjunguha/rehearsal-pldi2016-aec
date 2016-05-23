@@ -15,7 +15,6 @@ object Main extends App {
     bool: Map[String, Boolean],
     int: Map[String, Int])
 
-
   def usage(config: Config): Unit = {
     println(parser.usage)
     System.exit(1)

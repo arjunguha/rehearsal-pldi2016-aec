@@ -128,7 +128,20 @@ case class FSGraph(exprs: Map[FSGraph.Key, FSSyntax.Expr], deps: Graph[FSGraph.K
   /** Prunes writes from this graph to make determinism-checking faster. */
   def pruneWrites(): FSGraph = {
     val n = allPaths.size
-    val r = DeterminismPruning.pruneWrites(this)
+    val r = logTime("Pruning writes") {
+      val nodes = this.deps.topologicalSort.reverse
+      nodes.foldLeft(this) {
+        case (FSGraph(exprs, graph), nodeValue) => {
+          val node = graph.get(nodeValue)
+          val succs = graph.nodes.toSet -- graph.ancestors(node) - node
+          val commutesAll = succs.forall { succ =>
+            this.exprs(node.value).commutesWith(this.exprs(succ.value))
+          }
+          if (commutesAll) FSGraph(exprs - node, graph.shrink(node))
+          else FSGraph(exprs, graph)
+        }
+      }
+    }
     val m = r.allPaths.size
     logger.info(s"Pruning removed ${n - m} paths")
     r
