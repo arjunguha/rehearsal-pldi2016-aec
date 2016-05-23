@@ -19,14 +19,6 @@ import scalax.collection.GraphEdge.DiEdge
 
 object SymbolicEvaluator {
 
-  def exprEquals(e1: F.Expr, e2: F.Expr): Option[State] = {
-    val impl = new SymbolicEvaluatorImpl((e1.paths union e2.paths).toList,
-      e1.hashes union e2.hashes, Set())
-    val result = impl.exprEquals(e1, e2)
-    impl.free()
-    result
-  }
-
   def predEquals(a: F.Pred, b: F.Pred): Boolean = {
     val impl = new SymbolicEvaluatorImpl((a.readSet union b.readSet).toList, Set(), Set())
     val result = impl.predEquals(a, b)
@@ -77,6 +69,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   val writablePaths = allPaths.filterNot(p => readOnlyPaths.contains(p))
 
+  val childrenOf: Map[Path, List[Path]] = allPaths.map(p => p -> allPaths.filter(_.getParent == p)).toMap
+
   for (p <- writablePaths) {
     logger.debug(s"$p is writable")
   }
@@ -126,8 +120,10 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   }
   val initState = freshST()
 
+
   val reverseMap = initState.paths.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
   val reverseHash = hashToZ3.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
+
 
   // Ensures that all paths in st form a proper directory tree. If we assert
   // this for the input state and all operations preserve directory-tree-ness,
@@ -176,6 +172,11 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     case F.PAnd(a, b) => evalPred(st, a) && evalPred(st, b)
     case F.POr(a, b) => evalPred(st, a) || evalPred(st, b)
     case F.PTestFileState(p, F.IsDir) => Equals(st.paths(p), "IsDir".id)
+    case F.PTestFileState(p, F.IsEmptyDir) => {
+      val children = childrenOf(p)
+      Equals(st.paths(p), "IsDir".id) &&
+      children.map(p => Equals(st.paths(p),"DoesNotExist".id)).and()
+    }
     case F.PTestFileState(p, F.DoesNotExist) => Equals(st.paths(p), "DoesNotExist".id)
     case F.PTestFileState(p, F.IsFile) =>
       FunctionApplication("is-IsFile".id, Seq(st.paths(p)))

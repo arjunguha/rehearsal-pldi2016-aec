@@ -10,7 +10,7 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite
   import scalax.collection.GraphEdge.DiEdge
   import rehearsal.Implicits._
   import java.nio.file.Paths
-  import SymbolicEvaluator.{predEquals, exprEquals, isIdempotent}
+  import SymbolicEvaluator.{predEquals, isIdempotent}
   import PuppetSyntax._
 
   val root = "parser-tests/good"

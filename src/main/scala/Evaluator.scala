@@ -33,6 +33,7 @@ object FSEvaluator {
     case PTestFileState(p, IsFile) => isFile(st, p)
     case PTestFileState(p, IsDir) => isDir(st, p)
     case PTestFileState(p, DoesNotExist) => doesNotExist(st, p)
+    case PTestFileState(p, IsEmptyDir) => st.keys.exists(_.getParent == p)
   }
 
   def eval(st: State, expr: Expr): S = expr match {

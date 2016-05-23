@@ -46,4 +46,39 @@ private[rehearsal] object Helpers {
     case ECp(src, dst) => Set()
   }
 
+  /** Returns the set of paths that are tested to see if they are empty. */
+  def testedEmptyDirs(e: Expr): Set[Path] = {
+
+    def pred(pr: Pred, set: Set[Path]): Set[Path] = pr match {
+      case PNot(a) => pred(a, set)
+      case PAnd(a, b) => pred(b, pred(a, set))
+      case POr(a, b) => pred(b, pred(a, set))
+      case PTestFileState(p, IsEmptyDir) => set + p
+      case PTestFileState(_, _) => set
+      case PTrue => set
+      case PFalse => set
+    }
+
+    def expr(e: Expr, set: Set[Path]): Set[Path] = e match {
+      case EError => set
+      case ESkip => set
+      case EIf(a, p, q) => expr(q, expr(p, pred(a, set)))
+      case ESeq(p, q) => expr(q, expr(p, set))
+      case EMkdir(_) => set
+      case ECreateFile(_, _) => set
+      case ERm(_) => set
+      case ECp(_, _) => set
+    }
+    expr(e, Set())
+  }
+
+  /** Filters the set of path, returning only those paths that have no children
+    * in the set.
+    *
+    * For example, @code{fringe(/a, /a/b, /a/b/c) == Set(/a/b/c)}.
+    */
+  def fringe(paths: Iterable[Path]): Set[Path] = {
+    paths.filter(p1 => !paths.exists(p2 => p2.getParent == p1)).toSet
+  }
+
 }

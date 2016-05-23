@@ -147,15 +147,6 @@ case class FSGraph(exprs: Map[FSGraph.Key, FSSyntax.Expr], deps: Graph[FSGraph.K
     r
   }
 
-  /** Checks if two <b>deterministic</b> FS graphs are equivalent.
-    *
-    * @param other the other FS graph
-    * @return [None] if they are equivalent and [Some cex] if they are not and [cex] witnesses the difference
-    */
-  def notEquiv(other: FSGraph): Option[FSEvaluator.State] = {
-    SymbolicEvaluator.exprEquals(this.expr(), other.expr())
-  }
-
   /** All paths used by the nodes of this graph. */
   lazy val allPaths = this.deps.nodes.map(n => this.exprs(n).paths)
     .foldLeft(Set.empty[Path])(_ union _)

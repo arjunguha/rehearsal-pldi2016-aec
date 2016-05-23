@@ -7,7 +7,7 @@ class SymbolicEvaluatorTests extends FunSuitePlus {
   import scalax.collection.GraphEdge.DiEdge
   import rehearsal.Implicits._
   import java.nio.file.Paths
-  import SymbolicEvaluator.{predEquals, exprEquals}
+  import SymbolicEvaluator.{predEquals}
 
   def comprehensiveIsDet(original: FSGraph): Boolean = {
     val pruned = original.pruneWrites().toExecTree().isDeterministic()
@@ -208,43 +208,43 @@ class SymbolicEvaluatorTests extends FunSuitePlus {
 
   test("program equivalence") {
     val x = createFile(Paths.get("/usr"), "astring")
-    assert(exprEquals(x, x) == None)
+    assert(x equivalentTo x)
   }
 
 
   test("program equivalence 2") {
     val x = createFile(Paths.get("/usr"), "astring")
     val y = createFile(Paths.get("/lib"), "astring")
-    assert(exprEquals(seq(x, y), seq(y, x)) == None)
+    assert(seq(x, y).equivalentTo(seq(y, x)))
   }
 
   test("program equivalence 3") {
     val x = createFile(Paths.get("/usr/bin"), "astring")
     val y = createFile(Paths.get("/usr"), "astring")
-    assert(exprEquals(x, y) != None)
+    assert(x.equivalentTo(y) == false)
   }
 
   test("program equivalence 4 - Mkdir"){
     val x = mkdir(Paths.get("/usr"))
-    assert(exprEquals(x, x) == None)
+    assert(x equivalentTo x)
   }
 
   test("program equivalence 5 - Mkdir") {
     val x = mkdir(Paths.get("/usr"))
     val y = createFile(Paths.get("/usr/bin"), "astring")
-    assert(exprEquals(seq(x, y), seq(y, x)) != None)
+    assert(seq(x, y).equivalentTo(seq(y, x)) == false)
   }
 
   test("program equivalence 6 - Mkdir"){
     val x = mkdir(Paths.get("/usr"))
     val y = mkdir(Paths.get("/lib"))
-    assert(exprEquals(seq(x, y), seq(y, x)) == None)
+    assert(seq(x, y).equivalentTo(seq(y, x)))
   }
 
   test("program equivalence 7 - Rm"){
     val y = createFile(Paths.get("/usr"), "astring")
     val x = rm(Paths.get("/usr"))
-    assert(exprEquals(seq(y, x), seq(x, y)) != None)
+    assert(seq(y, x).equivalentTo(seq(x, y)) == false)
   }
 
   test("program equivalence 8 - Rm"){
@@ -252,15 +252,15 @@ class SymbolicEvaluatorTests extends FunSuitePlus {
     val y = createFile(Paths.get("/lib"), "astring")
     val x1 = rm(Paths.get("/usr"))
     val y1 = rm(Paths.get("/lib"))
-    assert(exprEquals(seq(seq(x, y), seq(x1, y1)),
-                      seq(seq(x, y), seq(y1, x1))) == None)
+    assert(seq(seq(x, y), seq(x1, y1)).equivalentTo(
+                      seq(seq(x, y), seq(y1, x1))))
   }
 
   test("program equivalence 9 - Cp"){
     val x = createFile(Paths.get("/usr"), "a")
     val y = cp(Paths.get("/usr"), Paths.get("/lib"))
     val z = createFile(Paths.get("/lib"), "a")
-    assert(exprEquals(seq(x, y), seq(x, z)) == None)
+    assert(seq(x, y).equivalentTo(seq(x, z)))
   }
 
   test("trivial program with non-deterministic output") {
@@ -539,6 +539,21 @@ class SymbolicEvaluatorTests extends FunSuitePlus {
       """).eval.resourceGraph().fsGraph("centos-6").pruneWrites
 
     assert(m.deps.nodes.size >= 3)
+  }
+
+  test("dir?(p) != emptydir?(p) is trivial if there is a file in p") {
+
+    val prefix = mkdir("/foo".toPath) >> mkdir("/foo/bar".toPath)
+    val e1 = prefix >> ite(testFileState("/foo".toPath, IsEmptyDir), ESkip, EError)
+    val e2 = prefix >> ite(testFileState("/foo".toPath, IsDir), ESkip, EError)
+    assert(e1.equivalentTo(e2) == false)
+  }
+
+  test("dir?(p) != emptydir?(p)") {
+
+    val e1 = ite(testFileState("/foo".toPath, IsEmptyDir), ESkip, EError)
+    val e2 = ite(testFileState("/foo".toPath, IsDir), ESkip, EError)
+    assert(e1.equivalentTo(e2) == false)
   }
 
 }

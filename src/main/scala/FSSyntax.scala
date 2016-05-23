@@ -9,6 +9,7 @@ object FSSyntax {
         case IsFile => 0
         case IsDir => 1
         case DoesNotExist => 2
+        case IsEmptyDir => 3
       }
       val x = toInt(this).compare(toInt(that))
       if (x > 0) 1 else if (x < 0) -1 else 0
@@ -18,6 +19,7 @@ object FSSyntax {
 
   case object IsFile extends FileState
   case object IsDir extends FileState
+  case object IsEmptyDir extends FileState
   case object DoesNotExist extends FileState
 
   sealed trait Pred {
@@ -107,6 +109,20 @@ object FSSyntax {
       case other => Seq(other)
     }
 
+    /** Returns {@code true} if both expressions are equivalent. */
+    def equivalentTo(other: Expr): Boolean = {
+      val allPaths = (this.paths union other.paths).toList
+      val emptyDirs = Helpers.testedEmptyDirs(this) union Helpers.testedEmptyDirs(other)
+      val addedPaths = (emptyDirs intersect Helpers.fringe(allPaths))
+        .map(p => p.resolve("__child__")).toList
+      val impl = new SymbolicEvaluatorImpl(
+        addedPaths ++ allPaths,
+        other.hashes union other.hashes,
+        Set())
+      val result = impl.exprEquals(this, other)
+      impl.free()
+      result.isEmpty
+    }
 
   }
 
@@ -128,7 +144,7 @@ object FSSyntax {
   private def intern(e: Expr): Expr = exprCache.getOrElseUpdate(e, e)
 
   def ite(a: Pred, p: Expr, q: Expr): Expr = {
-    if (p eq q) p else intern(EIf(a, p, q))
+    if (p eq q) p else intern(new EIf(a, p, q))
   }
 
   def seq(p: Expr, q: Expr) = intern(ESeq(p, q))
