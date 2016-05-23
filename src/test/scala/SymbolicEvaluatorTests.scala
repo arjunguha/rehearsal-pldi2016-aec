@@ -556,4 +556,12 @@ class SymbolicEvaluatorTests extends FunSuitePlus {
     assert(e1.equivalentTo(e2) == false)
   }
 
+  test("rm can remove empty directories") {
+    val foo = "/foo".toPath
+    val e = ite(testFileState(foo, IsEmptyDir),
+              rm(foo) >> mkdir(foo),
+              ESkip)
+    assert(e.equivalentTo(ESkip))
+  }
+
 }

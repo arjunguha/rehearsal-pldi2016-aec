@@ -173,9 +173,9 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     case F.POr(a, b) => evalPred(st, a) || evalPred(st, b)
     case F.PTestFileState(p, F.IsDir) => Equals(st.paths(p), "IsDir".id)
     case F.PTestFileState(p, F.IsEmptyDir) => {
-      val children = childrenOf(p)
+      val children = childrenOf(p).map(p => st.paths(p))
       Equals(st.paths(p), "IsDir".id) &&
-      children.map(p => Equals(st.paths(p),"DoesNotExist".id)).and()
+      children.map(p => Equals(p,"DoesNotExist".id)).and()
     }
     case F.PTestFileState(p, F.DoesNotExist) => Equals(st.paths(p), "DoesNotExist".id)
     case F.PTestFileState(p, F.IsFile) =>
@@ -232,6 +232,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
     case F.ERm(p) => {
       assert(readOnlyPaths.contains(p) == false)
+      // TODO(arjun): May not need to check all descendants. It should be enough
+      // to check if immediate children do not exist.
       val descendants = st.paths.filter(p1 => p1._1 != p && p1._1.startsWith(p)).map(_._2).toSeq
       val pre = FunctionApplication("is-IsFile".id, Seq(st.paths(p))) ||
         (FunctionApplication("is-IsDir".id, Seq(st.paths(p))) &&
