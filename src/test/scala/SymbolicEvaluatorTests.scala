@@ -564,4 +564,22 @@ class SymbolicEvaluatorTests extends FunSuitePlus {
     assert(e.equivalentTo(ESkip))
   }
 
+  test("force attribute on files") {
+    val g1 = PuppetParser.parse(
+      """
+      file{"/foo/bar":
+        force => true
+      }
+      """).eval.resourceGraph.fsGraph("ubuntu-trusty").expr()
+
+    val g2 = PuppetParser.parse(
+      """
+        file{"/foo/bar": }
+      """).eval.resourceGraph.fsGraph("ubuntu-trusty").expr()
+    // This is totally obvious. It is not clear how to write a good test case
+    // for this attribute.
+    assert(g1.equivalentTo(g2) == false)
+  }
+
+
 }

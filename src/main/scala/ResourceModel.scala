@@ -59,11 +59,24 @@ object ResourceModel {
          ite(testFileState(p, DoesNotExist),
             createFile(p, c),
             EError))
-    case File(p, CInline(c), true) =>
-    // TODO(arjun): needs support for recursive directory removal and can simplify too
-     ite(testFileState(p, IsDir) || testFileState(p, IsFile),
-         rm(p), ESkip) >>
+    case File(p, CInline(c), true) => {
+      val paths = {
+        def loop(path: Path): List[Path] = {
+          if (path.getParent == null) {
+            Nil
+          }
+          else {
+            path :: loop(path.getParent)
+          }
+        }
+        loop(p).reverse
+      }
+      val mkdirs = paths.map(p =>
+        ite(testFileState(p, IsDir), ESkip, rm(p) >> mkdir(p)))
+      ESeq(mkdirs: _*) >>
+      ite(testFileState(p, IsDir) || testFileState(p, IsFile), rm(p), ESkip) >>
       createFile(p, c)
+    }
     case File(p, CFile(s), false) =>
       ite(testFileState(p, IsFile),
         rm(p) >> cp(s, p),
