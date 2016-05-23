@@ -167,11 +167,13 @@ object ResourceModel {
           ESkip,
           ESeq((rm(pkgInstallInfoPath) :: exprs) :_*))
     }
-    case self@SshAuthorizedKey(_, present, _, key) => {
+    case self@SshAuthorizedKey(user, present, _, key) => {
       val p = self.keyPath
       present match {
         case true => {
-          ite(testFileState(p, IsFile), rm(p), ESkip) >> createFile(p, key)
+          ite(testFileState(p, IsFile), rm(p), ESkip) >>
+            createFile(p, key) >>
+          createFile(s"/home/$user/.ssh/authorized_keys".toPath, "dummy")
         }
         case false => {
           ite(testFileState(p, IsFile), rm(p), ESkip)

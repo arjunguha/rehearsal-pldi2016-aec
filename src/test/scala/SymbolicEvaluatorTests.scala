@@ -581,5 +581,31 @@ class SymbolicEvaluatorTests extends FunSuitePlus {
     assert(g1.equivalentTo(g2) == false)
   }
 
+  test(" a terrible manifest that uses ssh_authorized_keys and file") {
+    // This example is described in the PLDI'16 paper on Rehearsal.
+    val g = PuppetParser.parse(
+      """
+      file {'/home/arjun/.ssh':
+        ensure => directory,
+      }
+
+      ssh_authorized_key{'arjun@local':
+        user => 'arjun',
+        type => 'ssh-rsa',
+        key  => 'foobar',
+        ensure => present,
+        require => File['/home/arjun/.ssh']
+      }
+
+      file{'/home/arjun/.ssh/authorized_keys':
+        content => "ssh-rsa foobar",
+        ensure => present,
+        require => File['/home/arjun/.ssh']
+      }
+      """).eval.resourceGraph.fsGraph("ubuntu-trusty")
+
+    assert(g.toExecTree().isDeterministic == false)
+  }
+
 
 }
