@@ -171,9 +171,11 @@ object ResourceModel {
       val p = self.keyPath
       present match {
         case true => {
+          val dummyPath = s"/home/$user/.ssh/authorized_keys".toPath
           ite(testFileState(p, IsFile), rm(p), ESkip) >>
             createFile(p, key) >>
-          createFile(s"/home/$user/.ssh/authorized_keys".toPath, "dummy")
+            ite(testFileState(dummyPath, IsFile), rm(dummyPath), ESkip) >>
+            createFile(dummyPath, "dummy")
         }
         case false => {
           ite(testFileState(p, IsFile), rm(p), ESkip)
