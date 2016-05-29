@@ -5,13 +5,15 @@ import scalax.collection.GraphEdge.DiEdge
 import com.typesafe.scalalogging.LazyLogging
 import Implicits._
 
-case class ExecTree(commutingGroup: List[FSSyntax.Expr], branches: List[ExecTree]) {
+case class ExecTree(commutingGroup: List[(FSGraph.Key, FSSyntax.Expr)],
+                    branches: List[ExecTree],
+                    graph: FSGraph) {
 
   import FSSyntax._
 
   val fringeSize: Int = if (branches.isEmpty) 1 else branches.map(_.fringeSize).sum
 
-  def exprs(): Expr =  ESeq(commutingGroup: _*) >> ESeq(branches.map(_.exprs()): _*)
+  def exprs(): Expr =  ESeq(commutingGroup.map(_._2): _*) >> ESeq(branches.map(_.exprs()): _*)
 
   def size(): Int = 1 + branches.map(_.size).sum
 
@@ -109,10 +111,10 @@ case class FSGraph(exprs: Map[FSGraph.Key, FSSyntax.Expr], deps: Graph[FSGraph.K
         val fixed = if (commuteOpt == false) Nil else fringe.filter(commutesWithRest)
 
         if (fixed.isEmpty || fixed.length != fringe.length) {
-          fringe.map(key => ExecTree(List(exprs(key)), loop(g - key)))
+          fringe.map(key => ExecTree(List((key, exprs(key))), loop(g - key), this))
         }
         else {
-          List(ExecTree(fixed.map(k => exprs(k)), loop(g -- fixed)))
+          List(ExecTree(fixed.map(k => (k, exprs(k))), loop(g -- fixed), this))
         }
       }
     }
@@ -120,7 +122,7 @@ case class FSGraph(exprs: Map[FSGraph.Key, FSSyntax.Expr], deps: Graph[FSGraph.K
     logTime("building execution tree") {
       loop(deps) match {
         case List(node) => node
-        case alist => ExecTree(Nil, alist)
+        case alist => ExecTree(Nil, alist, this)
       }
     }
   }

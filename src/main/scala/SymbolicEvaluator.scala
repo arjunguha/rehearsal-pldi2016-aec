@@ -2,18 +2,21 @@ package rehearsal
 
 import FSEvaluator._
 import smtlib.theories.Core.{BoolSort, Equals}
-
 import edu.umass.cs.smtlib._
 import smtlib._
 import parser._
 import Commands._
 import Terms._
-import scala.util.{Try, Success, Failure}
+
+import scala.util.{Failure, Success, Try}
 import CommandsResponses._
-import java.nio.file.{Paths}
+import java.nio.file.Paths
+
 import FSSyntax.{ESeq, Expr}
 import rehearsal.{FSSyntax => F}
 import rehearsal.Implicits._
+import rehearsal.PuppetSyntax.ResourceGraph
+
 import scalax.collection.Graph
 import scalax.collection.GraphEdge.DiEdge
 
@@ -269,6 +272,15 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
 
   }
 
+  def isStateError(st: ST): Boolean = {
+    val Seq((_, isErr)) = smt.getValue(Seq(st.isErr))
+    isErr match {
+      case QualifiedIdentifier(Identifier(SSymbol("true"), Seq()), _) => true
+      case QualifiedIdentifier(Identifier(SSymbol("false"), Seq()), _) => false
+      case _ => throw Unexpected("value should be true or false")
+    }
+  }
+
   def stateFromTerm(st: ST): Option[State] = {
     val Seq((_, isErr)) = smt.getValue(Seq(st.isErr))
     isErr match {
@@ -335,16 +347,37 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     isIdempotent(exprs.foldRight(FSSyntax.ESkip: Expr)((e, expr) => e >> expr))
   }
 
-  def isDeter(execTree: ExecTree): Boolean = smt.pushPop {
-    def evalTree(in: ST, t: ExecTree): Seq[(Expr, ST)] = t match {
-      case ExecTree(es, Nil) => {
-        val expr = FSSyntax.ESeq(es: _*)
-        Seq((expr, evalExpr(in, expr)))
+  def diagnostic(perm: List[FSGraph.Key], graph: FSGraph): Unit = {
+    perm.tails.foreach {
+      case Nil => ()
+      case List(_) => ()
+      case x :: ys => {
+        ys.foreach { y =>
+          val xNode = graph.deps.nodes.get(x)
+          val yNode = graph.deps.nodes.get(y)
+          val descendant = graph.deps.descendants(xNode).contains(yNode)
+          val commutes = graph.exprs(xNode).commutesWith(graph.exprs(yNode))
+          if (!descendant && !commutes) {
+            logger.info(s"Consider adding $y -> $x")
+          }
+        }
       }
-      case ExecTree(es, children) => {
-        val expr = FSSyntax.ESeq(es: _*)
+    }
+  }
+
+
+  def isDeter(execTree: ExecTree): Boolean = smt.pushPop {
+    def evalTree(in: ST, t: ExecTree): Seq[(Stream[FSGraph.Key], Expr, ST)] = t match {
+      case ExecTree(es, Nil, _) => {
+        val path = es.map(_._1).toStream
+        val expr = FSSyntax.ESeq(es.map(_._2): _*)
+        Seq((path, expr, evalExpr(in, expr)))
+      }
+      case ExecTree(es, children, _) => {
+        val path = es.map(_._1).toStream
+        val expr = FSSyntax.ESeq(es.map(_._2): _*)
         val out = evalExpr(in, expr)
-        children.flatMap(t_ => evalTree(out, t_).map({ case (e, t) => (expr >> e, t) }))
+        children.flatMap(t_ => evalTree(out, t_).map({ case (p, e, t) => (path #::: p, expr >> e, t) }))
       }
     }
     val in = initState
@@ -356,21 +389,22 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
         logger.info("Trivially deterministic.")
         true
       }
-      case (out1Expr, out1St) :: rest => {
+      case (path1, out1Expr, out1St) :: rest => {
         val isDet = smt.pushPop {
-          eval(Assert(rest.map(out2 => !stEquals(out1St, out2._2)).or()))
+          eval(Assert(rest.map(out2 => !stEquals(out1St, out2._3)).or()))
           val nondet = smt.checkSat()
           !nondet
         }
         if (!isDet) {
-          rest.find {
-            case (out2Expr, out2St) => {
+          val other = rest.find {
+            case (path2, out2Expr, out2St) => {
               smt.pushPop {
                 eval(Assert(!stEquals(out1St, out2St)))
                 if (smt.checkSat()) {
+                  val badPath = (if (isStateError(out1St)) path1 else path2).toList
+                  diagnostic(badPath, execTree.graph)
                   logger.info("Divergence:")
-                  logger.info(s"$out1Expr\nproduces ${stateFromTerm(out1St)}\nbut$out2Expr\nproduces ${stateFromTerm(out2St)}")
-
+                  logger.info(s"${path1.toList} and ${path2.toList} produce different results")
                   true
                 }
                 else {
