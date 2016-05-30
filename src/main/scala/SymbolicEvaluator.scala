@@ -308,38 +308,34 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     isIdempotent(exprs.foldRight(FSSyntax.ESkip: Expr)((e, expr) => e >> expr))
   }
 
-  def diagnostic(perm: List[FSGraph.Key], graph: FSGraph): Unit = {
-    perm.tails.foreach {
-      case Nil => ()
-      case List(_) => ()
-      case x :: ys => {
-        ys.foreach { y =>
-          val xNode = graph.deps.nodes.get(x)
-          val yNode = graph.deps.nodes.get(y)
-          val descendant = graph.deps.descendants(xNode).contains(yNode)
-          val commutes = graph.exprs(xNode).commutesWith(graph.exprs(yNode))
-          if (!descendant && !commutes) {
-            logger.info(s"Consider adding $y -> $x")
-          }
-        }
-      }
+  def evalTree(in: ST, t: ExecTree): Seq[(Stream[FSGraph.Key], Expr, ST)] = t match {
+    case ExecTree(es, Nil, _) => {
+      val path = es.map(_._1).toStream
+      val expr = FSSyntax.ESeq(es.map(_._2): _*)
+      Seq((path, expr, evalExpr(in, expr)))
+    }
+    case ExecTree(es, children, _) => {
+      val path = es.map(_._1).toStream
+      val expr = FSSyntax.ESeq(es.map(_._2): _*)
+      val out = evalExpr(in, expr)
+      children.flatMap(t_ => evalTree(out, t_).map({ case (p, e, t) => (path #::: p, expr >> e, t) }))
     }
   }
 
-  def isDeter(execTree: ExecTree): Boolean = smt.pushPop {
-    def evalTree(in: ST, t: ExecTree): Seq[(Stream[FSGraph.Key], Expr, ST)] = t match {
-      case ExecTree(es, Nil, _) => {
-        val path = es.map(_._1).toStream
-        val expr = FSSyntax.ESeq(es.map(_._2): _*)
-        Seq((path, expr, evalExpr(in, expr)))
-      }
-      case ExecTree(es, children, _) => {
-        val path = es.map(_._1).toStream
-        val expr = FSSyntax.ESeq(es.map(_._2): _*)
-        val out = evalExpr(in, expr)
-        children.flatMap(t_ => evalTree(out, t_).map({ case (p, e, t) => (path #::: p, expr >> e, t) }))
-      }
-    }
+  /**
+    * Produces {@code None} if {@code execTree} is deterministic.
+    * Otherwise, produces {@code Some(inST, outs)}, where {@code inSt} is the
+    * symbolic state that can be turned into a counter-example that witnesses
+    * non-determinism and {@code outs} is a sequence of tuples that represent
+    * the possible symbolic output states. Each tuple is a
+    * {@code (path, expr, outSt)}, where {@code outSt} is a symbolic output
+    * state and {@code path} is the sequence of resources that go from
+    * {@code in} to {@code outSt}.
+    *
+    * This function leaves commands on the solver stack, so you typically
+    * want to {@code (push)} before the call and {@code (pop)} after it.
+    */
+  def isDeterCore(execTree: ExecTree): Option[(ST, List[(Stream[FSGraph.Key], Expr, ST)])] = {
     val in = initState
     assertPathConsistency(in)
     val outs = evalTree(in, execTree)
@@ -347,7 +343,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       case Nil => throw Unexpected("no possible final state: should never happen")
       case _ :: Nil => {
         logger.info("Trivially deterministic.")
-        true
+        None
       }
       case (path1, out1Expr, out1St) :: rest => {
         val isDet = smt.pushPop {
@@ -355,26 +351,56 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
           val nondet = smt.checkSat()
           !nondet
         }
-        if (!isDet) {
-          val other = rest.find {
-            case (path2, out2Expr, out2St) => {
-              smt.pushPop {
-                eval(Assert(!stEquals(out1St, out2St)))
-                if (smt.checkSat()) {
-                  val badPath = (if (isStateError(out1St)) path1 else path2).toList
-                  diagnostic(badPath, execTree.graph)
-                  logger.info("Divergence:")
-                  logger.info(s"${path1.toList} and ${path2.toList} produce different results")
-                  true
-                }
-                else {
-                  false
-                }
-              }
+        if (isDet) None else Some((in, outs.toList))
+      }
+    }
+  }
+
+  def isDeter(execTree: ExecTree): Boolean = smt.pushPop {
+    isDeterCore(execTree).isEmpty
+  }
+
+  def diagnostic(perm: List[FSGraph.Key], graph: FSGraph): Seq[(FSGraph.Key, FSGraph.Key)] = {
+    perm.tails.flatMap {
+      case Nil => Seq()
+      case List(_) => Seq()
+      case x :: ys => {
+        ys.flatMap { y =>
+          val xNode = graph.deps.nodes.get(x)
+          val yNode = graph.deps.nodes.get(y)
+          val descendant = graph.deps.descendants(xNode).contains(yNode)
+          val commutes = graph.exprs(xNode).commutesWith(graph.exprs(yNode))
+          if (!descendant && !commutes) {
+            Seq((y, x))
+          }
+          else {
+            Seq()
+          }
+        }
+      }
+    }.toSeq
+  }
+
+  def isDeterDiagnostic(execTree: ExecTree): Option[Seq[(FSGraph.Key, FSGraph.Key)]] = smt.pushPop {
+    isDeterCore(execTree) match {
+      case None => None
+      case Some((in, Nil)) => throw Unexpected("caught in inDeterCore")
+      case Some((in, _ :: Nil)) => throw Unexpected("deterministic")
+      case Some((in, (path1, out1Expr, out1St) :: rest)) => {
+        val result = rest.findMap {
+          case (path2, _, out2St) => smt.pushPop {
+            eval(Assert(!stEquals(out1St, out2St)))
+            if (smt.checkSat()) {
+              val badPath = (if (isStateError(out1St)) path1 else path2).toList
+              Some(diagnostic(badPath, execTree.graph))
+            }
+            else {
+              None
             }
           }
         }
-        isDet
+        assert(result.isDefined)
+        result
       }
     }
   }

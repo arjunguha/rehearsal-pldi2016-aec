@@ -39,12 +39,25 @@ object Implicits {
     }
   }
 
+
   implicit class RichList[A](alist: List[A]) {
 
     def spanRight(pred: A => Boolean) = {
       val (suffixRev, prefixRev) = alist.reverse.span(pred)
       (prefixRev.reverse, suffixRev.reverse)
     }
+
+    def findMap[B](f: A => Option[B]): Option[B] = {
+      def loop(xs: List[A]): Option[B] = xs match {
+        case Nil => None
+        case x :: rest => f(x) match {
+          case None => loop(rest)
+          case Some(y) => Some(y)
+        }
+      }
+      loop(alist)
+    }
+
   }
 
   implicit class RichDiGraph[V](graph: Graph[V, DiEdge]) {
