@@ -10,7 +10,7 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite
   import scalax.collection.GraphEdge.DiEdge
   import rehearsal.Implicits._
   import java.nio.file.Paths
-  import SymbolicEvaluator.{predEquals, isIdempotent}
+  import SymbolicEvaluator.{predEquals}
   import PuppetSyntax._
 
   val root = "parser-tests/good"
@@ -21,17 +21,17 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite
 
   test("nfisher-SpikyIRC.pp") {
     val g = parseFile(s"$root/nfisher-SpikyIRC.pp").eval.resourceGraph.fsGraph("centos-6")
-    assert(SymbolicEvaluator.isIdempotent(g))
+    assert(g.expr().isIdempotent())
   }
 
   test("dhoppe-monit.pp") {
     val g = parseFile(s"$root/dhoppe-monit.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isIdempotent(g) == true)
+    assert(g.expr().isIdempotent())
   }
 
   test("dhoppe-monit_BUG.pp") {
     val g = parseFile(s"$root/dhoppe-monit_BUG.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    assert(SymbolicEvaluator.isIdempotent(g) == true)
+    assert(g.expr().isIdempotent())
   }
 
   test("thias-bind.pp") {
@@ -195,8 +195,7 @@ class IdempotenceEvaluationSuite extends org.scalatest.FunSuite
 
   test("small non-idempotent example (in Puppet)"){
     val g = PuppetParser.parseFile(s"$root/non-idempotent.pp").eval.resourceGraph.fsGraph("ubuntu-trusty")
-    isIdempotent(g)
-    assert(isIdempotent(g) == false)
+    assert(g.expr().isIdempotent() == false)
 
   }
 

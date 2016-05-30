@@ -29,34 +29,6 @@ object SymbolicEvaluator {
     result
   }
 
-
-  private def mkImpl(g: FSGraph) = {
-     val sets = ESeq(g.exprs.values.toSeq: _*).fileSets
-     val ro = sets.reads -- sets.writes -- sets.dirs
-    new SymbolicEvaluatorImpl(g.allPaths.toList,
-      g.deps.nodes.map(n => g.exprs(n).hashes).reduce(_ union _),
-      ro)
-  }
-
-  private def foo(g: Graph[Expr, DiEdge]): FSGraph = {
-    val alist = g.nodes.map(n => n.value -> FSGraph.key())
-    val m = alist.toMap
-
-    FSGraph(alist.map({ case (k,v) => (v, k) }).toMap,
-      Graph(g.edges.toList.map(edge => DiEdge(m(edge._1.value), m(edge._2.value))): _*))
-
-  }
-
-  def isIdempotent(g: Graph[Expr, DiEdge]): Boolean = {
-    isIdempotent(foo(g))
-  }
-
-  def isIdempotent(g: FSGraph): Boolean = {
-    val impl = mkImpl(g)
-    val result = impl.isIdempotent(g)
-    impl.free()
-    result
-  }
 }
 
 case class ST(isErr: Term, paths: Map[Path, Term])
