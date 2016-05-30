@@ -146,7 +146,7 @@ case class FSGraph(exprs: Map[FSGraph.Key, FSSyntax.Expr], deps: Graph[FSGraph.K
     }
     val m = r.allPaths.size
     logger.info(s"Pruning removed ${n - m} paths")
-    r
+    DeterminismPruning.pruneWrites(r)
   }
 
   /** All paths used by the nodes of this graph. */
