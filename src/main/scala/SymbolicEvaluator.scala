@@ -12,8 +12,7 @@ import scala.util.{Failure, Success, Try}
 import CommandsResponses._
 import java.nio.file.Paths
 
-import FSSyntax.{ESeq, Expr}
-import rehearsal.{FSSyntax => F}
+import FSSyntax._
 import rehearsal.Implicits._
 import rehearsal.PuppetSyntax.ResourceGraph
 
@@ -22,7 +21,7 @@ import scalax.collection.GraphEdge.DiEdge
 
 object SymbolicEvaluator {
 
-  def predEquals(a: F.Pred, b: F.Pred): Boolean = {
+  def predEquals(a: Pred, b: Pred): Boolean = {
     val impl = new SymbolicEvaluatorImpl((a.readSet union b.readSet).toList, Set(), Set())
     val result = impl.predEquals(a, b)
     impl.free()
@@ -138,24 +137,24 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       (!st1.isErr && !st2.isErr && writablePaths.map(p => Equals(st1.paths(p), st2.paths(p))).and())
   }
 
-  def evalPred(st: ST, pred: F.Pred): Term = pred match {
-    case F.PTrue => true.term
-    case F.PFalse => false.term
-    case F.PNot(a) => !evalPred(st, a)
-    case F.PAnd(a, b) => evalPred(st, a) && evalPred(st, b)
-    case F.POr(a, b) => evalPred(st, a) || evalPred(st, b)
-    case F.PTestFileState(p, F.IsDir) => Equals(st.paths(p), "IsDir".id)
-    case F.PTestFileState(p, F.IsEmptyDir) => {
+  def evalPred(st: ST, pred: Pred): Term = pred match {
+    case PTrue => true.term
+    case PFalse => false.term
+    case PNot(a) => !evalPred(st, a)
+    case PAnd(a, b) => evalPred(st, a) && evalPred(st, b)
+    case POr(a, b) => evalPred(st, a) || evalPred(st, b)
+    case PTestFileState(p, IsDir) => Equals(st.paths(p), "IsDir".id)
+    case PTestFileState(p, IsEmptyDir) => {
       val children = childrenOf(p).map(p => st.paths(p))
       Equals(st.paths(p), "IsDir".id) &&
       children.map(p => Equals(p,"DoesNotExist".id)).and()
     }
-    case F.PTestFileState(p, F.DoesNotExist) => Equals(st.paths(p), "DoesNotExist".id)
-    case F.PTestFileState(p, F.IsFile) =>
+    case PTestFileState(p, DoesNotExist) => Equals(st.paths(p), "DoesNotExist".id)
+    case PTestFileState(p, IsFile) =>
       FunctionApplication("is-IsFile".id, Seq(st.paths(p)))
   }
 
-  def predEquals(a: F.Pred, b: F.Pred): Boolean = smt.pushPop {
+  def predEquals(a: Pred, b: Pred): Boolean = smt.pushPop {
     val st = initState
      eval(Assert(!Equals(evalPred(st, a), evalPred(st, b))))
     !smt.checkSat()
@@ -166,10 +165,10 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       writablePaths.map(p => (p, ite(b, st1.paths(p), st2.paths(p)))).toMap ++ readOnlyMap)
   }
 
-  def evalExpr(st: ST, expr: F.Expr): ST = expr match {
-    case F.ESkip => st
-    case F.EError => ST(true.term, st.paths)
-    case F.ESeq(p, q) => //evalExpr(evalExpr(st, p), q)
+  def evalExpr(st: ST, expr: Expr): ST = expr match {
+    case ESkip => st
+    case EError => ST(true.term, st.paths)
+    case ESeq(p, q) => //evalExpr(evalExpr(st, p), q)
     {
       val stInter = evalExpr(st, p)
       val isErr = freshName("isErr")
@@ -178,7 +177,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       eval(Assert(Equals(stInter.isErr, stInter1.isErr)))
       evalExpr(stInter1, q)
     }
-    case F.EIf(a, e1, e2) => {
+    case EIf(a, e1, e2) => {
       val st1 = evalExpr(st, e1)
       val st2 = evalExpr(st, e2)
       val b = freshName("b")
@@ -190,20 +189,20 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       ST(isErr.id,
         writablePaths.map(p => (p, ite(b.id, st1.paths(p), st2.paths(p)))).toMap ++ readOnlyMap)
     }
-    case F.ECreateFile(p, h) => {
+    case ECreateFile(p, h) => {
       assert(readOnlyPaths.contains(p) == false)
       val pre = Equals(st.paths(p), "DoesNotExist".id) && Equals(st.paths(p.getParent), "IsDir".id)
       ST(st.isErr ||  !pre,
         st.paths + (p -> FunctionApplication("IsFile".id, Seq(hashToZ3(h)))))
     }
-    case F.EMkdir(p) => {
+    case EMkdir(p) => {
       assert(readOnlyPaths.contains(p) == false,
         s"Mkdir($p) found, but path is read-only")
       val pre = Equals(st.paths(p), "DoesNotExist".id) && Equals(st.paths(p.getParent), "IsDir".id)
       ST(st.isErr || !pre,
         st.paths + (p -> "IsDir".id))
     }
-    case F.ERm(p) => {
+    case ERm(p) => {
       assert(readOnlyPaths.contains(p) == false)
       // TODO(arjun): May not need to check all descendants. It should be enough
       // to check if immediate children do not exist.
@@ -214,7 +213,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       ST(st.isErr || !pre,
         st.paths + (p -> "DoesNotExist".id))
     }
-    case F.ECp(src, dst) => {
+    case ECp(src, dst) => {
       assert(readOnlyPaths.contains(dst) == false)
       val pre = FunctionApplication("is-IsFile".id, Seq(st.paths(src))) &&
         Equals(st.paths(dst.getParent), "IsDir".id) &&
@@ -257,7 +256,7 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  def exprEquals(e1: F.Expr, e2: F.Expr): Option[State] = smt.pushPop {
+  def exprEquals(e1: Expr, e2: Expr): Option[State] = smt.pushPop {
     // TODO(arjun): Must rule out error as the initial state
     val st = initState
     assertPathConsistency(st)
