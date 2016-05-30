@@ -49,7 +49,6 @@ object FSGraph {
 
   trait Key
   case class Unlabelled private[FSGraph](index: Int) extends Key
-  case class Derived private[FSGraph](src: Key, index: Int, label: String) extends Key
 
   private var i = 0
 
@@ -57,12 +56,6 @@ object FSGraph {
     val n = i
     i = i + 1
     Unlabelled(n)
-  }
-
-  def derived(src: Key, label: String): Key = {
-    val n = i
-    i = i + 1
-    Derived(src, n, label)
   }
 
 }
