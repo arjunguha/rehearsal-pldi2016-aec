@@ -123,10 +123,8 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
   }
   val initState = freshST()
 
-
   val reverseMap = initState.paths.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
   val reverseHash = hashToZ3.map(x => (x._2.asInstanceOf[QualifiedIdentifier].id.symbol.name, x._1))
-
 
   // Ensures that all paths in st form a proper directory tree. If we assert
   // this for the input state and all operations preserve directory-tree-ness,
@@ -255,14 +253,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     }
   }
 
-  def exprAsPred(st: ST, expr: F.Expr): Term = expr match {
-    case F.ESkip => true.term
-    case F.EError => false.term
-    case F.ESeq(p, q) => exprAsPred(st, p) && exprAsPred(st, q)
-    case F.EIf(a, e1, e2) => ite(evalPred(st, a), exprAsPred(st, e1), exprAsPred(st, e2))
-    case _ => throw Unexpected(s"exprAsPred got $expr")
-  }
-
   def fstateFromTerm(term: Term): Option[FSEvaluator.FState] = term match {
     case QualifiedIdentifier(Identifier(SSymbol("IsDir"), _), _) => Some(FSEvaluator.FDir)
     case FunctionApplication(QualifiedIdentifier(Identifier(SSymbol("IsFile"), _), _), Seq(h)) =>
@@ -364,7 +354,6 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
       }
     }
   }
-
 
   def isDeter(execTree: ExecTree): Boolean = smt.pushPop {
     def evalTree(in: ST, t: ExecTree): Seq[(Stream[FSGraph.Key], Expr, ST)] = t match {
