@@ -166,15 +166,18 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
                       Node("file", "/usr/") ~> Node("file", "/usr/rian/")))
   }
 
-  test("eval-expandAll: no arguments") {
+  test("expand twice") {
     val prog = """
+      define hello($a) {
+        file{$a: }
+      }
 			define fun(){
-				hello { "foo": a => "b" }
+				hello { "foo": a => "the-filename" }
 			}
 			fun { 'i': }"""
     val EvaluatedManifest(r, g) = parse(prog).eval()
     assert(r.size == 1)
-    assert(g == Graph(Node("hello", "foo")))
+    assert(g == Graph(Node("file", "the-filename")))
   }
 
   test("Simple cron job") {
@@ -224,6 +227,14 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
 			}
 		"""
 		assert(parse(prog).eval() == parse(res).eval())
+  }
+
+  test("array of titles") {
+
+    val prog = """
+      file{[ "/x", "/y", "/z" ]: ensure => present }
+      """
+    assert(parse(prog).eval.ress.size == 3)
   }
 
 }

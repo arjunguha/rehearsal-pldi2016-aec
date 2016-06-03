@@ -39,6 +39,20 @@ object Implicits {
     }
   }
 
+  implicit class RichSeq[A](aseq: Seq[A]) {
+    def sliding2(): Iterator[(A, A)] = {
+      // .sliding(2) produces List(x) and Nil if the list is too small!
+      if (aseq.length < 2) {
+        Iterator.empty
+      }
+      else {
+        aseq.sliding(2).map({
+          case List(x, y) => (x, y)
+        })
+      }
+    }
+  }
+
 
   implicit class RichList[A](alist: List[A]) {
 
@@ -57,6 +71,7 @@ object Implicits {
       }
       loop(alist)
     }
+
 
   }
 

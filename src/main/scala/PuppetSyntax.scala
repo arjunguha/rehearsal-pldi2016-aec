@@ -103,8 +103,11 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
     val node: FSGraph.Key = Node(typ, title)
   }
 
+  val primTypes =  Set("file", "package", "user", "group", "service",
+    "ssh_authorized_key", "augeas", "notify", "cron", "host")
+
   case class Node(typ: String, title: String) extends FSGraph.Key {
-    lazy val isPrimitiveType = PuppetEval.primTypes.contains(typ)
+    lazy val isPrimitiveType = primTypes.contains(typ)
   }
 
   case class ResourceGraph(ress: Map[FSGraph.Key, ResourceModel.Res], deps: Graph[FSGraph.Key, DiEdge]) {
