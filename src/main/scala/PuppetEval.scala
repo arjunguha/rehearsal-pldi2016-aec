@@ -385,9 +385,13 @@ private object PuppetEval {
       }
       case MInclude(titles) => {
         for (title <- titles.map(e => evalTitle(store, e))) {
-          val res = resourceToTerm(Node("class", title))
-          val anInstance = AInstance("class", title, Map(), res)
-          newInstances.push(anInstance)
+          val node = Node("class", title)
+          if (definedResources.contains(node) == false) {
+            definedResources += node
+            val res = resourceToTerm(Node("class", title))
+            val anInstance = AInstance("class", title, Map(), res)
+            newInstances.push(anInstance)
+          }
         }
       }
       case MApp("fail", Seq(str)) => evalExpr(store, str) match {

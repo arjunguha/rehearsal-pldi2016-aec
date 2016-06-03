@@ -57,6 +57,9 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
 
 	test("eval-expandAll 1") {
 		val prog = """
+      define foo {
+        file{"foofile": }
+      }
 			define fun($a, $b){
 				foo { '/home':
 					require => $a,
@@ -71,12 +74,20 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
 			file{"B": }"""
 		val EvaluatedManifest(r, g) = parse(prog).eval()
 		assert(r.size == 3)
-		assert(g == Graph(Node("file", "A") ~> Node("foo", "/home"),
-		                 Node("foo", "/home") ~> Node("file", "B")))
+		assert(g == Graph(Node("file", "A") ~> Node("file", "foofile"),
+		                 Node("file", "foofile") ~> Node("file", "B")))
 	}
 
   test("expandAll: 2 defines") {
     val prog = """
+      define foo {
+        file{"foofile": }
+      }
+
+      define bar {
+        file{"barfile": }
+      }
+
 			define funOne($a, $b){
 				foo { "1":
 					require => $a,
@@ -95,9 +106,9 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
 			file { "banana": }"""
     val EvaluatedManifest(r, g) = parse(prog).eval()
     assert(r.size == 4)
-    assert(g == Graph(Node("file", "apple") ~> Node("foo", "1"),
-                      Node("foo", "1") ~> Node("file", "banana"),
-                      Node("bar", "2")))
+    assert(g == Graph(Node("file", "apple") ~> Node("file", "foofile"),
+                      Node("file", "foofile") ~> Node("file", "banana"),
+                      Node("file", "barfile")))
   }
 
   test("expandAll - 2 instances") {
