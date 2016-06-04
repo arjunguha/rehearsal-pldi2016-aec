@@ -1,5 +1,6 @@
 class SymbolicEvaluatorTests extends FunSuitePlus {
 
+  import edu.umass.cs.extras.Implicits._
   import rehearsal._
   import TestImplicits._
   import FSSyntax._

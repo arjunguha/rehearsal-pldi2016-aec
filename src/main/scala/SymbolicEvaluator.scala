@@ -1,5 +1,6 @@
 package rehearsal
 
+import edu.umass.cs.extras.Implicits._
 import FSEvaluator._
 import smtlib.theories.Core.{BoolSort, Equals}
 import edu.umass.cs.smtlib._

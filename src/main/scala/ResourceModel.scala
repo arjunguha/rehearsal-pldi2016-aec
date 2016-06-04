@@ -2,11 +2,12 @@ package rehearsal
 
 object ResourceModel {
 
-  import java.nio.file.{Paths}
+  import java.nio.file.Paths
   import scala.collection.immutable.Set
   import FSSyntax._
   import rehearsal.Implicits._
   import scalaj.http.Http
+  import edu.umass.cs.extras.Implicits._
 
   sealed trait Content
   case class CInline(src: String) extends Content
@@ -142,7 +143,8 @@ object ResourceModel {
     case Package(name, true) => {
 
       val paths = queryPackage(distro, name).getOrElse(throw PackageNotFound(distro, name))
-      val dirs = paths.map(_.ancestors()).reduce(_ union _) - root -- Settings.assumedDirs.toSet
+      // HACK: Why doesn't the .ancestors implicit method work?
+      val dirs = paths.map(p => new edu.umass.cs.extras.Implicits.RichPath(p).ancestors().toSet).reduce(_ union _) - root -- Settings.assumedDirs.toSet
       val files = paths -- dirs
 
       val mkdirs = dirs.toSeq.sortBy(_.getNameCount)

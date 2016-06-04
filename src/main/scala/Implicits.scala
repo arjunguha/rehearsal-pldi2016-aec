@@ -13,11 +13,6 @@ object Implicits {
 
   implicit def stringToPath(str: String): Path = Paths.get(str)
 
-  implicit class RichString(str: String) {
-
-    def toPath = Paths.get(str)
-  }
-
   implicit def extractString = new Extractor[PuppetSyntax.Expr, String] {
     import PuppetSyntax._
 
@@ -37,42 +32,6 @@ object Implicits {
       case EBool(b) => Some(b)
       case _ => None
     }
-  }
-
-  implicit class RichSeq[A](aseq: Seq[A]) {
-    def sliding2(): Iterator[(A, A)] = {
-      // .sliding(2) produces List(x) and Nil if the list is too small!
-      if (aseq.length < 2) {
-        Iterator.empty
-      }
-      else {
-        aseq.sliding(2).map({
-          case List(x, y) => (x, y)
-        })
-      }
-    }
-  }
-
-
-  implicit class RichList[A](alist: List[A]) {
-
-    def spanRight(pred: A => Boolean) = {
-      val (suffixRev, prefixRev) = alist.reverse.span(pred)
-      (prefixRev.reverse, suffixRev.reverse)
-    }
-
-    def findMap[B](f: A => Option[B]): Option[B] = {
-      def loop(xs: List[A]): Option[B] = xs match {
-        case Nil => None
-        case x :: rest => f(x) match {
-          case None => loop(rest)
-          case Some(y) => Some(y)
-        }
-      }
-      loop(alist)
-    }
-
-
   }
 
   implicit class RichDiGraph[V](graph: Graph[V, DiEdge]) {
@@ -165,25 +124,6 @@ object Implicits {
         }
       }
       loop(path.getParent(), Set())
-    }
-
-  }
-
-  implicit class RichMap[A,B](self: Map[A, B]) {
-
-    def combine[C, D](other: Map[A, C])(f: (Option[B], Option[C]) => Option[D]) = {
-      val keys = self.keySet ++ other.keySet
-      keys.foldLeft(Map[A,D]())({ case (map, k) =>
-        f(self.get(k), other.get(k)) match {
-          case None => map
-          case Some(v) => map + (k -> v)
-        }
-      })
-    }
-
-    def mapIf(pred: A => Boolean, f: B => B): Map[A, B] = {
-      def folder(acc: Map[A, B], k: A) = acc + (k -> f(acc(k)))
-      self.keys.filter(pred).foldLeft(self)(folder)
     }
 
   }

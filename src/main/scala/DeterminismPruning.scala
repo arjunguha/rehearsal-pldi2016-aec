@@ -2,6 +2,7 @@ package rehearsal
 
 object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
 
+  import edu.umass.cs.extras.Implicits._
   import FSSyntax._
   import Implicits._
 
@@ -83,13 +84,10 @@ object DeterminismPruning extends com.typesafe.scalalogging.LazyLogging   {
 
   def join2(branching: Set[Path], s1: Map[Path,(Set[Path], TrivialStatus)],
             s2: Map[Path,(Set[Path], TrivialStatus)]): Map[Path,(Set[Path], TrivialStatus)] = {
-    s1.combine(s2) {
-      case (None, None) => throw Unexpected("Should never happen")
-      case (Some((set, x)), None) => Some((branching union set, x))
-      case (None, Some((set, x))) => Some((branching union set, x))
-
-      case (Some((set1, x)), Some((set2, y))) => if (x == y) Some((set1 union set2, x)) else Some((Set(), Unknown))
-    }
+    s1.combine(s2)(
+      { case ((set1, x), (set2, y)) => if (x == y) (set1 union set2, x) else (Set(), Unknown) },
+      { case (set, x) => (branching union set, x) },
+      { case (set, x) => (branching union set, x) })
   }
 
   def trivialStatus2(expr: Expr): Map[Path, (Set[Path], TrivialStatus)] = expr match {

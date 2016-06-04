@@ -2,7 +2,54 @@ package rehearsal
 
 object Datalog {
 
-  import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
+  import edu.umass.cs.extras.Implicits._
+  import rehearsal.Implicits._
+
+  trait DatalogImpl {
+    def eval(assertions: List[Assertion]): List[Fact]
+  }
+
+  object RacketDatalog extends DatalogImpl {
+    def eval(assertions: List[Assertion]): List[Fact] = {
+      import java.nio.file.{Paths, Files}
+      import sys.process._
+      val db = Files.createTempFile("datalog", ".rkt")
+      val dbString = "#lang datalog\n" + assertions.mkString("\n")
+      Files.write(db, dbString.getBytes())
+      val facts = Seq("racket", db.toString).lineStream.mkString("\n")
+      Files.deleteIfExists(db)
+      Parser.parseAll(Parser.facts, facts) match {
+        case Parser.Success(facts, _) => facts
+        case Parser.NoSuccess(msg, _) => throw Unexpected(msg.toString)
+      }
+    }
+  }
+
+  /** Starts much faster than {@code RacketDatalog}. Available at
+    * https://sourceforge.net/projects/datalog/.
+    */
+  object MitreDatalog extends DatalogImpl {
+    def eval(assertions: List[Assertion]): List[Fact] = {
+      val pb = new ProcessBuilder("./datalog")
+      pb.redirectInput(ProcessBuilder.Redirect.PIPE)
+      pb.redirectOutput(ProcessBuilder.Redirect.PIPE)
+      pb.redirectErrorStream(true);
+      val proc = pb.start()
+      proc.getOutputStream().writeAllLines(assertions.map(_.toString)).close()
+      // First line says "Datalog 2.5"
+      val results = proc.getInputStream().readAllLines().drop(1)
+      val code = proc.waitFor()
+      assert(code == 0, s"Exit code $code")
+
+      Parser.parseAll(Parser.facts, results.mkString("\n")) match {
+        case Parser.Success(facts, _) => facts
+        case Parser.NoSuccess(msg, _) => {
+          println(results)
+          throw Unexpected(msg.toString)
+        }
+      }
+    }
+  }
 
   private val illegalIdentifierChars = List(':', '(', '`', '\'', ')', '=', ':',
     '.',  '~', '?', '\"', '%', ' ')
@@ -48,9 +95,12 @@ object Datalog {
     override def toString(): String = fact.toString + "?"
   }
 
+  import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
+
   private object Parser extends RegexParsers with PackratParsers {
 
-    lazy val id: PackratParser[String] = """[0-9a-z]([0-9a-zA-Z_])*""".r ^^ identity
+    lazy val id: PackratParser[String] =
+      """[0-9a-z]([0-9a-zA-Z_])*""".r ^^ identity
 
     lazy val term: PackratParser[Term] = (
       id ^^ { x => Lit(x) }
@@ -64,20 +114,6 @@ object Datalog {
     lazy val facts: PackratParser[List[Fact]] = rep(fact)
   }
 
-  /** Produces a list of ground facts. */
-  def eval(assertions: List[Assertion]): List[Fact] = {
-    import java.nio.file.{Paths, Files}
-    import sys.process._
-    val db = Files.createTempFile("datalog", ".rkt")
-    val dbString = "#lang datalog\n" + assertions.mkString("\n")
-    Files.write(db, dbString.getBytes())
-    val facts = Seq("racket", db.toString).lineStream.mkString("\n")
-    Files.deleteIfExists(db)
-    Parser.parseAll(Parser.facts, facts) match {
-      case Parser.Success(facts, _) => facts
-      case Parser.NoSuccess(msg, _) => throw new Exception(msg.toString)
-    }
-  }
 
   class ToTerm[A](prefix: String) {
     private val map = scala.collection.mutable.Map[A, Datalog.Term]()
@@ -113,33 +149,26 @@ object Datalog {
   class Evaluator() {
     private var assertions = List[Assertion]()
 
+    var haveQuery = false
     def fact(pred: String, terms: List[Term]): Unit = {
+      assert(haveQuery == false)
       assertions = GroundFact(Fact(pred, terms)) :: assertions
     }
 
     def query(fact: Fact): Unit = {
+      haveQuery = true
       assertions = Query(fact) :: assertions
     }
 
     def rule(head: Fact, body: List[Fact]): Unit = {
+      assert(haveQuery == false)
       assertions = Rule(head, body) :: assertions
     }
 
     def eval(): List[Fact] = {
-      import java.nio.file.{Paths, Files}
-      import sys.process._
-      val db = Files.createTempFile("datalog", ".rkt")
-      val dbString = "#lang datalog\n" + assertions.reverse.mkString("\n")
-      // println(dbString)
-      Files.write(db, dbString.getBytes())
-      val facts = Seq("racket", db.toString).lineStream.mkString("\n")
-      Files.deleteIfExists(db)
-      Parser.parseAll(Parser.facts, facts) match {
-        case Parser.Success(facts, _) => facts
-        case Parser.NoSuccess(msg, _) => throw new Exception(msg.toString)
-      }
+      val impl: DatalogImpl = MitreDatalog
+      impl.eval(assertions.reverse)
     }
-
 
   }
 

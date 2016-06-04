@@ -5,6 +5,7 @@ private object PuppetEval {
   import PuppetSyntax._
   import scalax.collection.Graph
   import scalax.collection.GraphEdge.DiEdge
+  import edu.umass.cs.extras.Implicits._
   import Implicits._
 
   object StringInterpolator {
@@ -452,12 +453,10 @@ private object PuppetEval {
         val store = {
           val withArgs = interStore ++ args
           val avars = assignedVars(body)
-           withArgs.combine(avars.map(name => name -> name).toMap) {
-            case (Some(parent), None) => Some(new Ref(parent.name, Some(parent)))
-            case (Some(enclosing), Some(local)) => Some(new Ref(local, Some(enclosing)))
-            case (None, None) => throw Unexpected("should not happen")
-            case (None, Some(local)) => Some(new Ref(local, None))
-          }
+           withArgs.combine(avars.map(name => name -> name).toMap)(
+             (enclosing, local) => new Ref(local, Some(enclosing)),
+             parent => new Ref(parent.name, Some(parent)),
+             local => new Ref(local, None))
         }
         evalManifest(store, instance, body)
       }
@@ -506,7 +505,6 @@ private object PuppetEval {
     if (g.isAcyclic == false) {
       throw EvalError("dependency cycle found")
     }
-    // println(resourceToTerm)
     EvaluatedManifest(resources, g)
   }
 

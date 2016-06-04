@@ -2,6 +2,7 @@ package rehearsal
 
 object Commutativity {
 
+  import edu.umass.cs.extras.Implicits._
   import Implicits._
   import FSSyntax._
 
@@ -40,12 +41,8 @@ object Commutativity {
     }
 
     def join(other: St): St = {
-      new St(this.map.combine(other.map) {
-        case (None, Some(x)) => Some(x)
-        case (Some(x), None) => Some(x)
-        case (Some(x), Some(y)) => Some(x.join(y))
-        case (None, None) => throw Unexpected("should not happen")
-      })
+      new St(this.map.combine(other.map)(
+        (x, y) => x.join(y), identity, identity))
     }
 
     def +(kv: (Path, V)): St = {

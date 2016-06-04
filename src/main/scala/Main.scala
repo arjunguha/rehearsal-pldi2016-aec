@@ -2,6 +2,7 @@ package rehearsal
 
 object Main extends App {
 
+  import edu.umass.cs.extras.Implicits._
   import scala.concurrent._
   import scala.concurrent.duration._
   import ExecutionContext.Implicits.global
