@@ -102,7 +102,7 @@ object Datalog {
       assert(map.contains(oldKey) == true)
       val term = map(oldKey)
       map += newKey -> term
-      invertMap += term -> newKey
+      // No need to add to invertMap
     }
 
     def invert(term: Datalog.Term): A = invertMap(term)
