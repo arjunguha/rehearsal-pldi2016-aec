@@ -127,6 +127,8 @@ private object PuppetEval {
     val valueToTerm = new Datalog.ToTerm[Expr]("value")
     val datalog = new Datalog.Evaluator()
 
+    val nodeSets: Iterator[Datalog.Term] = Stream.from(0).map(n => Datalog.Lit(s"set$n")).iterator
+
     // A hack to implement the defined predicate
     val definedResources = scala.collection.mutable.Set[Node]()
 
@@ -255,10 +257,15 @@ private object PuppetEval {
       case _ => throw EvalError(s"expected resource reference, got $e ${e.pos}")
     }
 
-    def evalResource(store: Store, instance: Datalog.Term, resource: Resource): List[Datalog.Term] = {
+
+    def evalResource(store: Store, instance: Datalog.Term, resource: Resource): Datalog.Term = {
+      val set = nodeSets.next()
       resource match {
-        case ResourceRef(typ, titleExpr, Seq()) =>
-          List(resourceToTerm(Node(typ.toLowerCase, evalTitle(store, titleExpr))))
+        case ResourceRef(typ, titleExpr, Seq()) => {
+          datalog.fact("in_set", List(set, resourceToTerm(Node(typ.toLowerCase, evalTitle(store, titleExpr)))))
+          set
+        }
+        case RCollector(typ, pred) => ???
         case ResourceDecl(typ, alist) => {
           val alist_ = alist.flatMap({ case (titleExpr, attrs) =>
             evalTitles(store, titleExpr).map(title => title -> attrs) })
@@ -269,8 +276,10 @@ private object PuppetEval {
             }
             definedResources += node
             val res = resourceToTerm(node)
+            datalog.fact("in_set", List(set, res))
             val attrValues = attrs.map(attr => attr.name.value[String].get -> evalExpr(store, attr.value)).toMap
             datalog.fact("type", List(res, valueToTerm(EStr(typ))))
+
             for ((name, value) <- attrValues) {
               name match {
                 case "alias" => {
@@ -324,7 +333,7 @@ private object PuppetEval {
               newInstances.push(anInstance)
             }
           }
-          alist_.map({ case (title, _) => resourceToTerm(Node(typ, title)) }).toList
+          set
         }
       }
     }
@@ -339,13 +348,10 @@ private object PuppetEval {
       }
       case MResources(resources) => {
         val aseq = resources.map(r => evalResource(store, instance, r))
-
-        for ((srcs, dsts) <- aseq.sliding2) {
-          for (src <- srcs) {
-            for (dst <- dsts) {
-              datalog.fact("edge", List(src, dst))
-            }
-          }
+        for ((src, dst) <- aseq.sliding2) {
+          datalog.rule(Fact("edge", List(Var("Src"), Var("Dst"))),
+            List(Fact("in_set", List(src, Var("Src"))),
+                 Fact("in_set", List(dst, Var("Dst")))))
         }
       }
       case MDefine(f, args, body) => {
