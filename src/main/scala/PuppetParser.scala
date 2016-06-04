@@ -180,7 +180,8 @@ private class PuppetParser extends RegexParsers with PackratParsers {
   }
 
   lazy val rexprAtom: P[RExpr] = positioned {
-    attributeName ~ "=" ~ rexprRhs ^^ { case lhs ~ _ ~ rhs => REAttrEqual(lhs, rhs) }
+    "(" ~ rexpr ~ ")" ^^ { case _ ~ e ~ _ => e } |
+    attributeName ~ "=" ~ rexprRhs ^^ { case lhs ~ _ ~ rhs => REAttrEqual(lhs, rhs) } |
     attributeName ~ "!=" ~ rexprRhs ^^ { case lhs ~ _ ~ rhs => RENot(REAttrEqual(lhs, rhs)) }
   }
 

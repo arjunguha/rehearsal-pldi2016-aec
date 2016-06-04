@@ -257,6 +257,23 @@ private object PuppetEval {
       case _ => throw EvalError(s"expected resource reference, got $e ${e.pos}")
     }
 
+    def evalRExpr(set: Datalog.Term, pred: RExpr): List[Datalog.Fact] = pred match {
+       // NOTE: The value does not need to be evaluated, since they are restricted
+       // to being syntactic values.
+      case REAttrEqual(attr, value) =>
+        List(Fact("attribute", List(Var("X"), valueToTerm(EStr(attr)), valueToTerm(value))))
+      case REAnd(e1, e2) => evalRExpr(set, e1) ++ evalRExpr(set, e2)
+      case REOr(e1, e2) => {
+        val newSet = nodeSets.next()
+        datalog.rule(Fact("in_set", List(newSet, Var("X"))),
+          evalRExpr(newSet, e1))
+        datalog.rule(Fact("in_set", List(newSet, Var("X"))),
+          evalRExpr(newSet, e2))
+        List(Fact("in_set", List(newSet, Var("X"))))
+      }
+      // TODO(arjun): Negation, yuck
+      case RENot(_) => ???
+    }
 
     def evalResource(store: Store, instance: Datalog.Term, resource: Resource): Datalog.Term = {
       val set = nodeSets.next()
@@ -265,7 +282,13 @@ private object PuppetEval {
           datalog.fact("in_set", List(set, resourceToTerm(Node(typ.toLowerCase, evalTitle(store, titleExpr)))))
           set
         }
-        case RCollector(typ, pred) => ???
+        case RCollector(typ, pred) => {
+          // TODO(arjun): Propagate type to keep sub-sets small?
+          datalog.rule(Fact("in_set", List(set, Var("X"))),
+              Fact("type", List(Var("X"), valueToTerm(EStr(typ.toLowerCase)))) ::
+              evalRExpr(set, pred))
+          set
+        }
         case ResourceDecl(typ, alist) => {
           val alist_ = alist.flatMap({ case (titleExpr, attrs) =>
             evalTitles(store, titleExpr).map(title => title -> attrs) })

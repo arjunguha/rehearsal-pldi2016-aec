@@ -241,11 +241,66 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
   }
 
   test("array of titles") {
-
     val prog = """
       file{[ "/x", "/y", "/z" ]: ensure => present }
       """
     assert(parse(prog).eval.ress.size == 3)
   }
+
+  test("resource collector (simple)") {
+    val prog ="""
+      File<| owner = 'arjun' |> -> User['arjun']
+
+      user{"arjun": }
+      file{"/home/arjun/x": owner => arjun }
+      file{"/home/arjun/y": owner => arjun }
+      """
+    val deps = parse(prog).eval.deps
+    assert(deps.contains(Node("file", "/home/arjun/x") ~> Node("user", "arjun")))
+    assert(deps.contains(Node("file", "/home/arjun/y") ~> Node("user", "arjun")))
+    assert(deps.edges.size == 2)
+  }
+
+  test("resource collector (conjunction)") {
+    val prog ="""
+      File<| owner = 'arjun' and mode = 0600 |> -> User['arjun']
+
+      user{"arjun": }
+      file{"/home/arjun/x": owner => arjun, mode => 0600 }
+      file{"/home/arjun/y": owner => arjun }
+              """
+    val deps = parse(prog).eval.deps
+    assert(deps.contains(Node("file", "/home/arjun/x") ~> Node("user", "arjun")))
+    assert(deps.edges.size == 1)
+  }
+
+  test("resource collector (disjunction)") {
+    val prog ="""
+      File<| owner = 'arjun' or owner = 'rachit' |> -> User['arjun']
+
+      user{"arjun": }
+      file{"/home/arjun/x": owner => arjun }
+      file{"/home/arjun/y": owner => rachit }
+              """
+    val deps = parse(prog).eval.deps
+    assert(deps.contains(Node("file", "/home/arjun/x") ~> Node("user", "arjun")))
+    assert(deps.contains(Node("file", "/home/arjun/y") ~> Node("user", "arjun")))
+    assert(deps.edges.size == 2)
+  }
+
+  test("resource collector (nested)") {
+    val prog = """
+      File<| (owner = 'arjun' or owner = 'rachit') and mode = 0600 |> -> User['arjun']
+
+      user{"arjun": }
+      file{"/home/arjun/x": owner => arjun }
+      file{"/home/arjun/y": owner => rachit, mode => 0600 }
+    """
+    val deps = parse(prog).eval.deps
+    assert(deps.contains(Node("file", "/home/arjun/y") ~> Node("user", "arjun")))
+    assert(deps.edges.size == 1)
+  }
+
+
 
 }
