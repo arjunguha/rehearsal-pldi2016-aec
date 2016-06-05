@@ -343,18 +343,7 @@ class SymbolicEvaluatorTests extends FunSuitePlus {
                   """
     val g = PuppetParser.parse(program).eval().resourceGraph().fsGraph("ubuntu-trusty")
     val exprs = g.exprs.values.toArray
-    assert(false == g.toExecTree().isDeterministic())
-  }
-
-  test("blah") {
-    val program = """
-      file {'/foo': ensure => directory}
-      file {'/foo/bar': ensure => file, before => File['/etc/foo'] }
-      file {'/etc/foo': ensure => file}
-                  """
-    val g = PuppetParser.parse(program).eval.resourceGraph
-      .fsGraph("ubuntu-trusty")
-    assert(false == g.toExecTree().isDeterministic())
+    assert(true == g.toExecTree().isDeterministic())
   }
 
   test("slicing regression: thias-bind-buggy") {
@@ -414,14 +403,14 @@ class SymbolicEvaluatorTests extends FunSuitePlus {
     comprehensiveIsDet(m)
   }
 
-  test("missing dependency between file and directory") {
+  test("missing dependency between file and directory (autorequire)") {
     val m = PuppetParser.parse("""
       file{"/dir": ensure => directory }
 
       file{"/dir/file": ensure => present}
       """).eval().resourceGraph().fsGraph("centos-6")
 
-    assert(comprehensiveIsDet(m) == false)
+    assert(comprehensiveIsDet(m) == true)
   }
 
   test("pdurbin-java-jpa reduced") {

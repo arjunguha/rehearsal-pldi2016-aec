@@ -262,15 +262,15 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
   }
 
   test("resource collector (conjunction)") {
-    val prog ="""
-      User['arjun'] -> File<| owner = 'arjun' and mode = 0600 |>
+    val prog = """
+      User['arjunx'] -> File<| owner = 'arjun' and mode = 0600 |>
 
-      user{"arjun": }
+      user{"arjunx": }
       file{"/home/arjun/x": owner => arjun, mode => 0600 }
       file{"/home/arjun/y": owner => arjun }
               """
     val deps = parse(prog).eval.deps
-    assert(deps.contains(Node("user", "arjun") ~>Node("file", "/home/arjun/x") ))
+    assert(deps.contains(Node("user", "arjunx") ~>Node("file", "/home/arjun/x") ))
     assert(deps.edges.size == 1)
   }
 
@@ -290,14 +290,14 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
 
   test("resource collector (nested)") {
     val prog = """
-      User['arjun'] -> File<| (owner = 'arjun' or owner = 'rachit') and mode = 0600 |>
+      User['arjunx'] -> File<| (owner = 'arjun' or owner = 'rachit') and mode = 0600 |>
 
-      user{"arjun": }
+      user{"arjunx": }
       file{"/home/arjun/x": owner => arjun }
       file{"/home/arjun/y": owner => rachit, mode => 0600 }
     """
     val deps = parse(prog).eval.deps
-    assert(deps.contains(Node("user", "arjun") ~> Node("file", "/home/arjun/y")))
+    assert(deps.contains(Node("user", "arjunx") ~> Node("file", "/home/arjun/y")))
     assert(deps.edges.size == 1)
   }
 
