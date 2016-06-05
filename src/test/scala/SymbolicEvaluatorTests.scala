@@ -608,5 +608,21 @@ class SymbolicEvaluatorTests extends FunSuitePlus {
     assert(g.toExecTree().isDeterministic == false)
   }
 
+  test("auto-require between user and ssh key") {
+    val g = PuppetParser.parse(
+      """
+      ssh_authorized_key{'arjun@local':
+        user => 'arjun',
+        type => 'ssh-rsa',
+        key  => 'foobar',
+        ensure => present
+      }
+
+      user{'arjun': managehome => true}
+      """).eval.resourceGraph.fsGraph("ubuntu-trusty")
+
+    assert(g.toExecTree().isDeterministic() == true)
+  }
+
 
 }

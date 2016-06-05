@@ -171,6 +171,46 @@ private object PuppetEval {
         Fact("resource", List(Var("Src"))),
         Fact("resource", List(Var("Dst")))))
 
+
+    def edgeFact(src: Term, dst: Term) = Fact("edge", List(src, dst))
+    def typeFact(node: Term, typ: Term) = Fact("type", List(node, typ))
+    def titleFact(node: Term, title: Term) = Fact("title", List(node, title))
+    def attrFact(node: Term, name: Term, value: Term) =
+      Fact("attribute", List(node, name, value))
+
+    // Auto-require rules (except between files and their parents)
+    datalog.rule(
+      edgeFact(Var("User"), Var("File")),
+      List(
+        typeFact(Var("User"), valueToTerm(EStr("user"))),
+        typeFact(Var("File"), valueToTerm(EStr("file"))),
+        attrFact(Var("File"), valueToTerm(EStr("owner")), Var("X")),
+        titleFact(Var("User"), Var("X"))))
+
+    datalog.rule(
+      edgeFact(Var("User"), Var("Cron")),
+      List(
+        typeFact(Var("User"), valueToTerm(EStr("user"))),
+        typeFact(Var("Cron"), valueToTerm(EStr("cron"))),
+        attrFact(Var("Cron"), valueToTerm(EStr("user")), Var("X")),
+        titleFact(Var("User"), Var("X"))))
+
+    datalog.rule(
+      edgeFact(Var("File"), Var("Package")),
+      List(
+        typeFact(Var("File"), valueToTerm(EStr("file"))),
+        typeFact(Var("Package"), valueToTerm(EStr("package"))),
+        attrFact(Var("Package"), valueToTerm(EStr("source")), Var("X")),
+        titleFact(Var("File"), Var("X"))))
+
+    datalog.rule(
+      edgeFact(Var("User"), Var("Ssh")),
+      List(
+        typeFact(Var("User"), valueToTerm(EStr("user"))),
+        typeFact(Var("Ssh"), valueToTerm(EStr("ssh_authorized_key"))),
+        attrFact(Var("Ssh"), valueToTerm(EStr("user")), Var("X")),
+        titleFact(Var("User"), Var("X"))))
+
     var newInstances = scala.collection.mutable.Stack[AInstance]()
 
     def evalTitle(store: Store, titleExpr: Expr): String = {
@@ -275,6 +315,21 @@ private object PuppetEval {
       case RENot(_) => ???
     }
 
+    def autorequire(thisNode: Datalog.Term,
+      typ: String, title: String, attrs: Map[String, Expr]): Unit = {
+      val deps = typ match {
+        case "file" => {
+          val path = attrs.get("path").map(_.value[String].get).getOrElse(title)
+          val parent = path.toPath.getParent.toString
+          List(Node("file", parent))
+        }
+        case _ => Nil
+      }
+      for (src <- deps) {
+        datalog.fact("edge", List(resourceToTerm(src), thisNode))
+      }
+    }
+
     def evalResource(store: Store, instance: Datalog.Term, resource: Resource): Datalog.Term = {
       val set = nodeSets.next()
       resource match {
@@ -302,7 +357,8 @@ private object PuppetEval {
             datalog.fact("in_set", List(set, res))
             val attrValues = attrs.map(attr => attr.name.value[String].get -> evalExpr(store, attr.value)).toMap
             datalog.fact("type", List(res, valueToTerm(EStr(typ))))
-
+            datalog.fact("title", List(res, valueToTerm(EStr(title))))
+            autorequire(res, typ, title, attrValues)
             for ((name, value) <- attrValues) {
               name match {
                 case "alias" => {
