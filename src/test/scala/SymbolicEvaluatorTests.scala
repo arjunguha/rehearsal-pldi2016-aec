@@ -613,5 +613,14 @@ class SymbolicEvaluatorTests extends FunSuitePlus {
     assert(g.toExecTree().isDeterministic() == true)
   }
 
+  test("trivially deterministic: ssh_authorized_key and user") {
+    val tree = PuppetParser.parse("""
+      user{'arjun': managehome => true}
+      ssh_authorized_key{'key1': user => arjun, type => 'ssh-rsa', key => 'x'}
+      ssh_authorized_key{'key2': user => arjun, type => 'ssh-rsa', key => 'y'}
+      """).eval().resourceGraph().fsGraph("ubuntu-trusty").toExecTree()
+    assert(tree.branches.length < 2)
+  }
+
 
 }

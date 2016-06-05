@@ -115,7 +115,7 @@ object ResourceSemantics {
       }
       case "ssh_authorized_key" => {
         val user = attrs.consume[String]("user")
-        val present = attrs.consume[String]("ensure") match {
+        val present = attrs.consume[String]("ensure", "present") match {
           case "present" => true
           case "absent" => false
           case x => throw FSCompileError(s"unexpected ensure value: $x")
