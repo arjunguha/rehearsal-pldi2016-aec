@@ -69,7 +69,6 @@ private object PuppetEval {
     * value can only be set once.
     *
     * @param name A name, used for error messages
-    * @tparam A The type of the value stored in the cell
     */
   class Ref(val name: String, parent: Option[Ref] = None) {
 
@@ -320,8 +319,9 @@ private object PuppetEval {
       val deps = typ match {
         case "file" => {
           val path = attrs.get("path").map(_.value[String].get).getOrElse(title)
-          val parent = path.toPath.getParent.toString
-          List(Node("file", parent))
+          val parent = path.toPath.getParent
+          // If the path is / or is one of the bogus paths we use in testing, we may get an exception.
+          if (parent != null) List(Node("file", parent.toString)) else Nil
         }
         case _ => Nil
       }
