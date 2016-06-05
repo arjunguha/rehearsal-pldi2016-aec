@@ -102,7 +102,7 @@ object Commutativity {
         st + (dir -> D)
       }
       else {
-        st + (dir -> W)
+        st + (dir -> W) + (dir.getParent -> R)
       }
     }
     case EIf(pred, e1, e2) => {
