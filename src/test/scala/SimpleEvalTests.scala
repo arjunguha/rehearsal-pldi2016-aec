@@ -249,7 +249,7 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
 
   test("resource collector (simple)") {
     val prog ="""
-      File<| owner = 'arjun' |> -> User['arjun']
+      User['arjun'] -> File<| owner = 'arjun' |>
 
       user{"arjun": }
       file{"/home/arjun/x": owner => arjun }
@@ -263,7 +263,7 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
 
   test("resource collector (conjunction)") {
     val prog ="""
-      File<| owner = 'arjun' and mode = 0600 |> -> User['arjun']
+      User['arjun'] -> File<| owner = 'arjun' and mode = 0600 |>
 
       user{"arjun": }
       file{"/home/arjun/x": owner => arjun, mode => 0600 }
@@ -276,7 +276,7 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
 
   test("resource collector (disjunction)") {
     val prog ="""
-      File<| owner = 'arjun' or owner = 'rachit' |> -> User['arjun']
+      User['arjun'] -> File<| owner = 'arjun' or owner = 'rachit' |>
 
       user{"arjun": }
       file{"/home/arjun/x": owner => arjun }
@@ -290,7 +290,7 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
 
   test("resource collector (nested)") {
     val prog = """
-      File<| (owner = 'arjun' or owner = 'rachit') and mode = 0600 |> -> User['arjun']
+      User['arjun'] -> File<| (owner = 'arjun' or owner = 'rachit') and mode = 0600 |>
 
       user{"arjun": }
       file{"/home/arjun/x": owner => arjun }
