@@ -41,7 +41,12 @@ object Datalog {
       val code = proc.waitFor()
       assert(code == 0, s"Exit code $code")
 
-      Parser.parseAll(Parser.facts, results.mkString("\n")) match {
+      // Using Datalog 2.6 on a Linux system, we seem to get the prompts to input an assertion as output.
+      // It is more surprising that this does not occur with Datalog 2.5 on Mac OS X.
+      def stripPrompt(line: String): String = {
+        line.dropWhile(ch => ch == '>' || ch == ' ')
+      }
+      Parser.parseAll(Parser.facts, results.map(stripPrompt).mkString("\n")) match {
         case Parser.Success(facts, _) => facts
         case Parser.NoSuccess(msg, _) => {
           println(results)
