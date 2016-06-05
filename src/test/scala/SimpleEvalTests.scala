@@ -256,8 +256,8 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
       file{"/home/arjun/y": owner => arjun }
       """
     val deps = parse(prog).eval.deps
-    assert(deps.contains(Node("file", "/home/arjun/x") ~> Node("user", "arjun")))
-    assert(deps.contains(Node("file", "/home/arjun/y") ~> Node("user", "arjun")))
+    assert(deps.contains(Node("user", "arjun") ~> Node("file", "/home/arjun/x")))
+    assert(deps.contains(Node("user", "arjun") ~> Node("file", "/home/arjun/y")))
     assert(deps.edges.size == 2)
   }
 
@@ -270,7 +270,7 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
       file{"/home/arjun/y": owner => arjun }
               """
     val deps = parse(prog).eval.deps
-    assert(deps.contains(Node("file", "/home/arjun/x") ~> Node("user", "arjun")))
+    assert(deps.contains(Node("user", "arjun") ~>Node("file", "/home/arjun/x") ))
     assert(deps.edges.size == 1)
   }
 
@@ -283,8 +283,8 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
       file{"/home/arjun/y": owner => rachit }
               """
     val deps = parse(prog).eval.deps
-    assert(deps.contains(Node("file", "/home/arjun/x") ~> Node("user", "arjun")))
-    assert(deps.contains(Node("file", "/home/arjun/y") ~> Node("user", "arjun")))
+    assert(deps.contains(Node("user", "arjun") ~> Node("file", "/home/arjun/x")))
+    assert(deps.contains(Node("user", "arjun") ~> Node("file", "/home/arjun/y")))
     assert(deps.edges.size == 2)
   }
 
@@ -297,7 +297,7 @@ class SimpleEvalTests extends org.scalatest.FunSuite {
       file{"/home/arjun/y": owner => rachit, mode => 0600 }
     """
     val deps = parse(prog).eval.deps
-    assert(deps.contains(Node("file", "/home/arjun/y") ~> Node("user", "arjun")))
+    assert(deps.contains(Node("user", "arjun") ~> Node("file", "/home/arjun/y")))
     assert(deps.edges.size == 1)
   }
 
